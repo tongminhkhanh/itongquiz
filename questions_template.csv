@@ -1,0 +1,5 @@
+id,quizId,type,question,options,correctAnswer,items
+q1,quiz-001,MCQ,1 + 1 bằng mấy?,1|2|3|4,B,
+q2,quiz-001,TRUE_FALSE,Chọn đúng hoặc sai:,,,,"[{""id"":""1"",""statement"":""Mặt trời mọc đằng Tây"",""isCorrect"":false},{""id"":""2"",""statement"":""Mặt trời lặn đằng Tây"",""isCorrect"":true}]"
+q3,quiz-001,SHORT_ANSWER,Tên thủ đô của Việt Nam là gì?,,Hà Nội,
+q4,quiz-002,MCQ,Từ nào viết đúng chính tả?,xinh xắn|xinh sắn|sin xắn|sin sắn,A,
