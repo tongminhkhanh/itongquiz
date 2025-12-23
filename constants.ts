@@ -45,6 +45,13 @@ The output must be a valid JSON object with this structure:
       "question": "Bà dặn bạn Lan đi chợ mua những loại quả nào? (Chọn tất cả đáp án đúng)",
       "options": ["Vải", "Xoài", "Dứa", "Ổi"],
       "correctAnswers": ["A", "B", "C"]
+    },
+    {
+      "type": "DRAG_DROP",
+      "question": "Điền từ thích hợp vào chỗ trống:",
+      "text": "Con mèo [trèo] cây cau. Con chó [nằm] trước nhà.",
+      "blanks": ["trèo", "nằm"],
+      "distractors": ["bơi", "bay"]
     }
   ]
 }
@@ -73,10 +80,17 @@ The output must be a valid JSON object with this structure:
    - KHÔNG giống MCQ! MCQ chỉ có 1 đáp án, MULTIPLE_SELECT có 2-3 đáp án đúng
    - Câu hỏi nên bắt đầu bằng: "Chọn tất cả...", "Những... nào...", "Các... nào..."
 
+6. DRAG_DROP (Kéo thả điền khuyết):
+   - Đoạn văn bản (text) chứa các từ cần điền trong ngoặc vuông []
+   - blanks: mảng các từ đúng cần điền theo thứ tự xuất hiện trong text
+   - distractors: mảng 2-3 từ gây nhiễu (sai)
+   - Ví dụ: text là "Con mèo [trèo] cây cau", blanks là ["trèo"], distractors là ["bơi", "bay"]
+
 Rules:
 1. Language: Vietnamese.
 2. Content: Appropriate for the specified grade level.
 3. MATCHING: Provide 3-4 pairs of related items.
 4. MULTIPLE_SELECT: PHẢI có 2-3 đáp án đúng, KHÔNG phải 1 đáp án.
-5. Ensure valid JSON. No markdown code blocks.
+5. DRAG_DROP: text PHẢI chứa các từ trong ngoặc vuông [] đúng với thứ tự trong blanks.
+6. Ensure valid JSON. No markdown code blocks.
 `;

@@ -28,7 +28,8 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     'TRUE_FALSE': 'TRUE_FALSE (Cho một câu hỏi chính và nhiều phát biểu, học sinh chọn Đúng hoặc Sai cho mỗi phát biểu)',
     'SHORT_ANSWER': 'SHORT_ANSWER (Điền đáp án ngắn, thường là 1-4 ký tự hoặc số)',
     'MATCHING': 'MATCHING (Nối các ý ở cột A với cột B sao cho phù hợp, có 3-4 cặp)',
-    'MULTIPLE_SELECT': 'MULTIPLE_SELECT (Chọn TẤT CẢ các đáp án đúng, có thể 2-3 đáp án đúng trong 4 lựa chọn, correctAnswers là mảng như ["A", "C"])'
+    'MULTIPLE_SELECT': 'MULTIPLE_SELECT (Chọn TẤT CẢ các đáp án đúng, có thể 2-3 đáp án đúng trong 4 lựa chọn, correctAnswers là mảng như ["A", "C"])',
+    'DRAG_DROP': 'DRAG_DROP (Điền từ vào chỗ trống. Text chứa các từ cần điền trong ngoặc vuông, ví dụ: "Con mèo [trèo] cây cau". Blanks là mảng các từ trong ngoặc ["trèo"]. Distractors là mảng các từ gây nhiễu ["bơi", "bay"])'
   };
 
   const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');
@@ -329,7 +330,10 @@ const generateWithGemini = async (
       const text = data.candidates[0].content.parts[0].text;
       if (!text) throw new Error("AI trả về dữ liệu rỗng.");
 
-      return parseAndRepairJSON(text);
+      // Format multiplication signs: Replace * with x in math contexts (e.g., 5 * 3 -> 5 x 3)
+      const formattedText = text.replace(/(\d+)\s*\*\s*(\d+)/g, '$1 x $2');
+
+      return parseAndRepairJSON(formattedText);
 
     } catch (error: any) {
       if (attempt >= maxRetries || !error.message.includes("429")) {
@@ -425,7 +429,11 @@ const generateWithOpenAI = async (
 
   const data = await response.json();
   const text = data.choices[0].message.content;
-  return parseAndRepairJSON(text);
+
+  // Format multiplication signs: Replace * with x in math contexts
+  const formattedText = text.replace(/(\d+)\s*\*\s*(\d+)/g, '$1 x $2');
+
+  return parseAndRepairJSON(formattedText);
 };
 
 // Main export function

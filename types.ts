@@ -4,6 +4,7 @@ export enum QuestionType {
   SHORT_ANSWER = 'SHORT_ANSWER',
   MATCHING = 'MATCHING',
   MULTIPLE_SELECT = 'MULTIPLE_SELECT',
+  DRAG_DROP = 'DRAG_DROP',
 }
 
 export interface MCQQuestion {
@@ -59,6 +60,16 @@ export interface MatchingQuestion {
   image?: string;
 }
 
+export interface DragDropQuestion {
+  id: string;
+  type: QuestionType.DRAG_DROP;
+  question: string; // Instruction
+  text: string; // Text with blanks, e.g. "The sky is [blue]."
+  blanks: string[]; // ["blue"]
+  distractors: string[]; // ["red", "green"]
+  image?: string;
+}
+
 // Image Library Item for teacher uploads
 export interface ImageLibraryItem {
   id: string;
@@ -68,7 +79,7 @@ export interface ImageLibraryItem {
   createdAt: string;
 }
 
-export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion;
+export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion;
 
 export interface Quiz {
   id: string;
