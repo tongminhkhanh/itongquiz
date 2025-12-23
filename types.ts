@@ -12,6 +12,7 @@ export interface MCQQuestion {
   question: string;
   options: string[]; // [A, B, C, D]
   correctAnswer: string; // "A", "B", "C", or "D"
+  image?: string; // URL or Base64
 }
 
 export interface MultipleSelectQuestion {
@@ -20,6 +21,7 @@ export interface MultipleSelectQuestion {
   question: string;
   options: string[];
   correctAnswers: string[]; // ["A", "C"]
+  image?: string;
 }
 
 export interface TrueFalseItem {
@@ -33,6 +35,7 @@ export interface TrueFalseQuestion {
   type: QuestionType.TRUE_FALSE;
   mainQuestion: string; // e.g., "Về nước:"
   items: TrueFalseItem[];
+  image?: string;
 }
 
 export interface ShortAnswerQuestion {
@@ -40,6 +43,7 @@ export interface ShortAnswerQuestion {
   type: QuestionType.SHORT_ANSWER;
   question: string;
   correctAnswer: string; // Short string
+  image?: string;
 }
 
 export interface MatchingPair {
@@ -52,6 +56,16 @@ export interface MatchingQuestion {
   type: QuestionType.MATCHING;
   question: string; // "Nối cột A với cột B"
   pairs: MatchingPair[];
+  image?: string;
+}
+
+// Image Library Item for teacher uploads
+export interface ImageLibraryItem {
+  id: string;
+  name: string; // File name or description
+  data: string; // Base64 data
+  topic?: string; // Optional topic tag
+  createdAt: string;
 }
 
 export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion;

@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Quiz, Question, QuestionType, StudentResult } from '../types';
+import { Quiz, Question, QuestionType, StudentResult, ImageLibraryItem } from '../types';
 import { generateQuiz, QuizGenerationOptions, AIProvider } from '../geminiService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { FileText, Save, RefreshCw, LogOut, Loader2, Download, Settings, FileUp, Trash2, Edit, List, KeyRound } from 'lucide-react';
+import { FileText, Save, RefreshCw, LogOut, Loader2, Download, Settings, FileUp, Trash2, Edit, List, KeyRound, Image, X } from 'lucide-react';
 import { deleteQuizFromSheet, updateQuizInSheet } from '../googleSheetService';
 import { GOOGLE_SCRIPT_URL } from '../App';
+
+// Image library constants
+const MAX_IMAGE_SIZE_MB = 1;
+const MAX_IMAGE_COUNT = 20;
+const MAX_IMAGE_WIDTH = 800;
+const MAX_IMAGE_HEIGHT = 600;
 
 interface Props {
     onLogout: () => void;
@@ -33,9 +39,15 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
     const [manualTimeLimit, setManualTimeLimit] = useState<number | ''>('');
 
     // Difficulty levels state
-    const [level1Count, setLevel1Count] = useState<number>(3); // Nhận biết/Thông hiểu thấp
-    const [level2Count, setLevel2Count] = useState<number>(5); // Thông hiểu/Vận dụng trực tiếp
-    const [level3Count, setLevel3Count] = useState<number>(2); // Vận dụng cao
+    const [level1Count, setLevel1Count] = useState<number>(3);
+    const [level2Count, setLevel2Count] = useState<number>(5);
+    const [level3Count, setLevel3Count] = useState<number>(2);
+
+    // Image library state
+    const [imageLibrary, setImageLibrary] = useState<ImageLibraryItem[]>(() => {
+        const saved = localStorage.getItem('quiz_image_library');
+        return saved ? JSON.parse(saved) : [];
+    });
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedQuiz, setGeneratedQuiz] = useState<Quiz | null>(null);
@@ -47,6 +59,92 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
 
     const [apiKey, setApiKey] = useState(() => localStorage.getItem('ai_api_key') || '');
     const [aiProvider, setAiProvider] = useState<AIProvider>(() => (localStorage.getItem('ai_provider') as AIProvider) || 'perplexity');
+
+    // Save image library to localStorage
+    useEffect(() => {
+        localStorage.setItem('quiz_image_library', JSON.stringify(imageLibrary));
+    }, [imageLibrary]);
+
+    // Resize image helper
+    const resizeImage = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = document.createElement('img');
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let { width, height } = img;
+
+                    // Scale down if needed
+                    if (width > MAX_IMAGE_WIDTH) {
+                        height = (height * MAX_IMAGE_WIDTH) / width;
+                        width = MAX_IMAGE_WIDTH;
+                    }
+                    if (height > MAX_IMAGE_HEIGHT) {
+                        width = (width * MAX_IMAGE_HEIGHT) / height;
+                        height = MAX_IMAGE_HEIGHT;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+                img.onerror = reject;
+                img.src = e.target?.result as string;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    };
+
+    // Handle image upload
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files) return;
+
+        if (imageLibrary.length >= MAX_IMAGE_COUNT) {
+            alert(`Toi da ${MAX_IMAGE_COUNT} hinh. Vui long xoa bot de upload them.`);
+            return;
+        }
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+
+            // Check file size
+            if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+                alert(`${file.name} qua lon (>${MAX_IMAGE_SIZE_MB}MB). Bo qua.`);
+                continue;
+            }
+
+            // Check total count
+            if (imageLibrary.length + i >= MAX_IMAGE_COUNT) {
+                alert(`Chi co the upload them ${MAX_IMAGE_COUNT - imageLibrary.length} hinh.`);
+                break;
+            }
+
+            try {
+                const resizedData = await resizeImage(file);
+                const newImage: ImageLibraryItem = {
+                    id: `img-${Date.now()}-${i}`,
+                    name: file.name,
+                    data: resizedData,
+                    topic: topic || '',
+                    createdAt: new Date().toISOString()
+                };
+                setImageLibrary(prev => [...prev, newImage]);
+            } catch (err) {
+                console.error('Error uploading image:', err);
+            }
+        }
+        e.target.value = ''; // Reset input
+    };
+
+    // Delete image from library
+    const handleDeleteImage = (id: string) => {
+        setImageLibrary(prev => prev.filter(img => img.id !== id));
+    };
 
     // Auto-generate title based on topic
     useEffect(() => {
@@ -436,6 +534,52 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                     <p className="text-sm text-green-700 font-bold mt-3 text-center">
                                         Tong so cau: {level1Count + level2Count + level3Count}
                                     </p>
+                                </div>
+
+                                {/* Image Library Section */}
+                                <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
+                                    <label className="block text-sm font-bold text-purple-800 mb-2 flex items-center">
+                                        <Image className="w-4 h-4 mr-2" />
+                                        Thu vien hinh anh ({imageLibrary.length}/{MAX_IMAGE_COUNT})
+                                    </label>
+                                    <p className="text-xs text-gray-500 mb-3">
+                                        Upload hinh anh de AI gan vao cau hoi. Toi da {MAX_IMAGE_SIZE_MB}MB/hinh, tu dong resize ve {MAX_IMAGE_WIDTH}x{MAX_IMAGE_HEIGHT}px.
+                                    </p>
+
+                                    {/* Upload Button */}
+                                    <label className="flex items-center justify-center w-full p-3 border-2 border-dashed border-purple-300 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors mb-3">
+                                        <FileUp className="w-5 h-5 text-purple-500 mr-2" />
+                                        <span className="text-purple-600 font-medium">Upload hinh anh</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={handleImageUpload}
+                                            className="hidden"
+                                        />
+                                    </label>
+
+                                    {/* Image Grid */}
+                                    {imageLibrary.length > 0 && (
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {imageLibrary.map(img => (
+                                                <div key={img.id} className="relative group">
+                                                    <img
+                                                        src={img.data}
+                                                        alt={img.name}
+                                                        className="w-full h-20 object-cover rounded-lg border border-gray-200"
+                                                    />
+                                                    <button
+                                                        onClick={() => handleDeleteImage(img.id)}
+                                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                    <p className="text-xs text-gray-500 truncate mt-1">{img.name}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
