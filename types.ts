@@ -63,7 +63,7 @@ export interface MatchingQuestion {
 export interface ImageLibraryItem {
   id: string;
   name: string; // File name or description
-  data: string; // Base64 data
+  data: string; // Base64 data or URL
   topic?: string; // Optional topic tag
   createdAt: string;
 }
