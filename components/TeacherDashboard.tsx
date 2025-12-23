@@ -534,6 +534,26 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                                     </ul>
                                                                 </div>
                                                             )}
+                                                            {q.type === 'MULTIPLE_SELECT' && (
+                                                                <div>
+                                                                    <p className="font-medium mb-2">{(q as any).question}</p>
+                                                                    <p className="text-xs text-purple-600 mb-1 font-bold">📌 Chọn nhiều đáp án đúng</p>
+                                                                    <ul className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                                                                        {(q as any).options?.map((o: string, idx: number) => {
+                                                                            const label = String.fromCharCode(65 + idx);
+                                                                            const isCorrect = (q as any).correctAnswers?.includes(label);
+                                                                            return (
+                                                                                <li key={idx} className={isCorrect ? "text-green-600 font-bold" : ""}>
+                                                                                    {isCorrect ? "✓ " : ""}{label}. {o}
+                                                                                </li>
+                                                                            );
+                                                                        })}
+                                                                    </ul>
+                                                                    <p className="text-xs text-green-600 mt-2">
+                                                                        Đáp án đúng: {(q as any).correctAnswers?.join(', ') || 'N/A'}
+                                                                    </p>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>

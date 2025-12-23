@@ -17,14 +17,15 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
 
   // Map question types to Vietnamese descriptions for better AI understanding
   const typeDescriptions: Record<string, string> = {
-    'MCQ': 'MCQ (Trắc nghiệm 1 đáp án đúng)',
-    'TRUE_FALSE': 'TRUE_FALSE (Đúng/Sai với nhiều phát biểu)',
-    'SHORT_ANSWER': 'SHORT_ANSWER (Điền đáp án ngắn)',
-    'MATCHING': 'MATCHING (Nối cột A với cột B)',
-    'MULTIPLE_SELECT': 'MULTIPLE_SELECT (Chọn NHIỀU đáp án đúng - correctAnswers là mảng)'
+    'MCQ': 'MCQ (Trắc nghiệm chọn 1 đáp án đúng trong 4 lựa chọn A, B, C, D)',
+    'TRUE_FALSE': 'TRUE_FALSE (Cho một câu hỏi chính và nhiều phát biểu, học sinh chọn Đúng hoặc Sai cho mỗi phát biểu)',
+    'SHORT_ANSWER': 'SHORT_ANSWER (Điền đáp án ngắn, thường là 1-4 ký tự hoặc số)',
+    'MATCHING': 'MATCHING (Nối các ý ở cột A với cột B sao cho phù hợp, có 3-4 cặp)',
+    'MULTIPLE_SELECT': 'MULTIPLE_SELECT (Chọn TẤT CẢ các đáp án đúng, có thể 2-3 đáp án đúng trong 4 lựa chọn, correctAnswers là mảng như ["A", "C"])'
   };
 
-  const typesDescription = types.map(t => typeDescriptions[t] || t).join(', ');
+  const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');
+  const typesList = types.join(', ');
 
   return `
     Tạo đề kiểm tra cho học sinh Lớp ${classLevel}.
@@ -33,17 +34,20 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     - Tiêu đề bài kiểm tra: "${title}"
     - Chủ đề: "${topic}"
     - Tổng số lượng câu hỏi cần tạo: ${count} câu.
-    - Các dạng câu hỏi BẮT BUỘC phải có: ${typesDescription}.
+    
+    ⚠️ CHỈ ĐƯỢC PHÉP SỬ DỤNG CÁC DẠNG CÂU HỎI SAU (KHÔNG ĐƯỢC DÙNG DẠNG KHÁC):
+    - ${typesDescription}
     
     NỘI DUNG THAM KHẢO:
     ${content ? `"${content}"` : "Không có nội dung cụ thể. Hãy tự động sinh câu hỏi dựa trên kiến thức chuẩn của sách giáo khoa Tiểu học Việt Nam phù hợp với Chủ đề và Lớp học đã nêu trên."}
 
-    YÊU CẦU QUAN TRỌNG:
-    - Phân bổ số lượng câu hỏi hợp lý cho TẤT CẢ các dạng đã yêu cầu.
-    - Nếu có MULTIPLE_SELECT: tạo câu hỏi có nhiều đáp án đúng (correctAnswers là mảng như ["A", "C"]).
-    - Nếu có MATCHING: tạo 3-4 cặp nối.
-    - Ngôn ngữ phù hợp, dễ hiểu cho học sinh tiểu học.
-    - Đảm bảo đầu ra đúng định dạng JSON.
+    ⛔ QUY TẮC BẮT BUỘC:
+    1. CHỈ tạo câu hỏi thuộc dạng: ${typesList}. TUYỆT ĐỐI KHÔNG tạo dạng câu hỏi nào khác.
+    2. Phân bổ đều ${count} câu cho các dạng đã chọn.
+    3. Nếu chỉ chọn 1 dạng (ví dụ: MULTIPLE_SELECT), thì TẤT CẢ ${count} câu đều phải là dạng đó.
+    4. Với MULTIPLE_SELECT: correctAnswers phải là mảng có ít nhất 2 đáp án đúng, ví dụ: ["A", "C"] hoặc ["B", "C", "D"].
+    5. Ngôn ngữ: Tiếng Việt, phù hợp với học sinh tiểu học.
+    6. Đảm bảo đầu ra đúng định dạng JSON.
   `;
 };
 
