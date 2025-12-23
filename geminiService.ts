@@ -1,7 +1,7 @@
 import { SYSTEM_INSTRUCTION } from "./constants";
 import { QuestionType } from "./types";
 
-export type AIProvider = 'gemini' | 'perplexity';
+export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux';
 
 export interface QuizGenerationOptions {
   title: string;
@@ -12,7 +12,7 @@ export interface QuizGenerationOptions {
     level2: number;
     level3: number;
   };
-  imageLibrary?: Array<{ id: string; name: string; }>;
+  imageLibrary?: Array<{ id: string; name: string; data?: string; }>;
 }
 
 // Build the prompt for quiz generation
@@ -58,9 +58,12 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     THU VIEN HINH ANH DA UPLOAD (co the gan vao cau hoi):
     ${imageList}
     
-    NEU cau hoi can hinh anh minh hoa, them truong "image" voi gia tri la ID cua hinh (vi du: "image": "img-123...").
-    NEU khong co hinh phu hop trong thu vien, co the de trong hoac dung URL anh tu web (bat dau bang http).
-    Chi gan hinh khi thuc su can thiet, dac biet cho cau hoi ve hinh hoc, do dai, do vat cu the.`;
+    ⚠️ YEU CAU BAT BUOC VE HINH ANH:
+    1. UU TIEN TUYET DOI viec su dung cac hinh anh tren de tao cau hoi.
+    2. Hay doc ten hinh anh de hieu noi dung va tao cau hoi phu hop voi hinh do.
+    3. Khi su dung hinh, BAT BUOC phai them truong "image" voi gia tri la ID cua hinh (vi du: "image": "img-123...").
+    4. Noi dung cau hoi phai lien quan truc tiep den hinh anh (vi du: "Dua vao hinh ben...", "Hinh anh nay mo ta...", "Ket qua cua phep tinh trong hinh la...").
+    5. Neu khong co hinh phu hop, moi tu tao cau hoi khong hinh hoac dung URL ngoai.`;
   }
 
   return `
@@ -207,7 +210,8 @@ const generateWithPerplexity = async (
 const generateWithGemini = async (
   promptText: string,
   apiKey: string,
-  file?: File | null
+  file?: File | null,
+  imageLibrary?: Array<{ id: string; name: string; data?: string; }>
 ): Promise<any> => {
   const MODEL_NAME = 'gemini-2.0-flash';
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
@@ -217,12 +221,35 @@ const generateWithGemini = async (
 
   if (file) {
     const base64Data = await fileToBase64(file);
+    parts.push({ text: "Tài liệu đính kèm (Attached File):" });
     parts.push({
       inline_data: {
         mime_type: file.type,
         data: base64Data
       }
     });
+  }
+
+  // Handle Image Library
+  if (imageLibrary && imageLibrary.length > 0) {
+    parts.push({ text: "THƯ VIỆN HÌNH ẢNH (Image Library):" });
+    for (const img of imageLibrary) {
+      if (img.data && img.data.startsWith('http')) {
+        try {
+          const { data, mimeType } = await urlToBase64(img.data);
+          parts.push({ text: `Image ID: ${img.id} (Name: ${img.name})` });
+          parts.push({
+            inline_data: {
+              mime_type: mimeType,
+              data: data
+            }
+          });
+        } catch (err) {
+          console.error(`Failed to fetch image ${img.id}:`, err);
+          parts.push({ text: `[Failed to load image ID: ${img.id}]` });
+        }
+      }
+    }
   }
 
   parts.push({ text: promptText });
@@ -313,6 +340,94 @@ const generateWithGemini = async (
   }
 };
 
+// Generate quiz using OpenAI API (or compatible LLM-Mux)
+const generateWithOpenAI = async (
+  promptText: string,
+  apiKey: string,
+  file?: File | null,
+  imageLibrary?: Array<{ id: string; name: string; data?: string; }>,
+  baseUrl: string = 'https://api.openai.com/v1'
+): Promise<any> => {
+  const API_URL = `${baseUrl}/chat/completions`;
+  // If using LLM-Mux, default to a model that is likely to exist for Google login
+  // The user can override this via env var if they want, but for now let's pick a safe default
+  const isLlmMux = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
+  const MODEL_NAME = isLlmMux ? 'gemini-2.5-flash' : 'gpt-4o';
+
+  const messages: any[] = [
+    {
+      role: 'system',
+      content: SYSTEM_INSTRUCTION
+    }
+  ];
+
+  const userContent: any[] = [{ type: 'text', text: promptText }];
+
+  // Handle Attached File (if image)
+  if (file && file.type.startsWith('image/')) {
+    const base64Data = await fileToBase64(file);
+    userContent.push({
+      type: 'image_url',
+      image_url: {
+        url: `data:${file.type};base64,${base64Data}`
+      }
+    });
+  }
+
+  // Handle Image Library
+  if (imageLibrary && imageLibrary.length > 0) {
+    userContent.push({ type: 'text', text: "\n\nTHƯ VIỆN HÌNH ẢNH (Image Library):" });
+    for (const img of imageLibrary) {
+      if (img.data && img.data.startsWith('http')) {
+        // OpenAI can take URLs directly, which is faster and cheaper than base64
+        userContent.push({ type: 'text', text: `\nImage ID: ${img.id} (Name: ${img.name})` });
+        userContent.push({
+          type: 'image_url',
+          image_url: {
+            url: img.data
+          }
+        });
+      }
+    }
+  }
+
+  messages.push({
+    role: 'user',
+    content: userContent
+  });
+
+  const requestBody = {
+    model: MODEL_NAME,
+    messages: messages,
+    temperature: 0.4,
+    response_format: { type: "json_object" }
+  };
+
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error("OpenAI API Error:", errorData);
+
+    if (response.status === 429) {
+      throw new Error("Hết tiền trong tài khoản OpenAI (Quota Exceeded). Vui lòng nạp thêm tiền hoặc chuyển sang dùng Google Gemini (Miễn phí).");
+    }
+
+    throw new Error(`Lỗi OpenAI API (${response.status}): ${errorData.error?.message || response.statusText}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices[0].message.content;
+  return parseAndRepairJSON(text);
+};
+
 // Main export function
 export const generateQuiz = async (
   topic: string,
@@ -323,17 +438,58 @@ export const generateQuiz = async (
   customApiKey?: string,
   provider: AIProvider = 'perplexity' // Default to Perplexity
 ): Promise<any> => {
-  const apiKey = (customApiKey || (import.meta as any).env.VITE_API_KEY || process.env.API_KEY || '').trim();
-  if (!apiKey) throw new Error("Vui lòng nhập API Key trong phần Cấu hình.");
+  // Determine API Key based on provider
+  let envKey = '';
+  if (provider === 'perplexity') {
+    envKey = (import.meta as any).env.VITE_PERPLEXITY_API_KEY || '';
+  } else if (provider === 'openai') {
+    envKey = (import.meta as any).env.VITE_OPENAI_API_KEY || '';
+  } else if (provider === 'llm-mux') {
+    envKey = (import.meta as any).env.VITE_LLM_MUX_API_KEY || 'sk-dummy-key'; // LLM-Mux might not need a real key, but usually requires something
+  } else {
+    envKey = (import.meta as any).env.VITE_GEMINI_API_KEY || (import.meta as any).env.VITE_API_KEY || '';
+  }
+
+  const apiKey = (customApiKey || envKey || '').trim();
+  if (!apiKey && provider !== 'llm-mux') throw new Error(`Vui lòng nhập API Key cho ${provider.toUpperCase()} trong phần Cấu hình.`);
 
   const promptText = buildPrompt(topic, classLevel, content, options);
 
   if (provider === 'perplexity') {
     return generateWithPerplexity(promptText, apiKey);
+  } else if (provider === 'openai') {
+    return generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary);
+  } else if (provider === 'llm-mux') {
+    const baseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || 'http://localhost:8317/v1';
+    return generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary, baseUrl);
   } else {
-    return generateWithGemini(promptText, apiKey, file);
+    return generateWithGemini(promptText, apiKey, file, options?.imageLibrary);
   }
 };
+
+async function urlToBase64(url: string): Promise<{ data: string; mimeType: string }> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+
+    const blob = await response.blob();
+    const mimeType = blob.type || 'image/jpeg'; // Default fallback
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        const base64Data = base64String.split(',')[1];
+        resolve({ data: base64Data, mimeType });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error("urlToBase64 error:", error);
+    throw error;
+  }
+}
 
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

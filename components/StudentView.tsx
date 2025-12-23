@@ -297,6 +297,15 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                       ) : (
                         <p className="font-medium text-gray-800">{(q as any).question}</p>
                       )}
+                      {q.image && (
+                        <div className="mt-2">
+                          <img
+                            src={q.image}
+                            alt="Question Illustration"
+                            className="max-h-40 rounded border border-gray-200 object-contain"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -468,6 +477,16 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                     <h3 className="text-lg font-bold text-gray-800">{q.mainQuestion}</h3>
                   ) : (
                     <h3 className="text-lg font-bold text-gray-800">{(q as any).question}</h3>
+                  )}
+
+                  {q.image && (
+                    <div className="mt-3 mb-4">
+                      <img
+                        src={q.image}
+                        alt="Question Illustration"
+                        className="max-h-64 rounded-lg border border-gray-200 object-contain"
+                      />
+                    </div>
                   )}
 
                   {/* Render Inputs */}

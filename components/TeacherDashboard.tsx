@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Quiz, Question, QuestionType, StudentResult, ImageLibraryItem } from '../types';
 import { generateQuiz, QuizGenerationOptions, AIProvider } from '../geminiService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { FileText, Save, RefreshCw, LogOut, Loader2, Download, Settings, FileUp, Trash2, Edit, List, KeyRound, Image, X } from 'lucide-react';
+import { FileText, Save, RefreshCw, LogOut, Loader2, Download, Settings, FileUp, Trash2, Edit, List, KeyRound, Image, X, Link as LinkIcon, Search, Bot } from 'lucide-react';
 import { deleteQuizFromSheet, updateQuizInSheet } from '../googleSheetService';
+import { uploadToCloudinary } from '../cloudinaryService';
 import { GOOGLE_SCRIPT_URL } from '../App';
 
 // Image library constants
-const MAX_IMAGE_SIZE_MB = 1;
+const MAX_IMAGE_SIZE_MB = 5; // Increased for Cloudinary
 const MAX_IMAGE_COUNT = 20;
 const MAX_IMAGE_WIDTH = 800;
 const MAX_IMAGE_HEIGHT = 600;
@@ -17,9 +18,10 @@ interface Props {
     quizzes: Quiz[];
     results: StudentResult[];
     onSaveQuiz: (quiz: Quiz) => Promise<void>;
+    onUpdateQuiz: (quiz: Quiz) => Promise<void>;
 }
 
-const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQuiz }) => {
+const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQuiz, onUpdateQuiz }) => {
     const [activeTab, setActiveTab] = useState<'create' | 'results' | 'manage'>('results');
     const [editingQuizId, setEditingQuizId] = useState<string | null>(null);
 
@@ -57,47 +59,22 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
     const [sortField, setSortField] = useState<'score' | 'submittedAt'>('submittedAt');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-    const [apiKey, setApiKey] = useState(() => localStorage.getItem('ai_api_key') || '');
-    const [aiProvider, setAiProvider] = useState<AIProvider>(() => (localStorage.getItem('ai_provider') as AIProvider) || 'perplexity');
+    const [aiProvider, setAiProvider] = useState<AIProvider>(() => (localStorage.getItem('ai_provider') as AIProvider) || 'gemini');
+
+    // DEBUG: Check if keys are loaded
+    useEffect(() => {
+        console.log("--- DEBUG API KEYS ---");
+        console.log("VITE_GEMINI_API_KEY:", (import.meta as any).env.VITE_GEMINI_API_KEY ? "✅ Loaded" : "❌ Missing");
+        console.log("VITE_PERPLEXITY_API_KEY:", (import.meta as any).env.VITE_PERPLEXITY_API_KEY ? "✅ Loaded" : "❌ Missing");
+        console.log("VITE_OPENAI_API_KEY:", (import.meta as any).env.VITE_OPENAI_API_KEY ? "✅ Loaded" : "❌ Missing");
+        console.log("VITE_LLM_MUX_BASE_URL:", (import.meta as any).env.VITE_LLM_MUX_BASE_URL || "Using Default (localhost:8317)");
+        console.log("----------------------");
+    }, []);
 
     // Save image library to localStorage
     useEffect(() => {
         localStorage.setItem('quiz_image_library', JSON.stringify(imageLibrary));
     }, [imageLibrary]);
-
-    // Resize image helper
-    const resizeImage = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = document.createElement('img');
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let { width, height } = img;
-
-                    // Scale down if needed
-                    if (width > MAX_IMAGE_WIDTH) {
-                        height = (height * MAX_IMAGE_WIDTH) / width;
-                        width = MAX_IMAGE_WIDTH;
-                    }
-                    if (height > MAX_IMAGE_HEIGHT) {
-                        width = (width * MAX_IMAGE_HEIGHT) / height;
-                        height = MAX_IMAGE_HEIGHT;
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx?.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.8));
-                };
-                img.onerror = reject;
-                img.src = e.target?.result as string;
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-    };
 
     // Handle image upload
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,17 +102,18 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
             }
 
             try {
-                const resizedData = await resizeImage(file);
+                const imageUrl = await uploadToCloudinary(file);
                 const newImage: ImageLibraryItem = {
                     id: `img-${Date.now()}-${i}`,
                     name: file.name,
-                    data: resizedData,
+                    data: imageUrl, // Store Cloudinary URL
                     topic: topic || '',
                     createdAt: new Date().toISOString()
                 };
                 setImageLibrary(prev => [...prev, newImage]);
             } catch (err) {
                 console.error('Error uploading image:', err);
+                alert(`Lỗi upload ảnh ${file.name}: ${(err as Error).message}`);
             }
         }
         e.target.value = ''; // Reset input
@@ -154,7 +132,7 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
     }, [topic, quizTitle]);
 
     const handleGenerate = async () => {
-        if (!apiKey) return alert(`Vui lòng nhập ${aiProvider === 'perplexity' ? 'Perplexity' : 'Gemini'} API Key ở phần 'Cấu hình API' bên dưới!`);
+        // if (!apiKey) return alert(`Vui lòng nhập ${aiProvider === 'perplexity' ? 'Perplexity' : 'Gemini'} API Key ở phần 'Cấu hình API' bên dưới!`);
         if (!topic) return alert("Vui lòng nhập chủ đề bài học");
 
         // Validate types
@@ -163,6 +141,12 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
             .map(([type]) => type as QuestionType);
 
         if (enabledTypes.length === 0) return alert("Vui lòng chọn ít nhất một dạng câu hỏi");
+
+        // Check for Perplexity + Images (OpenAI, Gemini, and LLM-Mux support images)
+        if (aiProvider === 'perplexity' && imageLibrary.length > 0) {
+            const confirmContinue = confirm("LƯU Ý: Bạn đang sử dụng Perplexity AI. AI này KHÔNG THỂ nhìn thấy hình ảnh, chỉ có thể đọc tên hình.\n\nĐể AI phân tích được nội dung hình ảnh, vui lòng chuyển sang dùng Gemini, OpenAI hoặc LLM-Mux.\n\nBạn có muốn tiếp tục không?");
+            if (!confirmContinue) return;
+        }
 
         setIsGenerating(true);
         try {
@@ -175,10 +159,12 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                     level2: level2Count,
                     level3: level3Count
                 },
-                imageLibrary: imageLibrary.map(img => ({ id: img.id, name: img.name }))
+                imageLibrary: imageLibrary.map(img => ({ id: img.id, name: img.name, data: img.data }))
             };
+            console.log("Generating quiz with options:", options);
+            console.log("Image Library passed to AI:", options.imageLibrary);
 
-            const data = await generateQuiz(topic, classLevel, content, attachedFile, options, apiKey, aiProvider);
+            const data = await generateQuiz(topic, classLevel, content, attachedFile, options, '', aiProvider);
 
             // Process raw data into Type safe objects
             const questions: Question[] = data.questions
@@ -193,7 +179,18 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                         if (q.image.startsWith('http')) {
                             imageField = q.image;
                         } else {
-                            const foundImg = imageLibrary.find(img => img.id === q.image);
+                            // Try exact match first
+                            let foundImg = imageLibrary.find(img => img.id === q.image);
+
+                            // If not found, try fuzzy match by name or partial ID
+                            if (!foundImg) {
+                                foundImg = imageLibrary.find(img =>
+                                    q.image.includes(img.id) ||
+                                    img.name.toLowerCase().includes(q.image.toLowerCase()) ||
+                                    q.image.toLowerCase().includes(img.name.toLowerCase())
+                                );
+                            }
+
                             if (foundImg) {
                                 imageField = foundImg.data;
                             }
@@ -244,10 +241,32 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                 throw new Error("AI không tạo được câu hỏi hợp lệ. Vui lòng thử lại.");
             }
 
+            // FALLBACK: If user uploaded images but AI didn't assign them, force assign them.
+            if (imageLibrary.length > 0) {
+                const questionsWithImages = questions.filter(q => q.image);
+                if (questionsWithImages.length === 0) {
+                    console.warn("AI did not assign any images. Force assigning images sequentially.");
+                    // Distribute images to questions sequentially
+                    questions.forEach((q, idx) => {
+                        if (idx < imageLibrary.length) {
+                            q.image = imageLibrary[idx].data;
+                        } else {
+                            // Cycle through images if more questions than images
+                            q.image = imageLibrary[idx % imageLibrary.length].data;
+                        }
+                    });
+                    alert("Lưu ý: AI không tự chọn được hình, hệ thống đã tự động chèn hình vào các câu hỏi cho bạn.");
+                }
+            }
+
             // Limit questions to the requested count
             const requestedCount = options.questionCount;
             console.log(`[Quiz] AI generated ${questions.length} questions, requested ${requestedCount}`);
-            const limitedQuestions = questions.slice(0, requestedCount);
+            
+            // SHUFFLE QUESTIONS to avoid consecutive same-type questions
+            const shuffledQuestions = questions.sort(() => Math.random() - 0.5);
+            
+            const limitedQuestions = shuffledQuestions.slice(0, requestedCount);
             console.log(`[Quiz] Final question count: ${limitedQuestions.length}`);
 
             const newQuiz: Quiz = {
@@ -268,14 +287,43 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
 
     const [isSaving, setIsSaving] = useState(false);
 
+    // Manual Image Assignment State
+    const [editingQuestionImageId, setEditingQuestionImageId] = useState<string | null>(null);
+    const [tempImageUrl, setTempImageUrl] = useState('');
+
+    const handleUpdateQuestionImage = (questionId: string, imageUrl: string) => {
+        console.log('Updating image for question:', questionId, 'URL:', imageUrl);
+        if (!generatedQuiz) {
+            console.error('No generated quiz found');
+            return;
+        }
+
+        const updatedQuestions = generatedQuiz.questions.map(q => {
+            if (q.id === questionId) {
+                return { ...q, image: imageUrl };
+            }
+            return q;
+        });
+
+        setGeneratedQuiz({ ...generatedQuiz, questions: updatedQuestions });
+        setEditingQuestionImageId(null);
+        setTempImageUrl('');
+        alert("Đã cập nhật ảnh cho câu hỏi!");
+    };
+
     const handleSaveQuiz = async () => {
         if (generatedQuiz) {
             setIsSaving(true);
             try {
                 if (editingQuizId) {
                     // Update existing
-                    await updateQuizInSheet(generatedQuiz, GOOGLE_SCRIPT_URL);
-                    alert("Đã cập nhật đề thi thành công!");
+                    const success = await updateQuizInSheet(generatedQuiz, GOOGLE_SCRIPT_URL);
+                    if (success) {
+                        await onUpdateQuiz(generatedQuiz); // Update local state
+                        alert("Đã cập nhật đề thi thành công!");
+                    } else {
+                        throw new Error("Không thể cập nhật vào Google Sheet (vui lòng kiểm tra kết nối hoặc script)");
+                    }
                 } else {
                     // Create new
                     await onSaveQuiz(generatedQuiz);
@@ -291,8 +339,8 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                 setAttachedFile(null);
                 setActiveTab('manage'); // Go to manage tab to see changes (though requires refresh/reload usually)
             } catch (error) {
-                alert("Lỗi khi lưu đề thi!");
                 console.error(error);
+                alert("Lỗi khi lưu đề thi: " + (error as Error).message);
             } finally {
                 setIsSaving(false);
             }
@@ -655,27 +703,26 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                     {isGenerating ? <><Loader2 className="animate-spin mr-2" /> Đang phân tích & tạo đề...</> : '🚀 Tạo đề kiểm tra ngay'}
                                 </button>
 
-                                <div className={`mt-6 pt-6 border-t-2 ${apiKey ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'} -mx-6 px-6 pb-4 rounded-b-2xl`}>
+                                <div className="mt-6 pt-6 border-t-2 border-gray-100 -mx-6 px-6 pb-4 rounded-b-2xl">
                                     <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center">
-                                        <KeyRound className={`w-4 h-4 mr-2 ${apiKey ? 'text-green-500' : 'text-orange-500'}`} />
-                                        🔑 Cấu hình AI (Bắt buộc)
-                                        {apiKey && <span className="ml-2 text-green-600 text-xs">✓ Đã nhập</span>}
+                                        <Bot className="w-4 h-4 mr-2 text-indigo-600" />
+                                        Chọn AI tạo đề
                                     </label>
 
                                     {/* Provider Selection */}
-                                    <div className="flex gap-2 mb-3">
+                                    <div className="flex gap-2">
                                         <button
                                             type="button"
                                             onClick={() => {
                                                 setAiProvider('perplexity');
                                                 localStorage.setItem('ai_provider', 'perplexity');
                                             }}
-                                            className={`flex-1 py-2 px-4 rounded-lg font-bold text-sm transition-all ${aiProvider === 'perplexity'
-                                                ? 'bg-purple-600 text-white shadow-md'
-                                                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                                            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${aiProvider === 'perplexity'
+                                                ? 'bg-purple-600 text-white shadow-lg ring-2 ring-purple-200'
+                                                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                                                 }`}
                                         >
-                                            🟣 Perplexity AI
+                                            <span className="mr-2">🟣</span> Perplexity AI
                                         </button>
                                         <button
                                             type="button"
@@ -683,44 +730,42 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                 setAiProvider('gemini');
                                                 localStorage.setItem('ai_provider', 'gemini');
                                             }}
-                                            className={`flex-1 py-2 px-4 rounded-lg font-bold text-sm transition-all ${aiProvider === 'gemini'
-                                                ? 'bg-blue-600 text-white shadow-md'
-                                                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                                            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${aiProvider === 'gemini'
+                                                ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-200'
+                                                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                                                 }`}
                                         >
-                                            🔵 Google Gemini
+                                            <span className="mr-2">🔵</span> Google Gemini
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAiProvider('openai');
+                                                localStorage.setItem('ai_provider', 'openai');
+                                            }}
+                                            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${aiProvider === 'openai'
+                                                ? 'bg-green-600 text-white shadow-lg ring-2 ring-green-200'
+                                                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <span className="mr-2">🟢</span> OpenAI (GPT-4o)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAiProvider('llm-mux');
+                                                localStorage.setItem('ai_provider', 'llm-mux');
+                                            }}
+                                            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${aiProvider === 'llm-mux'
+                                                ? 'bg-orange-600 text-white shadow-lg ring-2 ring-orange-200'
+                                                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <span className="mr-2">🟠</span> LLM-Mux (Local)
                                         </button>
                                     </div>
-
-                                    {/* API Key Input */}
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="password"
-                                            value={apiKey}
-                                            onChange={(e) => {
-                                                setApiKey(e.target.value);
-                                                localStorage.setItem('ai_api_key', e.target.value);
-                                            }}
-                                            placeholder={aiProvider === 'perplexity' ? "Dán Perplexity API Key vào đây..." : "Dán Google Gemini API Key vào đây..."}
-                                            className={`flex-1 p-3 border-2 rounded-lg text-sm focus:ring-2 outline-none ${apiKey ? 'border-green-300 focus:ring-green-500' : 'border-orange-300 focus:ring-orange-500'}`}
-                                        />
-                                    </div>
-
-                                    {/* Help Links */}
-                                    <p className="text-xs text-gray-600 mt-2">
-                                        📌 Lấy API Key miễn phí tại: {' '}
-                                        {aiProvider === 'perplexity' ? (
-                                            <a href="https://www.perplexity.ai/settings/api" target="_blank" rel="noopener noreferrer" className="text-purple-600 underline hover:text-purple-800">
-                                                Perplexity Settings
-                                            </a>
-                                        ) : (
-                                            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-800">
-                                                Google AI Studio
-                                            </a>
-                                        )}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        * API Key được lưu an toàn trên trình duyệt của bạn, không gửi lên server.
+                                    <p className="text-xs text-gray-400 mt-3 text-center">
+                                        * Hệ thống tự động sử dụng API Key từ cấu hình Server.
                                     </p>
                                 </div>
                             </div>
@@ -813,6 +858,29 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                                     <p className="text-xs">{(q as any).question || (q as any).mainQuestion || 'Khong co noi dung'}</p>
                                                                 </div>
                                                             )}
+
+                                                            {/* Image Display & Edit Button */}
+                                                            <div className="mt-2 flex items-start gap-3 pt-2 border-t border-gray-50">
+                                                                {q.image && (
+                                                                    <div className="relative group">
+                                                                        <img src={q.image} alt="Question" className="h-20 object-contain rounded border border-gray-200" />
+                                                                        <button
+                                                                            onClick={() => handleUpdateQuestionImage(q.id, '')}
+                                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                            title="Xóa ảnh"
+                                                                        >
+                                                                            <X className="w-3 h-3" />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => setEditingQuestionImageId(q.id)}
+                                                                    className="flex items-center text-xs text-indigo-600 hover:text-indigo-800 font-medium mt-1 py-1 px-2 hover:bg-indigo-50 rounded transition-colors"
+                                                                >
+                                                                    <Image className="w-3 h-3 mr-1" />
+                                                                    {q.image ? 'Thay đổi ảnh' : 'Thêm hình ảnh'}
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -930,7 +998,13 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                             {quizzes.map(quiz => (
                                 <div key={quiz.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
                                     <div>
-                                        <h3 className="font-bold text-lg text-gray-800">{quiz.title}</h3>
+                                        <h3
+                                            className="font-bold text-lg text-gray-800 cursor-pointer hover:text-blue-600 hover:underline"
+                                            onClick={() => window.open(`?quizId=${quiz.id}`, '_blank')}
+                                            title="Nhấn để làm bài (Xem như học sinh)"
+                                        >
+                                            {quiz.title}
+                                        </h3>
                                         <p className="text-sm text-gray-500">Lớp {quiz.classLevel} • {quiz.questions.length} câu • {quiz.timeLimit} phút</p>
                                         <p className="text-xs text-gray-400 mt-1">Tạo ngày: {new Date(quiz.createdAt).toLocaleDateString('vi-VN')}</p>
                                     </div>
@@ -961,6 +1035,93 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                     </div>
                 )}
             </div>
+
+            {/* Image Selection Modal */}
+            {editingQuestionImageId && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                            <h3 className="font-bold text-lg text-gray-800">Chọn hình ảnh cho câu hỏi</h3>
+                            <button onClick={() => setEditingQuestionImageId(null)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            {/* Option 1: Library */}
+                            <div>
+                                <h4 className="font-bold text-sm text-gray-700 mb-3 flex items-center">
+                                    <List className="w-4 h-4 mr-2" />
+                                    Từ thư viện đã upload ({imageLibrary.length})
+                                </h4>
+                                {imageLibrary.length > 0 ? (
+                                    <div className="grid grid-cols-4 gap-3 max-h-40 overflow-y-auto p-2 border border-gray-100 rounded-lg">
+                                        {imageLibrary.map(img => (
+                                            <div
+                                                key={img.id}
+                                                onClick={() => {
+                                                    if (editingQuestionImageId) {
+                                                        handleUpdateQuestionImage(editingQuestionImageId, img.data);
+                                                    }
+                                                }}
+                                                className="cursor-pointer group relative border-2 border-transparent hover:border-indigo-500 rounded-lg overflow-hidden"
+                                            >
+                                                <img src={img.data} alt={img.name} className="w-full h-20 object-cover" />
+                                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all flex items-center justify-center">
+                                                    <span className="text-white text-xs font-bold opacity-0 group-hover:opacity-100 bg-black bg-opacity-50 px-2 py-1 rounded">Chọn</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-500 italic">Chưa có hình nào trong thư viện.</p>
+                                )}
+                            </div>
+
+                            <div className="border-t border-gray-100"></div>
+
+                            {/* Option 2: URL */}
+                            <div>
+                                <h4 className="font-bold text-sm text-gray-700 mb-3 flex items-center">
+                                    <LinkIcon className="w-4 h-4 mr-2" />
+                                    Từ URL (Link ảnh trên mạng)
+                                </h4>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={tempImageUrl}
+                                        onChange={(e) => setTempImageUrl(e.target.value)}
+                                        placeholder="https://example.com/image.jpg"
+                                        className="flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            if (editingQuestionImageId) {
+                                                handleUpdateQuestionImage(editingQuestionImageId, tempImageUrl);
+                                            }
+                                        }}
+                                        disabled={!tempImageUrl}
+                                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Sử dụng
+                                    </button>
+                                </div>
+                                <div className="mt-2 text-right">
+                                    <a
+                                        href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(topic)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-blue-600 hover:underline flex items-center justify-end"
+                                    >
+                                        <Search className="w-3 h-3 mr-1" />
+                                        Tìm ảnh trên Google Images
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

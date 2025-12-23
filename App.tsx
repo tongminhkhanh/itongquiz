@@ -95,7 +95,28 @@ const App: React.FC = () => {
         loadData();
         const savedResults = localStorage.getItem('itong_results');
         if (savedResults) setResults(JSON.parse(savedResults));
+
+        // Check URL for quizId
+        const params = new URLSearchParams(window.location.search);
+        const quizId = params.get('quizId');
+        if (quizId) {
+            // Need to wait for quizzes to load, or load them then find
+            // Since loadData is async and sets state, we might need to depend on quizzes
+        }
     }, []);
+
+    // Effect to handle deep linking once quizzes are loaded
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const quizId = params.get('quizId');
+        if (quizId && quizzes.length > 0 && !activeQuiz) {
+            const foundQuiz = quizzes.find(q => q.id === quizId);
+            if (foundQuiz) {
+                setActiveQuiz(foundQuiz);
+                setView('student');
+            }
+        }
+    }, [quizzes]);
 
     const saveQuizToStorage = async (newQuiz: Quiz) => {
         // 1. Save to Local State & Storage
@@ -107,6 +128,16 @@ const App: React.FC = () => {
         if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.startsWith('http')) {
             await saveQuizToSheet(newQuiz, GOOGLE_SCRIPT_URL);
         }
+    };
+
+    const updateQuizInStorage = async (updatedQuiz: Quiz) => {
+        // 1. Update Local State & Storage
+        const updated = quizzes.map(q => q.id === updatedQuiz.id ? updatedQuiz : q);
+        setQuizzes(updated);
+        localStorage.setItem('itong_quizzes', JSON.stringify(updated));
+
+        // 2. Update in Google Sheet (handled in TeacherDashboard, but good to keep sync logic here if refactoring)
+        // For now, TeacherDashboard calls updateQuizInSheet directly, but we MUST update local state here.
     };
 
     const saveResultToStorage = async (newResult: StudentResult) => {
@@ -173,6 +204,7 @@ const App: React.FC = () => {
                 quizzes={quizzes}
                 results={results}
                 onSaveQuiz={saveQuizToStorage}
+                onUpdateQuiz={updateQuizInStorage}
             />
         );
     }
