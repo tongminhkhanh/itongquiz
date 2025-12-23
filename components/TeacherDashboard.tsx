@@ -75,12 +75,14 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
             const questions: Question[] = data.questions
                 .map((q: any, idx: number) => {
                     const base = { id: `q-${Date.now()}-${idx}` };
+                    // Normalize type to uppercase
+                    const qType = (q.type || '').toUpperCase().trim();
                     try {
-                        if (q.type === 'MCQ') {
+                        if (qType === 'MCQ') {
                             // Validate MCQ has required fields
                             if (!q.question || !q.options || !q.correctAnswer) return null;
                             return { ...base, type: QuestionType.MCQ, question: q.question, options: q.options, correctAnswer: q.correctAnswer };
-                        } else if (q.type === 'TRUE_FALSE') {
+                        } else if (qType === 'TRUE_FALSE') {
                             // Validate TRUE_FALSE has required fields
                             if (!q.mainQuestion || !q.items || q.items.length === 0) return null;
                             return {
@@ -89,11 +91,11 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                 mainQuestion: q.mainQuestion,
                                 items: q.items.map((i: any, subIdx: number) => ({ id: `sub-${idx}-${subIdx}`, statement: i.statement, isCorrect: i.isCorrect }))
                             };
-                        } else if (q.type === 'MATCHING') {
+                        } else if (qType === 'MATCHING') {
                             // Validate MATCHING has required fields
                             if (!q.pairs || q.pairs.length === 0) return null;
                             return { ...base, type: QuestionType.MATCHING, question: q.question || "Nối các ý ở cột A với cột B:", mainQuestion: q.question || "Nối các ý ở cột A với cột B:", pairs: q.pairs };
-                        } else if (q.type === 'MULTIPLE_SELECT') {
+                        } else if (qType === 'MULTIPLE_SELECT') {
                             // Validate MULTIPLE_SELECT has required fields
                             if (!q.question || !q.options || !q.correctAnswers || q.correctAnswers.length === 0) return null;
                             return {
@@ -103,13 +105,13 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                 options: q.options,
                                 correctAnswers: q.correctAnswers || []
                             };
-                        } else if (q.type === 'SHORT_ANSWER') {
+                        } else if (qType === 'SHORT_ANSWER') {
                             // Validate SHORT_ANSWER has required fields
                             if (!q.question || !q.correctAnswer) return null;
                             return { ...base, type: QuestionType.SHORT_ANSWER, question: q.question, correctAnswer: q.correctAnswer };
                         } else {
                             // Unknown type - skip
-                            console.warn('Unknown question type:', q.type);
+                            console.warn('Unknown question type:', qType, 'Original:', q.type);
                             return null;
                         }
                     } catch (error) {
@@ -581,6 +583,13 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                                     <p className="text-xs text-green-600 mt-2">
                                                                         Đáp án đúng: {(q as any).correctAnswers?.join(', ') || 'N/A'}
                                                                     </p>
+                                                                </div>
+                                                            )}
+                                                            {/* Fallback for unknown or unrecognized types */}
+                                                            {!['MCQ', 'TRUE_FALSE', 'SHORT_ANSWER', 'MATCHING', 'MULTIPLE_SELECT'].includes(q.type) && (
+                                                                <div className="text-red-500">
+                                                                    <p className="font-medium mb-1">⚠️ Loại câu hỏi không nhận diện: {q.type}</p>
+                                                                    <p className="text-xs">{(q as any).question || (q as any).mainQuestion || 'Không có nội dung'}</p>
                                                                 </div>
                                                             )}
                                                         </div>
