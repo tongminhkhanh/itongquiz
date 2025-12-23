@@ -37,12 +37,14 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
   let difficultyInstructions = '';
   if (levels) {
     difficultyInstructions = `
-    PHAN BO CAU HOI THEO MUC DO (BAT BUOC TUAN THU):
-    - Muc 1 (Nhan biet): ${levels.level1} cau - Hoc sinh nhan biet, nhac lai, mo ta noi dung da hoc
-    - Muc 2 (Thong hieu): ${levels.level2} cau - Hoc sinh ket noi, so sanh, giai thich don gian
-    - Muc 3 (Van dung cao): ${levels.level3} cau - Hoc sinh van dung kien thuc vao tinh huong moi
+    PHAN BO CAU HOI THEO MUC DO (CHI LA HUONG DAN CHO AI, KHONG GHI VAO DE):
+    - Muc 1 (Nhan biet): ${levels.level1} cau - De, quen thuoc
+    - Muc 2 (Thong hieu): ${levels.level2} cau - Trung binh
+    - Muc 3 (Van dung cao): ${levels.level3} cau - Kho, thuc tien
     
-    TONG CONG CHINH XAC: ${levels.level1 + levels.level2 + levels.level3} cau`;
+    TONG CONG: ${levels.level1 + levels.level2 + levels.level3} cau
+    
+    LUU Y QUAN TRONG: KHONG duoc ghi "Muc 1", "Muc 2", "Muc 3", "Nhan biet", "Thong hieu", "Van dung" hay bat ky nhan muc do nao vao trong cau hoi. Chi tao cau hoi binh thuong.`;
   }
 
   return `
