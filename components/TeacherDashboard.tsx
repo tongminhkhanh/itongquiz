@@ -127,7 +127,9 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
 
             // Limit questions to the requested count
             const requestedCount = options.questionCount;
+            console.log(`[Quiz] AI generated ${questions.length} questions, requested ${requestedCount}`);
             const limitedQuestions = questions.slice(0, requestedCount);
+            console.log(`[Quiz] Final question count: ${limitedQuestions.length}`);
 
             const newQuiz: Quiz = {
                 id: crypto.randomUUID(),
