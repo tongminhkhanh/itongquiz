@@ -8,10 +8,11 @@ export interface QuizGenerationOptions {
   questionCount: number;
   questionTypes: QuestionType[];
   difficultyLevels?: {
-    level1: number; // Nhận biết/Thông hiểu thấp
-    level2: number; // Thông hiểu/Vận dụng trực tiếp
-    level3: number; // Vận dụng cao
+    level1: number;
+    level2: number;
+    level3: number;
   };
+  imageLibrary?: Array<{ id: string; name: string; }>;
 }
 
 // Build the prompt for quiz generation
@@ -32,6 +33,7 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
 
   const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');
   const typesList = types.join(', ');
+  const images = options?.imageLibrary || [];
 
   // Build difficulty level instructions
   let difficultyInstructions = '';
@@ -47,6 +49,20 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     LUU Y QUAN TRONG: KHONG duoc ghi "Muc 1", "Muc 2", "Muc 3", "Nhan biet", "Thong hieu", "Van dung" hay bat ky nhan muc do nao vao trong cau hoi. Chi tao cau hoi binh thuong.`;
   }
 
+  // Build image library instructions
+  let imageInstructions = '';
+  if (images.length > 0) {
+    const imageList = images.map((img, idx) => `${idx + 1}. "${img.name}" (ID: ${img.id})`).join('\n    ');
+    imageInstructions = `
+    
+    THU VIEN HINH ANH DA UPLOAD (co the gan vao cau hoi):
+    ${imageList}
+    
+    NEU cau hoi can hinh anh minh hoa, them truong "image" voi gia tri la ID cua hinh (vi du: "image": "img-123...").
+    NEU khong co hinh phu hop trong thu vien, co the de trong hoac dung URL anh tu web (bat dau bang http).
+    Chi gan hinh khi thuc su can thiet, dac biet cho cau hoi ve hinh hoc, do dai, do vat cu the.`;
+  }
+
   return `
     Tao de kiem tra cho hoc sinh Lop ${classLevel}.
     
@@ -55,6 +71,7 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     - Chu de: "${topic}"
     - Tong so luong cau hoi can tao: CHINH XAC ${count} cau.
     ${difficultyInstructions}
+    ${imageInstructions}
     
     ⚠️ CHỈ ĐƯỢC PHÉP SỬ DỤNG CÁC DẠNG CÂU HỎI SAU (KHÔNG ĐƯỢC DÙNG DẠNG KHÁC):
     - ${typesDescription}

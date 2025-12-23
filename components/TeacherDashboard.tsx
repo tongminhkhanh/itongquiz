@@ -172,9 +172,10 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                 questionTypes: enabledTypes,
                 difficultyLevels: {
                     level1: level1Count, // Nhận biết
-                    level2: level2Count, // Thông hiểu
-                    level3: level3Count  // Vận dụng cao
-                }
+                    level2: level2Count,
+                    level3: level3Count
+                },
+                imageLibrary: imageLibrary.map(img => ({ id: img.id, name: img.name }))
             };
 
             const data = await generateQuiz(topic, classLevel, content, attachedFile, options, apiKey, aiProvider);
@@ -185,40 +186,50 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                     const base = { id: `q-${Date.now()}-${idx}` };
                     // Normalize type to uppercase
                     const qType = (q.type || '').toUpperCase().trim();
+
+                    // Process image: convert imageId to Base64 data or keep URL
+                    let imageField: string | undefined;
+                    if (q.image) {
+                        if (q.image.startsWith('http')) {
+                            imageField = q.image;
+                        } else {
+                            const foundImg = imageLibrary.find(img => img.id === q.image);
+                            if (foundImg) {
+                                imageField = foundImg.data;
+                            }
+                        }
+                    }
+
                     try {
                         if (qType === 'MCQ') {
-                            // Validate MCQ has required fields
                             if (!q.question || !q.options || !q.correctAnswer) return null;
-                            return { ...base, type: QuestionType.MCQ, question: q.question, options: q.options, correctAnswer: q.correctAnswer };
+                            return { ...base, type: QuestionType.MCQ, question: q.question, options: q.options, correctAnswer: q.correctAnswer, image: imageField };
                         } else if (qType === 'TRUE_FALSE') {
-                            // Validate TRUE_FALSE has required fields
                             if (!q.mainQuestion || !q.items || q.items.length === 0) return null;
                             return {
                                 ...base,
                                 type: QuestionType.TRUE_FALSE,
                                 mainQuestion: q.mainQuestion,
-                                items: q.items.map((i: any, subIdx: number) => ({ id: `sub-${idx}-${subIdx}`, statement: i.statement, isCorrect: i.isCorrect }))
+                                items: q.items.map((i: any, subIdx: number) => ({ id: `sub-${idx}-${subIdx}`, statement: i.statement, isCorrect: i.isCorrect })),
+                                image: imageField
                             };
                         } else if (qType === 'MATCHING') {
-                            // Validate MATCHING has required fields
                             if (!q.pairs || q.pairs.length === 0) return null;
-                            return { ...base, type: QuestionType.MATCHING, question: q.question || "Nối các ý ở cột A với cột B:", mainQuestion: q.question || "Nối các ý ở cột A với cột B:", pairs: q.pairs };
+                            return { ...base, type: QuestionType.MATCHING, question: q.question || "Noi cac y o cot A voi cot B:", mainQuestion: q.question || "Noi cac y o cot A voi cot B:", pairs: q.pairs, image: imageField };
                         } else if (qType === 'MULTIPLE_SELECT') {
-                            // Validate MULTIPLE_SELECT has required fields
                             if (!q.question || !q.options || !q.correctAnswers || q.correctAnswers.length === 0) return null;
                             return {
                                 ...base,
                                 type: QuestionType.MULTIPLE_SELECT,
                                 question: q.question,
                                 options: q.options,
-                                correctAnswers: q.correctAnswers || []
+                                correctAnswers: q.correctAnswers || [],
+                                image: imageField
                             };
                         } else if (qType === 'SHORT_ANSWER') {
-                            // Validate SHORT_ANSWER has required fields
                             if (!q.question || !q.correctAnswer) return null;
-                            return { ...base, type: QuestionType.SHORT_ANSWER, question: q.question, correctAnswer: q.correctAnswer };
+                            return { ...base, type: QuestionType.SHORT_ANSWER, question: q.question, correctAnswer: q.correctAnswer, image: imageField };
                         } else {
-                            // Unknown type - skip
                             console.warn('Unknown question type:', qType, 'Original:', q.type);
                             return null;
                         }
