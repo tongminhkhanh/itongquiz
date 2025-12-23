@@ -7,6 +7,11 @@ export interface QuizGenerationOptions {
   title: string;
   questionCount: number;
   questionTypes: QuestionType[];
+  difficultyLevels?: {
+    level1: number; // Nhận biết/Thông hiểu thấp
+    level2: number; // Thông hiểu/Vận dụng trực tiếp
+    level3: number; // Vận dụng cao
+  };
 }
 
 // Build the prompt for quiz generation
@@ -14,6 +19,7 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
   const title = options?.title || `Kiểm tra: ${topic}`;
   const count = options?.questionCount || 10;
   const types = options?.questionTypes || [];
+  const levels = options?.difficultyLevels;
 
   // Map question types to Vietnamese descriptions for better AI understanding
   const typeDescriptions: Record<string, string> = {
@@ -27,13 +33,26 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
   const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');
   const typesList = types.join(', ');
 
-  return `
-    Tạo đề kiểm tra cho học sinh Lớp ${classLevel}.
+  // Build difficulty level instructions
+  let difficultyInstructions = '';
+  if (levels) {
+    difficultyInstructions = `
+    PHAN BO CAU HOI THEO MUC DO (BAT BUOC TUAN THU):
+    - Muc 1 (Nhan biet): ${levels.level1} cau - Hoc sinh nhan biet, nhac lai, mo ta noi dung da hoc
+    - Muc 2 (Thong hieu): ${levels.level2} cau - Hoc sinh ket noi, so sanh, giai thich don gian
+    - Muc 3 (Van dung cao): ${levels.level3} cau - Hoc sinh van dung kien thuc vao tinh huong moi
     
-    THÔNG TIN CẤU HÌNH:
-    - Tiêu đề bài kiểm tra: "${title}"
-    - Chủ đề: "${topic}"
-    - Tổng số lượng câu hỏi cần tạo: ${count} câu.
+    TONG CONG CHINH XAC: ${levels.level1 + levels.level2 + levels.level3} cau`;
+  }
+
+  return `
+    Tao de kiem tra cho hoc sinh Lop ${classLevel}.
+    
+    THONG TIN CAU HINH:
+    - Tieu de bai kiem tra: "${title}"
+    - Chu de: "${topic}"
+    - Tong so luong cau hoi can tao: CHINH XAC ${count} cau.
+    ${difficultyInstructions}
     
     ⚠️ CHỈ ĐƯỢC PHÉP SỬ DỤNG CÁC DẠNG CÂU HỎI SAU (KHÔNG ĐƯỢC DÙNG DẠNG KHÁC):
     - ${typesDescription}

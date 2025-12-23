@@ -32,6 +32,11 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
     });
     const [manualTimeLimit, setManualTimeLimit] = useState<number | ''>('');
 
+    // Difficulty levels state
+    const [level1Count, setLevel1Count] = useState<number>(3); // Nhận biết/Thông hiểu thấp
+    const [level2Count, setLevel2Count] = useState<number>(5); // Thông hiểu/Vận dụng trực tiếp
+    const [level3Count, setLevel3Count] = useState<number>(2); // Vận dụng cao
+
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedQuiz, setGeneratedQuiz] = useState<Quiz | null>(null);
 
@@ -65,8 +70,13 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
         try {
             const options: QuizGenerationOptions = {
                 title: quizTitle || `Kiểm tra: ${topic}`,
-                questionCount: questionCount,
-                questionTypes: enabledTypes
+                questionCount: level1Count + level2Count + level3Count, // Total from all levels
+                questionTypes: enabledTypes,
+                difficultyLevels: {
+                    level1: level1Count, // Nhận biết
+                    level2: level2Count, // Thông hiểu
+                    level3: level3Count  // Vận dụng cao
+                }
             };
 
             const data = await generateQuiz(topic, classLevel, content, attachedFile, options, apiKey, aiProvider);
@@ -369,9 +379,63 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                 onChange={e => setSelectedTypes(p => ({ ...p, [QuestionType.MULTIPLE_SELECT]: e.target.checked }))}
                                                 className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
                                             />
-                                            <span className="text-gray-700">Nhiều đáp án</span>
+                                            <span className="text-gray-700">Nhieu dap an</span>
                                         </label>
                                     </div>
+                                </div>
+
+                                {/* Difficulty Levels Configuration */}
+                                <div className="bg-green-50 p-4 rounded-xl border border-green-200">
+                                    <label className="block text-sm font-bold text-green-800 mb-3">
+                                        Phan bo cau hoi theo muc do:
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                Muc 1: Nhan biet
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={50}
+                                                value={level1Count}
+                                                onChange={e => setLevel1Count(Number(e.target.value) || 0)}
+                                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-center"
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">De, quen thuoc</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                Muc 2: Thong hieu
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={50}
+                                                value={level2Count}
+                                                onChange={e => setLevel2Count(Number(e.target.value) || 0)}
+                                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-center"
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">Trung binh</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                Muc 3: Van dung cao
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={50}
+                                                value={level3Count}
+                                                onChange={e => setLevel3Count(Number(e.target.value) || 0)}
+                                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-center"
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">Kho, thuc tien</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-sm text-green-700 font-bold mt-3 text-center">
+                                        Tong so cau: {level1Count + level2Count + level3Count}
+                                    </p>
                                 </div>
 
                                 <div>
