@@ -226,6 +226,17 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                         } else if (qType === 'SHORT_ANSWER') {
                             if (!q.question || !q.correctAnswer) return null;
                             return { ...base, type: QuestionType.SHORT_ANSWER, question: q.question, correctAnswer: q.correctAnswer, image: imageField };
+                        } else if (qType === 'DRAG_DROP') {
+                            if (!q.text || !q.blanks || q.blanks.length === 0) return null;
+                            return {
+                                ...base,
+                                type: QuestionType.DRAG_DROP,
+                                question: q.question || "Điền từ thích hợp vào chỗ trống:",
+                                text: q.text,
+                                blanks: q.blanks,
+                                distractors: q.distractors || [],
+                                image: imageField
+                            };
                         } else {
                             console.warn('Unknown question type:', qType, 'Original:', q.type);
                             return null;
@@ -262,10 +273,10 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
             // Limit questions to the requested count
             const requestedCount = options.questionCount;
             console.log(`[Quiz] AI generated ${questions.length} questions, requested ${requestedCount}`);
-            
+
             // SHUFFLE QUESTIONS to avoid consecutive same-type questions
             const shuffledQuestions = questions.sort(() => Math.random() - 0.5);
-            
+
             const limitedQuestions = shuffledQuestions.slice(0, requestedCount);
             console.log(`[Quiz] Final question count: ${limitedQuestions.length}`);
 
@@ -446,23 +457,13 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-1">Số lượng câu</label>
-                                        <input
-                                            type="number"
-                                            min={5} max={30}
-                                            value={questionCount}
-                                            onChange={e => setQuestionCount(Number(e.target.value))}
-                                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                                        />
-                                    </div>
-                                    <div className="col-span-2">
                                         <label className="block text-sm font-bold text-gray-700 mb-1">Thời gian làm bài (phút)</label>
                                         <input
                                             type="number"
                                             min={1}
                                             value={manualTimeLimit}
                                             onChange={e => setManualTimeLimit(Number(e.target.value))}
-                                            placeholder="Tự động tính theo số câu hỏi (1.5 phút/câu)"
+                                            placeholder="Tự động tính"
                                             className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                                         />
                                     </div>
@@ -536,7 +537,16 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                 onChange={e => setSelectedTypes(p => ({ ...p, [QuestionType.MULTIPLE_SELECT]: e.target.checked }))}
                                                 className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
                                             />
-                                            <span className="text-gray-700">Nhieu dap an</span>
+                                            <span className="text-gray-700">Chọn nhiều đáp án</span>
+                                        </label>
+                                        <label className="flex items-center space-x-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedTypes[QuestionType.DRAG_DROP]}
+                                                onChange={e => setSelectedTypes(p => ({ ...p, [QuestionType.DRAG_DROP]: e.target.checked }))}
+                                                className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
+                                            />
+                                            <span className="text-gray-700">Kéo thả điền khuyết</span>
                                         </label>
                                     </div>
                                 </div>
@@ -740,19 +750,6 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                setAiProvider('openai');
-                                                localStorage.setItem('ai_provider', 'openai');
-                                            }}
-                                            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${aiProvider === 'openai'
-                                                ? 'bg-green-600 text-white shadow-lg ring-2 ring-green-200'
-                                                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            <span className="mr-2">🟢</span> OpenAI (GPT-4o)
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
                                                 setAiProvider('llm-mux');
                                                 localStorage.setItem('ai_provider', 'llm-mux');
                                             }}
@@ -851,8 +848,29 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                                     </p>
                                                                 </div>
                                                             )}
+                                                            {q.type === 'DRAG_DROP' && (
+                                                                <div>
+                                                                    <p className="font-medium mb-2">{(q as any).question}</p>
+                                                                    <div className="p-3 bg-gray-50 rounded border border-gray-200 text-sm leading-relaxed">
+                                                                        {((q as any).text || "").split(/(\[.*?\])/g).map((part: string, idx: number) => {
+                                                                            if (part.startsWith('[') && part.endsWith(']')) {
+                                                                                return <span key={idx} className="font-bold text-blue-600 mx-1">{part}</span>;
+                                                                            }
+                                                                            return <span key={idx}>{part}</span>;
+                                                                        })}
+                                                                    </div>
+                                                                    <div className="mt-2 text-xs text-gray-500">
+                                                                        <span className="font-bold">Từ cần điền:</span> {(q as any).blanks?.join(', ') || 'Không có'}
+                                                                    </div>
+                                                                    {(q as any).distractors && (q as any).distractors.length > 0 && (
+                                                                        <div className="mt-1 text-xs text-gray-500">
+                                                                            <span className="font-bold">Từ gây nhiễu:</span> {(q as any).distractors.join(', ')}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                             {/* Fallback for unknown or unrecognized types */}
-                                                            {!['MCQ', 'TRUE_FALSE', 'SHORT_ANSWER', 'MATCHING', 'MULTIPLE_SELECT'].includes(q.type) && (
+                                                            {!['MCQ', 'TRUE_FALSE', 'SHORT_ANSWER', 'MATCHING', 'MULTIPLE_SELECT', 'DRAG_DROP'].includes(q.type) && (
                                                                 <div className="text-red-500">
                                                                     <p className="font-medium mb-1">Loai cau hoi khong nhan dien: {q.type}</p>
                                                                     <p className="text-xs">{(q as any).question || (q as any).mainQuestion || 'Khong co noi dung'}</p>
@@ -1037,92 +1055,94 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
             </div>
 
             {/* Image Selection Modal */}
-            {editingQuestionImageId && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                            <h3 className="font-bold text-lg text-gray-800">Chọn hình ảnh cho câu hỏi</h3>
-                            <button onClick={() => setEditingQuestionImageId(null)} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-6">
-                            {/* Option 1: Library */}
-                            <div>
-                                <h4 className="font-bold text-sm text-gray-700 mb-3 flex items-center">
-                                    <List className="w-4 h-4 mr-2" />
-                                    Từ thư viện đã upload ({imageLibrary.length})
-                                </h4>
-                                {imageLibrary.length > 0 ? (
-                                    <div className="grid grid-cols-4 gap-3 max-h-40 overflow-y-auto p-2 border border-gray-100 rounded-lg">
-                                        {imageLibrary.map(img => (
-                                            <div
-                                                key={img.id}
-                                                onClick={() => {
-                                                    if (editingQuestionImageId) {
-                                                        handleUpdateQuestionImage(editingQuestionImageId, img.data);
-                                                    }
-                                                }}
-                                                className="cursor-pointer group relative border-2 border-transparent hover:border-indigo-500 rounded-lg overflow-hidden"
-                                            >
-                                                <img src={img.data} alt={img.name} className="w-full h-20 object-cover" />
-                                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all flex items-center justify-center">
-                                                    <span className="text-white text-xs font-bold opacity-0 group-hover:opacity-100 bg-black bg-opacity-50 px-2 py-1 rounded">Chọn</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-gray-500 italic">Chưa có hình nào trong thư viện.</p>
-                                )}
+            {
+                editingQuestionImageId && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                            <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                                <h3 className="font-bold text-lg text-gray-800">Chọn hình ảnh cho câu hỏi</h3>
+                                <button onClick={() => setEditingQuestionImageId(null)} className="text-gray-400 hover:text-gray-600">
+                                    <X className="w-6 h-6" />
+                                </button>
                             </div>
 
-                            <div className="border-t border-gray-100"></div>
-
-                            {/* Option 2: URL */}
-                            <div>
-                                <h4 className="font-bold text-sm text-gray-700 mb-3 flex items-center">
-                                    <LinkIcon className="w-4 h-4 mr-2" />
-                                    Từ URL (Link ảnh trên mạng)
-                                </h4>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={tempImageUrl}
-                                        onChange={(e) => setTempImageUrl(e.target.value)}
-                                        placeholder="https://example.com/image.jpg"
-                                        className="flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                    />
-                                    <button
-                                        onClick={() => {
-                                            if (editingQuestionImageId) {
-                                                handleUpdateQuestionImage(editingQuestionImageId, tempImageUrl);
-                                            }
-                                        }}
-                                        disabled={!tempImageUrl}
-                                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Sử dụng
-                                    </button>
+                            <div className="p-6 space-y-6">
+                                {/* Option 1: Library */}
+                                <div>
+                                    <h4 className="font-bold text-sm text-gray-700 mb-3 flex items-center">
+                                        <List className="w-4 h-4 mr-2" />
+                                        Từ thư viện đã upload ({imageLibrary.length})
+                                    </h4>
+                                    {imageLibrary.length > 0 ? (
+                                        <div className="grid grid-cols-4 gap-3 max-h-40 overflow-y-auto p-2 border border-gray-100 rounded-lg">
+                                            {imageLibrary.map(img => (
+                                                <div
+                                                    key={img.id}
+                                                    onClick={() => {
+                                                        if (editingQuestionImageId) {
+                                                            handleUpdateQuestionImage(editingQuestionImageId, img.data);
+                                                        }
+                                                    }}
+                                                    className="cursor-pointer group relative border-2 border-transparent hover:border-indigo-500 rounded-lg overflow-hidden"
+                                                >
+                                                    <img src={img.data} alt={img.name} className="w-full h-20 object-cover" />
+                                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all flex items-center justify-center">
+                                                        <span className="text-white text-xs font-bold opacity-0 group-hover:opacity-100 bg-black bg-opacity-50 px-2 py-1 rounded">Chọn</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 italic">Chưa có hình nào trong thư viện.</p>
+                                    )}
                                 </div>
-                                <div className="mt-2 text-right">
-                                    <a
-                                        href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(topic)}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs text-blue-600 hover:underline flex items-center justify-end"
-                                    >
-                                        <Search className="w-3 h-3 mr-1" />
-                                        Tìm ảnh trên Google Images
-                                    </a>
+
+                                <div className="border-t border-gray-100"></div>
+
+                                {/* Option 2: URL */}
+                                <div>
+                                    <h4 className="font-bold text-sm text-gray-700 mb-3 flex items-center">
+                                        <LinkIcon className="w-4 h-4 mr-2" />
+                                        Từ URL (Link ảnh trên mạng)
+                                    </h4>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={tempImageUrl}
+                                            onChange={(e) => setTempImageUrl(e.target.value)}
+                                            placeholder="https://example.com/image.jpg"
+                                            className="flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                if (editingQuestionImageId) {
+                                                    handleUpdateQuestionImage(editingQuestionImageId, tempImageUrl);
+                                                }
+                                            }}
+                                            disabled={!tempImageUrl}
+                                            className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Sử dụng
+                                        </button>
+                                    </div>
+                                    <div className="mt-2 text-right">
+                                        <a
+                                            href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(topic)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-blue-600 hover:underline flex items-center justify-end"
+                                        >
+                                            <Search className="w-3 h-3 mr-1" />
+                                            Tìm ảnh trên Google Images
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

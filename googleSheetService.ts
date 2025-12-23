@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import { Quiz, Question, QuestionType, MCQQuestion, TrueFalseQuestion, ShortAnswerQuestion, FillInBlankQuestion, TableFillQuestion, Teacher } from './types';
+import { Quiz, Question, QuestionType, MCQQuestion, TrueFalseQuestion, ShortAnswerQuestion, Teacher } from './types';
 
 // Helper to fetch CSV data
 const fetchCSV = async (url: string): Promise<any[]> => {
@@ -85,6 +85,15 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                     question: row.question,
                     options: row.options ? row.options.split('|').map((o: string) => o.trim()) : [],
                     correctAnswers: row.correctAnswer ? JSON.parse(row.correctAnswer) : []
+                } as any;
+            } else if (row.type === QuestionType.DRAG_DROP) {
+                question = {
+                    id: row.id,
+                    type: QuestionType.DRAG_DROP,
+                    question: row.question || "Điền từ thích hợp vào chỗ trống:",
+                    text: row.text || "",
+                    blanks: row.blanks ? JSON.parse(row.blanks) : [],
+                    distractors: row.distractors ? JSON.parse(row.distractors) : []
                 } as any;
             }
 

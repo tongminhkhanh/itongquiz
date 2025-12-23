@@ -21,6 +21,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
   // Shuffled questions for random order
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Fisher-Yates shuffle algorithm
   const shuffleArray = <T,>(array: T[]): T[] => {
@@ -86,29 +87,17 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         const selectedLeft = newAnswers.selectedLeft;
         if (selectedLeft) {
           // If a left item is selected, try to form a pair
-          // Check if this right item is already paired with another left item
-          const existingLeftForThisRight = Object.keys(newAnswers).find(key => newAnswers[key] === item && key !== 'selectedLeft');
-          if (existingLeftForThisRight) {
-            // If it is, remove the old pair
-            delete newAnswers[existingLeftForThisRight];
-          }
 
           // Check if the selectedLeft is already paired
-          if (newAnswers[selectedLeft]) {
-            // If it is, remove the old right item it was paired with
-            // (This logic might need refinement based on desired UX for re-pairing)
-          }
+          // (We overwrite the old pair for this left item automatically)
 
           // Form the new pair
+          // Note: We allow multiple left items to map to the same right item (Many-to-One)
           newAnswers[selectedLeft] = item;
           delete newAnswers.selectedLeft; // Clear selected left item
         } else {
           // If no left item is selected, and a right item is clicked,
-          // check if it's part of an existing pair and remove that pair.
-          const leftItemPairedWithThisRight = Object.keys(newAnswers).find(key => newAnswers[key] === item && key !== 'selectedLeft');
-          if (leftItemPairedWithThisRight) {
-            delete newAnswers[leftItemPairedWithThisRight];
-          }
+          // do nothing (or maybe highlight it? but for now we require Left -> Right flow)
         }
       }
       return { ...prev, [questionId]: newAnswers };
@@ -171,6 +160,29 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
           studentAns.every(val => correctAns.includes(val));
 
         if (isCorrect) correctCount++;
+      } else if (q.type === QuestionType.DRAG_DROP) {
+        totalItems++;
+        const studentAns = (answers[q.id] as Record<number, string>) || {};
+        const text = q.text || "";
+        const parts = text.split(/(\[.*?\])/g);
+        const blanks: number[] = [];
+        parts.forEach((part, idx) => {
+          if (part.startsWith('[') && part.endsWith(']')) {
+            blanks.push(idx);
+          }
+        });
+
+        // Check if all blanks are filled correctly
+        let allCorrect = true;
+        blanks.forEach((blankIdx, i) => {
+          const correctWord = q.blanks[i]; // The correct word for this blank
+          const studentWord = studentAns[blankIdx];
+          if (studentWord !== correctWord) {
+            allCorrect = false;
+          }
+        });
+
+        if (allCorrect && blanks.length > 0) correctCount++;
       }
     });
 
@@ -429,6 +441,65 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                         </div>
                       );
                     })()}
+                    {q.type === QuestionType.DRAG_DROP && (() => {
+                      const studentAns = (answers[q.id] as Record<number, string>) || {};
+                      const text = (q as any).text || "";
+                      const parts = text.split(/(\[.*?\])/g);
+                      const blanks: number[] = [];
+                      parts.forEach((part: string, idx: number) => {
+                        if (part.startsWith('[') && part.endsWith(']')) {
+                          blanks.push(idx);
+                        }
+                      });
+                      const correctBlanks = (q as any).blanks || [];
+
+                      // Check if all blanks are filled correctly
+                      let allCorrect = true;
+                      blanks.forEach((blankIdx, i) => {
+                        const correctWord = correctBlanks[i];
+                        const studentWord = studentAns[blankIdx];
+                        if (studentWord !== correctWord) {
+                          allCorrect = false;
+                        }
+                      });
+
+                      return (
+                        <div>
+                          <p className="font-bold mb-2">Câu trả lời của em:</p>
+                          <div className="text-sm leading-relaxed bg-gray-50 p-3 rounded-lg">
+                            {parts.map((part, idx) => {
+                              if (part.startsWith('[') && part.endsWith(']')) {
+                                const blankIndex = blanks.indexOf(idx);
+                                const correctWord = correctBlanks[blankIndex];
+                                const studentWord = studentAns[idx];
+                                const isBlankCorrect = studentWord === correctWord;
+                                return (
+                                  <span
+                                    key={idx}
+                                    className={`inline-block px-2 py-1 rounded mx-1 font-bold ${isBlankCorrect
+                                      ? 'bg-green-100 text-green-700 border border-green-300'
+                                      : 'bg-red-100 text-red-700 border border-red-300'
+                                      }`}
+                                  >
+                                    {studentWord || "___"}
+                                    {isBlankCorrect && " ✓"}
+                                  </span>
+                                );
+                              }
+                              return <span key={idx}>{part}</span>;
+                            })}
+                          </div>
+                          {!allCorrect && (
+                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                              <p className="text-yellow-800 text-xs">
+                                💡 <strong>Gợi ý:</strong> Em hãy đọc lại câu và chọn từ phù hợp với ngữ cảnh.
+                              </p>
+                            </div>
+                          )}
+                          {allCorrect && <span className="text-green-600 font-bold text-sm mt-2 block">✓ Chính xác!</span>}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
@@ -447,289 +518,502 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
   // QUIZ TAKING VIEW
   return (
-    <div
-      className="min-h-screen p-4 pb-24 bg-cover bg-center bg-fixed bg-no-repeat"
-      style={{ backgroundImage: "url('/quiz-background.jpg')" }}
-    >
-      {/* Overlay for better readability */}
-      <div className="fixed inset-0 bg-white/40 backdrop-blur-[1px] -z-10"></div>
-
-      <div className="max-w-3xl mx-auto">
-        <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-10 px-4 py-3 flex justify-between items-center">
-          <div>
-            <span className="text-gray-500 text-sm">Thí sinh:</span>
-            <span className="font-bold text-gray-800 ml-1">{studentName} ({studentClass})</span>
-          </div>
-          <div className={`font-mono text-xl font-bold ${timeLeft < 300 ? 'text-red-500 animate-pulse' : 'text-blue-600'}`}>
-            {formatTime(timeLeft)}
-          </div>
+    <div className="min-h-screen bg-gray-100 font-sans">
+      {/* Header - Minimalist */}
+      <div className="bg-white shadow-sm border-b px-6 py-4 flex justify-between items-center sticky top-0 z-20">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">{quiz.title}</h1>
+          <p className="text-lg text-gray-500 mt-1">Thí sinh: <span className="font-semibold text-gray-700">{studentName}</span> - Lớp: <span className="font-semibold text-gray-700">{studentClass}</span></p>
         </div>
+        {/* Timer removed from header as requested */}
+      </div>
 
-        <div className="mt-16 space-y-8">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 flex flex-col md:flex-row gap-6">
+        {/* LEFT COLUMN: Question List */}
+        <div className="flex-1 space-y-6 pb-20 md:pb-0">
           {shuffledQuestions.map((q, index) => (
-            <div key={q.id} className="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-gray-100">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="bg-orange-100 text-orange-600 font-bold rounded-lg w-8 h-8 flex items-center justify-center flex-shrink-0">
-                  {index + 1}
-                </div>
-                <div className="flex-1">
+            <div key={q.id} id={`question-${index}`} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 scroll-mt-24">
+              <div className="mb-4">
+                <h3 className="text-lg font-bold text-gray-800 mb-2">Câu hỏi {index + 1}</h3>
+                <div className="text-gray-700 font-medium">
                   {q.type === QuestionType.TRUE_FALSE || q.type === QuestionType.MATCHING ? (
-                    <h3 className="text-lg font-bold text-gray-800">{q.mainQuestion}</h3>
+                    <p>{q.mainQuestion}</p>
                   ) : (
-                    <h3 className="text-lg font-bold text-gray-800">{(q as any).question}</h3>
+                    <p>{(q as any).question}</p>
                   )}
+                </div>
 
-                  {q.image && (
-                    <div className="mt-3 mb-4">
-                      <img
-                        src={q.image}
-                        alt="Question Illustration"
-                        className="max-h-64 rounded-lg border border-gray-200 object-contain"
+                {q.image && (
+                  <div className="mt-3">
+                    <img
+                      src={q.image}
+                      alt="Question Illustration"
+                      className="max-h-64 rounded-lg border border-gray-200 object-contain"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Answer Section */}
+              <div className="mt-4 pl-0 md:pl-4 border-l-0 md:border-l-4 border-orange-100">
+                {q.type === QuestionType.MCQ && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {q.options.map((opt, idx) => {
+                      const label = String.fromCharCode(65 + idx); // A, B, C, D
+                      const isSelected = answers[q.id] === label;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => handleAnswerChange(q.id, label)}
+                          className={`text-left p-3 rounded-lg border transition-all flex items-center ${isSelected
+                            ? 'border-orange-500 bg-orange-50 text-orange-900 ring-1 ring-orange-500'
+                            : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
+                            }`}
+                        >
+                          <span className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mr-3 flex-shrink-0 ${isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-gray-300 text-gray-500'
+                            }`}>
+                            {label}
+                          </span>
+                          <span>{opt}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {q.type === QuestionType.SHORT_ANSWER && (
+                  <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Trả lời:</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={answers[q.id] || ''}
+                        onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                        className="flex-1 p-2 border-b-2 border-gray-400 bg-transparent focus:border-orange-500 outline-none font-mono text-lg"
+                        placeholder="Nhập đáp án..."
                       />
                     </div>
-                  )}
-
-                  {/* Render Inputs */}
-                  <div className="mt-4">
-                    {q.type === QuestionType.MCQ && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {q.options.map((opt, idx) => {
-                          const label = String.fromCharCode(65 + idx); // A, B, C, D
-                          const isSelected = answers[q.id] === label;
-                          return (
-                            <button
-                              key={idx}
-                              onClick={() => handleAnswerChange(q.id, label)}
-                              className={`text-left p-4 rounded-xl border-2 transition-all flex items-center ${isSelected
-                                ? 'border-orange-500 bg-orange-50 text-orange-900'
-                                : 'border-gray-200 hover:border-orange-300'
-                                }`}
-                            >
-                              <span className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center text-xs font-bold ${isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-gray-300 text-gray-400'
-                                }`}>
-                                {label}
-                              </span>
-                              {opt}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {q.type === QuestionType.SHORT_ANSWER && (
-                      <div>
-                        <input
-                          type="text"
-                          maxLength={4}
-                          value={answers[q.id] || ''}
-                          onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                          className="w-full md:w-1/2 p-3 border-2 border-gray-300 rounded-xl text-lg font-mono focus:border-orange-500 outline-none uppercase"
-                          placeholder="Nhập đáp án..."
-                        />
-                        <p className="text-xs text-gray-400 mt-2">Tối đa 4 ký tự/số.</p>
-                      </div>
-                    )}
-
-                    {q.type === QuestionType.TRUE_FALSE && (
-                      <div className="space-y-3">
-                        {q.items.map((item, i) => {
-                          const val = answers[q.id]?.[item.id];
-                          return (
-                            <div key={item.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                              <span className="text-gray-700 font-medium mr-4 flex-1">
-                                {String.fromCharCode(97 + i)}. {item.statement}
-                              </span>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => handleAnswerChange(q.id, true, item.id)}
-                                  className={`px-3 py-1 rounded font-bold text-sm ${val === true ? 'bg-green-500 text-white' : 'bg-white border border-gray-300 text-gray-500'}`}
-                                >Đ</button>
-                                <button
-                                  onClick={() => handleAnswerChange(q.id, false, item.id)}
-                                  className={`px-3 py-1 rounded font-bold text-sm ${val === false ? 'bg-red-500 text-white' : 'bg-white border border-gray-300 text-gray-500'}`}
-                                >S</button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {q.type === QuestionType.MATCHING && (() => {
-                      // Define colors for pairs
-                      const pairColors = [
-                        { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-700' },
-                        { bg: 'bg-green-100', border: 'border-green-500', text: 'text-green-700' },
-                        { bg: 'bg-purple-100', border: 'border-purple-500', text: 'text-purple-700' },
-                        { bg: 'bg-orange-100', border: 'border-orange-500', text: 'text-orange-700' },
-                        { bg: 'bg-pink-100', border: 'border-pink-500', text: 'text-pink-700' },
-                        { bg: 'bg-yellow-100', border: 'border-yellow-500', text: 'text-yellow-700' },
-                        { bg: 'bg-teal-100', border: 'border-teal-500', text: 'text-teal-700' },
-                        { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-700' },
-                      ];
-
-                      // Build a map of left -> colorIndex for paired items
-                      const currentAnswers = answers[q.id] || {};
-                      const pairedLeftItems = Object.keys(currentAnswers).filter(key => key !== 'selectedLeft' && currentAnswers[key]);
-                      const leftToColorIndex: Record<string, number> = {};
-                      pairedLeftItems.forEach((left, idx) => {
-                        leftToColorIndex[left] = idx % pairColors.length;
-                      });
-
-                      // Build a map of right -> colorIndex
-                      const rightToColorIndex: Record<string, number> = {};
-                      pairedLeftItems.forEach(left => {
-                        const right = currentAnswers[left];
-                        if (right && leftToColorIndex[left] !== undefined) {
-                          rightToColorIndex[right] = leftToColorIndex[left];
-                        }
-                      });
-
-                      return (
-                        <div className="mt-4">
-                          <div className="grid grid-cols-2 gap-8">
-                            <div className="space-y-3">
-                              <p className="font-bold text-blue-600 text-center">Cột A</p>
-                              {q.pairs.map((pair) => {
-                                const isSelectedLeft = currentAnswers.selectedLeft === pair.left;
-                                const isPaired = currentAnswers[pair.left] !== undefined;
-                                const colorIdx = leftToColorIndex[pair.left];
-                                const color = isPaired && colorIdx !== undefined ? pairColors[colorIdx] : null;
-
-                                return (
-                                  <div
-                                    key={pair.left}
-                                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all font-medium ${isSelectedLeft
-                                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300'
-                                      : color
-                                        ? `${color.border} ${color.bg} ${color.text}`
-                                        : 'border-gray-200 hover:border-blue-300'
-                                      }`}
-                                    onClick={() => handleMatchingClick(q.id, pair.left, 'left')}
-                                  >
-                                    {color && <span className="mr-2">●</span>}
-                                    {pair.left}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            <div className="space-y-3">
-                              <p className="font-bold text-orange-600 text-center">Cột B</p>
-                              {[...q.pairs].sort((a, b) => a.right.localeCompare(b.right)).map((pair) => {
-                                const colorIdx = rightToColorIndex[pair.right];
-                                const color = colorIdx !== undefined ? pairColors[colorIdx] : null;
-
-                                return (
-                                  <div
-                                    key={pair.right}
-                                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all font-medium ${color
-                                      ? `${color.border} ${color.bg} ${color.text}`
-                                      : 'border-gray-200 hover:border-orange-300'
-                                      }`}
-                                    onClick={() => handleMatchingClick(q.id, pair.right, 'right')}
-                                  >
-                                    {color && <span className="mr-2">●</span>}
-                                    {pair.right}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* Legend - show paired items */}
-                          {pairedLeftItems.length > 0 && (
-                            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                              <p className="text-xs font-bold text-gray-600 mb-2">Đã nối:</p>
-                              <div className="flex flex-wrap gap-2">
-                                {pairedLeftItems.map(left => {
-                                  const colorIdx = leftToColorIndex[left];
-                                  const color = pairColors[colorIdx];
-                                  return (
-                                    <span key={left} className={`text-xs px-2 py-1 rounded ${color.bg} ${color.text} ${color.border} border`}>
-                                      {left} ↔ {currentAnswers[left]}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="mt-3 text-sm text-gray-500 text-center">
-                            Chọn một ô ở Cột A, sau đó chọn ô tương ứng ở Cột B để nối.
-                          </div>
-                          <button
-                            onClick={() => setAnswers(prev => ({ ...prev, [q.id]: {} }))}
-                            className="mt-2 text-xs text-red-500 underline"
-                          >
-                            Làm lại câu này
-                          </button>
-                        </div>
-                      );
-                    })()}
-
-                    {q.type === QuestionType.MULTIPLE_SELECT && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {q.options.map((opt, idx) => {
-                          const label = String.fromCharCode(65 + idx); // A, B, C, D
-                          const currentAnswers = (answers[q.id] as string[]) || [];
-                          const isSelected = currentAnswers.includes(label);
-
-                          return (
-                            <button
-                              key={idx}
-                              onClick={() => {
-                                const newAnswers = isSelected
-                                  ? currentAnswers.filter(a => a !== label)
-                                  : [...currentAnswers, label].sort();
-                                handleAnswerChange(q.id, newAnswers);
-                              }}
-                              className={`text-left p-4 rounded-xl border-2 transition-all flex items-center ${isSelected
-                                ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
-                                : 'border-gray-200 hover:border-indigo-300'
-                                }`}
-                            >
-                              <div className={`w-6 h-6 rounded border-2 mr-3 flex items-center justify-center text-xs font-bold ${isSelected ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-300 text-gray-400'
-                                }`}>
-                                {isSelected && <CheckCircle className="w-4 h-4" />}
-                              </div>
-                              {opt}
-                            </button>
-                          )
-                        })}
-                        <p className="col-span-2 text-xs text-gray-500 mt-2">Chọn tất cả các đáp án đúng.</p>
-                      </div>
-                    )}
                   </div>
-                </div>
+                )}
+
+                {q.type === QuestionType.TRUE_FALSE && (
+                  <div className="space-y-2">
+                    {q.items.map((item, i) => {
+                      const val = answers[q.id]?.[item.id];
+                      return (
+                        <div key={item.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
+                          <span className="text-gray-700 mr-4 flex-1 text-sm">
+                            {String.fromCharCode(97 + i)}. {item.statement}
+                          </span>
+                          <div className="flex gap-2 flex-shrink-0">
+                            <button
+                              onClick={() => handleAnswerChange(q.id, true, item.id)}
+                              className={`w-10 h-8 rounded font-bold text-sm transition-colors ${val === true ? 'bg-green-500 text-white shadow-md' : 'bg-white border border-gray-300 text-gray-400 hover:bg-gray-100'}`}
+                            >Đ</button>
+                            <button
+                              onClick={() => handleAnswerChange(q.id, false, item.id)}
+                              className={`w-10 h-8 rounded font-bold text-sm transition-colors ${val === false ? 'bg-red-500 text-white shadow-md' : 'bg-white border border-gray-300 text-gray-400 hover:bg-gray-100'}`}
+                            >S</button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {q.type === QuestionType.MATCHING && (() => {
+                  // Define colors for pairs
+                  const pairColors = [
+                    { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-700' },
+                    { bg: 'bg-green-100', border: 'border-green-500', text: 'text-green-700' },
+                    { bg: 'bg-purple-100', border: 'border-purple-500', text: 'text-purple-700' },
+                    { bg: 'bg-orange-100', border: 'border-orange-500', text: 'text-orange-700' },
+                    { bg: 'bg-pink-100', border: 'border-pink-500', text: 'text-pink-700' },
+                    { bg: 'bg-yellow-100', border: 'border-yellow-500', text: 'text-yellow-700' },
+                    { bg: 'bg-teal-100', border: 'border-teal-500', text: 'text-teal-700' },
+                    { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-700' },
+                  ];
+
+                  // Build a map of left -> colorIndex for paired items
+                  const currentAnswers = answers[q.id] || {};
+                  const pairedLeftItems = Object.keys(currentAnswers).filter(key => key !== 'selectedLeft' && currentAnswers[key]);
+                  const leftToColorIndex: Record<string, number> = {};
+                  pairedLeftItems.forEach((left, idx) => {
+                    leftToColorIndex[left] = idx % pairColors.length;
+                  });
+
+                  // Build a map of right -> colorIndex
+                  const rightToColorIndex: Record<string, number> = {};
+                  pairedLeftItems.forEach(left => {
+                    const right = currentAnswers[left];
+                    if (right && leftToColorIndex[left] !== undefined) {
+                      rightToColorIndex[right] = leftToColorIndex[left];
+                    }
+                  });
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-8">
+                        <div className="space-y-3">
+                          <p className="font-bold text-blue-600 text-center">Cột A</p>
+                          {q.pairs.map((pair) => {
+                            const isSelectedLeft = currentAnswers.selectedLeft === pair.left;
+                            const isPaired = currentAnswers[pair.left] !== undefined;
+                            const colorIdx = leftToColorIndex[pair.left];
+                            const color = isPaired && colorIdx !== undefined ? pairColors[colorIdx] : null;
+
+                            return (
+                              <div
+                                key={pair.left}
+                                className={`p-3 rounded-lg border-2 cursor-pointer transition-all font-medium ${isSelectedLeft
+                                  ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300'
+                                  : color
+                                    ? `${color.border} ${color.bg} ${color.text}`
+                                    : 'border-gray-200 hover:border-blue-300'
+                                  }`}
+                                onClick={() => handleMatchingClick(q.id, pair.left, 'left')}
+                              >
+                                {color && <span className="mr-2">●</span>}
+                                {pair.left}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="space-y-3">
+                          <p className="font-bold text-orange-600 text-center">Cột B</p>
+                          {/* Deduplicate Right Column Items */}
+                          {Array.from(new Set(q.pairs.map(p => p.right)))
+                            .sort((a, b) => (a as string).localeCompare(b as string))
+                            .map((rightItem) => {
+                              // Check if this right item is paired with ANY left item
+                              const pairedLefts = Object.keys(currentAnswers).filter(key => currentAnswers[key] === rightItem && key !== 'selectedLeft');
+                              const isPaired = pairedLefts.length > 0;
+
+                              // Get color of the first paired item (or handle multiple if needed)
+                              // For simplicity, we take the color of the first paired left item
+                              const colorIdx = isPaired ? leftToColorIndex[pairedLefts[0]] : undefined;
+                              const color = colorIdx !== undefined ? pairColors[colorIdx] : null;
+
+                              return (
+                                <div
+                                  key={rightItem}
+                                  className={`p-3 rounded-lg border-2 cursor-pointer transition-all font-medium ${color
+                                    ? `${color.border} ${color.bg} ${color.text}`
+                                    : 'border-gray-200 hover:border-orange-300'
+                                    }`}
+                                  onClick={() => handleMatchingClick(q.id, rightItem as string, 'right')}
+                                >
+                                  {color && <span className="mr-2">●</span>}
+                                  {rightItem}
+                                  {pairedLefts.length > 1 && (
+                                    <span className="ml-2 text-xs bg-white/50 px-1.5 py-0.5 rounded-full border border-black/10">
+                                      x{pairedLefts.length}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+
+                      {/* Legend - show paired items */}
+                      {pairedLeftItems.length > 0 && (
+                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-xs font-bold text-gray-600 mb-2">Đã nối:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {pairedLeftItems.map(left => {
+                              const colorIdx = leftToColorIndex[left];
+                              const color = pairColors[colorIdx];
+                              return (
+                                <span key={left} className={`text-xs px-2 py-1 rounded ${color.bg} ${color.text} ${color.border} border`}>
+                                  {left} ↔ {currentAnswers[left]}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-3 text-sm text-gray-500 text-center">
+                        Chọn một ô ở Cột A, sau đó chọn ô tương ứng ở Cột B để nối.
+                      </div>
+                      <button
+                        onClick={() => setAnswers(prev => ({ ...prev, [q.id]: {} }))}
+                        className="mt-2 text-xs text-red-500 underline"
+                      >
+                        Làm lại câu này
+                      </button>
+                    </div>
+                  );
+                })()}
+
+                {q.type === QuestionType.MULTIPLE_SELECT && (
+                  <div className="grid grid-cols-1 gap-2">
+                    {q.options.map((opt, idx) => {
+                      const label = String.fromCharCode(65 + idx);
+                      const currentAnswers = (answers[q.id] as string[]) || [];
+                      const isSelected = currentAnswers.includes(label);
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            const newAnswers = isSelected
+                              ? currentAnswers.filter(a => a !== label)
+                              : [...currentAnswers, label].sort();
+                            handleAnswerChange(q.id, newAnswers);
+                          }}
+                          className={`text-left p-3 rounded-lg border transition-all flex items-center ${isSelected
+                            ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
+                            : 'border-gray-200 hover:bg-gray-50'
+                            }`}
+                        >
+                          <div className={`w-5 h-5 rounded border mr-3 flex items-center justify-center ${isSelected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-300'}`}>
+                            {isSelected && <CheckCircle className="w-3 h-3" />}
+                          </div>
+                          {opt}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {q.type === QuestionType.DRAG_DROP && (() => {
+                  const currentAnswers = (answers[q.id] as Record<number, string>) || {};
+                  // Safety check for q.text
+                  const text = (q as any).text || "";
+
+                  const parts = text.split(/(\[.*?\])/g);
+                  const blanks: number[] = [];
+                  parts.forEach((part: string, idx: number) => {
+                    if (part.startsWith('[') && part.endsWith(']')) {
+                      blanks.push(idx);
+                    }
+                  });
+
+                  // Combine correct answers and distractors for the word bank
+                  // Use a seeded shuffle based on question ID for stability
+                  const qBlanks = (q as any).blanks || [];
+                  const qDistractors = (q as any).distractors || [];
+                  const words = [...qBlanks, ...qDistractors];
+                  // Simple seeded shuffle for display stability
+                  const seed = q.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                  const allWords = words.sort((a, b) => {
+                    const hashA = (a.charCodeAt(0) * seed) % 100;
+                    const hashB = (b.charCodeAt(0) * seed) % 100;
+                    return hashA - hashB;
+                  });
+
+                  const handleWordClick = (word: string) => {
+                    // Find first empty blank
+                    const firstEmptyBlankIdx = blanks.find(idx => !currentAnswers[idx]);
+
+                    if (firstEmptyBlankIdx !== undefined) {
+                      handleAnswerChange(q.id, { ...currentAnswers, [firstEmptyBlankIdx]: word });
+                    }
+                  };
+
+                  const handleBlankClick = (idx: number) => {
+                    // Clear the blank
+                    const newAnswers = { ...currentAnswers };
+                    delete newAnswers[idx];
+                    handleAnswerChange(q.id, newAnswers);
+                  };
+
+                  return (
+                    <div className="space-y-6">
+                      <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                        {parts.map((part, idx) => {
+                          if (part.startsWith('[') && part.endsWith(']')) {
+                            const filledWord = currentAnswers[idx];
+                            return (
+                              <span
+                                key={idx}
+                                onClick={() => filledWord && handleBlankClick(idx)}
+                                className={`inline-block min-w-[80px] h-10 mx-1 px-3 py-1 align-middle text-center rounded-lg border-2 border-dashed transition-all cursor-pointer select-none flex items-center justify-center ${filledWord
+                                  ? 'bg-indigo-100 border-indigo-500 text-indigo-700 font-bold border-solid'
+                                  : 'bg-gray-50 border-gray-300 text-gray-400 hover:border-indigo-300'
+                                  }`}
+                              >
+                                {filledWord || (idx + 1)}
+                              </span>
+                            );
+                          }
+                          return <span key={idx}>{part}</span>;
+                        })}
+                      </div>
+
+                      <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                        <p className="text-sm font-bold text-indigo-800 mb-3 uppercase tracking-wide">Kho từ vựng (Chạm để điền):</p>
+                        <div className="flex flex-wrap gap-3">
+                          {allWords.map((word, wIdx) => {
+                            // Check if word is already used (count occurrences)
+                            const usedCount = Object.values(currentAnswers).filter(w => w === word).length;
+                            const totalCount = allWords.filter(w => w === word).length;
+                            const isFullyUsed = usedCount >= totalCount;
+
+                            return (
+                              <button
+                                key={`${word}-${wIdx}`}
+                                onClick={() => !isFullyUsed && handleWordClick(word)}
+                                disabled={isFullyUsed}
+                                className={`px-4 py-2 rounded-lg font-bold shadow-sm transition-all transform active:scale-95 ${isFullyUsed
+                                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                                  : 'bg-white text-indigo-700 hover:bg-indigo-600 hover:text-white hover:shadow-md border border-indigo-200'
+                                  }`}
+                              >
+                                {word}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => handleAnswerChange(q.id, {})}
+                          className="text-xs text-red-500 hover:underline flex items-center"
+                        >
+                          <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           ))}
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-10 flex justify-center">
-          <button
-            onClick={() => {
-              // Simple validation check before submitting
-              const unanswered = shuffledQuestions.filter(q => {
-                if (q.type === QuestionType.TRUE_FALSE) {
-                  return q.items.some(i => answers[q.id]?.[i.id] === undefined);
-                }
-                return !answers[q.id];
-              });
+        {/* RIGHT COLUMN: Sidebar (Sticky) */}
+        <div className="w-full md:w-80 flex-shrink-0">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sticky top-24">
+            <div className="text-center mb-6">
+              <p className="text-sm text-gray-500 mb-1">Thời gian còn lại</p>
+              <div className="text-3xl font-mono font-bold text-orange-600 bg-orange-50 py-2 rounded-lg border border-orange-100">
+                {formatTime(timeLeft)}
+              </div>
+            </div>
 
-              if (unanswered.length > 0) {
-                if (confirm(`Bạn còn ${unanswered.length} câu chưa làm xong. Bạn có chắc chắn muốn nộp bài không?`)) {
-                  handleSubmit();
-                }
-              } else {
-                handleSubmit();
-              }
-            }}
-            className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-12 rounded-full shadow-lg text-lg transform transition-transform hover:scale-105"
-          >
-            NỘP BÀI
-          </button>
+            <div className="mb-6">
+              <p className="text-sm font-bold text-gray-700 mb-3 flex justify-between">
+                <span>Danh sách câu hỏi</span>
+                <span className="text-gray-400 font-normal">{Object.keys(answers).length}/{shuffledQuestions.length}</span>
+              </p>
+              <div className="grid grid-cols-5 gap-2">
+                {shuffledQuestions.map((q, index) => {
+                  // Check if answered
+                  let isAnswered = false;
+                  if (q.type === QuestionType.TRUE_FALSE) {
+                    // For T/F, consider answered if all items have a value
+                    isAnswered = q.items.every(i => answers[q.id]?.[i.id] !== undefined);
+                  } else if (q.type === QuestionType.MATCHING) {
+                    // For Matching, consider answered if all pairs are made (simplified check)
+                    const userPairs = answers[q.id] || {};
+                    const pairedCount = Object.keys(userPairs).filter(k => k !== 'selectedLeft').length;
+                    isAnswered = pairedCount === q.pairs.length;
+                  } else if (q.type === QuestionType.MULTIPLE_SELECT) {
+                    isAnswered = (answers[q.id] as string[])?.length > 0;
+                  } else if (q.type === QuestionType.DRAG_DROP) {
+                    // For DRAG_DROP, consider answered if all blanks are filled
+                    const qAny = q as any;
+                    const text = qAny.text || "";
+                    const parts = text.split(/(\[.*?\])/g);
+                    const blanks: number[] = [];
+                    parts.forEach((part: string, idx: number) => {
+                      if (part.startsWith('[') && part.endsWith(']')) {
+                        blanks.push(idx);
+                      }
+                    });
+                    const currentAnswers = (answers[q.id] as Record<number, string>) || {};
+                    isAnswered = blanks.length > 0 && blanks.every(idx => currentAnswers[idx] !== undefined);
+                  } else {
+                    isAnswered = !!answers[q.id];
+                  }
+
+                  return (
+                    <a
+                      key={q.id}
+                      href={`#question-${index}`}
+                      className={`h-10 w-10 flex items-center justify-center rounded-full text-sm font-bold transition-all ${isAnswered
+                        ? 'bg-blue-500 text-white shadow-md hover:bg-blue-600'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                    >
+                      {index + 1}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowConfirmModal(true)}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all flex items-center justify-center"
+            >
+              <CheckCircle className="w-5 h-5 mr-2" /> NỘP BÀI
+            </button>
+          </div>
         </div>
+      </div>
+
+      {/* Custom Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-orange-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Nộp bài ngay?</h3>
+
+              {(() => {
+                const unansweredCount = shuffledQuestions.length - Object.keys(answers).length; // Rough estimate
+                if (unansweredCount > 0) {
+                  return (
+                    <p className="text-gray-600">
+                      Bạn vẫn còn <span className="font-bold text-red-500">{unansweredCount}</span> câu hỏi chưa làm.
+                      <br />Bạn có chắc chắn muốn nộp bài không?
+                    </p>
+                  );
+                } else {
+                  return (
+                    <p className="text-gray-600">
+                      Bạn đã hoàn thành tất cả câu hỏi.
+                      <br />Xác nhận nộp bài để xem kết quả?
+                    </p>
+                  );
+                }
+              })()}
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors"
+              >
+                Quay lại
+              </button>
+              <button
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  handleSubmit();
+                }}
+                className="flex-1 py-3 px-4 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-lg transition-colors"
+              >
+                Đồng ý nộp
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-10 flex justify-center md:hidden">
+        <button
+          onClick={() => setShowConfirmModal(true)}
+          className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-12 rounded-full shadow-lg text-lg transform transition-transform hover:scale-105"
+        >
+          NỘP BÀI
+        </button>
       </div>
     </div>
   );

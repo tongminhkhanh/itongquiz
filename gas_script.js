@@ -68,6 +68,9 @@ function saveQuiz(sheet, data) {
     const questionRows = questions.map(q => {
         let options = "";
         let items = "";
+        let textField = "";
+        let blanksField = "";
+        let distractorsField = "";
 
         if (q.type === 'MCQ') {
             options = q.options.join('|');
@@ -79,6 +82,10 @@ function saveQuiz(sheet, data) {
             options = q.options.join('|');
             // For multiple select, correctAnswer column will store the JSON array of correct answers
             // We reuse the 'correctAnswer' column which is usually a string, but here it's a JSON string
+        } else if (q.type === 'DRAG_DROP') {
+            textField = q.text || "";
+            blanksField = JSON.stringify(q.blanks || []);
+            distractorsField = JSON.stringify(q.distractors || []);
         }
 
         return [
@@ -88,7 +95,10 @@ function saveQuiz(sheet, data) {
             q.type === 'TRUE_FALSE' ? q.mainQuestion : q.question,
             options,
             q.type === 'MULTIPLE_SELECT' ? JSON.stringify(q.correctAnswers) : (q.correctAnswer || ""),
-            items
+            items,
+            textField,        // Column H: text (for DRAG_DROP)
+            blanksField,      // Column I: blanks (for DRAG_DROP)
+            distractorsField  // Column J: distractors (for DRAG_DROP)
         ];
     });
 
