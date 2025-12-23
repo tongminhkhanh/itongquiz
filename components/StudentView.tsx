@@ -10,9 +10,16 @@ interface Props {
 }
 
 const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
-  const [step, setStep] = useState<'info' | 'quiz' | 'result'>('info');
+  // Determine initial step based on whether quiz requires access code
+  const [step, setStep] = useState<'code' | 'info' | 'quiz' | 'result'>(
+    quiz.requireCode ? 'code' : 'info'
+  );
   const [studentName, setStudentName] = useState('');
   const [studentClass, setStudentClass] = useState('');
+
+  // Access code verification state
+  const [enteredCode, setEnteredCode] = useState('');
+  const [codeError, setCodeError] = useState('');
 
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [timeLeft, setTimeLeft] = useState(quiz.timeLimit * 60);
@@ -46,12 +53,57 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, timeLeft]);
 
+  // Prevent refresh (F5) and navigation away during quiz
+  useEffect(() => {
+    if (step === 'quiz') {
+      // Handle F5 / refresh / close tab
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = 'Bạn đang làm bài! Nếu rời đi, bài làm sẽ bị mất. Bạn có chắc muốn thoát?';
+        return e.returnValue;
+      };
+
+      // Handle back button
+      const handlePopState = (e: PopStateEvent) => {
+        e.preventDefault();
+        const confirmLeave = window.confirm('Bạn đang làm bài! Nếu quay lại, bài làm sẽ bị mất. Bạn có chắc muốn thoát?');
+        if (!confirmLeave) {
+          // Push state again to prevent leaving
+          window.history.pushState(null, '', window.location.href);
+        } else {
+          onExit();
+        }
+      };
+
+      // Push initial state to history
+      window.history.pushState(null, '', window.location.href);
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      window.addEventListener('popstate', handlePopState);
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+  }, [step, onExit]);
+
   const handleStart = () => {
     if (!studentName || !studentClass) return;
     // Shuffle questions when starting the quiz
     setShuffledQuestions(shuffleArray(quiz.questions));
     setStartTime(Date.now());
     setStep('quiz');
+  };
+
+  // Verify access code
+  const handleCodeVerify = () => {
+    if (enteredCode.toUpperCase() === quiz.accessCode?.toUpperCase()) {
+      setCodeError('');
+      setStep('info');
+    } else {
+      setCodeError('Mã không đúng. Vui lòng thử lại!');
+    }
   };
 
 
@@ -218,6 +270,61 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     const s = seconds % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
+
+  // ACCESS CODE VERIFICATION VIEW
+  if (step === 'code') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-200 p-4">
+        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border-t-4 border-orange-500">
+          <div className="text-center mb-6">
+            <div className="text-6xl mb-4">🔐</div>
+            <h2 className="text-2xl font-bold text-gray-800">{quiz.title}</h2>
+            <p className="text-gray-500 mt-2">Bài kiểm tra này yêu cầu mã truy cập</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Nhập mã làm bài</label>
+              <input
+                type="text"
+                value={enteredCode}
+                onChange={e => setEnteredCode(e.target.value.toUpperCase())}
+                onKeyDown={e => e.key === 'Enter' && handleCodeVerify()}
+                placeholder="Nhập mã 6 ký tự..."
+                maxLength={6}
+                className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-center font-mono text-2xl tracking-widest uppercase"
+                autoFocus
+              />
+              {codeError && (
+                <p className="mt-2 text-red-500 text-sm text-center font-medium">
+                  ❌ {codeError}
+                </p>
+              )}
+            </div>
+
+            <button
+              onClick={handleCodeVerify}
+              disabled={enteredCode.length < 1}
+              className="w-full bg-orange-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-orange-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              Xác nhận mã
+            </button>
+
+            <button
+              onClick={onExit}
+              className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+            >
+              ← Quay lại trang chủ
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-400 text-center mt-4">
+            Mã làm bài được giáo viên cung cấp trước khi kiểm tra
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (step === 'info') {
     return (

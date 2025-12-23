@@ -75,7 +75,7 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                 question = {
                     id: row.id,
                     type: QuestionType.MATCHING,
-                    question: row.question,
+                    mainQuestion: row.question,
                     pairs: row.items ? JSON.parse(row.items) : []
                 } as any;
             } else if (row.type === QuestionType.MULTIPLE_SELECT) {
@@ -109,7 +109,9 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
             classLevel: row.classLevel,
             timeLimit: parseInt(row.timeLimit, 10) || 15,
             createdAt: row.createdAt || new Date().toISOString(),
-            questions: questionsByQuizId[row.id] || []
+            questions: questionsByQuizId[row.id] || [],
+            accessCode: row.accessCode || "",
+            requireCode: row.requireCode === "TRUE" || row.requireCode === true
         }));
 
         return quizzes;
