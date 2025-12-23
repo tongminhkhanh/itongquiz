@@ -19,9 +19,10 @@ interface Props {
     results: StudentResult[];
     onSaveQuiz: (quiz: Quiz) => Promise<void>;
     onUpdateQuiz: (quiz: Quiz) => Promise<void>;
+    isAdmin?: boolean;
 }
 
-const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQuiz, onUpdateQuiz }) => {
+const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQuiz, onUpdateQuiz, isAdmin = false }) => {
     const [activeTab, setActiveTab] = useState<'create' | 'results' | 'manage'>('results');
     const [editingQuizId, setEditingQuizId] = useState<string | null>(null);
 
@@ -44,6 +45,10 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
     const [level1Count, setLevel1Count] = useState<number>(3);
     const [level2Count, setLevel2Count] = useState<number>(5);
     const [level3Count, setLevel3Count] = useState<number>(2);
+
+    // Access code state
+    const [requireCode, setRequireCode] = useState<boolean>(false);
+    const [accessCode, setAccessCode] = useState<string>('');
 
     // Image library state
     const [imageLibrary, setImageLibrary] = useState<ImageLibraryItem[]>(() => {
@@ -130,6 +135,16 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
             setQuizTitle(`Kiểm tra: ${topic}`);
         }
     }, [topic, quizTitle]);
+
+    // Generate random 6-character access code
+    const generateRandomCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+    };
 
     const handleGenerate = async () => {
         // if (!apiKey) return alert(`Vui lòng nhập ${aiProvider === 'perplexity' ? 'Perplexity' : 'Gemini'} API Key ở phần 'Cấu hình API' bên dưới!`);
@@ -286,7 +301,9 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                 classLevel,
                 timeLimit: manualTimeLimit ? Number(manualTimeLimit) : Math.ceil(limitedQuestions.length * 1.5),
                 questions: limitedQuestions,
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                accessCode: requireCode ? (accessCode || generateRandomCode()) : '',
+                requireCode: requireCode
             };
             setGeneratedQuiz(newQuiz);
         } catch (e) {
@@ -326,18 +343,25 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
         if (generatedQuiz) {
             setIsSaving(true);
             try {
+                // Merge current access code settings into the quiz
+                const quizToSave: Quiz = {
+                    ...generatedQuiz,
+                    accessCode: requireCode ? (accessCode || generatedQuiz.accessCode || '') : '',
+                    requireCode: requireCode
+                };
+
                 if (editingQuizId) {
                     // Update existing
-                    const success = await updateQuizInSheet(generatedQuiz, GOOGLE_SCRIPT_URL);
+                    const success = await updateQuizInSheet(quizToSave, GOOGLE_SCRIPT_URL);
                     if (success) {
-                        await onUpdateQuiz(generatedQuiz); // Update local state
+                        await onUpdateQuiz(quizToSave); // Update local state
                         alert("Đã cập nhật đề thi thành công!");
                     } else {
                         throw new Error("Không thể cập nhật vào Google Sheet (vui lòng kiểm tra kết nối hoặc script)");
                     }
                 } else {
                     // Create new
-                    await onSaveQuiz(generatedQuiz);
+                    await onSaveQuiz(quizToSave);
                     alert("Đã lưu đề thi thành công!");
                 }
 
@@ -348,6 +372,8 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                 setQuizTitle('');
                 setContent('');
                 setAttachedFile(null);
+                setRequireCode(false);
+                setAccessCode('');
                 setActiveTab('manage'); // Go to manage tab to see changes (though requires refresh/reload usually)
             } catch (error) {
                 console.error(error);
@@ -365,6 +391,8 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
         setClassLevel(quiz.classLevel);
         setQuestionCount(quiz.questions.length);
         setManualTimeLimit(quiz.timeLimit);
+        setRequireCode(quiz.requireCode || false);
+        setAccessCode(quiz.accessCode || '');
         setGeneratedQuiz(quiz); // Load existing quiz into preview
         setActiveTab('create');
     };
@@ -650,6 +678,55 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                         </div>
                                     )}
                                 </div>
+
+                                {/* Access Code Section - Only visible to Admin */}
+                                {isAdmin && (
+                                    <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <label className="block text-sm font-bold text-orange-800 flex items-center">
+                                                🔐 Mã làm bài (Chỉ Admin)
+                                            </label>
+                                            <label className="flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={requireCode}
+                                                    onChange={e => {
+                                                        setRequireCode(e.target.checked);
+                                                        if (e.target.checked && !accessCode) {
+                                                            setAccessCode(generateRandomCode());
+                                                        }
+                                                    }}
+                                                    className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mr-2"
+                                                />
+                                                <span className="text-sm text-gray-700">Yêu cầu nhập mã khi làm bài</span>
+                                            </label>
+                                        </div>
+                                        {requireCode && (
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={accessCode}
+                                                    onChange={e => setAccessCode(e.target.value.toUpperCase().slice(0, 6))}
+                                                    placeholder="Nhập mã 6 ký tự"
+                                                    maxLength={6}
+                                                    className="flex-1 p-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-center font-mono text-lg tracking-widest uppercase"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAccessCode(generateRandomCode())}
+                                                    className="px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold"
+                                                >
+                                                    Tạo mã mới
+                                                </button>
+                                            </div>
+                                        )}
+                                        <p className="text-xs text-gray-500 mt-2">
+                                            {requireCode
+                                                ? "Học sinh cần nhập đúng mã này để bắt đầu làm bài."
+                                                : "Khi tắt, học sinh có thể vào làm bài trực tiếp."}
+                                        </p>
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-1">
@@ -1024,7 +1101,14 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                             {quiz.title}
                                         </h3>
                                         <p className="text-sm text-gray-500">Lớp {quiz.classLevel} • {quiz.questions.length} câu • {quiz.timeLimit} phút</p>
-                                        <p className="text-xs text-gray-400 mt-1">Tạo ngày: {new Date(quiz.createdAt).toLocaleDateString('vi-VN')}</p>
+                                        <p className="text-xs text-gray-400 mt-1">Tạo lúc: {new Date(quiz.createdAt).toLocaleString('vi-VN')}</p>
+                                        {isAdmin && quiz.requireCode && (
+                                            <p className="text-xs mt-1">
+                                                <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold">
+                                                    🔐 Mã: {quiz.accessCode}
+                                                </span>
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="flex space-x-2">
                                         <button

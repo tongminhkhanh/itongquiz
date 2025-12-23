@@ -57,7 +57,9 @@ function saveQuiz(sheet, data) {
         data.title,
         data.classLevel,
         data.timeLimit,
-        data.createdAt
+        data.createdAt,
+        data.accessCode || "",      // Column F: accessCode
+        data.requireCode ? "TRUE" : "FALSE"  // Column G: requireCode
     ]);
 
     // 2. Save Questions to 'Questions' sheet
