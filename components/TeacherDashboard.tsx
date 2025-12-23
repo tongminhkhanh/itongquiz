@@ -568,28 +568,28 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                             {q.type === 'MULTIPLE_SELECT' && (
                                                                 <div>
                                                                     <p className="font-medium mb-2">{(q as any).question}</p>
-                                                                    <p className="text-xs text-purple-600 mb-1 font-bold">📌 Chọn nhiều đáp án đúng</p>
+                                                                    <p className="text-xs text-purple-600 mb-1 font-bold">(Chọn nhiều đáp án)</p>
                                                                     <ul className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                                                                         {(q as any).options?.map((o: string, idx: number) => {
                                                                             const label = String.fromCharCode(65 + idx);
                                                                             const isCorrect = (q as any).correctAnswers?.includes(label);
                                                                             return (
                                                                                 <li key={idx} className={isCorrect ? "text-green-600 font-bold" : ""}>
-                                                                                    {isCorrect ? "✓ " : ""}{label}. {o}
+                                                                                    {label}. {o}
                                                                                 </li>
                                                                             );
                                                                         })}
                                                                     </ul>
                                                                     <p className="text-xs text-green-600 mt-2">
-                                                                        Đáp án đúng: {(q as any).correctAnswers?.join(', ') || 'N/A'}
+                                                                        Dap an dung: {(q as any).correctAnswers?.join(', ') || 'N/A'}
                                                                     </p>
                                                                 </div>
                                                             )}
                                                             {/* Fallback for unknown or unrecognized types */}
                                                             {!['MCQ', 'TRUE_FALSE', 'SHORT_ANSWER', 'MATCHING', 'MULTIPLE_SELECT'].includes(q.type) && (
                                                                 <div className="text-red-500">
-                                                                    <p className="font-medium mb-1">⚠️ Loại câu hỏi không nhận diện: {q.type}</p>
-                                                                    <p className="text-xs">{(q as any).question || (q as any).mainQuestion || 'Không có nội dung'}</p>
+                                                                    <p className="font-medium mb-1">Loai cau hoi khong nhan dien: {q.type}</p>
+                                                                    <p className="text-xs">{(q as any).question || (q as any).mainQuestion || 'Khong co noi dung'}</p>
                                                                 </div>
                                                             )}
                                                         </div>
