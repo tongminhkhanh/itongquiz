@@ -72,38 +72,67 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
             const data = await generateQuiz(topic, classLevel, content, attachedFile, options, apiKey, aiProvider);
 
             // Process raw data into Type safe objects
-            const questions: Question[] = data.questions.map((q: any, idx: number) => {
-                const base = { id: `q-${Date.now()}-${idx}` };
-                if (q.type === 'MCQ') {
-                    return { ...base, type: QuestionType.MCQ, question: q.question, options: q.options, correctAnswer: q.correctAnswer };
-                } else if (q.type === 'TRUE_FALSE') {
-                    return {
-                        ...base,
-                        type: QuestionType.TRUE_FALSE,
-                        mainQuestion: q.mainQuestion,
-                        items: q.items.map((i: any, subIdx: number) => ({ id: `sub-${idx}-${subIdx}`, statement: i.statement, isCorrect: i.isCorrect }))
-                    };
-                } else if (q.type === 'MATCHING') {
-                    return { ...base, type: QuestionType.MATCHING, question: q.question, pairs: q.pairs };
-                } else if (q.type === 'MULTIPLE_SELECT') {
-                    return {
-                        ...base,
-                        type: QuestionType.MULTIPLE_SELECT,
-                        question: q.question,
-                        options: q.options,
-                        correctAnswers: q.correctAnswers || []
-                    };
-                } else {
-                    return { ...base, type: QuestionType.SHORT_ANSWER, question: q.question, correctAnswer: q.correctAnswer };
-                }
-            });
+            const questions: Question[] = data.questions
+                .map((q: any, idx: number) => {
+                    const base = { id: `q-${Date.now()}-${idx}` };
+                    try {
+                        if (q.type === 'MCQ') {
+                            // Validate MCQ has required fields
+                            if (!q.question || !q.options || !q.correctAnswer) return null;
+                            return { ...base, type: QuestionType.MCQ, question: q.question, options: q.options, correctAnswer: q.correctAnswer };
+                        } else if (q.type === 'TRUE_FALSE') {
+                            // Validate TRUE_FALSE has required fields
+                            if (!q.mainQuestion || !q.items || q.items.length === 0) return null;
+                            return {
+                                ...base,
+                                type: QuestionType.TRUE_FALSE,
+                                mainQuestion: q.mainQuestion,
+                                items: q.items.map((i: any, subIdx: number) => ({ id: `sub-${idx}-${subIdx}`, statement: i.statement, isCorrect: i.isCorrect }))
+                            };
+                        } else if (q.type === 'MATCHING') {
+                            // Validate MATCHING has required fields
+                            if (!q.pairs || q.pairs.length === 0) return null;
+                            return { ...base, type: QuestionType.MATCHING, question: q.question || "Nối các ý ở cột A với cột B:", mainQuestion: q.question || "Nối các ý ở cột A với cột B:", pairs: q.pairs };
+                        } else if (q.type === 'MULTIPLE_SELECT') {
+                            // Validate MULTIPLE_SELECT has required fields
+                            if (!q.question || !q.options || !q.correctAnswers || q.correctAnswers.length === 0) return null;
+                            return {
+                                ...base,
+                                type: QuestionType.MULTIPLE_SELECT,
+                                question: q.question,
+                                options: q.options,
+                                correctAnswers: q.correctAnswers || []
+                            };
+                        } else if (q.type === 'SHORT_ANSWER') {
+                            // Validate SHORT_ANSWER has required fields
+                            if (!q.question || !q.correctAnswer) return null;
+                            return { ...base, type: QuestionType.SHORT_ANSWER, question: q.question, correctAnswer: q.correctAnswer };
+                        } else {
+                            // Unknown type - skip
+                            console.warn('Unknown question type:', q.type);
+                            return null;
+                        }
+                    } catch (error) {
+                        console.error('Error processing question:', q, error);
+                        return null;
+                    }
+                })
+                .filter((q: any) => q !== null) as Question[]; // Filter out invalid questions
+
+            if (questions.length === 0) {
+                throw new Error("AI không tạo được câu hỏi hợp lệ. Vui lòng thử lại.");
+            }
+
+            // Limit questions to the requested count
+            const requestedCount = options.questionCount;
+            const limitedQuestions = questions.slice(0, requestedCount);
 
             const newQuiz: Quiz = {
                 id: crypto.randomUUID(),
                 title: data.title || options.title,
                 classLevel,
-                timeLimit: manualTimeLimit ? Number(manualTimeLimit) : Math.ceil(questions.length * 1.5),
-                questions,
+                timeLimit: manualTimeLimit ? Number(manualTimeLimit) : Math.ceil(limitedQuestions.length * 1.5),
+                questions: limitedQuestions,
                 createdAt: new Date().toISOString()
             };
             setGeneratedQuiz(newQuiz);
