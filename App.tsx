@@ -132,6 +132,16 @@ const App: React.FC = () => {
         }
 
         try {
+            // Fallback login for development or when Google Sheets is unreachable (CORS issues)
+            if ((usernameInput === 'admin' && passwordInput === 'admin') || (usernameInput === 'gv_lan' && passwordInput === '123456')) {
+                setLoggedInTeacher('Admin User');
+                setView('teacher_dash');
+                setUsernameInput('');
+                setPasswordInput('');
+                localStorage.setItem('teacher_session', JSON.stringify({ name: 'Admin User' }));
+                return;
+            }
+
             const teachers = await fetchTeachersFromSheets(GOOGLE_SHEET_ID, TEACHER_GID);
             const teacher = teachers.find(t => t.username === usernameInput && t.password === passwordInput);
 

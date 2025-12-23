@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Quiz, Question, QuestionType, StudentResult } from '../types';
-import { generateQuiz, QuizGenerationOptions } from '../geminiService';
+import { generateQuiz, QuizGenerationOptions, AIProvider } from '../geminiService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { FileText, Save, RefreshCw, LogOut, Loader2, Download, Settings, FileUp, Trash2, Edit, List } from 'lucide-react';
+import { FileText, Save, RefreshCw, LogOut, Loader2, Download, Settings, FileUp, Trash2, Edit, List, KeyRound } from 'lucide-react';
 import { deleteQuizFromSheet, updateQuizInSheet } from '../googleSheetService';
 import { GOOGLE_SCRIPT_URL } from '../App';
 
@@ -40,6 +40,9 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
     const [sortField, setSortField] = useState<'score' | 'submittedAt'>('submittedAt');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+    const [apiKey, setApiKey] = useState(() => localStorage.getItem('ai_api_key') || '');
+    const [aiProvider, setAiProvider] = useState<AIProvider>(() => (localStorage.getItem('ai_provider') as AIProvider) || 'perplexity');
+
     // Auto-generate title based on topic
     useEffect(() => {
         if (topic && !quizTitle) {
@@ -48,6 +51,7 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
     }, [topic, quizTitle]);
 
     const handleGenerate = async () => {
+        if (!apiKey) return alert(`Vui lòng nhập ${aiProvider === 'perplexity' ? 'Perplexity' : 'Gemini'} API Key ở phần 'Cấu hình API' bên dưới!`);
         if (!topic) return alert("Vui lòng nhập chủ đề bài học");
 
         // Validate types
@@ -65,7 +69,7 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                 questionTypes: enabledTypes
             };
 
-            const data = await generateQuiz(topic, classLevel, content, attachedFile, options);
+            const data = await generateQuiz(topic, classLevel, content, attachedFile, options, apiKey, aiProvider);
 
             // Process raw data into Type safe objects
             const questions: Question[] = data.questions.map((q: any, idx: number) => {
@@ -81,6 +85,14 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                     };
                 } else if (q.type === 'MATCHING') {
                     return { ...base, type: QuestionType.MATCHING, question: q.question, pairs: q.pairs };
+                } else if (q.type === 'MULTIPLE_SELECT') {
+                    return {
+                        ...base,
+                        type: QuestionType.MULTIPLE_SELECT,
+                        question: q.question,
+                        options: q.options,
+                        correctAnswers: q.correctAnswers || []
+                    };
                 } else {
                     return { ...base, type: QuestionType.SHORT_ANSWER, question: q.question, correctAnswer: q.correctAnswer };
                 }
@@ -390,6 +402,75 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                 >
                                     {isGenerating ? <><Loader2 className="animate-spin mr-2" /> Đang phân tích & tạo đề...</> : '🚀 Tạo đề kiểm tra ngay'}
                                 </button>
+
+                                <div className={`mt-6 pt-6 border-t-2 ${apiKey ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'} -mx-6 px-6 pb-4 rounded-b-2xl`}>
+                                    <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center">
+                                        <KeyRound className={`w-4 h-4 mr-2 ${apiKey ? 'text-green-500' : 'text-orange-500'}`} />
+                                        🔑 Cấu hình AI (Bắt buộc)
+                                        {apiKey && <span className="ml-2 text-green-600 text-xs">✓ Đã nhập</span>}
+                                    </label>
+
+                                    {/* Provider Selection */}
+                                    <div className="flex gap-2 mb-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAiProvider('perplexity');
+                                                localStorage.setItem('ai_provider', 'perplexity');
+                                            }}
+                                            className={`flex-1 py-2 px-4 rounded-lg font-bold text-sm transition-all ${aiProvider === 'perplexity'
+                                                ? 'bg-purple-600 text-white shadow-md'
+                                                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            🟣 Perplexity AI
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAiProvider('gemini');
+                                                localStorage.setItem('ai_provider', 'gemini');
+                                            }}
+                                            className={`flex-1 py-2 px-4 rounded-lg font-bold text-sm transition-all ${aiProvider === 'gemini'
+                                                ? 'bg-blue-600 text-white shadow-md'
+                                                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            🔵 Google Gemini
+                                        </button>
+                                    </div>
+
+                                    {/* API Key Input */}
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="password"
+                                            value={apiKey}
+                                            onChange={(e) => {
+                                                setApiKey(e.target.value);
+                                                localStorage.setItem('ai_api_key', e.target.value);
+                                            }}
+                                            placeholder={aiProvider === 'perplexity' ? "Dán Perplexity API Key vào đây..." : "Dán Google Gemini API Key vào đây..."}
+                                            className={`flex-1 p-3 border-2 rounded-lg text-sm focus:ring-2 outline-none ${apiKey ? 'border-green-300 focus:ring-green-500' : 'border-orange-300 focus:ring-orange-500'}`}
+                                        />
+                                    </div>
+
+                                    {/* Help Links */}
+                                    <p className="text-xs text-gray-600 mt-2">
+                                        📌 Lấy API Key miễn phí tại: {' '}
+                                        {aiProvider === 'perplexity' ? (
+                                            <a href="https://www.perplexity.ai/settings/api" target="_blank" rel="noopener noreferrer" className="text-purple-600 underline hover:text-purple-800">
+                                                Perplexity Settings
+                                            </a>
+                                        ) : (
+                                            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-800">
+                                                Google AI Studio
+                                            </a>
+                                        )}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        * API Key được lưu an toàn trên trình duyệt của bạn, không gửi lên server.
+                                    </p>
+                                </div>
                             </div>
 
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 h-full flex flex-col">

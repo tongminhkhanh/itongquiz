@@ -481,60 +481,117 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                     </div>
                   )}
 
-                  {q.type === QuestionType.MATCHING && (
-                    <div className="mt-4">
-                      <div className="grid grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                          <p className="font-bold text-blue-600 text-center">Cột A</p>
-                          {q.pairs.map((pair) => {
-                            const isSelectedLeft = answers[q.id]?.selectedLeft === pair.left;
-                            const isPaired = answers[q.id]?.[pair.left] !== undefined;
-                            return (
-                              <div
-                                key={pair.left}
-                                className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${isSelectedLeft
-                                  ? 'border-blue-500 bg-blue-50'
-                                  : isPaired
-                                    ? 'border-green-500 bg-green-50'
-                                    : 'border-gray-200 hover:border-blue-300'
-                                  }`}
-                                onClick={() => handleMatchingClick(q.id, pair.left, 'left')}
-                              >
-                                {pair.left}
-                              </div>
-                            );
-                          })}
+                  {q.type === QuestionType.MATCHING && (() => {
+                    // Define colors for pairs
+                    const pairColors = [
+                      { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-700' },
+                      { bg: 'bg-green-100', border: 'border-green-500', text: 'text-green-700' },
+                      { bg: 'bg-purple-100', border: 'border-purple-500', text: 'text-purple-700' },
+                      { bg: 'bg-orange-100', border: 'border-orange-500', text: 'text-orange-700' },
+                      { bg: 'bg-pink-100', border: 'border-pink-500', text: 'text-pink-700' },
+                      { bg: 'bg-yellow-100', border: 'border-yellow-500', text: 'text-yellow-700' },
+                      { bg: 'bg-teal-100', border: 'border-teal-500', text: 'text-teal-700' },
+                      { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-700' },
+                    ];
+
+                    // Build a map of left -> colorIndex for paired items
+                    const currentAnswers = answers[q.id] || {};
+                    const pairedLeftItems = Object.keys(currentAnswers).filter(key => key !== 'selectedLeft' && currentAnswers[key]);
+                    const leftToColorIndex: Record<string, number> = {};
+                    pairedLeftItems.forEach((left, idx) => {
+                      leftToColorIndex[left] = idx % pairColors.length;
+                    });
+
+                    // Build a map of right -> colorIndex
+                    const rightToColorIndex: Record<string, number> = {};
+                    pairedLeftItems.forEach(left => {
+                      const right = currentAnswers[left];
+                      if (right && leftToColorIndex[left] !== undefined) {
+                        rightToColorIndex[right] = leftToColorIndex[left];
+                      }
+                    });
+
+                    return (
+                      <div className="mt-4">
+                        <div className="grid grid-cols-2 gap-8">
+                          <div className="space-y-3">
+                            <p className="font-bold text-blue-600 text-center">Cột A</p>
+                            {q.pairs.map((pair) => {
+                              const isSelectedLeft = currentAnswers.selectedLeft === pair.left;
+                              const isPaired = currentAnswers[pair.left] !== undefined;
+                              const colorIdx = leftToColorIndex[pair.left];
+                              const color = isPaired && colorIdx !== undefined ? pairColors[colorIdx] : null;
+
+                              return (
+                                <div
+                                  key={pair.left}
+                                  className={`p-3 rounded-lg border-2 cursor-pointer transition-all font-medium ${isSelectedLeft
+                                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300'
+                                      : color
+                                        ? `${color.border} ${color.bg} ${color.text}`
+                                        : 'border-gray-200 hover:border-blue-300'
+                                    }`}
+                                  onClick={() => handleMatchingClick(q.id, pair.left, 'left')}
+                                >
+                                  {color && <span className="mr-2">●</span>}
+                                  {pair.left}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="space-y-3">
+                            <p className="font-bold text-orange-600 text-center">Cột B</p>
+                            {[...q.pairs].sort((a, b) => a.right.localeCompare(b.right)).map((pair) => {
+                              const colorIdx = rightToColorIndex[pair.right];
+                              const color = colorIdx !== undefined ? pairColors[colorIdx] : null;
+
+                              return (
+                                <div
+                                  key={pair.right}
+                                  className={`p-3 rounded-lg border-2 cursor-pointer transition-all font-medium ${color
+                                      ? `${color.border} ${color.bg} ${color.text}`
+                                      : 'border-gray-200 hover:border-orange-300'
+                                    }`}
+                                  onClick={() => handleMatchingClick(q.id, pair.right, 'right')}
+                                >
+                                  {color && <span className="mr-2">●</span>}
+                                  {pair.right}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <div className="space-y-3">
-                          <p className="font-bold text-orange-600 text-center">Cột B</p>
-                          {[...q.pairs].sort((a, b) => a.right.localeCompare(b.right)).map((pair, idx) => {
-                            const isPairedWithThisRight = Object.values(answers[q.id] || {}).includes(pair.right);
-                            return (
-                              <div
-                                key={pair.right}
-                                className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${isPairedWithThisRight
-                                  ? 'border-green-500 bg-green-50'
-                                  : 'border-gray-200 hover:border-orange-300'
-                                  }`}
-                                onClick={() => handleMatchingClick(q.id, pair.right, 'right')}
-                              >
-                                {pair.right}
-                              </div>
-                            );
-                          })}
+
+                        {/* Legend - show paired items */}
+                        {pairedLeftItems.length > 0 && (
+                          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                            <p className="text-xs font-bold text-gray-600 mb-2">Đã nối:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {pairedLeftItems.map(left => {
+                                const colorIdx = leftToColorIndex[left];
+                                const color = pairColors[colorIdx];
+                                return (
+                                  <span key={left} className={`text-xs px-2 py-1 rounded ${color.bg} ${color.text} ${color.border} border`}>
+                                    {left} ↔ {currentAnswers[left]}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="mt-3 text-sm text-gray-500 text-center">
+                          Chọn một ô ở Cột A, sau đó chọn ô tương ứng ở Cột B để nối.
                         </div>
+                        <button
+                          onClick={() => setAnswers(prev => ({ ...prev, [q.id]: {} }))}
+                          className="mt-2 text-xs text-red-500 underline"
+                        >
+                          Làm lại câu này
+                        </button>
                       </div>
-                      <div className="mt-4 text-sm text-gray-500 text-center">
-                        Chọn một ô ở Cột A, sau đó chọn ô tương ứng ở Cột B để nối.
-                      </div>
-                      <button
-                        onClick={() => setAnswers(prev => ({ ...prev, [q.id]: {} }))}
-                        className="mt-2 text-xs text-red-500 underline"
-                      >
-                        Làm lại câu này
-                      </button>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {q.type === QuestionType.MULTIPLE_SELECT && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
