@@ -19,6 +19,19 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
   const [startTime, setStartTime] = useState<number>(0);
   const [result, setResult] = useState<StudentResult | null>(null);
 
+  // Shuffled questions for random order
+  const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
+
+  // Fisher-Yates shuffle algorithm
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   // Timer logic
   useEffect(() => {
     if (step === 'quiz' && timeLeft > 0) {
@@ -34,6 +47,8 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
   const handleStart = () => {
     if (!studentName || !studentClass) return;
+    // Shuffle questions when starting the quiz
+    setShuffledQuestions(shuffleArray(quiz.questions));
     setStartTime(Date.now());
     setStep('quiz');
   };
@@ -287,91 +302,124 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
                   {/* Render Answer Review based on Type */}
                   <div className="ml-10 text-sm">
-                    {q.type === QuestionType.MCQ && (
-                      <div>
-                        <p className={answers[q.id] === q.correctAnswer ? "text-green-600 font-bold" : "text-red-500 font-bold"}>
-                          Em chọn: {answers[q.id] || "Không trả lời"}
-                        </p>
-                        {answers[q.id] !== q.correctAnswer && (
-                          <p className="text-gray-500">Đáp án đúng: <span className="font-bold">{q.correctAnswer}</span></p>
-                        )}
-                      </div>
-                    )}
-                    {q.type === QuestionType.SHORT_ANSWER && (
-                      <div>
-                        <p className={(answers[q.id] || "").toString().toLowerCase() === q.correctAnswer.toLowerCase() ? "text-green-600 font-bold" : "text-red-500 font-bold"}>
-                          Em ghi: {answers[q.id] || "..."}
-                        </p>
-                        {(answers[q.id] || "").toString().toLowerCase() !== q.correctAnswer.toLowerCase() && (
-                          <p className="text-gray-500">Đáp án đúng: <span className="font-bold">{q.correctAnswer}</span></p>
-                        )}
-                      </div>
-                    )}
+                    {q.type === QuestionType.MCQ && (() => {
+                      const isCorrect = answers[q.id] === q.correctAnswer;
+                      return (
+                        <div>
+                          <p className={isCorrect ? "text-green-600 font-bold" : "text-red-500 font-bold"}>
+                            Em chọn: {answers[q.id] || "Không trả lời"}
+                          </p>
+                          {!isCorrect && (
+                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                              <p className="text-yellow-800 text-xs">
+                                💡 <strong>Gợi ý:</strong> Em hãy đọc kỹ lại câu hỏi và các lựa chọn. Suy nghĩ xem đáp án nào phù hợp nhất với kiến thức đã học.
+                              </p>
+                            </div>
+                          )}
+                          {isCorrect && <span className="text-green-600">✓ Chính xác!</span>}
+                        </div>
+                      );
+                    })()}
+                    {q.type === QuestionType.SHORT_ANSWER && (() => {
+                      const isCorrect = (answers[q.id] || "").toString().toLowerCase() === q.correctAnswer.toLowerCase();
+                      return (
+                        <div>
+                          <p className={isCorrect ? "text-green-600 font-bold" : "text-red-500 font-bold"}>
+                            Em ghi: {answers[q.id] || "..."}
+                          </p>
+                          {!isCorrect && (
+                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                              <p className="text-yellow-800 text-xs">
+                                💡 <strong>Gợi ý:</strong> Em hãy tính toán hoặc suy luận lại. Kiểm tra xem em đã hiểu đúng yêu cầu của câu hỏi chưa.
+                              </p>
+                            </div>
+                          )}
+                          {isCorrect && <span className="text-green-600">✓ Chính xác!</span>}
+                        </div>
+                      );
+                    })()}
                     {q.type === QuestionType.TRUE_FALSE && (
                       <div className="grid grid-cols-1 gap-1 mt-2">
                         {q.items.map(item => {
                           const studentVal = answers[q.id]?.[item.id];
                           const isCorrect = studentVal === item.isCorrect;
                           return (
-                            <div key={item.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                              <span className="flex-1">{item.statement}</span>
-                              <div className="flex items-center space-x-2 text-xs">
-                                <span className={isCorrect ? "text-green-600 font-bold" : "text-red-500 font-bold"}>
+                            <div key={item.id} className={`p-2 rounded ${isCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
+                              <div className="flex items-center justify-between">
+                                <span className="flex-1">{item.statement}</span>
+                                <span className={isCorrect ? "text-green-600 font-bold text-xs" : "text-red-500 font-bold text-xs"}>
                                   {studentVal === true ? "Đúng" : studentVal === false ? "Sai" : "Trống"}
+                                  {isCorrect && " ✓"}
                                 </span>
-                                {!isCorrect && (
-                                  <span className="text-gray-400">
-                                    (Chuẩn: {item.isCorrect ? "Đúng" : "Sai"})
-                                  </span>
-                                )}
                               </div>
+                              {!isCorrect && (
+                                <p className="text-yellow-700 text-xs mt-1 italic">
+                                  💡 Hãy xem lại phát biểu này và suy nghĩ kỹ hơn.
+                                </p>
+                              )}
                             </div>
                           )
                         })}
                       </div>
                     )}
-                    {q.type === QuestionType.MATCHING && (
-                      <div className="mt-2">
-                        <p className="font-bold mb-2">Các cặp đã nối:</p>
-                        {q.pairs.map(correctPair => {
-                          const studentRight = answers[q.id]?.[correctPair.left];
-                          const isCorrect = studentRight === correctPair.right;
-                          return (
-                            <div key={correctPair.left} className={`flex justify-between items-center p-2 rounded mb-1 ${isCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
-                              <span className="font-medium">{correctPair.left}</span>
-                              <span className="mx-2">→</span>
-                              <span className={`${isCorrect ? 'text-green-700' : 'text-red-700'} font-bold`}>
-                                {studentRight || "Chưa nối"}
-                              </span>
-                              {!isCorrect && studentRight && (
-                                <span className="ml-2 text-gray-500 text-xs">(Đúng: {correctPair.right})</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                        {Object.keys(answers[q.id] || {}).filter(key => key !== 'selectedLeft' && !q.pairs.some(p => p.left === key)).length > 0 && (
-                          <p className="text-red-500 text-xs mt-2">Có cặp nối không hợp lệ.</p>
-                        )}
-                      </div>
-                    )}
-                    {q.type === QuestionType.MULTIPLE_SELECT && (
-                      <div>
-                        <p className="mb-1">
-                          Em chọn: <span className="font-bold">{(answers[q.id] as string[])?.join(', ') || "Không trả lời"}</span>
-                        </p>
-                        {(() => {
-                          const studentAns = (answers[q.id] as string[]) || [];
-                          const correctAns = q.correctAnswers || [];
-                          const isCorrect = studentAns.length === correctAns.length && studentAns.every(val => correctAns.includes(val));
+                    {q.type === QuestionType.MATCHING && (() => {
+                      const userPairs = answers[q.id] || {};
+                      const incorrectPairs = q.pairs.filter(p => userPairs[p.left] !== p.right);
+                      const hasIncorrect = incorrectPairs.length > 0;
 
-                          return !isCorrect ? (
-                            <p className="text-gray-500">
-                              Đáp án đúng: <span className="font-bold">{correctAns.join(', ')}</span>
-                            </p>
-                          ) : <span className="text-green-600 font-bold text-sm">Đúng!</span>;
-                        })()}
-                      </div>
-                    )}
+                      return (
+                        <div className="mt-2">
+                          <p className="font-bold mb-2">Các cặp em đã nối:</p>
+                          {q.pairs.map(correctPair => {
+                            const studentRight = userPairs[correctPair.left];
+                            const isCorrect = studentRight === correctPair.right;
+                            return (
+                              <div key={correctPair.left} className={`flex justify-between items-center p-2 rounded mb-1 ${isCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
+                                <span className="font-medium">{correctPair.left}</span>
+                                <span className="mx-2">→</span>
+                                <span className={`${isCorrect ? 'text-green-700' : 'text-red-700'} font-bold`}>
+                                  {studentRight || "Chưa nối"}
+                                  {isCorrect && " ✓"}
+                                </span>
+                              </div>
+                            );
+                          })}
+                          {hasIncorrect && (
+                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                              <p className="text-yellow-800 text-xs">
+                                💡 <strong>Gợi ý:</strong> Em hãy xem lại mối quan hệ giữa các cột. Mỗi ý ở cột A chỉ nối với đúng một ý ở cột B.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    {q.type === QuestionType.MULTIPLE_SELECT && (() => {
+                      const studentAns = (answers[q.id] as string[]) || [];
+                      const correctAns = q.correctAnswers || [];
+                      const isCorrect = studentAns.length === correctAns.length && studentAns.every(val => correctAns.includes(val));
+
+                      return (
+                        <div>
+                          <p className="mb-1">
+                            Em chọn: <span className={isCorrect ? "font-bold text-green-600" : "font-bold text-red-500"}>
+                              {studentAns.length > 0 ? studentAns.join(', ') : "Không trả lời"}
+                            </span>
+                          </p>
+                          {isCorrect ? (
+                            <span className="text-green-600 font-bold text-sm">✓ Chính xác!</span>
+                          ) : (
+                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                              <p className="text-yellow-800 text-xs">
+                                💡 <strong>Gợi ý:</strong> Câu này có nhiều đáp án đúng. Em hãy đọc lại câu hỏi và kiểm tra từng lựa chọn xem có phù hợp không.
+                                {studentAns.length < correctAns.length && " (Có thể em còn thiếu đáp án)"}
+                                {studentAns.length > correctAns.length && " (Có thể em chọn thừa đáp án)"}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
@@ -390,271 +438,279 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
   // QUIZ TAKING VIEW
   return (
-    <div className="max-w-3xl mx-auto p-4 pb-24">
-      <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-10 px-4 py-3 flex justify-between items-center">
-        <div>
-          <span className="text-gray-500 text-sm">Thí sinh:</span>
-          <span className="font-bold text-gray-800 ml-1">{studentName} ({studentClass})</span>
-        </div>
-        <div className={`font-mono text-xl font-bold ${timeLeft < 300 ? 'text-red-500 animate-pulse' : 'text-blue-600'}`}>
-          {formatTime(timeLeft)}
-        </div>
-      </div>
+    <div
+      className="min-h-screen p-4 pb-24 bg-cover bg-center bg-fixed bg-no-repeat"
+      style={{ backgroundImage: "url('/quiz-background.jpg')" }}
+    >
+      {/* Overlay for better readability */}
+      <div className="fixed inset-0 bg-white/40 backdrop-blur-[1px] -z-10"></div>
 
-      <div className="mt-16 space-y-8">
-        {quiz.questions.map((q, index) => (
-          <div key={q.id} className="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-gray-100">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="bg-orange-100 text-orange-600 font-bold rounded-lg w-8 h-8 flex items-center justify-center flex-shrink-0">
-                {index + 1}
-              </div>
-              <div className="flex-1">
-                {q.type === QuestionType.TRUE_FALSE || q.type === QuestionType.MATCHING ? (
-                  <h3 className="text-lg font-bold text-gray-800">{q.mainQuestion}</h3>
-                ) : (
-                  <h3 className="text-lg font-bold text-gray-800">{(q as any).question}</h3>
-                )}
+      <div className="max-w-3xl mx-auto">
+        <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-10 px-4 py-3 flex justify-between items-center">
+          <div>
+            <span className="text-gray-500 text-sm">Thí sinh:</span>
+            <span className="font-bold text-gray-800 ml-1">{studentName} ({studentClass})</span>
+          </div>
+          <div className={`font-mono text-xl font-bold ${timeLeft < 300 ? 'text-red-500 animate-pulse' : 'text-blue-600'}`}>
+            {formatTime(timeLeft)}
+          </div>
+        </div>
 
-                {/* Render Inputs */}
-                <div className="mt-4">
-                  {q.type === QuestionType.MCQ && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {q.options.map((opt, idx) => {
-                        const label = String.fromCharCode(65 + idx); // A, B, C, D
-                        const isSelected = answers[q.id] === label;
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => handleAnswerChange(q.id, label)}
-                            className={`text-left p-4 rounded-xl border-2 transition-all flex items-center ${isSelected
-                              ? 'border-orange-500 bg-orange-50 text-orange-900'
-                              : 'border-gray-200 hover:border-orange-300'
-                              }`}
-                          >
-                            <span className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center text-xs font-bold ${isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-gray-300 text-gray-400'
-                              }`}>
-                              {label}
-                            </span>
-                            {opt}
-                          </button>
-                        )
-                      })}
-                    </div>
+        <div className="mt-16 space-y-8">
+          {shuffledQuestions.map((q, index) => (
+            <div key={q.id} className="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-gray-100">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="bg-orange-100 text-orange-600 font-bold rounded-lg w-8 h-8 flex items-center justify-center flex-shrink-0">
+                  {index + 1}
+                </div>
+                <div className="flex-1">
+                  {q.type === QuestionType.TRUE_FALSE || q.type === QuestionType.MATCHING ? (
+                    <h3 className="text-lg font-bold text-gray-800">{q.mainQuestion}</h3>
+                  ) : (
+                    <h3 className="text-lg font-bold text-gray-800">{(q as any).question}</h3>
                   )}
 
-                  {q.type === QuestionType.SHORT_ANSWER && (
-                    <div>
-                      <input
-                        type="text"
-                        maxLength={4}
-                        value={answers[q.id] || ''}
-                        onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                        className="w-full md:w-1/2 p-3 border-2 border-gray-300 rounded-xl text-lg font-mono focus:border-orange-500 outline-none uppercase"
-                        placeholder="Nhập đáp án..."
-                      />
-                      <p className="text-xs text-gray-400 mt-2">Tối đa 4 ký tự/số.</p>
-                    </div>
-                  )}
+                  {/* Render Inputs */}
+                  <div className="mt-4">
+                    {q.type === QuestionType.MCQ && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {q.options.map((opt, idx) => {
+                          const label = String.fromCharCode(65 + idx); // A, B, C, D
+                          const isSelected = answers[q.id] === label;
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => handleAnswerChange(q.id, label)}
+                              className={`text-left p-4 rounded-xl border-2 transition-all flex items-center ${isSelected
+                                ? 'border-orange-500 bg-orange-50 text-orange-900'
+                                : 'border-gray-200 hover:border-orange-300'
+                                }`}
+                            >
+                              <span className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center text-xs font-bold ${isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-gray-300 text-gray-400'
+                                }`}>
+                                {label}
+                              </span>
+                              {opt}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
 
-                  {q.type === QuestionType.TRUE_FALSE && (
-                    <div className="space-y-3">
-                      {q.items.map((item, i) => {
-                        const val = answers[q.id]?.[item.id];
-                        return (
-                          <div key={item.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                            <span className="text-gray-700 font-medium mr-4 flex-1">
-                              {String.fromCharCode(97 + i)}. {item.statement}
-                            </span>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleAnswerChange(q.id, true, item.id)}
-                                className={`px-3 py-1 rounded font-bold text-sm ${val === true ? 'bg-green-500 text-white' : 'bg-white border border-gray-300 text-gray-500'}`}
-                              >Đ</button>
-                              <button
-                                onClick={() => handleAnswerChange(q.id, false, item.id)}
-                                className={`px-3 py-1 rounded font-bold text-sm ${val === false ? 'bg-red-500 text-white' : 'bg-white border border-gray-300 text-gray-500'}`}
-                              >S</button>
+                    {q.type === QuestionType.SHORT_ANSWER && (
+                      <div>
+                        <input
+                          type="text"
+                          maxLength={4}
+                          value={answers[q.id] || ''}
+                          onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                          className="w-full md:w-1/2 p-3 border-2 border-gray-300 rounded-xl text-lg font-mono focus:border-orange-500 outline-none uppercase"
+                          placeholder="Nhập đáp án..."
+                        />
+                        <p className="text-xs text-gray-400 mt-2">Tối đa 4 ký tự/số.</p>
+                      </div>
+                    )}
+
+                    {q.type === QuestionType.TRUE_FALSE && (
+                      <div className="space-y-3">
+                        {q.items.map((item, i) => {
+                          const val = answers[q.id]?.[item.id];
+                          return (
+                            <div key={item.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                              <span className="text-gray-700 font-medium mr-4 flex-1">
+                                {String.fromCharCode(97 + i)}. {item.statement}
+                              </span>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleAnswerChange(q.id, true, item.id)}
+                                  className={`px-3 py-1 rounded font-bold text-sm ${val === true ? 'bg-green-500 text-white' : 'bg-white border border-gray-300 text-gray-500'}`}
+                                >Đ</button>
+                                <button
+                                  onClick={() => handleAnswerChange(q.id, false, item.id)}
+                                  className={`px-3 py-1 rounded font-bold text-sm ${val === false ? 'bg-red-500 text-white' : 'bg-white border border-gray-300 text-gray-500'}`}
+                                >S</button>
+                              </div>
                             </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                          )
+                        })}
+                      </div>
+                    )}
 
-                  {q.type === QuestionType.MATCHING && (() => {
-                    // Define colors for pairs
-                    const pairColors = [
-                      { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-700' },
-                      { bg: 'bg-green-100', border: 'border-green-500', text: 'text-green-700' },
-                      { bg: 'bg-purple-100', border: 'border-purple-500', text: 'text-purple-700' },
-                      { bg: 'bg-orange-100', border: 'border-orange-500', text: 'text-orange-700' },
-                      { bg: 'bg-pink-100', border: 'border-pink-500', text: 'text-pink-700' },
-                      { bg: 'bg-yellow-100', border: 'border-yellow-500', text: 'text-yellow-700' },
-                      { bg: 'bg-teal-100', border: 'border-teal-500', text: 'text-teal-700' },
-                      { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-700' },
-                    ];
+                    {q.type === QuestionType.MATCHING && (() => {
+                      // Define colors for pairs
+                      const pairColors = [
+                        { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-700' },
+                        { bg: 'bg-green-100', border: 'border-green-500', text: 'text-green-700' },
+                        { bg: 'bg-purple-100', border: 'border-purple-500', text: 'text-purple-700' },
+                        { bg: 'bg-orange-100', border: 'border-orange-500', text: 'text-orange-700' },
+                        { bg: 'bg-pink-100', border: 'border-pink-500', text: 'text-pink-700' },
+                        { bg: 'bg-yellow-100', border: 'border-yellow-500', text: 'text-yellow-700' },
+                        { bg: 'bg-teal-100', border: 'border-teal-500', text: 'text-teal-700' },
+                        { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-700' },
+                      ];
 
-                    // Build a map of left -> colorIndex for paired items
-                    const currentAnswers = answers[q.id] || {};
-                    const pairedLeftItems = Object.keys(currentAnswers).filter(key => key !== 'selectedLeft' && currentAnswers[key]);
-                    const leftToColorIndex: Record<string, number> = {};
-                    pairedLeftItems.forEach((left, idx) => {
-                      leftToColorIndex[left] = idx % pairColors.length;
-                    });
+                      // Build a map of left -> colorIndex for paired items
+                      const currentAnswers = answers[q.id] || {};
+                      const pairedLeftItems = Object.keys(currentAnswers).filter(key => key !== 'selectedLeft' && currentAnswers[key]);
+                      const leftToColorIndex: Record<string, number> = {};
+                      pairedLeftItems.forEach((left, idx) => {
+                        leftToColorIndex[left] = idx % pairColors.length;
+                      });
 
-                    // Build a map of right -> colorIndex
-                    const rightToColorIndex: Record<string, number> = {};
-                    pairedLeftItems.forEach(left => {
-                      const right = currentAnswers[left];
-                      if (right && leftToColorIndex[left] !== undefined) {
-                        rightToColorIndex[right] = leftToColorIndex[left];
-                      }
-                    });
+                      // Build a map of right -> colorIndex
+                      const rightToColorIndex: Record<string, number> = {};
+                      pairedLeftItems.forEach(left => {
+                        const right = currentAnswers[left];
+                        if (right && leftToColorIndex[left] !== undefined) {
+                          rightToColorIndex[right] = leftToColorIndex[left];
+                        }
+                      });
 
-                    return (
-                      <div className="mt-4">
-                        <div className="grid grid-cols-2 gap-8">
-                          <div className="space-y-3">
-                            <p className="font-bold text-blue-600 text-center">Cột A</p>
-                            {q.pairs.map((pair) => {
-                              const isSelectedLeft = currentAnswers.selectedLeft === pair.left;
-                              const isPaired = currentAnswers[pair.left] !== undefined;
-                              const colorIdx = leftToColorIndex[pair.left];
-                              const color = isPaired && colorIdx !== undefined ? pairColors[colorIdx] : null;
+                      return (
+                        <div className="mt-4">
+                          <div className="grid grid-cols-2 gap-8">
+                            <div className="space-y-3">
+                              <p className="font-bold text-blue-600 text-center">Cột A</p>
+                              {q.pairs.map((pair) => {
+                                const isSelectedLeft = currentAnswers.selectedLeft === pair.left;
+                                const isPaired = currentAnswers[pair.left] !== undefined;
+                                const colorIdx = leftToColorIndex[pair.left];
+                                const color = isPaired && colorIdx !== undefined ? pairColors[colorIdx] : null;
 
-                              return (
-                                <div
-                                  key={pair.left}
-                                  className={`p-3 rounded-lg border-2 cursor-pointer transition-all font-medium ${isSelectedLeft
+                                return (
+                                  <div
+                                    key={pair.left}
+                                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all font-medium ${isSelectedLeft
                                       ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300'
                                       : color
                                         ? `${color.border} ${color.bg} ${color.text}`
                                         : 'border-gray-200 hover:border-blue-300'
-                                    }`}
-                                  onClick={() => handleMatchingClick(q.id, pair.left, 'left')}
-                                >
-                                  {color && <span className="mr-2">●</span>}
-                                  {pair.left}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <div className="space-y-3">
-                            <p className="font-bold text-orange-600 text-center">Cột B</p>
-                            {[...q.pairs].sort((a, b) => a.right.localeCompare(b.right)).map((pair) => {
-                              const colorIdx = rightToColorIndex[pair.right];
-                              const color = colorIdx !== undefined ? pairColors[colorIdx] : null;
+                                      }`}
+                                    onClick={() => handleMatchingClick(q.id, pair.left, 'left')}
+                                  >
+                                    {color && <span className="mr-2">●</span>}
+                                    {pair.left}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div className="space-y-3">
+                              <p className="font-bold text-orange-600 text-center">Cột B</p>
+                              {[...q.pairs].sort((a, b) => a.right.localeCompare(b.right)).map((pair) => {
+                                const colorIdx = rightToColorIndex[pair.right];
+                                const color = colorIdx !== undefined ? pairColors[colorIdx] : null;
 
-                              return (
-                                <div
-                                  key={pair.right}
-                                  className={`p-3 rounded-lg border-2 cursor-pointer transition-all font-medium ${color
+                                return (
+                                  <div
+                                    key={pair.right}
+                                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all font-medium ${color
                                       ? `${color.border} ${color.bg} ${color.text}`
                                       : 'border-gray-200 hover:border-orange-300'
-                                    }`}
-                                  onClick={() => handleMatchingClick(q.id, pair.right, 'right')}
-                                >
-                                  {color && <span className="mr-2">●</span>}
-                                  {pair.right}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Legend - show paired items */}
-                        {pairedLeftItems.length > 0 && (
-                          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                            <p className="text-xs font-bold text-gray-600 mb-2">Đã nối:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {pairedLeftItems.map(left => {
-                                const colorIdx = leftToColorIndex[left];
-                                const color = pairColors[colorIdx];
-                                return (
-                                  <span key={left} className={`text-xs px-2 py-1 rounded ${color.bg} ${color.text} ${color.border} border`}>
-                                    {left} ↔ {currentAnswers[left]}
-                                  </span>
+                                      }`}
+                                    onClick={() => handleMatchingClick(q.id, pair.right, 'right')}
+                                  >
+                                    {color && <span className="mr-2">●</span>}
+                                    {pair.right}
+                                  </div>
                                 );
                               })}
                             </div>
                           </div>
-                        )}
 
-                        <div className="mt-3 text-sm text-gray-500 text-center">
-                          Chọn một ô ở Cột A, sau đó chọn ô tương ứng ở Cột B để nối.
-                        </div>
-                        <button
-                          onClick={() => setAnswers(prev => ({ ...prev, [q.id]: {} }))}
-                          className="mt-2 text-xs text-red-500 underline"
-                        >
-                          Làm lại câu này
-                        </button>
-                      </div>
-                    );
-                  })()}
-
-                  {q.type === QuestionType.MULTIPLE_SELECT && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {q.options.map((opt, idx) => {
-                        const label = String.fromCharCode(65 + idx); // A, B, C, D
-                        const currentAnswers = (answers[q.id] as string[]) || [];
-                        const isSelected = currentAnswers.includes(label);
-
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => {
-                              const newAnswers = isSelected
-                                ? currentAnswers.filter(a => a !== label)
-                                : [...currentAnswers, label].sort();
-                              handleAnswerChange(q.id, newAnswers);
-                            }}
-                            className={`text-left p-4 rounded-xl border-2 transition-all flex items-center ${isSelected
-                              ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
-                              : 'border-gray-200 hover:border-indigo-300'
-                              }`}
-                          >
-                            <div className={`w-6 h-6 rounded border-2 mr-3 flex items-center justify-center text-xs font-bold ${isSelected ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-300 text-gray-400'
-                              }`}>
-                              {isSelected && <CheckCircle className="w-4 h-4" />}
+                          {/* Legend - show paired items */}
+                          {pairedLeftItems.length > 0 && (
+                            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                              <p className="text-xs font-bold text-gray-600 mb-2">Đã nối:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {pairedLeftItems.map(left => {
+                                  const colorIdx = leftToColorIndex[left];
+                                  const color = pairColors[colorIdx];
+                                  return (
+                                    <span key={left} className={`text-xs px-2 py-1 rounded ${color.bg} ${color.text} ${color.border} border`}>
+                                      {left} ↔ {currentAnswers[left]}
+                                    </span>
+                                  );
+                                })}
+                              </div>
                             </div>
-                            {opt}
+                          )}
+
+                          <div className="mt-3 text-sm text-gray-500 text-center">
+                            Chọn một ô ở Cột A, sau đó chọn ô tương ứng ở Cột B để nối.
+                          </div>
+                          <button
+                            onClick={() => setAnswers(prev => ({ ...prev, [q.id]: {} }))}
+                            className="mt-2 text-xs text-red-500 underline"
+                          >
+                            Làm lại câu này
                           </button>
-                        )
-                      })}
-                      <p className="col-span-2 text-xs text-gray-500 mt-2">Chọn tất cả các đáp án đúng.</p>
-                    </div>
-                  )}
+                        </div>
+                      );
+                    })()}
+
+                    {q.type === QuestionType.MULTIPLE_SELECT && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {q.options.map((opt, idx) => {
+                          const label = String.fromCharCode(65 + idx); // A, B, C, D
+                          const currentAnswers = (answers[q.id] as string[]) || [];
+                          const isSelected = currentAnswers.includes(label);
+
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                const newAnswers = isSelected
+                                  ? currentAnswers.filter(a => a !== label)
+                                  : [...currentAnswers, label].sort();
+                                handleAnswerChange(q.id, newAnswers);
+                              }}
+                              className={`text-left p-4 rounded-xl border-2 transition-all flex items-center ${isSelected
+                                ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
+                                : 'border-gray-200 hover:border-indigo-300'
+                                }`}
+                            >
+                              <div className={`w-6 h-6 rounded border-2 mr-3 flex items-center justify-center text-xs font-bold ${isSelected ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-300 text-gray-400'
+                                }`}>
+                                {isSelected && <CheckCircle className="w-4 h-4" />}
+                              </div>
+                              {opt}
+                            </button>
+                          )
+                        })}
+                        <p className="col-span-2 text-xs text-gray-500 mt-2">Chọn tất cả các đáp án đúng.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-10 flex justify-center">
-        <button
-          onClick={() => {
-            // Simple validation check before submitting
-            const unanswered = quiz.questions.filter(q => {
-              if (q.type === QuestionType.TRUE_FALSE) {
-                return q.items.some(i => answers[q.id]?.[i.id] === undefined);
-              }
-              return !answers[q.id];
-            });
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-10 flex justify-center">
+          <button
+            onClick={() => {
+              // Simple validation check before submitting
+              const unanswered = shuffledQuestions.filter(q => {
+                if (q.type === QuestionType.TRUE_FALSE) {
+                  return q.items.some(i => answers[q.id]?.[i.id] === undefined);
+                }
+                return !answers[q.id];
+              });
 
-            if (unanswered.length > 0) {
-              if (confirm(`Bạn còn ${unanswered.length} câu chưa làm xong. Bạn có chắc chắn muốn nộp bài không?`)) {
+              if (unanswered.length > 0) {
+                if (confirm(`Bạn còn ${unanswered.length} câu chưa làm xong. Bạn có chắc chắn muốn nộp bài không?`)) {
+                  handleSubmit();
+                }
+              } else {
                 handleSubmit();
               }
-            } else {
-              handleSubmit();
-            }
-          }}
-          className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-12 rounded-full shadow-lg text-lg transform transition-transform hover:scale-105"
-        >
-          NỘP BÀI
-        </button>
+            }}
+            className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-12 rounded-full shadow-lg text-lg transform transition-transform hover:scale-105"
+          >
+            NỘP BÀI
+          </button>
+        </div>
       </div>
     </div>
   );
