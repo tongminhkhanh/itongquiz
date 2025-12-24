@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import { Quiz, Question, QuestionType, MCQQuestion, TrueFalseQuestion, ShortAnswerQuestion, Teacher } from './types';
+import { Quiz, Question, QuestionType, MCQQuestion, TrueFalseQuestion, ShortAnswerQuestion, Teacher, StudentResult } from './types';
 
 // Helper to fetch CSV data
 const fetchCSV = async (url: string): Promise<any[]> => {
@@ -26,6 +26,30 @@ export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Pro
         }));
     } catch (error) {
         console.error("Error fetching teachers:", error);
+        return [];
+    }
+};
+
+export const fetchResultsFromSheets = async (sheetId: string, resultsGid: string): Promise<StudentResult[]> => {
+    try {
+        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${resultsGid}`;
+        const data = await fetchCSV(url);
+
+        return data.map((row: any) => ({
+            id: row.id || `result-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            studentName: row.studentName || row.name || '',
+            studentClass: row.className || row.studentClass || '',
+            quizId: row.quizId || '',
+            quizTitle: row.quizTitle || '',
+            score: parseFloat(row.score) || 0,
+            correctCount: parseInt(row.correctCount) || 0,
+            totalQuestions: parseInt(row.totalQuestions) || 0,
+            submittedAt: row.submittedAt || new Date().toISOString(),
+            timeTaken: parseInt(row.timeTaken) || 0,
+            answers: row.answers ? JSON.parse(row.answers) : []
+        })).filter((r: StudentResult) => r.studentName); // Filter out invalid rows
+    } catch (error) {
+        console.error("Error fetching results from Sheets:", error);
         return [];
     }
 };
