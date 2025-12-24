@@ -51,7 +51,8 @@ The output must be a valid JSON object with this structure:
       "question": "Điền từ thích hợp vào chỗ trống:",
       "text": "Con mèo [trèo] cây cau. Con chó [nằm] trước nhà.",
       "blanks": ["trèo", "nằm"],
-      "distractors": ["bơi", "bay"]
+      "distractors": ["bơi", "bay"],
+      "explanation": "Mèo có khả năng leo trèo giỏi nên dùng từ 'trèo'. Chó thường nằm canh nhà nên dùng từ 'nằm'."
     }
   ]
 }
@@ -93,4 +94,9 @@ Rules:
 4. MULTIPLE_SELECT: PHẢI có 2-3 đáp án đúng, KHÔNG phải 1 đáp án.
 5. DRAG_DROP: text PHẢI chứa các từ trong ngoặc vuông [] đúng với thứ tự trong blanks.
 6. Ensure valid JSON. No markdown code blocks.
+7. EXPLANATION: Mỗi câu hỏi BẮT BUỘC phải có trường "explanation". Đây là hướng dẫn giải chi tiết, giải thích tại sao đáp án đó đúng, hoặc cách tính toán để ra kết quả. Viết giọng văn khuyến khích, dễ hiểu cho học sinh tiểu học.
+8. QUY TẮC VỀ CA DAO, TỤC NGỮ, THÀNH NGỮ:
+   - BẮT BUỘC phải chính xác tuyệt đối từng từ theo nguyên tác.
+   - KHÔNG ĐƯỢC tự bịa ra hoặc thay đổi câu chữ.
+   - Nếu không chắc chắn, hãy tìm kiếm thông tin kiểm chứng trước khi đưa vào câu hỏi.
 `;

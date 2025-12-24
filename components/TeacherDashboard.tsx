@@ -81,6 +81,15 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
         localStorage.setItem('quiz_image_library', JSON.stringify(imageLibrary));
     }, [imageLibrary]);
 
+    const formatText = (text: string) => {
+        if (!text) return "";
+        // Replace / with : ONLY if surrounded by spaces (e.g., 5 / 7 -> 5 : 7). Keep fractions (1/2) as is.
+        // Replace * with x (e.g., 5 * 7 -> 5 x 7)
+        return text
+            .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 x $2')
+            .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
+    };
+
     // Handle image upload
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -864,11 +873,11 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                         <div className="text-gray-800">
                                                             {q.type === 'MCQ' && (
                                                                 <div>
-                                                                    <p className="font-medium mb-2">{(q as any).question}</p>
+                                                                    <p className="font-medium mb-2">{formatText((q as any).question)}</p>
                                                                     <ul className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                                                                         {(q as any).options.map((o: string, idx: number) => (
                                                                             <li key={idx} className={String.fromCharCode(65 + idx) === (q as any).correctAnswer ? "text-green-600 font-bold" : ""}>
-                                                                                {String.fromCharCode(65 + idx)}. {o}
+                                                                                {String.fromCharCode(65 + idx)}. {formatText(o)}
                                                                             </li>
                                                                         ))}
                                                                     </ul>
@@ -876,11 +885,11 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                             )}
                                                             {q.type === 'TRUE_FALSE' && (
                                                                 <div>
-                                                                    <p className="font-medium mb-2">{(q as any).mainQuestion}</p>
+                                                                    <p className="font-medium mb-2">{formatText((q as any).mainQuestion)}</p>
                                                                     <ul className="space-y-1 text-xs text-gray-600">
                                                                         {(q as any).items.map((it: any) => (
                                                                             <li key={it.id} className="flex justify-between">
-                                                                                <span>- {it.statement}</span>
+                                                                                <span>- {formatText(it.statement)}</span>
                                                                                 <span className={it.isCorrect ? "text-green-600 font-bold" : "text-red-500 font-bold"}>
                                                                                     {it.isCorrect ? "Đúng" : "Sai"}
                                                                                 </span>
@@ -891,23 +900,23 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                             )}
                                                             {q.type === 'SHORT_ANSWER' && (
                                                                 <div>
-                                                                    <p className="font-medium mb-1">{(q as any).question}</p>
-                                                                    <p className="text-xs text-green-600 font-bold">Đáp án: {(q as any).correctAnswer}</p>
+                                                                    <p className="font-medium mb-1">{formatText((q as any).question)}</p>
+                                                                    <p className="text-xs text-green-600 font-bold">Đáp án: {formatText((q as any).correctAnswer)}</p>
                                                                 </div>
                                                             )}
                                                             {q.type === 'MATCHING' && (
                                                                 <div>
-                                                                    <p className="font-medium mb-1">{(q as any).question}</p>
+                                                                    <p className="font-medium mb-1">{formatText((q as any).question)}</p>
                                                                     <ul className="text-xs text-gray-600 space-y-1">
                                                                         {(q as any).pairs.map((p: any, idx: number) => (
-                                                                            <li key={idx}>{p.left} - {p.right}</li>
+                                                                            <li key={idx}>{formatText(p.left)} - {formatText(p.right)}</li>
                                                                         ))}
                                                                     </ul>
                                                                 </div>
                                                             )}
                                                             {q.type === 'MULTIPLE_SELECT' && (
                                                                 <div>
-                                                                    <p className="font-medium mb-2">{(q as any).question}</p>
+                                                                    <p className="font-medium mb-2">{formatText((q as any).question)}</p>
                                                                     <p className="text-xs text-purple-600 mb-1 font-bold">(Chọn nhiều đáp án)</p>
                                                                     <ul className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                                                                         {(q as any).options?.map((o: string, idx: number) => {
@@ -915,7 +924,7 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                                             const isCorrect = (q as any).correctAnswers?.includes(label);
                                                                             return (
                                                                                 <li key={idx} className={isCorrect ? "text-green-600 font-bold" : ""}>
-                                                                                    {label}. {o}
+                                                                                    {label}. {formatText(o)}
                                                                                 </li>
                                                                             );
                                                                         })}
@@ -927,13 +936,13 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                                             )}
                                                             {q.type === 'DRAG_DROP' && (
                                                                 <div>
-                                                                    <p className="font-medium mb-2">{(q as any).question}</p>
+                                                                    <p className="font-medium mb-2">{formatText((q as any).question)}</p>
                                                                     <div className="p-3 bg-gray-50 rounded border border-gray-200 text-sm leading-relaxed">
                                                                         {((q as any).text || "").split(/(\[.*?\])/g).map((part: string, idx: number) => {
                                                                             if (part.startsWith('[') && part.endsWith(']')) {
                                                                                 return <span key={idx} className="font-bold text-blue-600 mx-1">{part}</span>;
                                                                             }
-                                                                            return <span key={idx}>{part}</span>;
+                                                                            return <span key={idx}>{formatText(part)}</span>;
                                                                         })}
                                                                     </div>
                                                                     <div className="mt-2 text-xs text-gray-500">

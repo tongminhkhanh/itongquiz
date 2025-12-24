@@ -96,8 +96,19 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     setStep('quiz');
   };
 
+  // Helper function to format math text
+  const formatText = (text: string) => {
+    if (!text) return "";
+    // Replace / with : ONLY if surrounded by spaces (e.g., 5 / 7 -> 5 : 7). Keep fractions (1/2) as is.
+    // Replace * with x (e.g., 5 * 7 -> 5 x 7)
+    return text
+      .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 x $2')
+      .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
+  };
+
   // Verify access code
   const handleCodeVerify = () => {
+
     if (enteredCode.toUpperCase() === quiz.accessCode?.toUpperCase()) {
       setCodeError('');
       setStep('info');
@@ -438,9 +449,9 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                             Em chọn: {answers[q.id] || "Không trả lời"}
                           </p>
                           {!isCorrect && (
-                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                              <p className="text-yellow-800 text-xs">
-                                💡 <strong>Gợi ý:</strong> Em hãy đọc kỹ lại câu hỏi và các lựa chọn. Suy nghĩ xem đáp án nào phù hợp nhất với kiến thức đã học.
+                            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <p className="text-blue-800 text-sm">
+                                💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy xem lại kiến thức phần này nhé!"}
                               </p>
                             </div>
                           )}
@@ -449,16 +460,17 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                       );
                     })()}
                     {q.type === QuestionType.SHORT_ANSWER && (() => {
-                      const isCorrect = (answers[q.id] || "").toString().toLowerCase() === q.correctAnswer.toLowerCase();
+                      const correctAns = (q.correctAnswer || "").toString().toLowerCase();
+                      const isCorrect = (answers[q.id] || "").toString().toLowerCase() === correctAns;
                       return (
                         <div>
                           <p className={isCorrect ? "text-green-600 font-bold" : "text-red-500 font-bold"}>
                             Em ghi: {answers[q.id] || "..."}
                           </p>
                           {!isCorrect && (
-                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                              <p className="text-yellow-800 text-xs">
-                                💡 <strong>Gợi ý:</strong> Em hãy tính toán hoặc suy luận lại. Kiểm tra xem em đã hiểu đúng yêu cầu của câu hỏi chưa.
+                            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <p className="text-blue-800 text-sm">
+                                💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy tính toán lại cẩn thận nhé!"}
                               </p>
                             </div>
                           )}
@@ -468,54 +480,57 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                     })()}
                     {q.type === QuestionType.TRUE_FALSE && (
                       <div className="grid grid-cols-1 gap-1 mt-2">
-                        {q.items.map(item => {
+                        {(q.items || []).map(item => {
                           const studentVal = answers[q.id]?.[item.id];
                           const isCorrect = studentVal === item.isCorrect;
                           return (
                             <div key={item.id} className={`p-2 rounded ${isCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
                               <div className="flex items-center justify-between">
-                                <span className="flex-1">{item.statement}</span>
+                                <span className="flex-1">{formatText(item.statement)}</span>
                                 <span className={isCorrect ? "text-green-600 font-bold text-xs" : "text-red-500 font-bold text-xs"}>
                                   {studentVal === true ? "Đúng" : studentVal === false ? "Sai" : "Trống"}
                                   {isCorrect && " ✓"}
                                 </span>
                               </div>
-                              {!isCorrect && (
-                                <p className="text-yellow-700 text-xs mt-1 italic">
-                                  💡 Hãy xem lại phát biểu này và suy nghĩ kỹ hơn.
-                                </p>
-                              )}
                             </div>
                           )
                         })}
+                        {/* Show explanation if any item is wrong */}
+                        {(q.items || []).some(item => answers[q.id]?.[item.id] !== item.isCorrect) && (
+                          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-blue-800 text-sm">
+                              💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy đọc kỹ lại các phát biểu nhé!"}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                     {q.type === QuestionType.MATCHING && (() => {
                       const userPairs = answers[q.id] || {};
-                      const incorrectPairs = q.pairs.filter(p => userPairs[p.left] !== p.right);
+                      const incorrectPairs = (q.pairs || []).filter(p => userPairs[p.left] !== p.right);
                       const hasIncorrect = incorrectPairs.length > 0;
 
                       return (
                         <div className="mt-2">
                           <p className="font-bold mb-2">Các cặp em đã nối:</p>
-                          {q.pairs.map(correctPair => {
+                          {(q.pairs || []).map(correctPair => {
                             const studentRight = userPairs[correctPair.left];
                             const isCorrect = studentRight === correctPair.right;
                             return (
                               <div key={correctPair.left} className={`flex justify-between items-center p-2 rounded mb-1 ${isCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
-                                <span className="font-medium">{correctPair.left}</span>
+                                <span className="font-medium">{formatText(correctPair.left)}</span>
                                 <span className="mx-2">→</span>
                                 <span className={`${isCorrect ? 'text-green-700' : 'text-red-700'} font-bold`}>
-                                  {studentRight || "Chưa nối"}
+                                  {formatText(studentRight || "Chưa nối")}
                                   {isCorrect && " ✓"}
                                 </span>
                               </div>
                             );
                           })}
                           {hasIncorrect && (
-                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                              <p className="text-yellow-800 text-xs">
-                                💡 <strong>Gợi ý:</strong> Em hãy xem lại mối quan hệ giữa các cột. Mỗi ý ở cột A chỉ nối với đúng một ý ở cột B.
+                            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <p className="text-blue-800 text-sm">
+                                💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy xem lại mối quan hệ giữa các cột nhé!"}
                               </p>
                             </div>
                           )}
@@ -537,11 +552,9 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                           {isCorrect ? (
                             <span className="text-green-600 font-bold text-sm">✓ Chính xác!</span>
                           ) : (
-                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                              <p className="text-yellow-800 text-xs">
-                                💡 <strong>Gợi ý:</strong> Câu này có nhiều đáp án đúng. Em hãy đọc lại câu hỏi và kiểm tra từng lựa chọn xem có phù hợp không.
-                                {studentAns.length < correctAns.length && " (Có thể em còn thiếu đáp án)"}
-                                {studentAns.length > correctAns.length && " (Có thể em chọn thừa đáp án)"}
+                            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <p className="text-blue-800 text-sm">
+                                💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy kiểm tra kỹ từng lựa chọn nhé!"}
                               </p>
                             </div>
                           )}
@@ -577,7 +590,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                             {parts.map((part, idx) => {
                               if (part.startsWith('[') && part.endsWith(']')) {
                                 const blankIndex = blanks.indexOf(idx);
-                                const correctWord = correctBlanks[blankIndex];
+                                const correctWord = correctBlanks[blankIndex] || "";
                                 const studentWord = studentAns[idx];
                                 const isBlankCorrect = studentWord === correctWord;
                                 return (
@@ -593,14 +606,17 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                   </span>
                                 );
                               }
-                              return <span key={idx}>{part}</span>;
+                              return <span key={idx}>{formatText(part)}</span>;
                             })}
                           </div>
                           {!allCorrect && (
-                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                              <p className="text-yellow-800 text-xs">
-                                💡 <strong>Gợi ý:</strong> Em hãy đọc lại câu và chọn từ phù hợp với ngữ cảnh.
+                            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <p className="text-blue-800 text-sm">
+                                💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy xem lại từ vựng nhé!"}
                               </p>
+                              <div className="mt-1 text-xs text-gray-600">
+                                <strong>Đáp án đúng:</strong> {correctBlanks.join(', ')}
+                              </div>
                             </div>
                           )}
                           {allCorrect && <span className="text-green-600 font-bold text-sm mt-2 block">✓ Chính xác!</span>}
@@ -623,6 +639,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     );
   }
 
+
   // QUIZ TAKING VIEW
   return (
     <div className="min-h-screen bg-gray-100 font-sans">
@@ -644,9 +661,9 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Câu hỏi {index + 1}</h3>
                 <div className="text-gray-700 font-medium">
                   {q.type === QuestionType.TRUE_FALSE || q.type === QuestionType.MATCHING ? (
-                    <p>{q.mainQuestion}</p>
+                    <p>{formatText(q.mainQuestion || "")}</p>
                   ) : (
-                    <p>{(q as any).question}</p>
+                    <p>{formatText((q as any).question || "")}</p>
                   )}
                 </div>
 
@@ -681,7 +698,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                             }`}>
                             {label}
                           </span>
-                          <span>{opt}</span>
+                          <span>{formatText(opt)}</span>
                         </button>
                       )
                     })}
@@ -710,7 +727,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                       return (
                         <div key={item.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
                           <span className="text-gray-700 mr-4 flex-1 text-sm">
-                            {String.fromCharCode(97 + i)}. {item.statement}
+                            {String.fromCharCode(97 + i)}. {formatText(item.statement)}
                           </span>
                           <div className="flex gap-2 flex-shrink-0">
                             <button
@@ -781,7 +798,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                 onClick={() => handleMatchingClick(q.id, pair.left, 'left')}
                               >
                                 {color && <span className="mr-2">●</span>}
-                                {pair.left}
+                                {formatText(pair.left)}
                               </div>
                             );
                           })}
@@ -811,7 +828,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                   onClick={() => handleMatchingClick(q.id, rightItem as string, 'right')}
                                 >
                                   {color && <span className="mr-2">●</span>}
-                                  {rightItem}
+                                  {formatText(rightItem as string)}
                                   {pairedLefts.length > 1 && (
                                     <span className="ml-2 text-xs bg-white/50 px-1.5 py-0.5 rounded-full border border-black/10">
                                       x{pairedLefts.length}
@@ -833,7 +850,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                               const color = pairColors[colorIdx];
                               return (
                                 <span key={left} className={`text-xs px-2 py-1 rounded ${color.bg} ${color.text} ${color.border} border`}>
-                                  {left} ↔ {currentAnswers[left]}
+                                  {formatText(left)} ↔ {formatText(currentAnswers[left])}
                                 </span>
                               );
                             })}
@@ -877,7 +894,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                           <div className={`w-5 h-5 rounded border mr-3 flex items-center justify-center ${isSelected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-300'}`}>
                             {isSelected && <CheckCircle className="w-3 h-3" />}
                           </div>
-                          {opt}
+                          {formatText(opt)}
                         </button>
                       )
                     })}
@@ -945,7 +962,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                               </span>
                             );
                           }
-                          return <span key={idx}>{part}</span>;
+                          return <span key={idx}>{formatText(part)}</span>;
                         })}
                       </div>
 
@@ -1038,16 +1055,19 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                   }
 
                   return (
-                    <a
+                    <button
                       key={q.id}
-                      href={`#question-${index}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        document.getElementById(`question-${index}`)?.scrollIntoView({ behavior: 'smooth' });
+                      }}
                       className={`h-10 w-10 flex items-center justify-center rounded-full text-sm font-bold transition-all ${isAnswered
                         ? 'bg-blue-500 text-white shadow-md hover:bg-blue-600'
                         : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                         }`}
                     >
                       {index + 1}
-                    </a>
+                    </button>
                   );
                 })}
               </div>

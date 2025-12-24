@@ -14,6 +14,7 @@ export interface MCQQuestion {
   options: string[]; // [A, B, C, D]
   correctAnswer: string; // "A", "B", "C", or "D"
   image?: string; // URL or Base64
+  explanation?: string; // Detailed guide on how to solve
 }
 
 export interface MultipleSelectQuestion {
@@ -23,6 +24,7 @@ export interface MultipleSelectQuestion {
   options: string[];
   correctAnswers: string[]; // ["A", "C"]
   image?: string;
+  explanation?: string;
 }
 
 export interface TrueFalseItem {
@@ -37,6 +39,7 @@ export interface TrueFalseQuestion {
   mainQuestion: string; // e.g., "Về nước:"
   items: TrueFalseItem[];
   image?: string;
+  explanation?: string;
 }
 
 export interface ShortAnswerQuestion {
@@ -45,6 +48,7 @@ export interface ShortAnswerQuestion {
   question: string;
   correctAnswer: string; // Short string
   image?: string;
+  explanation?: string;
 }
 
 export interface MatchingPair {
@@ -58,6 +62,7 @@ export interface MatchingQuestion {
   question: string; // "Nối cột A với cột B"
   pairs: MatchingPair[];
   image?: string;
+  explanation?: string;
 }
 
 export interface DragDropQuestion {
@@ -68,6 +73,7 @@ export interface DragDropQuestion {
   blanks: string[]; // ["blue"]
   distractors: string[]; // ["red", "green"]
   image?: string;
+  explanation?: string;
 }
 
 // Image Library Item for teacher uploads
