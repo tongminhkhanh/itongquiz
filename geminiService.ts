@@ -90,6 +90,10 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     4. Với MULTIPLE_SELECT: correctAnswers phải là mảng có ít nhất 2 đáp án đúng, ví dụ: ["A", "C"] hoặc ["B", "C", "D"].
     5. Ngôn ngữ: Tiếng Việt, phù hợp với học sinh tiểu học.
     6. Đảm bảo đầu ra đúng định dạng JSON.
+    7. QUY TẮC VIẾT PHÉP TÍNH:
+       - Phân số: Viết liền không cách (ví dụ: 1/2, 3/4).
+       - Phép chia: Viết có khoảng cách (ví dụ: 10 / 2, 15 / 3).
+       - Phép nhân: Viết có khoảng cách (ví dụ: 5 * 3).
   `;
 };
 
@@ -261,6 +265,16 @@ const generateWithGemini = async (
     system_instruction: {
       parts: [{ text: SYSTEM_INSTRUCTION }]
     },
+    tools: [
+      {
+        google_search_retrieval: {
+          dynamic_retrieval_config: {
+            mode: "MODE_DYNAMIC",
+            dynamic_threshold: 0.6
+          }
+        }
+      }
+    ],
     generation_config: {
       temperature: 0.4,
       response_mime_type: "application/json"
@@ -330,8 +344,11 @@ const generateWithGemini = async (
       const text = data.candidates[0].content.parts[0].text;
       if (!text) throw new Error("AI trả về dữ liệu rỗng.");
 
-      // Format multiplication signs: Replace * with x in math contexts (e.g., 5 * 3 -> 5 x 3)
-      const formattedText = text.replace(/(\d+)\s*\*\s*(\d+)/g, '$1 x $2');
+      // Format multiplication signs: Replace * with x in math contexts (e.g., 5 * 3 -> 5 x 3, x * 8 -> x x 8)
+      // Format division signs: Replace / with : ONLY if surrounded by spaces (e.g., 5 / 3 -> 5 : 3). Keep fractions (1/2) as is.
+      const formattedText = text
+        .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 x $2')
+        .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
 
       return parseAndRepairJSON(formattedText);
 
@@ -431,7 +448,10 @@ const generateWithOpenAI = async (
   const text = data.choices[0].message.content;
 
   // Format multiplication signs: Replace * with x in math contexts
-  const formattedText = text.replace(/(\d+)\s*\*\s*(\d+)/g, '$1 x $2');
+  // Format division signs: Replace / with : ONLY if surrounded by spaces
+  const formattedText = text
+    .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 x $2')
+    .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
 
   return parseAndRepairJSON(formattedText);
 };
