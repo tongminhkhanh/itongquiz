@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import StudentView from './components/StudentView';
 import TeacherDashboard from './components/TeacherDashboard';
 import { Quiz, StudentResult, QuestionType } from './types';
@@ -98,42 +99,41 @@ const App: React.FC = () => {
     // Load results from Google Sheets
     const loadResults = async () => {
         let sheetResults: StudentResult[] = [];
-        let localResults: StudentResult[] = [];
 
-        // 1. Get results from localStorage first
-        const savedResults = localStorage.getItem('itong_results');
-        if (savedResults) {
-            try {
-                localResults = JSON.parse(savedResults);
-            } catch (e) {
-                console.error("Failed to parse local results", e);
-            }
-        }
-
-        // 2. Try to fetch from Google Sheets
+        // 1. Try to fetch from Google Sheets (source of truth)
         try {
             if (GOOGLE_SHEET_ID && RESULTS_GID) {
                 sheetResults = await fetchResultsFromSheets(GOOGLE_SHEET_ID, RESULTS_GID);
+                console.log('[loadResults] Fetched from Google Sheets:', sheetResults.length, 'results');
             }
         } catch (e) {
             console.error("Failed to fetch results from sheets", e);
         }
 
-        // 3. Merge results - combine both sources, remove duplicates by id
-        const allResults = [...sheetResults, ...localResults];
-        const uniqueResults = allResults.reduce((acc: StudentResult[], curr) => {
-            if (!acc.find(r => r.id === curr.id)) {
-                acc.push(curr);
+        // 2. If Google Sheets has data, use it as source of truth (replace localStorage)
+        if (sheetResults.length > 0) {
+            // Sort by submittedAt descending (newest first)
+            sheetResults.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+            setResults(sheetResults);
+            localStorage.setItem('itong_results', JSON.stringify(sheetResults));
+            return sheetResults;
+        }
+
+        // 3. Fallback to localStorage if Google Sheets is empty or failed
+        const savedResults = localStorage.getItem('itong_results');
+        if (savedResults) {
+            try {
+                const localResults: StudentResult[] = JSON.parse(savedResults);
+                localResults.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+                setResults(localResults);
+                return localResults;
+            } catch (e) {
+                console.error("Failed to parse local results", e);
             }
-            return acc;
-        }, []);
+        }
 
-        // 4. Sort by submittedAt descending (newest first)
-        uniqueResults.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-
-        setResults(uniqueResults);
-        localStorage.setItem('itong_results', JSON.stringify(uniqueResults));
-        return uniqueResults;
+        setResults([]);
+        return [];
     };
 
     // --- PERSISTENCE (MOCK DB) ---
@@ -242,30 +242,36 @@ const App: React.FC = () => {
 
     if (view === 'teacher_dash') {
         return (
-            <TeacherDashboard
-                onLogout={() => {
-                    setView('home');
-                    setLoggedInTeacher(null);
-                    setIsAdmin(false);
-                    localStorage.removeItem('teacher_session');
-                }}
-                isAdmin={isAdmin}
-                quizzes={quizzes}
-                results={results}
-                onSaveQuiz={saveQuizToStorage}
-                onUpdateQuiz={updateQuizInStorage}
-                onRefreshResults={loadResults}
-            />
+            <>
+                <TeacherDashboard
+                    onLogout={() => {
+                        setView('home');
+                        setLoggedInTeacher(null);
+                        setIsAdmin(false);
+                        localStorage.removeItem('teacher_session');
+                    }}
+                    isAdmin={isAdmin}
+                    quizzes={quizzes}
+                    results={results}
+                    onSaveQuiz={saveQuizToStorage}
+                    onUpdateQuiz={updateQuizInStorage}
+                    onRefreshResults={loadResults}
+                />
+                <Analytics />
+            </>
         );
     }
 
     if (view === 'student' && activeQuiz) {
         return (
-            <StudentView
-                quiz={activeQuiz}
-                onExit={() => { setActiveQuiz(null); setView('home'); }}
-                onSaveResult={saveResultToStorage}
-            />
+            <>
+                <StudentView
+                    quiz={activeQuiz}
+                    onExit={() => { setActiveQuiz(null); setView('home'); }}
+                    onSaveResult={saveResultToStorage}
+                />
+                <Analytics />
+            </>
         );
     }
 
@@ -414,6 +420,7 @@ const App: React.FC = () => {
                     </div>
                 </div>
             </div>
+            <Analytics />
         </div>
 
     );
