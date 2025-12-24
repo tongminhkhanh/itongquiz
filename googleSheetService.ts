@@ -33,21 +33,37 @@ export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Pro
 export const fetchResultsFromSheets = async (sheetId: string, resultsGid: string): Promise<StudentResult[]> => {
     try {
         const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${resultsGid}`;
+        console.log('[fetchResultsFromSheets] Fetching from URL:', url);
         const data = await fetchCSV(url);
+        console.log('[fetchResultsFromSheets] Raw data received:', data.length, 'rows', data.slice(0, 2));
 
-        return data.map((row: any) => ({
-            id: row.id || `result-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            studentName: row.studentName || row.name || '',
-            studentClass: row.className || row.studentClass || '',
-            quizId: row.quizId || '',
-            quizTitle: row.quizTitle || '',
-            score: parseFloat(row.score) || 0,
-            correctCount: parseInt(row.correctCount) || 0,
-            totalQuestions: parseInt(row.totalQuestions) || 0,
-            submittedAt: row.submittedAt || new Date().toISOString(),
-            timeTaken: parseInt(row.timeTaken) || 0,
-            answers: row.answers ? JSON.parse(row.answers) : []
-        })).filter((r: StudentResult) => r.studentName); // Filter out invalid rows
+        return data.map((row: any) => {
+            // Handle column names with spaces and different casing from Google Sheets
+            const studentName = row['Student Name'] || row.studentName || row.name || '';
+            const studentClass = row['Class'] || row.className || row.studentClass || '';
+            const quizTitle = row['Quiz Title'] || row.quizTitle || '';
+            const scoreRaw = row['Score'] || row.score || '0';
+            // Handle score with comma as decimal separator (e.g., "3,6" -> 3.6)
+            const score = parseFloat(String(scoreRaw).replace(',', '.')) || 0;
+            const totalQuestions = parseInt(row['Total Questions'] || row.totalQuestions) || 0;
+            const submittedAt = row['Submitted At'] || row.submittedAt || new Date().toISOString();
+            const correctCount = parseInt(row['Correct Count'] || row.correctCount) || 0;
+            const timeTaken = parseInt(row['Time Taken'] || row.timeTaken) || 0;
+
+            return {
+                id: row.id || `result-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                studentName,
+                studentClass,
+                quizId: row['Quiz ID'] || row.quizId || '',
+                quizTitle,
+                score,
+                correctCount,
+                totalQuestions,
+                submittedAt,
+                timeTaken,
+                answers: row.answers ? JSON.parse(row.answers) : []
+            };
+        }).filter((r: StudentResult) => r.studentName); // Filter out invalid rows
     } catch (error) {
         console.error("Error fetching results from Sheets:", error);
         return [];
