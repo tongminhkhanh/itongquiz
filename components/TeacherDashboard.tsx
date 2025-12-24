@@ -19,10 +19,11 @@ interface Props {
     results: StudentResult[];
     onSaveQuiz: (quiz: Quiz) => Promise<void>;
     onUpdateQuiz: (quiz: Quiz) => Promise<void>;
+    onRefreshResults?: () => Promise<StudentResult[]>;
     isAdmin?: boolean;
 }
 
-const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQuiz, onUpdateQuiz, isAdmin = false }) => {
+const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQuiz, onUpdateQuiz, onRefreshResults, isAdmin = false }) => {
     const [activeTab, setActiveTab] = useState<'create' | 'results' | 'manage'>('results');
     const [editingQuizId, setEditingQuizId] = useState<string | null>(null);
 
@@ -63,6 +64,15 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
     const [filterClass, setFilterClass] = useState<string>('All');
     const [sortField, setSortField] = useState<'score' | 'submittedAt'>('submittedAt');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Pagination for quiz management
+    const [quizPage, setQuizPage] = useState(1);
+    const QUIZZES_PER_PAGE = 10;
+
+    // Quiz filter states
+    const [filterQuizLevel, setFilterQuizLevel] = useState<string>('All');
+    const [filterQuizSearch, setFilterQuizSearch] = useState<string>('');
 
     const [aiProvider, setAiProvider] = useState<AIProvider>(() => (localStorage.getItem('ai_provider') as AIProvider) || 'gemini');
 
@@ -1046,9 +1056,28 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                     ).map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                             </div>
-                            <button onClick={exportExcel} className="bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200 flex items-center text-sm font-bold">
-                                <Download className="w-4 h-4 mr-2" /> Xuất Excel
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={async () => {
+                                        if (onRefreshResults) {
+                                            setIsRefreshing(true);
+                                            try {
+                                                await onRefreshResults();
+                                            } finally {
+                                                setIsRefreshing(false);
+                                            }
+                                        }
+                                    }}
+                                    disabled={isRefreshing}
+                                    className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 flex items-center text-sm font-bold disabled:opacity-50"
+                                >
+                                    <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                    {isRefreshing ? 'Đang tải...' : 'Làm mới'}
+                                </button>
+                                <button onClick={exportExcel} className="bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200 flex items-center text-sm font-bold">
+                                    <Download className="w-4 h-4 mr-2" /> Xuất Excel
+                                </button>
+                            </div>
                         </div>
 
                         {/* Table */}
@@ -1098,51 +1127,170 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
 
                 {activeTab === 'manage' && (
                     <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {quizzes.map(quiz => (
-                                <div key={quiz.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
-                                    <div>
-                                        <h3
-                                            className="font-bold text-lg text-gray-800 cursor-pointer hover:text-blue-600 hover:underline"
-                                            onClick={() => window.open(`?quizId=${quiz.id}`, '_blank')}
-                                            title="Nhấn để làm bài (Xem như học sinh)"
-                                        >
-                                            {quiz.title}
-                                        </h3>
-                                        <p className="text-sm text-gray-500">Lớp {quiz.classLevel} • {quiz.questions.length} câu • {quiz.timeLimit} phút</p>
-                                        <p className="text-xs text-gray-400 mt-1">Tạo lúc: {new Date(quiz.createdAt).toLocaleString('vi-VN')}</p>
-                                        {isAdmin && quiz.requireCode && (
-                                            <p className="text-xs mt-1">
-                                                <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold">
-                                                    🔐 Mã: {quiz.accessCode}
-                                                </span>
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="flex space-x-2">
-                                        <button
-                                            onClick={() => handleEditQuiz(quiz)}
-                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                            title="Sửa đề thi"
-                                        >
-                                            <Edit className="w-5 h-5" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteQuiz(quiz.id)}
-                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                            title="Xóa đề thi"
-                                        >
-                                            <Trash2 className="w-5 h-5" />
-                                        </button>
-                                    </div>
+                        {/* Filter Controls */}
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                            <div className="flex flex-wrap gap-4 items-center">
+                                {/* Khối Filter */}
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm font-bold text-gray-600">Khối:</label>
+                                    <select
+                                        value={filterQuizLevel}
+                                        onChange={(e) => {
+                                            setFilterQuizLevel(e.target.value);
+                                            setQuizPage(1); // Reset to page 1 when filter changes
+                                        }}
+                                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                    >
+                                        <option value="All">Tất cả</option>
+                                        <option value="1">Lớp 1</option>
+                                        <option value="2">Lớp 2</option>
+                                        <option value="3">Lớp 3</option>
+                                        <option value="4">Lớp 4</option>
+                                        <option value="5">Lớp 5</option>
+                                    </select>
                                 </div>
-                            ))}
+
+                                {/* Search Input */}
+                                <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                                    <label className="text-sm font-bold text-gray-600">Tìm kiếm:</label>
+                                    <input
+                                        type="text"
+                                        value={filterQuizSearch}
+                                        onChange={(e) => {
+                                            setFilterQuizSearch(e.target.value);
+                                            setQuizPage(1); // Reset to page 1 when search changes
+                                        }}
+                                        placeholder="Nhập tên đề thi..."
+                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                    />
+                                </div>
+
+                                {/* Clear Filters */}
+                                {(filterQuizLevel !== 'All' || filterQuizSearch) && (
+                                    <button
+                                        onClick={() => {
+                                            setFilterQuizLevel('All');
+                                            setFilterQuizSearch('');
+                                            setQuizPage(1);
+                                        }}
+                                        className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                                    >
+                                        ✕ Xóa bộ lọc
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Pagination Info */}
+                        <div className="flex justify-between items-center">
+                            <p className="text-sm text-gray-500">
+                                Hiển thị {Math.min((quizPage - 1) * QUIZZES_PER_PAGE + 1, quizzes.filter(q => (filterQuizLevel === 'All' || q.classLevel === filterQuizLevel) && (filterQuizSearch === '' || q.title.toLowerCase().includes(filterQuizSearch.toLowerCase()))).length)} - {Math.min(quizPage * QUIZZES_PER_PAGE, quizzes.filter(q => (filterQuizLevel === 'All' || q.classLevel === filterQuizLevel) && (filterQuizSearch === '' || q.title.toLowerCase().includes(filterQuizSearch.toLowerCase()))).length)} / {quizzes.filter(q => (filterQuizLevel === 'All' || q.classLevel === filterQuizLevel) && (filterQuizSearch === '' || q.title.toLowerCase().includes(filterQuizSearch.toLowerCase()))).length} đề thi
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {quizzes
+                                .filter(q => (filterQuizLevel === 'All' || q.classLevel === filterQuizLevel) && (filterQuizSearch === '' || q.title.toLowerCase().includes(filterQuizSearch.toLowerCase())))
+                                .slice((quizPage - 1) * QUIZZES_PER_PAGE, quizPage * QUIZZES_PER_PAGE)
+                                .map(quiz => (
+                                    <div key={quiz.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+                                        <div>
+                                            <h3
+                                                className="font-bold text-lg text-gray-800 cursor-pointer hover:text-blue-600 hover:underline"
+                                                onClick={() => window.open(`?quizId=${quiz.id}`, '_blank')}
+                                                title="Nhấn để làm bài (Xem như học sinh)"
+                                            >
+                                                {quiz.title}
+                                            </h3>
+                                            <p className="text-sm text-gray-500">Lớp {quiz.classLevel} • {quiz.questions.length} câu • {quiz.timeLimit} phút</p>
+                                            <p className="text-xs text-gray-400 mt-1">Tạo lúc: {new Date(quiz.createdAt).toLocaleString('vi-VN')}</p>
+                                            {isAdmin && quiz.requireCode && (
+                                                <p className="text-xs mt-1">
+                                                    <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold">
+                                                        🔐 Mã: {quiz.accessCode}
+                                                    </span>
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="flex space-x-2">
+                                            <button
+                                                onClick={() => handleEditQuiz(quiz)}
+                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Sửa đề thi"
+                                            >
+                                                <Edit className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteQuiz(quiz.id)}
+                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Xóa đề thi"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
                             {quizzes.length === 0 && (
                                 <div className="col-span-2 text-center py-12 text-gray-400 bg-white rounded-xl border border-dashed border-gray-300">
                                     <p>Chưa có đề thi nào được tạo.</p>
                                 </div>
                             )}
                         </div>
+
+                        {/* Pagination Controls */}
+                        {(() => {
+                            const filteredQuizzes = quizzes.filter(q => (filterQuizLevel === 'All' || q.classLevel === filterQuizLevel) && (filterQuizSearch === '' || q.title.toLowerCase().includes(filterQuizSearch.toLowerCase())));
+                            const totalPages = Math.ceil(filteredQuizzes.length / QUIZZES_PER_PAGE);
+                            return filteredQuizzes.length > QUIZZES_PER_PAGE && (
+                                <div className="flex justify-center items-center gap-2 mt-6">
+                                    <button
+                                        onClick={() => setQuizPage(1)}
+                                        disabled={quizPage === 1}
+                                        className="px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                                    >
+                                        ⏮️ Đầu
+                                    </button>
+                                    <button
+                                        onClick={() => setQuizPage(p => Math.max(1, p - 1))}
+                                        disabled={quizPage === 1}
+                                        className="px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                                    >
+                                        ◀️ Trước
+                                    </button>
+
+                                    {/* Page Numbers */}
+                                    <div className="flex gap-1">
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                            <button
+                                                key={page}
+                                                onClick={() => setQuizPage(page)}
+                                                className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${page === quizPage
+                                                    ? 'bg-blue-600 text-white shadow-md'
+                                                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={() => setQuizPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={quizPage === totalPages}
+                                        className="px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                                    >
+                                        Sau ▶️
+                                    </button>
+                                    <button
+                                        onClick={() => setQuizPage(totalPages)}
+                                        disabled={quizPage === totalPages}
+                                        className="px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                                    >
+                                        Cuối ⏭️
+                                    </button>
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
             </div>

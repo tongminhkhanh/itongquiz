@@ -5,14 +5,15 @@ import TeacherDashboard from './components/TeacherDashboard';
 import { Quiz, StudentResult, QuestionType } from './types';
 import { SCHOOL_NAME } from './constants';
 import { BookOpen, GraduationCap, Lock, KeyRound, RefreshCw } from 'lucide-react';
-import { fetchQuizzesFromSheets, fetchTeachersFromSheets, saveQuizToSheet, saveResultToSheet } from './googleSheetService';
+import { fetchQuizzesFromSheets, fetchTeachersFromSheets, fetchResultsFromSheets, saveQuizToSheet, saveResultToSheet } from './googleSheetService';
 
 // --- CONFIGURATION ---
 // Replace these with your actual Google Sheet ID and GIDs
-const GOOGLE_SHEET_ID = '1mrqbJ3Xzj4CBF_B2vyI7-ANLaVPAfWCe_TdmCd9_gx4'; // User needs to update this
+export const GOOGLE_SHEET_ID = '1mrqbJ3Xzj4CBF_B2vyI7-ANLaVPAfWCe_TdmCd9_gx4'; // User needs to update this
 const QUIZ_GID = '0'; // Default first sheet
 const QUESTION_GID = '1395660327'; // User needs to update this
 const TEACHER_GID = '1482913865'; // User needs to update this
+export const RESULTS_GID = '1960978030'; // GID for Results sheet
 export const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwbfluTcn5UjnKCBOLJRJvtsX3imQOdEeZD9QCkheDv72z1lnd0dR07C02sZJUyXKMqUA/exec'; // User needs to update this
 
 const App: React.FC = () => {
@@ -94,11 +95,33 @@ const App: React.FC = () => {
         setIsLoading(false);
     };
 
+    // Load results from Google Sheets
+    const loadResults = async () => {
+        try {
+            if (GOOGLE_SHEET_ID && RESULTS_GID) {
+                const sheetResults = await fetchResultsFromSheets(GOOGLE_SHEET_ID, RESULTS_GID);
+                setResults(sheetResults);
+                localStorage.setItem('itong_results', JSON.stringify(sheetResults));
+                return sheetResults;
+            }
+        } catch (e) {
+            console.error("Failed to fetch results from sheets, falling back to local storage", e);
+        }
+
+        // Fallback to localStorage
+        const savedResults = localStorage.getItem('itong_results');
+        if (savedResults) {
+            const parsed = JSON.parse(savedResults);
+            setResults(parsed);
+            return parsed;
+        }
+        return [];
+    };
+
     // --- PERSISTENCE (MOCK DB) ---
     useEffect(() => {
         loadData();
-        const savedResults = localStorage.getItem('itong_results');
-        if (savedResults) setResults(JSON.parse(savedResults));
+        loadResults(); // Load results from Google Sheets instead of just localStorage
 
         // Check URL for quizId
         const params = new URLSearchParams(window.location.search);
@@ -213,6 +236,7 @@ const App: React.FC = () => {
                 results={results}
                 onSaveQuiz={saveQuizToStorage}
                 onUpdateQuiz={updateQuizInStorage}
+                onRefreshResults={loadResults}
             />
         );
     }
@@ -346,7 +370,10 @@ const App: React.FC = () => {
                                                         className="w-full text-left p-4 rounded-xl bg-green-50 hover:bg-green-100 transition-colors border border-green-100 hover:border-green-300 group shadow-sm hover:shadow-md"
                                                     >
                                                         <div className="flex justify-between items-center">
-                                                            <span className="font-bold text-lg text-green-800 group-hover:text-green-900 line-clamp-1">{q.title}</span>
+                                                            <span className="font-bold text-lg text-green-800 group-hover:text-green-900 line-clamp-1 flex items-center gap-2">
+                                                                {q.requireCode && <span title="Yêu cầu mật khẩu">🔒</span>}
+                                                                {q.title}
+                                                            </span>
                                                             <span className="bg-white px-3 py-1 rounded-full text-xs font-bold text-green-600 shadow-sm border border-green-100">
                                                                 Bắt đầu
                                                             </span>
@@ -362,6 +389,10 @@ const App: React.FC = () => {
                                 </>
                             )}
                         </div>
+                        {/* Copyright Footer */}
+                        <p className="text-center text-gray-500 text-sm mt-6">
+                            © 2025 Trường Tiểu học Ít Ong. Developed by Tòng Minh Khánh. All rights reserved.
+                        </p>
                     </div>
                 </div>
             </div>
