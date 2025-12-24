@@ -181,12 +181,16 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         const correctAns = q.correctAnswer.toString().trim().toLowerCase();
         if (studentAns === correctAns) correctCount++;
       } else if (q.type === QuestionType.TRUE_FALSE) {
-        // For True/False, each sub-item counts
+        // TRUE_FALSE counts as 1 question - only correct if ALL sub-items are correct
+        totalItems++;
+        let allSubItemsCorrect = true;
         q.items.forEach(item => {
-          totalItems++;
           const studentAns = answers[q.id]?.[item.id];
-          if (studentAns === item.isCorrect) correctCount++;
+          if (studentAns !== item.isCorrect) {
+            allSubItemsCorrect = false;
+          }
         });
+        if (allSubItemsCorrect) correctCount++;
       } else if (q.type === QuestionType.MATCHING) {
         totalItems++; // A matching question counts as one item
         const userPairs = answers[q.id] || {}; // Student's submitted pairs

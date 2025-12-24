@@ -32,7 +32,7 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
     const [quizTitle, setQuizTitle] = useState('');
     const [classLevel, setClassLevel] = useState('3');
     const [content, setContent] = useState('');
-    const [attachedFile, setAttachedFile] = useState<File | null>(null);
+    const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
     const [questionCount, setQuestionCount] = useState<number>(10);
     const [selectedTypes, setSelectedTypes] = useState({
         [QuestionType.MCQ]: true,
@@ -198,7 +198,7 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
             console.log("Generating quiz with options:", options);
             console.log("Image Library passed to AI:", options.imageLibrary);
 
-            const data = await generateQuiz(topic, classLevel, content, attachedFile, options, '', aiProvider);
+            const data = await generateQuiz(topic, classLevel, content, attachedFiles.length > 0 ? attachedFiles[0] : null, options, '', aiProvider);
 
             // Process raw data into Type safe objects
             const questions: Question[] = data.questions
@@ -390,7 +390,7 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                 setTopic('');
                 setQuizTitle('');
                 setContent('');
-                setAttachedFile(null);
+                setAttachedFiles([]);
                 setRequireCode(false);
                 setAccessCode('');
                 setActiveTab('manage'); // Go to manage tab to see changes (though requires refresh/reload usually)
@@ -763,42 +763,71 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
 
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-1">
-                                        Ảnh chụp bài học / Tài liệu PDF (Tùy chọn)
+                                        Ảnh chụp bài học / Tài liệu PDF (Tùy chọn - có thể chọn nhiều file)
                                     </label>
-                                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:bg-gray-50 transition-colors relative">
+                                    <label
+                                        className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:bg-gray-50 hover:border-indigo-400 transition-colors cursor-pointer"
+                                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            const files = e.dataTransfer.files;
+                                            if (files && files.length > 0) {
+                                                setAttachedFiles(prev => [...prev, ...Array.from(files)]);
+                                            }
+                                        }}
+                                    >
                                         <div className="space-y-1 text-center">
                                             <FileUp className="mx-auto h-12 w-12 text-gray-400" />
-                                            <div className="flex text-sm text-gray-600">
-                                                <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none">
-                                                    <span>Tải lên tệp tin</span>
-                                                    <input
-                                                        id="file-upload"
-                                                        name="file-upload"
-                                                        type="file"
-                                                        className="sr-only"
-                                                        accept="image/*,application/pdf"
-                                                        onChange={e => setAttachedFile(e.target.files?.[0] || null)}
-                                                    />
-                                                </label>
+                                            <div className="flex text-sm text-gray-600 justify-center">
+                                                <span className="font-medium text-indigo-600 hover:text-indigo-500">Tải lên tệp tin</span>
                                                 <p className="pl-1">hoặc kéo thả vào đây</p>
                                             </div>
-                                            <p className="text-xs text-gray-500">PNG, JPG, PDF</p>
+                                            <p className="text-xs text-gray-500">PNG, JPG, PDF (có thể chọn nhiều file)</p>
                                         </div>
-                                        {attachedFile && (
-                                            <div className="absolute inset-0 bg-green-50 flex items-center justify-center rounded-lg border-2 border-green-500">
-                                                <span className="text-green-700 font-bold flex items-center">
-                                                    <FileText className="w-5 h-5 mr-2" />
-                                                    {attachedFile.name}
-                                                </span>
-                                                <button
-                                                    onClick={(e) => { e.preventDefault(); setAttachedFile(null); }}
-                                                    className="ml-4 text-red-500 hover:text-red-700 font-bold text-lg"
-                                                >
-                                                    ×
-                                                </button>
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/*,application/pdf"
+                                            multiple
+                                            onChange={e => {
+                                                const files = e.target.files;
+                                                if (files && files.length > 0) {
+                                                    setAttachedFiles(prev => [...prev, ...Array.from(files)]);
+                                                }
+                                                e.target.value = ''; // Reset to allow same file selection
+                                            }}
+                                        />
+                                    </label>
+                                    {/* Display selected files */}
+                                    {attachedFiles.length > 0 && (
+                                        <div className="mt-3 space-y-2">
+                                            <p className="text-sm font-medium text-gray-700">Đã chọn {attachedFiles.length} file:</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {attachedFiles.map((file, idx) => (
+                                                    <div key={idx} className="flex items-center bg-green-50 border border-green-200 px-3 py-1 rounded-full text-sm">
+                                                        <FileText className="w-4 h-4 mr-1 text-green-600" />
+                                                        <span className="text-green-700 max-w-[150px] truncate">{file.name}</span>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                setAttachedFiles(prev => prev.filter((_, i) => i !== idx));
+                                                            }}
+                                                            className="ml-2 text-red-500 hover:text-red-700 font-bold"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        )}
-                                    </div>
+                                            <button
+                                                onClick={(e) => { e.preventDefault(); setAttachedFiles([]); }}
+                                                className="text-xs text-red-500 hover:text-red-700"
+                                            >
+                                                Xóa tất cả
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <button

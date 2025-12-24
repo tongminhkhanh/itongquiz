@@ -226,7 +226,19 @@ const generateWithGemini = async (
 
   if (file) {
     const base64Data = await fileToBase64(file);
-    parts.push({ text: "Tài liệu đính kèm (Attached File):" });
+    parts.push({
+      text: `⚠️ TÀI LIỆU ĐÍNH KÈM (Attached File) - ƯU TIÊN CAO NHẤT:
+Đây là tài liệu bài học/nội dung do giáo viên tải lên.
+
+🔴 YÊU CẦU BẮT BUỘC:
+1. ĐỌC KỸ VÀ HIỂU nội dung trong tài liệu này.
+2. TẠO CÂU HỎI DỰA TRÊN NỘI DUNG TRONG TÀI LIỆU NÀY LÀ CHÍNH.
+3. Tất cả câu hỏi phải liên quan trực tiếp đến kiến thức trong tài liệu.
+4. Không tự bịa nội dung ngoài tài liệu trừ khi cần bổ sung.
+5. Nếu là ảnh chụp bài học, hãy đọc văn bản trong ảnh và tạo câu hỏi từ đó.
+6. Nếu là PDF, hãy phân tích và trích xuất nội dung để tạo câu hỏi.
+
+Tài liệu đính kèm:` });
     parts.push({
       inline_data: {
         mime_type: file.type,
@@ -344,10 +356,18 @@ const generateWithGemini = async (
       const text = data.candidates[0].content.parts[0].text;
       if (!text) throw new Error("AI trả về dữ liệu rỗng.");
 
-      // Format multiplication signs: Replace * with x in math contexts (e.g., 5 * 3 -> 5 x 3, x * 8 -> x x 8)
+      // Format multiplication signs: Replace ALL * with x in math contexts
       // Format division signs: Replace / with : ONLY if surrounded by spaces (e.g., 5 / 3 -> 5 : 3). Keep fractions (1/2) as is.
       const formattedText = text
-        .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 x $2')
+        // Replace * when surrounded by spaces: " * " -> " x "
+        .replace(/\s\*\s/g, ' x ')
+        // Replace * after parenthesis: ") * " -> ") x "
+        .replace(/\)\s*\*\s*/g, ') x ')
+        // Replace * before parenthesis: " * (" -> " x ("
+        .replace(/\s*\*\s*\(/g, ' x (')
+        // Replace * between alphanumeric: "a * b", "5 * 3" -> "a x b", "5 x 3"
+        .replace(/([a-zA-Z0-9?])\s*\*\s*([a-zA-Z0-9?(])/g, '$1 x $2')
+        // Division with spaces
         .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
 
       return parseAndRepairJSON(formattedText);
@@ -384,10 +404,24 @@ const generateWithOpenAI = async (
 
   const userContent: any[] = [{ type: 'text', text: promptText }];
 
-  // Handle Attached File (if image)
+  // Handle Attached File (if image) - PRIORITIZE for quiz generation
   if (file && file.type.startsWith('image/')) {
     const base64Data = await fileToBase64(file);
-    userContent.push({
+    userContent.unshift({
+      type: 'text',
+      text: `⚠️ TÀI LIỆU ĐÍNH KÈM (Attached File) - ƯU TIÊN CAO NHẤT:
+Đây là tài liệu bài học/nội dung do giáo viên tải lên.
+
+🔴 YÊU CẦU BẮT BUỘC:
+1. ĐỌC KỸ VÀ HIỂU nội dung trong tài liệu này.
+2. TẠO CÂU HỎI DỰA TRÊN NỘI DUNG TRONG TÀI LIỆU NÀY LÀ CHÍNH.
+3. Tất cả câu hỏi phải liên quan trực tiếp đến kiến thức trong tài liệu.
+4. Không tự bịa nội dung ngoài tài liệu trừ khi cần bổ sung.
+5. Nếu là ảnh chụp bài học, hãy đọc văn bản trong ảnh và tạo câu hỏi từ đó.
+
+Tài liệu đính kèm:`
+    });
+    userContent.splice(1, 0, {
       type: 'image_url',
       image_url: {
         url: `data:${file.type};base64,${base64Data}`
@@ -447,10 +481,18 @@ const generateWithOpenAI = async (
   const data = await response.json();
   const text = data.choices[0].message.content;
 
-  // Format multiplication signs: Replace * with x in math contexts
+  // Format multiplication signs: Replace ALL * with x in math contexts
   // Format division signs: Replace / with : ONLY if surrounded by spaces
   const formattedText = text
-    .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 x $2')
+    // Replace * when surrounded by spaces: " * " -> " x "
+    .replace(/\s\*\s/g, ' x ')
+    // Replace * after parenthesis: ") * " -> ") x "
+    .replace(/\)\s*\*\s*/g, ') x ')
+    // Replace * before parenthesis: " * (" -> " x ("
+    .replace(/\s*\*\s*\(/g, ' x (')
+    // Replace * between alphanumeric: "a * b", "5 * 3" -> "a x b", "5 x 3"
+    .replace(/([a-zA-Z0-9?])\s*\*\s*([a-zA-Z0-9?(])/g, '$1 x $2')
+    // Division with spaces
     .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
 
   return parseAndRepairJSON(formattedText);

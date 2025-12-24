@@ -97,25 +97,43 @@ const App: React.FC = () => {
 
     // Load results from Google Sheets
     const loadResults = async () => {
-        try {
-            if (GOOGLE_SHEET_ID && RESULTS_GID) {
-                const sheetResults = await fetchResultsFromSheets(GOOGLE_SHEET_ID, RESULTS_GID);
-                setResults(sheetResults);
-                localStorage.setItem('itong_results', JSON.stringify(sheetResults));
-                return sheetResults;
-            }
-        } catch (e) {
-            console.error("Failed to fetch results from sheets, falling back to local storage", e);
-        }
+        let sheetResults: StudentResult[] = [];
+        let localResults: StudentResult[] = [];
 
-        // Fallback to localStorage
+        // 1. Get results from localStorage first
         const savedResults = localStorage.getItem('itong_results');
         if (savedResults) {
-            const parsed = JSON.parse(savedResults);
-            setResults(parsed);
-            return parsed;
+            try {
+                localResults = JSON.parse(savedResults);
+            } catch (e) {
+                console.error("Failed to parse local results", e);
+            }
         }
-        return [];
+
+        // 2. Try to fetch from Google Sheets
+        try {
+            if (GOOGLE_SHEET_ID && RESULTS_GID) {
+                sheetResults = await fetchResultsFromSheets(GOOGLE_SHEET_ID, RESULTS_GID);
+            }
+        } catch (e) {
+            console.error("Failed to fetch results from sheets", e);
+        }
+
+        // 3. Merge results - combine both sources, remove duplicates by id
+        const allResults = [...sheetResults, ...localResults];
+        const uniqueResults = allResults.reduce((acc: StudentResult[], curr) => {
+            if (!acc.find(r => r.id === curr.id)) {
+                acc.push(curr);
+            }
+            return acc;
+        }, []);
+
+        // 4. Sort by submittedAt descending (newest first)
+        uniqueResults.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+
+        setResults(uniqueResults);
+        localStorage.setItem('itong_results', JSON.stringify(uniqueResults));
+        return uniqueResults;
     };
 
     // --- PERSISTENCE (MOCK DB) ---
