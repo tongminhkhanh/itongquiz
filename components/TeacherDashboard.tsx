@@ -456,35 +456,50 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
     };
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <nav className="bg-slate-800 text-white p-4 flex justify-between items-center shadow-lg sticky top-0 z-50">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+            <nav className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white p-4 flex justify-between items-center shadow-xl sticky top-0 z-50">
                 <h1 className="text-xl font-bold flex items-center">
-                    <span className="text-2xl mr-2">🔐</span> Giáo viên - Trường Tiểu học Ít Ong
+                    <span className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center mr-3 shadow-lg">🔐</span>
+                    <span className="hidden sm:inline">Giáo viên - Trường Tiểu học Ít Ong</span>
+                    <span className="sm:hidden">Giáo viên</span>
                 </h1>
-                <button onClick={onLogout} className="flex items-center text-sm bg-red-600 hover:bg-red-700 px-3 py-2 rounded">
+                <button
+                    onClick={onLogout}
+                    className="flex items-center text-sm bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 px-4 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+                >
                     <LogOut className="w-4 h-4 mr-2" /> Đăng xuất
                 </button>
             </nav>
 
             <div className="container mx-auto p-6">
-                <div className="flex space-x-4 mb-6">
+                {/* Modern Tab Navigation */}
+                <div className="bg-white/80 backdrop-blur-sm p-1.5 rounded-2xl shadow-lg mb-6 inline-flex gap-1">
                     <button
                         onClick={() => setActiveTab('results')}
-                        className={`px-6 py-2 rounded-full font-bold transition-all ${activeTab === 'results' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}
+                        className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${activeTab === 'results'
+                            ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
+                            : 'text-gray-600 hover:bg-gray-100'
+                            }`}
                     >
-                        📊 Kết quả học sinh
+                        <span className="text-lg">📊</span> Kết quả học sinh
                     </button>
                     <button
                         onClick={() => setActiveTab('create')}
-                        className={`px-6 py-2 rounded-full font-bold transition-all ${activeTab === 'create' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}
+                        className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${activeTab === 'create'
+                            ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
+                            : 'text-gray-600 hover:bg-gray-100'
+                            }`}
                     >
-                        📝 Tạo đề thi mới
+                        <span className="text-lg">📝</span> Tạo đề thi mới
                     </button>
                     <button
                         onClick={() => setActiveTab('manage')}
-                        className={`px-6 py-2 rounded-full font-bold transition-all ${activeTab === 'manage' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}
+                        className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${activeTab === 'manage'
+                            ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
+                            : 'text-gray-600 hover:bg-gray-100'
+                            }`}
                     >
-                        📂 Quản lý đề thi
+                        <span className="text-lg">📂</span> Quản lý đề thi
                     </button>
                 </div>
 
@@ -1055,30 +1070,55 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                 )}
 
                 {activeTab === 'results' && (
-                    <div className="space-y-6">
+                    <div className="space-y-6 animate-fade-in">
                         {/* Stats Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
-                                <p className="text-gray-500 text-sm">Tổng bài nộp</p>
-                                <p className="text-2xl font-bold">{results.length}</p>
+                            <div className="stat-card stat-card-primary group">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-gray-500 text-sm font-medium">Tổng bài nộp</p>
+                                        <p className="text-3xl font-bold text-gray-800 mt-1">{results.length}</p>
+                                    </div>
+                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                        <span className="text-2xl">📋</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500">
-                                <p className="text-gray-500 text-sm">Điểm trung bình</p>
-                                <p className="text-2xl font-bold">
-                                    {results.length > 0 ? (results.reduce((a, b) => a + b.score, 0) / results.length).toFixed(1) : 0}
-                                </p>
+                            <div className="stat-card stat-card-success group">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-gray-500 text-sm font-medium">Điểm trung bình</p>
+                                        <p className="text-3xl font-bold text-gray-800 mt-1">
+                                            {results.length > 0 ? (results.reduce((a, b) => a + b.score, 0) / results.length).toFixed(1) : 0}
+                                        </p>
+                                    </div>
+                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                        <span className="text-2xl">⭐</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-orange-500">
-                                <p className="text-gray-500 text-sm">Số đề hiện có</p>
-                                <p className="text-2xl font-bold">{quizzes.length}</p>
+                            <div className="stat-card stat-card-warning group">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-gray-500 text-sm font-medium">Số đề hiện có</p>
+                                        <p className="text-3xl font-bold text-gray-800 mt-1">{quizzes.length}</p>
+                                    </div>
+                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                        <span className="text-2xl">📚</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         {/* Filters */}
-                        <div className="bg-white p-4 rounded-xl shadow-sm flex flex-wrap gap-4 items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <label className="text-sm font-bold">Lọc Lớp:</label>
-                                <select value={filterClass} onChange={e => setFilterClass(e.target.value)} className="border rounded p-2 text-sm">
+                        <div className="glass bg-white/80 p-4 rounded-2xl shadow-lg flex flex-wrap gap-4 items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <label className="text-sm font-semibold text-gray-600">Lọc Lớp:</label>
+                                <select
+                                    value={filterClass}
+                                    onChange={e => setFilterClass(e.target.value)}
+                                    className="border-2 border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                                >
                                     <option value="All">Tất cả</option>
                                     {Array.from({ length: 5 }, (_, g) => g + 1).flatMap(grade =>
                                         Array.from({ length: 9 }, (_, c) => c + 1).map(num => `${grade}A${num}`)
@@ -1098,12 +1138,15 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                         }
                                     }}
                                     disabled={isRefreshing}
-                                    className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 flex items-center text-sm font-bold disabled:opacity-50"
+                                    className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-5 py-2.5 rounded-xl hover:from-blue-600 hover:to-indigo-700 flex items-center text-sm font-semibold disabled:opacity-50 shadow-md hover:shadow-lg transition-all"
                                 >
                                     <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                                     {isRefreshing ? 'Đang tải...' : 'Làm mới'}
                                 </button>
-                                <button onClick={exportExcel} className="bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200 flex items-center text-sm font-bold">
+                                <button
+                                    onClick={exportExcel}
+                                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2.5 rounded-xl hover:from-green-600 hover:to-emerald-700 flex items-center text-sm font-semibold shadow-md hover:shadow-lg transition-all"
+                                >
                                     <Download className="w-4 h-4 mr-2" /> Xuất Excel
                                 </button>
                             </div>
@@ -1116,6 +1159,7 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Họ tên</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lớp</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đề thi</th>
                                         <th
                                             className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-blue-600"
                                             onClick={() => { setSortField('score'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
@@ -1132,21 +1176,29 @@ const TeacherDashboard: React.FC<Props> = ({ onLogout, quizzes, results, onSaveQ
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {filteredResults.map((r) => (
-                                        <tr key={r.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{r.studentName}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.studentClass}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${r.score >= 5 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                                    {r.score}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.correctCount}/{r.totalQuestions}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">
-                                                {new Date(r.submittedAt).toLocaleString('vi-VN')}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {filteredResults.map((r) => {
+                                        const quiz = quizzes.find(q => q.id === r.quizId);
+                                        return (
+                                            <tr key={r.id}>
+                                                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{r.studentName}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.studentClass}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-lg max-w-[200px] truncate inline-block" title={quiz?.title || r.quizId}>
+                                                        {quiz?.title || 'Đề thi đã xóa'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${r.score >= 5 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                        {r.score}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.correctCount}/{r.totalQuestions}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">
+                                                    {new Date(r.submittedAt).toLocaleString('vi-VN')}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                             {filteredResults.length === 0 && <div className="p-8 text-center text-gray-400">Chưa có dữ liệu</div>}

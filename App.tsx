@@ -285,68 +285,108 @@ const App: React.FC = () => {
             <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px] z-0"></div>
 
             {view === 'teacher_login' && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl">
-                        <div className="text-center mb-6">
-                            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Lock className="w-8 h-8 text-blue-600" />
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+                    <div className="glass bg-white/90 rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-scale-in border border-white/50">
+                        <div className="text-center mb-8">
+                            <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                <Lock className="w-10 h-10 text-white" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-800">Truy cập khóa giáo viên</h3>
+                            <h3 className="text-2xl font-bold text-gray-800">Đăng nhập Giáo viên</h3>
+                            <p className="text-gray-500 text-sm mt-1">Nhập thông tin để truy cập</p>
                         </div>
-                        <input
-                            type="text"
-                            value={usernameInput}
-                            onChange={e => setUsernameInput(e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="Tên đăng nhập..."
-                            autoFocus
-                        />
-                        <input
-                            type="password"
-                            value={passwordInput}
-                            onChange={e => setPasswordInput(e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="Mật khẩu..."
-                            onKeyDown={(e) => e.key === 'Enter' && handleTeacherLogin()}
-                        />
-                        {loginError && <p className="text-red-500 text-sm mb-4 text-center">Tên đăng nhập hoặc mật khẩu không đúng!</p>}
-                        <div className="flex gap-3">
-                            <button onClick={() => setView('home')} className="flex-1 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">Hủy</button>
-                            <button onClick={handleTeacherLogin} className="flex-1 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Đăng nhập</button>
+                        <div className="space-y-4">
+                            <div className="relative">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={usernameInput}
+                                    onChange={e => setUsernameInput(e.target.value)}
+                                    className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white/80"
+                                    placeholder="Tên đăng nhập..."
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="relative">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="password"
+                                    value={passwordInput}
+                                    onChange={e => setPasswordInput(e.target.value)}
+                                    className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white/80"
+                                    placeholder="Mật khẩu..."
+                                    onKeyDown={(e) => e.key === 'Enter' && handleTeacherLogin()}
+                                />
+                            </div>
+                        </div>
+                        {loginError && (
+                            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-600 text-sm animate-slide-down">
+                                <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                                Tên đăng nhập hoặc mật khẩu không đúng!
+                            </div>
+                        )}
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => setView('home')}
+                                className="flex-1 py-3 text-gray-600 font-semibold hover:bg-gray-100 rounded-xl transition-all border-2 border-gray-200 hover:border-gray-300"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleTeacherLogin}
+                                className="flex-1 py-3 btn-primary rounded-xl font-semibold"
+                            >
+                                Đăng nhập
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            <div className="z-10 text-center max-w-4xl w-full">
-                <div className="mb-8">
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-orange-600 mb-2 drop-shadow-sm">{SCHOOL_NAME}</h1>
-                    <p className="text-orange-600 font-bold text-xl bg-white/90 px-6 py-2 rounded-full shadow-md inline-block mt-2 backdrop-blur-sm">
-                        Học mà chơi - Chơi mà học
+            <div className="z-10 text-center max-w-4xl w-full animate-fade-in">
+                <div className="mb-8 animate-slide-down">
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-orange-600 mb-2 drop-shadow-lg">{SCHOOL_NAME}</h1>
+                    <p className="glass text-orange-600 font-bold text-xl px-8 py-3 rounded-full shadow-lg inline-block mt-2">
+                        ✨ Học mà chơi - Chơi mà học ✨
                     </p>
                 </div>
 
                 <div className="max-w-3xl mx-auto mb-12">
                     {/* Available Quizzes Section */}
-                    <div className="bg-white p-8 rounded-3xl shadow-xl border-t-8 border-green-400 transform transition hover:-translate-y-1">
+                    <div className="glass bg-white/80 p-8 rounded-3xl shadow-2xl animate-slide-up">
                         <div className="flex items-center justify-center mb-6">
-                            <BookOpen className="w-16 h-16 text-green-500" />
+                            <div className="w-20 h-20 rounded-2xl gradient-success flex items-center justify-center shadow-lg">
+                                <BookOpen className="w-10 h-10 text-white" />
+                            </div>
                         </div>
                         <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-3xl font-bold text-gray-800">
-                                {selectedClassLevel ? `Bài kiểm tra Lớp ${selectedClassLevel}` : 'Danh sách bài kiểm tra'}
+                            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+                                {selectedClassLevel ? `📚 Bài kiểm tra Lớp ${selectedClassLevel}` : '📋 Danh sách bài kiểm tra'}
                             </h2>
                             <div className="flex gap-2">
                                 {selectedClassLevel && (
                                     <button
                                         onClick={() => setSelectedClassLevel(null)}
-                                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-bold text-gray-600 transition-colors"
+                                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-semibold text-gray-600 transition-all hover:shadow-md border border-gray-200"
                                     >
-                                        Quay lại
+                                        ← Quay lại
                                     </button>
                                 )}
-                                <button onClick={loadData} className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Làm mới dữ liệu">
-                                    <RefreshCw className={`w-6 h-6 text-gray-500 ${isLoading ? 'animate-spin' : ''}`} />
+                                <button
+                                    onClick={loadData}
+                                    className="p-2.5 hover:bg-gray-100 rounded-xl transition-all hover:shadow-md border border-gray-200 group"
+                                    title="Làm mới dữ liệu"
+                                >
+                                    <RefreshCw className={`w-5 h-5 text-gray-500 group-hover:text-blue-600 ${isLoading ? 'animate-spin' : ''}`} />
                                 </button>
                             </div>
                         </div>
@@ -355,14 +395,17 @@ const App: React.FC = () => {
                             {!selectedClassLevel ? (
                                 // Class Level Selection
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    {['1', '2', '3', '4', '5'].map(level => (
+                                    {['1', '2', '3', '4', '5'].map((level, index) => (
                                         <button
                                             key={level}
                                             onClick={() => setSelectedClassLevel(level)}
-                                            className="p-6 rounded-2xl bg-green-50 hover:bg-green-100 border-2 border-green-100 hover:border-green-300 text-green-800 font-bold text-xl transition-all hover:shadow-lg flex flex-col items-center group"
+                                            className="relative p-6 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-100 hover:from-green-100 hover:to-emerald-200 border-2 border-green-200 hover:border-green-400 text-green-800 font-bold text-xl transition-all hover:shadow-xl hover:-translate-y-1 flex flex-col items-center group overflow-hidden"
+                                            style={{ animationDelay: `${index * 100}ms` }}
                                         >
-                                            <span className="group-hover:scale-110 transition-transform">Lớp {level}</span>
-                                            <span className="text-sm font-normal text-gray-500 mt-2">
+                                            <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <span className="text-3xl mb-1 group-hover:scale-125 transition-transform">📖</span>
+                                            <span className="relative group-hover:scale-105 transition-transform">Lớp {level}</span>
+                                            <span className="text-sm font-medium text-green-600/70 mt-1 bg-white/50 px-3 py-0.5 rounded-full">
                                                 {quizzes.filter(q => q.classLevel === level).length} đề thi
                                             </span>
                                         </button>
@@ -370,9 +413,9 @@ const App: React.FC = () => {
                                     {/* Teacher Login Button in Grid */}
                                     <button
                                         onClick={() => setView('teacher_login')}
-                                        className="p-6 rounded-2xl bg-white border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 text-gray-500 hover:text-blue-600 font-bold text-lg transition-all hover:shadow-lg flex flex-col items-center justify-center group"
+                                        className="p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:from-blue-50 hover:to-indigo-100 text-gray-500 hover:text-blue-600 font-bold text-lg transition-all hover:shadow-xl hover:-translate-y-1 flex flex-col items-center justify-center group"
                                     >
-                                        <KeyRound className="w-8 h-8 mb-2 group-hover:scale-110 transition-transform" />
+                                        <KeyRound className="w-8 h-8 mb-2 group-hover:scale-125 transition-transform text-gray-400 group-hover:text-blue-500" />
                                         <span>Giáo viên</span>
                                     </button>
                                 </div>
@@ -380,31 +423,37 @@ const App: React.FC = () => {
                                 // Quiz List for Selected Level
                                 <>
                                     {quizzes.filter(q => q.classLevel === selectedClassLevel).length === 0 ? (
-                                        <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                                            <p className="text-gray-400 italic text-lg">Chưa có bài kiểm tra nào cho Lớp {selectedClassLevel}.</p>
+                                        <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-slate-100 rounded-2xl border-2 border-dashed border-gray-300">
+                                            <div className="text-6xl mb-4">📭</div>
+                                            <p className="text-gray-400 text-lg">Chưa có bài kiểm tra nào cho Lớp {selectedClassLevel}.</p>
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 gap-3">
                                             {quizzes
                                                 .filter(q => q.classLevel === selectedClassLevel)
-                                                .map(q => (
+                                                .map((q, index) => (
                                                     <button
                                                         key={q.id}
                                                         onClick={() => { setActiveQuiz(q); setView('student'); }}
-                                                        className="w-full text-left p-4 rounded-xl bg-green-50 hover:bg-green-100 transition-colors border border-green-100 hover:border-green-300 group shadow-sm hover:shadow-md"
+                                                        className="w-full text-left p-5 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-all border-2 border-green-100 hover:border-green-300 group shadow-sm hover:shadow-lg animate-slide-up"
+                                                        style={{ animationDelay: `${index * 50}ms` }}
                                                     >
                                                         <div className="flex justify-between items-center">
                                                             <span className="font-bold text-lg text-green-800 group-hover:text-green-900 line-clamp-1 flex items-center gap-2">
-                                                                {q.requireCode && <span title="Yêu cầu mật khẩu">🔒</span>}
+                                                                {q.requireCode && <span className="text-amber-500" title="Yêu cầu mật khẩu">🔒</span>}
                                                                 {q.title}
                                                             </span>
-                                                            <span className="bg-white px-3 py-1 rounded-full text-xs font-bold text-green-600 shadow-sm border border-green-100">
-                                                                Bắt đầu
+                                                            <span className="bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-1.5 rounded-full text-xs font-bold text-white shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all">
+                                                                Bắt đầu →
                                                             </span>
                                                         </div>
-                                                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                                                            <span>📝 {q.questions.length} câu hỏi</span>
-                                                            <span>⏱️ {q.timeLimit} phút</span>
+                                                        <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                                                            <span className="flex items-center gap-1">
+                                                                <span>📝</span> {q.questions.length} câu hỏi
+                                                            </span>
+                                                            <span className="flex items-center gap-1">
+                                                                <span>⏱️</span> {q.timeLimit} phút
+                                                            </span>
                                                         </div>
                                                     </button>
                                                 ))}
@@ -414,8 +463,8 @@ const App: React.FC = () => {
                             )}
                         </div>
                         {/* Copyright Footer */}
-                        <p className="text-center text-gray-500 text-sm mt-6">
-                            © 2025 Trường Tiểu học Ít Ong. Developed by Tòng Minh Khánh. All rights reserved.
+                        <p className="text-center text-gray-400 text-sm mt-8 pt-6 border-t border-gray-100">
+                            © 2025 Trường Tiểu học Ít Ong. Developed by Tòng Minh Khánh.
                         </p>
                     </div>
                 </div>
