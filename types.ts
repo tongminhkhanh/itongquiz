@@ -101,6 +101,7 @@ export interface Quiz {
 export interface StudentResult {
   id: string; // UUID
   quizId: string;
+  quizTitle?: string; // Optional quiz title from Google Sheets
   studentName: string;
   studentClass: string;
   score: number; // 0-10

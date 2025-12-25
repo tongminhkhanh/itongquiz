@@ -6,7 +6,7 @@ import TeacherDashboard from './components/TeacherDashboard';
 import { Quiz, StudentResult, QuestionType } from './types';
 import { SCHOOL_NAME } from './constants';
 import { BookOpen, GraduationCap, Lock, KeyRound, RefreshCw } from 'lucide-react';
-import { fetchQuizzesFromSheets, fetchTeachersFromSheets, fetchResultsFromSheets, saveQuizToSheet, saveResultToSheet } from './googleSheetService';
+import { fetchQuizzesFromSheets, fetchTeachersFromSheets, fetchResultsFromSheets, saveQuizToSheet, saveResultToSheet, updateQuizInSheet, deleteQuizFromSheet } from './googleSheetService';
 
 // --- CONFIGURATION ---
 // Replace these with your actual Google Sheet ID and GIDs
@@ -181,8 +181,22 @@ const App: React.FC = () => {
         setQuizzes(updated);
         localStorage.setItem('itong_quizzes', JSON.stringify(updated));
 
-        // 2. Update in Google Sheet (handled in TeacherDashboard, but good to keep sync logic here if refactoring)
-        // For now, TeacherDashboard calls updateQuizInSheet directly, but we MUST update local state here.
+        // 2. Update in Google Sheet
+        if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.startsWith('http')) {
+            await updateQuizInSheet(updatedQuiz, GOOGLE_SCRIPT_URL);
+        }
+    };
+
+    const deleteQuizFromStorage = async (quizId: string) => {
+        // 1. Delete from Local State & Storage
+        const updated = quizzes.filter(q => q.id !== quizId);
+        setQuizzes(updated);
+        localStorage.setItem('itong_quizzes', JSON.stringify(updated));
+
+        // 2. Delete from Google Sheet
+        if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.startsWith('http')) {
+            await deleteQuizFromSheet(quizId, GOOGLE_SCRIPT_URL);
+        }
     };
 
     const saveResultToStorage = async (newResult: StudentResult) => {
@@ -192,10 +206,12 @@ const App: React.FC = () => {
 
         // Save to Google Sheet
         if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.startsWith('http')) {
-            // Find quiz title for better reporting
-            const quiz = quizzes.find(q => q.id === newResult.quizId);
-            const resultWithTitle = { ...newResult, quizTitle: quiz?.title || 'Unknown' };
-            await saveResultToSheet(resultWithTitle, GOOGLE_SCRIPT_URL);
+            // Ensure quizTitle is present (fallback to finding from quizzes if not)
+            const resultToSave = {
+                ...newResult,
+                quizTitle: newResult.quizTitle || quizzes.find(q => q.id === newResult.quizId)?.title || 'Unknown Quiz'
+            };
+            await saveResultToSheet(resultToSave, GOOGLE_SCRIPT_URL);
         }
     };
 
@@ -241,20 +257,23 @@ const App: React.FC = () => {
     // --- VIEWS ---
 
     if (view === 'teacher_dash') {
+        const handleLogout = () => {
+            setView('home');
+            setLoggedInTeacher(null);
+            setIsAdmin(false);
+            localStorage.removeItem('teacher_session');
+        };
+
         return (
             <>
                 <TeacherDashboard
-                    onLogout={() => {
-                        setView('home');
-                        setLoggedInTeacher(null);
-                        setIsAdmin(false);
-                        localStorage.removeItem('teacher_session');
-                    }}
+                    onLogout={handleLogout}
                     isAdmin={isAdmin}
                     quizzes={quizzes}
                     results={results}
                     onSaveQuiz={saveQuizToStorage}
                     onUpdateQuiz={updateQuizInStorage}
+                    onDeleteQuiz={deleteQuizFromStorage}
                     onRefreshResults={loadResults}
                 />
                 <Analytics />
@@ -275,15 +294,15 @@ const App: React.FC = () => {
         );
     }
 
-    // Home Screen
+    // Home Screen - Redesigned
     return (
         <div
-            className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
+            className="min-h-screen flex flex-col items-center justify-center p-4 md:p-6 relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
             style={{ backgroundImage: "url('/background.jpg')" }}
         >
-            {/* Overlay for better text readability if needed, though cards have white bg */}
-            <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px] z-0"></div>
-
+            {/* Overlay for better readability */}
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-50/70 via-white/50 to-green-50/70 backdrop-blur-[1px] z-0"></div>
+            {/* Login Modal */}
             {view === 'teacher_login' && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
                     <div className="glass bg-white/90 rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-scale-in border border-white/50">
@@ -352,122 +371,152 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            <div className="z-10 text-center max-w-4xl w-full animate-fade-in">
-                <div className="mb-8 animate-slide-down">
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-orange-600 mb-2 drop-shadow-lg">{SCHOOL_NAME}</h1>
-                    <p className="glass text-orange-600 font-bold text-xl px-8 py-3 rounded-full shadow-lg inline-block mt-2">
-                        ✨ Học mà chơi - Chơi mà học ✨
-                    </p>
+            {/* Header - Pill Shaped */}
+            <div className="z-10 mb-8 animate-slide-down">
+                <div className="inline-flex items-center gap-3 bg-gradient-to-r from-amber-600 to-amber-500 px-6 py-3 rounded-full shadow-xl">
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-inner">
+                        <GraduationCap className="w-6 h-6 text-amber-600" />
+                    </div>
+                    <div className="text-left">
+                        <h1 className="text-xl md:text-2xl font-bold text-white tracking-wide">{SCHOOL_NAME}</h1>
+                        <p className="text-amber-100 text-xs font-medium tracking-widest">HỌC TẬP & RÈN LUYỆN</p>
+                    </div>
                 </div>
+            </div>
 
-                <div className="max-w-3xl mx-auto mb-12">
-                    {/* Available Quizzes Section */}
-                    <div className="glass bg-white/80 p-8 rounded-3xl shadow-2xl animate-slide-up">
-                        <div className="flex items-center justify-center mb-6">
-                            <div className="w-20 h-20 rounded-2xl gradient-success flex items-center justify-center shadow-lg">
-                                <BookOpen className="w-10 h-10 text-white" />
+            {/* Main Card */}
+            <div className="z-10 w-full max-w-xl mx-auto animate-fade-in">
+                <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
+                    {/* Card Header */}
+                    <div className="p-6 pb-4">
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-md">
+                                    <BookOpen className="w-5 h-5 text-white" />
+                                </div>
+                                <h2 className="text-xl md:text-2xl font-bold text-gray-800">
+                                    Chọn Lớp Học
+                                </h2>
                             </div>
+                            <button
+                                onClick={loadData}
+                                className="p-2 hover:bg-gray-100 rounded-full transition-all group"
+                                title="Làm mới dữ liệu"
+                            >
+                                <RefreshCw className={`w-5 h-5 text-gray-400 group-hover:text-blue-600 ${isLoading ? 'animate-spin' : ''}`} />
+                            </button>
                         </div>
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                                {selectedClassLevel ? `📚 Bài kiểm tra Lớp ${selectedClassLevel}` : '📋 Danh sách bài kiểm tra'}
-                            </h2>
-                            <div className="flex gap-2">
-                                {selectedClassLevel && (
+                        <p className="text-gray-500 text-sm ml-[52px]">Vui lòng chọn khối lớp để xem danh sách bài kiểm tra</p>
+                    </div>
+
+                    {/* Content */}
+                    <div className="px-6 pb-6">
+                        {!selectedClassLevel ? (
+                            // Class Level Selection - Circle Buttons
+                            <>
+                                <div className="flex flex-wrap justify-center gap-4 md:gap-6 py-4">
+                                    {['1', '2', '3', '4', '5'].map((level) => {
+                                        const quizCount = quizzes.filter(q => q.classLevel === level).length;
+                                        return (
+                                            <button
+                                                key={level}
+                                                onClick={() => setSelectedClassLevel(level)}
+                                                className="group flex flex-col items-center transition-all hover:-translate-y-1"
+                                            >
+                                                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all mb-2">
+                                                    <GraduationCap className="w-8 h-8 md:w-10 md:h-10 text-white" />
+                                                </div>
+                                                <span className="font-bold text-gray-700 text-sm md:text-base">Lớp {level}</span>
+                                                <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-full mt-1">
+                                                    {quizCount} đề thi
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Divider */}
+                                <div className="flex items-center gap-4 my-6">
+                                    <div className="flex-1 h-px bg-gray-200"></div>
+                                    <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Khu vực quản lý</span>
+                                    <div className="flex-1 h-px bg-gray-200"></div>
+                                </div>
+
+                                {/* Teacher Login Button */}
+                                <button
+                                    onClick={() => setView('teacher_login')}
+                                    className="w-full flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 border border-orange-200 hover:border-orange-300 transition-all group"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+                                            <KeyRound className="w-6 h-6 text-white" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="font-bold text-gray-800">Dành cho Giáo viên</p>
+                                            <p className="text-xs text-gray-500">Đăng nhập để quản lý đề thi, học sinh và chấm điểm.</p>
+                                        </div>
+                                    </div>
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-400 to-amber-500 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all">
+                                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </div>
+                                </button>
+                            </>
+                        ) : (
+                            // Quiz List for Selected Level
+                            <>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-bold text-gray-800">Bài kiểm tra Lớp {selectedClassLevel}</h3>
                                     <button
                                         onClick={() => setSelectedClassLevel(null)}
-                                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-semibold text-gray-600 transition-all hover:shadow-md border border-gray-200"
+                                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600 transition-all"
                                     >
                                         ← Quay lại
                                     </button>
-                                )}
-                                <button
-                                    onClick={loadData}
-                                    className="p-2.5 hover:bg-gray-100 rounded-xl transition-all hover:shadow-md border border-gray-200 group"
-                                    title="Làm mới dữ liệu"
-                                >
-                                    <RefreshCw className={`w-5 h-5 text-gray-500 group-hover:text-blue-600 ${isLoading ? 'animate-spin' : ''}`} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                            {!selectedClassLevel ? (
-                                // Class Level Selection
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    {['1', '2', '3', '4', '5'].map((level, index) => (
-                                        <button
-                                            key={level}
-                                            onClick={() => setSelectedClassLevel(level)}
-                                            className="relative p-6 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-100 hover:from-green-100 hover:to-emerald-200 border-2 border-green-200 hover:border-green-400 text-green-800 font-bold text-xl transition-all hover:shadow-xl hover:-translate-y-1 flex flex-col items-center group overflow-hidden"
-                                            style={{ animationDelay: `${index * 100}ms` }}
-                                        >
-                                            <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            <span className="text-3xl mb-1 group-hover:scale-125 transition-transform">📖</span>
-                                            <span className="relative group-hover:scale-105 transition-transform">Lớp {level}</span>
-                                            <span className="text-sm font-medium text-green-600/70 mt-1 bg-white/50 px-3 py-0.5 rounded-full">
-                                                {quizzes.filter(q => q.classLevel === level).length} đề thi
-                                            </span>
-                                        </button>
-                                    ))}
-                                    {/* Teacher Login Button in Grid */}
-                                    <button
-                                        onClick={() => setView('teacher_login')}
-                                        className="p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:from-blue-50 hover:to-indigo-100 text-gray-500 hover:text-blue-600 font-bold text-lg transition-all hover:shadow-xl hover:-translate-y-1 flex flex-col items-center justify-center group"
-                                    >
-                                        <KeyRound className="w-8 h-8 mb-2 group-hover:scale-125 transition-transform text-gray-400 group-hover:text-blue-500" />
-                                        <span>Giáo viên</span>
-                                    </button>
                                 </div>
-                            ) : (
-                                // Quiz List for Selected Level
-                                <>
+                                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
                                     {quizzes.filter(q => q.classLevel === selectedClassLevel).length === 0 ? (
-                                        <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-slate-100 rounded-2xl border-2 border-dashed border-gray-300">
-                                            <div className="text-6xl mb-4">📭</div>
-                                            <p className="text-gray-400 text-lg">Chưa có bài kiểm tra nào cho Lớp {selectedClassLevel}.</p>
+                                        <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                                            <div className="text-5xl mb-3 text-gray-300">∅</div>
+                                            <p className="text-gray-400">Chưa có bài kiểm tra nào cho Lớp {selectedClassLevel}.</p>
                                         </div>
                                     ) : (
-                                        <div className="grid grid-cols-1 gap-3">
-                                            {quizzes
-                                                .filter(q => q.classLevel === selectedClassLevel)
-                                                .map((q, index) => (
-                                                    <button
-                                                        key={q.id}
-                                                        onClick={() => { setActiveQuiz(q); setView('student'); }}
-                                                        className="w-full text-left p-5 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-all border-2 border-green-100 hover:border-green-300 group shadow-sm hover:shadow-lg animate-slide-up"
-                                                        style={{ animationDelay: `${index * 50}ms` }}
-                                                    >
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="font-bold text-lg text-green-800 group-hover:text-green-900 line-clamp-1 flex items-center gap-2">
-                                                                {q.requireCode && <span className="text-amber-500" title="Yêu cầu mật khẩu">🔒</span>}
-                                                                {q.title}
-                                                            </span>
-                                                            <span className="bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-1.5 rounded-full text-xs font-bold text-white shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all">
-                                                                Bắt đầu →
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
-                                                            <span className="flex items-center gap-1">
-                                                                <span>📝</span> {q.questions.length} câu hỏi
-                                                            </span>
-                                                            <span className="flex items-center gap-1">
-                                                                <span>⏱️</span> {q.timeLimit} phút
-                                                            </span>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                        </div>
+                                        quizzes
+                                            .filter(q => q.classLevel === selectedClassLevel)
+                                            .map((q, index) => (
+                                                <button
+                                                    key={q.id}
+                                                    onClick={() => { setActiveQuiz(q); setView('student'); }}
+                                                    className="w-full text-left p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-all border border-green-100 hover:border-green-300 group shadow-sm hover:shadow-md"
+                                                    style={{ animationDelay: `${index * 50}ms` }}
+                                                >
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="font-bold text-green-800 group-hover:text-green-900 flex items-center gap-2">
+                                                            {q.requireCode && <Lock className="w-4 h-4 text-amber-500" />}
+                                                            {q.title}
+                                                        </span>
+                                                        <span className="bg-gradient-to-r from-green-500 to-emerald-500 px-3 py-1 rounded-full text-xs font-bold text-white shadow group-hover:shadow-md group-hover:scale-105 transition-all">
+                                                            Bắt đầu →
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                                        <span>{q.questions.length} câu hỏi</span>
+                                                        <span>{q.timeLimit} phút</span>
+                                                    </div>
+                                                </button>
+                                            ))
                                     )}
-                                </>
-                            )}
-                        </div>
-                        {/* Copyright Footer */}
-                        <p className="text-center text-gray-400 text-sm mt-8 pt-6 border-t border-gray-100">
-                            © 2025 Trường Tiểu học Ít Ong. Developed by Tòng Minh Khánh.
-                        </p>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
+
+                {/* Footer */}
+                <p className="text-center text-gray-500 text-xs mt-6">
+                    © 2025 Trường Tiểu học Ít Ong. Developed by Tòng Minh Khánh.
+                </p>
             </div>
             <Analytics />
         </div>
