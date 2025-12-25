@@ -13,6 +13,7 @@ export interface QuizGenerationOptions {
     level3: number;
   };
   imageLibrary?: Array<{ id: string; name: string; data?: string; }>;
+  customPrompt?: string; // Custom prompt từ giáo viên - ưu tiên cao nhất
 }
 
 // Build the prompt for quiz generation
@@ -21,13 +22,14 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
   const count = options?.questionCount || 10;
   const types = options?.questionTypes || [];
   const levels = options?.difficultyLevels;
+  const customPrompt = options?.customPrompt?.trim(); // Custom prompt từ giáo viên
 
   // Map question types to Vietnamese descriptions for better AI understanding
   const typeDescriptions: Record<string, string> = {
     'MCQ': 'MCQ (Trắc nghiệm chọn 1 đáp án đúng trong 4 lựa chọn A, B, C, D)',
     'TRUE_FALSE': 'TRUE_FALSE (Cho một câu hỏi chính và nhiều phát biểu, học sinh chọn Đúng hoặc Sai cho mỗi phát biểu)',
     'SHORT_ANSWER': 'SHORT_ANSWER (Điền đáp án ngắn, thường là 1-4 ký tự hoặc số)',
-    'MATCHING': 'MATCHING (Nối các ý ở cột A với cột B sao cho phù hợp, có 3-4 cặp)',
+    'MATCHING': 'MATCHING (Nối các ý ở cột A với cột B. ⚠️ BẮT BUỘC: Cột A (left) và Cột B (right) PHẢI CÓ CÙNG SỐ LƯỢNG mục, thường là 3-4 cặp. Mỗi mục ở cột A chỉ nối với 1 mục ở cột B)',
     'MULTIPLE_SELECT': 'MULTIPLE_SELECT (Chọn TẤT CẢ các đáp án đúng, có thể 2-3 đáp án đúng trong 4 lựa chọn, correctAnswers là mảng như ["A", "C"])',
     'DRAG_DROP': 'DRAG_DROP (Điền từ vào chỗ trống. Text chứa các từ cần điền trong ngoặc vuông, ví dụ: "Con mèo [trèo] cây cau". Blanks là mảng các từ trong ngoặc ["trèo"]. Distractors là mảng các từ gây nhiễu ["bơi", "bay"])'
   };
@@ -36,18 +38,46 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
   const typesList = types.join(', ');
   const images = options?.imageLibrary || [];
 
-  // Build difficulty level instructions
+  // Build difficulty level instructions with detailed Vietnamese educational standards
   let difficultyInstructions = '';
   if (levels) {
     difficultyInstructions = `
-    PHAN BO CAU HOI THEO MUC DO (CHI LA HUONG DAN CHO AI, KHONG GHI VAO DE):
-    - Muc 1 (Nhan biet): ${levels.level1} cau - De, quen thuoc
-    - Muc 2 (Thong hieu): ${levels.level2} cau - Trung binh
-    - Muc 3 (Van dung cao): ${levels.level3} cau - Kho, thuc tien
+    PHÂN BỔ CÂU HỎI THEO MỨC ĐỘ NHẬN THỨC (Chuẩn đánh giá Tiểu học Việt Nam):
     
-    TONG CONG: ${levels.level1 + levels.level2 + levels.level3} cau
+    📗 MỨC 1 - NHẬN BIẾT (${levels.level1} câu):
+    Định nghĩa: Nhận biết, nhắc lại hoặc mô tả được nội dung đã học và áp dụng trực tiếp để giải quyết một số tình huống quen thuộc trong học tập.
+    Đặc điểm câu hỏi Mức 1:
+    - Câu hỏi đơn giản, quen thuộc
+    - Yêu cầu nhớ lại kiến thức cơ bản
+    - Áp dụng trực tiếp công thức/quy tắc đã học
+    - Tình huống đã gặp trong sách giáo khoa
+    - Ví dụ: "5 + 3 = ?", "Từ nào là danh từ?", "Nước sôi ở bao nhiêu độ?"
     
-    LUU Y QUAN TRONG: KHONG duoc ghi "Muc 1", "Muc 2", "Muc 3", "Nhan biet", "Thong hieu", "Van dung" hay bat ky nhan muc do nao vao trong cau hoi. Chi tao cau hoi binh thuong.`;
+    📘 MỨC 2 - THÔNG HIỂU (${levels.level2} câu):
+    Định nghĩa: Kết nối, sắp xếp được một số nội dung đã học để giải quyết vấn đề có nội dung tương tự.
+    Đặc điểm câu hỏi Mức 2:
+    - Câu hỏi có biến đổi nhẹ so với ví dụ trong sách
+    - Yêu cầu kết nối 2-3 kiến thức đã học
+    - Giải quyết vấn đề tương tự nhưng khác ngữ cảnh
+    - Cần suy luận một bước
+    - Ví dụ: "Mẹ có 15 quả táo, cho lan 7 quả, còn lại bao nhiêu?", "Điền từ thích hợp vào câu..."
+    
+    📕 MỨC 3 - VẬN DỤNG (${levels.level3} câu):
+    Định nghĩa: Vận dụng các nội dung đã học để giải quyết một số vấn đề mới hoặc đưa ra những phản hồi hợp lý trong học tập và cuộc sống.
+    Đặc điểm câu hỏi Mức 3:
+    - Câu hỏi phức tạp, thực tế, gắn với đời sống
+    - Yêu cầu vận dụng tổng hợp nhiều kiến thức
+    - Tình huống mới chưa gặp trong sách
+    - Cần suy luận nhiều bước
+    - Có thể có nhiều cách giải
+    - Ví dụ: "Nam có 50.000đ, mua 3 quyển vở giá 8.000đ/quyển và 2 cây bút giá 5.000đ/cây. Nam còn bao nhiêu tiền?", "Viết đoạn văn ngắn về..."
+    
+    TỔNG CỘNG: ${levels.level1 + levels.level2 + levels.level3} câu
+    
+    ⚠️ LƯU Ý QUAN TRỌNG: 
+    - KHÔNG được ghi "Mức 1", "Mức 2", "Mức 3", "Nhận biết", "Thông hiểu", "Vận dụng" hay nhãn mức độ nào vào câu hỏi
+    - Chỉ tạo câu hỏi bình thường, độ khó phản ánh qua nội dung câu hỏi
+    - Đảm bảo phân bổ đúng số lượng theo từng mức`;
   }
 
   // Build image library instructions
@@ -67,13 +97,35 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     5. Neu khong co hinh phu hop, moi tu tao cau hoi khong hinh hoac dung URL ngoai.`;
   }
 
+  // ⭐ Build custom prompt instructions (HIGHEST PRIORITY)
+  let customPromptSection = '';
+  if (customPrompt) {
+    customPromptSection = `
+    
+    🔴 YÊU CẦU ĐẶC BIỆT TỪ GIÁO VIÊN (ƯU TIÊN CAO NHẤT - PHẢI TUÂN THỦ):
+    "${customPrompt}"
+    
+    ⚠️ LƯU Ý: Yêu cầu trên của giáo viên có độ ưu tiên cao nhất. Hãy tuân thủ chặt chẽ các yêu cầu này khi tạo đề.
+    `;
+  }
+
   return `
+    ⛔⛔⛔ GIỚI HẠN SỐ LƯỢNG - QUY TẮC TUYỆT ĐỐI KHÔNG ĐƯỢC VI PHẠM ⛔⛔⛔
+    SỐ CÂU HỎI: CHÍNH XÁC ${count} CÂU
+    - KHÔNG ĐƯỢC tạo nhiều hơn ${count} câu
+    - KHÔNG ĐƯỢC tạo ít hơn ${count} câu  
+    - Mảng "questions" trong JSON PHẢI có ĐÚNG ${count} phần tử
+    - Nếu vi phạm giới hạn này, toàn bộ đề thi sẽ BỊ HỦY
+    ⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔
+
     Tao de kiem tra cho hoc sinh Lop ${classLevel}.
+    ${customPromptSection}
     
     THONG TIN CAU HINH:
     - Tieu de bai kiem tra: "${title}"
     - Chu de: "${topic}"
-    - Tong so luong cau hoi can tao: CHINH XAC ${count} cau.
+    - SO CAU: ${count} (KHONG DUOC THAY DOI)
+    
     ${difficultyInstructions}
     ${imageInstructions}
     
@@ -84,16 +136,18 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     ${content ? `"${content}"` : "Không có nội dung cụ thể. Hãy tự động sinh câu hỏi dựa trên kiến thức chuẩn của sách giáo khoa Tiểu học Việt Nam phù hợp với Chủ đề và Lớp học đã nêu trên."}
 
     ⛔ QUY TẮC BẮT BUỘC:
-    1. CHỈ tạo câu hỏi thuộc dạng: ${typesList}. TUYỆT ĐỐI KHÔNG tạo dạng câu hỏi nào khác.
-    2. Phân bổ đều ${count} câu cho các dạng đã chọn.
+    1. TẠO ĐÚNG ${count} CÂU - ĐÂY LÀ GIỚI HẠN CỨNG, KHÔNG ĐƯỢC VƯỢT QUÁ.
+    2. CHỈ tạo câu hỏi thuộc dạng: ${typesList}. TUYỆT ĐỐI KHÔNG tạo dạng câu hỏi nào khác.
     3. Nếu chỉ chọn 1 dạng (ví dụ: MULTIPLE_SELECT), thì TẤT CẢ ${count} câu đều phải là dạng đó.
     4. Với MULTIPLE_SELECT: correctAnswers phải là mảng có ít nhất 2 đáp án đúng, ví dụ: ["A", "C"] hoặc ["B", "C", "D"].
     5. Ngôn ngữ: Tiếng Việt, phù hợp với học sinh tiểu học.
-    6. Đảm bảo đầu ra đúng định dạng JSON.
+    6. Đảm bảo đầu ra đúng định dạng JSON với ĐÚNG ${count} câu hỏi.
     7. QUY TẮC VIẾT PHÉP TÍNH:
        - Phân số: Viết liền không cách (ví dụ: 1/2, 3/4).
        - Phép chia: Viết có khoảng cách (ví dụ: 10 / 2, 15 / 3).
        - Phép nhân: Viết có khoảng cách (ví dụ: 5 * 3).
+    
+    ⚠️ KIỂM TRA LẦN CUỐI: Đếm lại số câu hỏi trước khi trả về. Nếu không đúng ${count} câu, hãy điều chỉnh.
   `;
 };
 
