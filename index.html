@@ -5,11 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Trường Tiểu học Ít Ong</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
     <style>
       body {
-        font-family: 'Nunito', sans-serif;
+        font-family: 'Inter', 'Nunito', sans-serif;
         background-color: #f0f9ff;
+        scroll-behavior: smooth;
+      }
+      
+      /* Smooth transitions for all interactive elements */
+      button, a, input, select, textarea {
+        transition: all 0.2s ease;
+      }
+      
+      /* Focus visible for accessibility */
+      :focus-visible {
+        outline: 2px solid #3b82f6;
+        outline-offset: 2px;
       }
     </style>
   <script type="importmap">

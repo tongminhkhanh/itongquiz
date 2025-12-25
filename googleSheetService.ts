@@ -190,9 +190,12 @@ export const saveResultToSheet = async (result: any, scriptUrl: string): Promise
             type: 'result',
             studentName: result.studentName,
             className: result.studentClass,
+            quizId: result.quizId || "",
             quizTitle: result.quizTitle || "Unknown Quiz",
             score: result.score,
+            correctCount: result.correctCount || 0,
             totalQuestions: result.totalQuestions,
+            timeTaken: result.timeTaken || 0,
             submittedAt: result.submittedAt
         };
 
