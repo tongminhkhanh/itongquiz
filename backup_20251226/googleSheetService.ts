@@ -42,10 +42,9 @@ const callGasApi = async (action: string, payload: any = {}): Promise<any> => {
 
 export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Promise<Teacher[]> => {
     // DEBUG: Bypass cache temporarily to diagnose issue
-    console.log('[fetchTeachersFromSheets] Calling API...');
-    // SECURITY: Don't log sensitive URLs and tokens
-    // console.log('[fetchTeachersFromSheets] GOOGLE_SCRIPT_URL:', GOOGLE_SCRIPT_URL);
-    // console.log('[fetchTeachersFromSheets] API_SECRET_TOKEN exists:', !!API_SECRET_TOKEN);
+    console.log('[fetchTeachersFromSheets] Calling API directly (bypassing cache for debug)...');
+    console.log('[fetchTeachersFromSheets] GOOGLE_SCRIPT_URL:', GOOGLE_SCRIPT_URL);
+    console.log('[fetchTeachersFromSheets] API_SECRET_TOKEN exists:', !!API_SECRET_TOKEN);
 
     try {
         const response = await fetch(GOOGLE_SCRIPT_URL, {
@@ -62,8 +61,7 @@ export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Pro
 
         console.log('[fetchTeachersFromSheets] Response status:', response.status);
         const rawText = await response.text();
-        // SECURITY: Don't log raw response as it contains passwords
-        // console.log('[fetchTeachersFromSheets] Raw response:', rawText);
+        console.log('[fetchTeachersFromSheets] Raw response:', rawText);
 
         // Try to parse as JSON
         let data;
@@ -75,8 +73,7 @@ export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Pro
             return [];
         }
 
-        // SECURITY: Don't log parsed data as it contains passwords
-        // console.log('[fetchTeachersFromSheets] Parsed data:', data);
+        console.log('[fetchTeachersFromSheets] Parsed data:', data);
 
         if (data.status === 'error') {
             console.error('[fetchTeachersFromSheets] API returned error:', data.message);
@@ -98,8 +95,7 @@ export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Pro
             class: row.class ? String(row.class).trim() : undefined
         }));
 
-        // SECURITY: Don't log teacher data as it contains passwords
-        console.log('[fetchTeachersFromSheets] Mapped teachers count:', teachers.length);
+        console.log('[fetchTeachersFromSheets] Mapped teachers:', teachers);
         return teachers;
 
     } catch (error) {

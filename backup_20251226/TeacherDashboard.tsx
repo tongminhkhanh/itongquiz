@@ -33,7 +33,6 @@ interface Props {
     onDeleteQuiz?: (quizId: string) => Promise<void>;
     onRefreshResults?: () => Promise<StudentResult[]>;
     isAdmin?: boolean;
-    teacherClass?: string | null; // Class this teacher is responsible for
 }
 
 const TeacherDashboardV2: React.FC<Props> = ({
@@ -45,19 +44,13 @@ const TeacherDashboardV2: React.FC<Props> = ({
     onDeleteQuiz,
     onRefreshResults,
     isAdmin = false,
-    teacherClass = null,
 }) => {
     // Tab state
     const [activeTab, setActiveTab] = useState<string>('results');
 
-    // Filter results by teacherClass - Admin sees all, teachers see only their class
-    const filteredResultsByClass = isAdmin || !teacherClass
-        ? results
-        : results.filter(r => r.studentClass === teacherClass);
-
     // Use custom hooks for results
     const resultsHook = useResults({
-        results: filteredResultsByClass,
+        results,
         onRefresh: onRefreshResults,
     });
 
@@ -128,15 +121,12 @@ const TeacherDashboardV2: React.FC<Props> = ({
         localStorage.setItem('ai_provider', aiProvider);
     }, [aiProvider]);
 
-    // Tab configuration - Admin sees all tabs, teachers only see Results
-    const allTabs: TabItem[] = [
+    // Tab configuration
+    const tabs: TabItem[] = [
         { id: 'results', label: 'Kết quả', icon: <FileText className="w-4 h-4" /> },
         { id: 'manage', label: 'Quản lý đề', icon: <List className="w-4 h-4" /> },
         { id: 'create', label: 'Tạo đề mới', icon: <Settings className="w-4 h-4" /> },
     ];
-
-    // Non-admin teachers only see Results tab
-    const tabs = isAdmin ? allTabs : allTabs.filter(tab => tab.id === 'results');
 
     // Export to Excel
     const exportExcel = () => {
