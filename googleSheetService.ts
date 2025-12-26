@@ -1,9 +1,9 @@
 import { Quiz, Question, QuestionType, MCQQuestion, TrueFalseQuestion, ShortAnswerQuestion, Teacher, StudentResult } from './types';
 import { cacheService, CacheKeys, CacheTTL } from './services/CacheService';
+import { GOOGLE_SCRIPT_URL } from './constants';
 
 // Security: API token for GAS authentication
 const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
-const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || '';
 
 // Helper to call GAS API
 const callGasApi = async (action: string, payload: any = {}): Promise<any> => {

@@ -7,10 +7,15 @@ interface AuthState {
     teacherName: string | null;
     isAdmin: boolean;
     teacherClass: string | null; // Class this teacher is responsible for
+    isLoggingIn: boolean;
+    loginError: boolean;
 
     // Actions
-    login: (name: string, isAdmin: boolean, teacherClass?: string) => void;
+    loginStart: () => void;
+    loginSuccess: (name: string, isAdmin: boolean, teacherClass?: string | null) => void;
+    loginFailure: () => void;
     logout: () => void;
+    resetError: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -21,22 +26,36 @@ export const useAuthStore = create<AuthState>()(
             teacherName: null,
             isAdmin: false,
             teacherClass: null,
+            isLoggingIn: false,
+            loginError: false,
 
-            // Login action
-            login: (name: string, isAdmin: boolean, teacherClass?: string) => set({
+            // Actions
+            loginStart: () => set({ isLoggingIn: true, loginError: false }),
+
+            loginSuccess: (name, isAdmin, teacherClass) => set({
                 isLoggedIn: true,
                 teacherName: name,
                 isAdmin,
-                teacherClass: teacherClass || null
+                teacherClass: teacherClass || null,
+                isLoggingIn: false,
+                loginError: false
             }),
 
-            // Logout action
+            loginFailure: () => set({
+                isLoggingIn: false,
+                loginError: true
+            }),
+
             logout: () => set({
                 isLoggedIn: false,
                 teacherName: null,
                 isAdmin: false,
-                teacherClass: null
-            })
+                teacherClass: null,
+                isLoggingIn: false,
+                loginError: false
+            }),
+
+            resetError: () => set({ loginError: false })
         }),
         {
             name: 'auth-storage', // localStorage key

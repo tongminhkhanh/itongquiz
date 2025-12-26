@@ -1,5 +1,14 @@
 export const SCHOOL_NAME = "Trường Tiểu học Ít Ong";
 
+// --- CONFIGURATION ---
+// Replace these with your actual Google Sheet ID and GIDs
+export const GOOGLE_SHEET_ID = '1mrqbJ3Xzj4CBF_B2vyI7-ANLaVPAfWCe_TdmCd9_gx4';
+export const QUIZ_GID = '0'; // Default first sheet
+export const QUESTION_GID = '1395660327';
+export const TEACHER_GID = '1482913865';
+export const RESULTS_GID = '1960978030';
+export const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwbfluTcn5UjnKCBOLJRJvtsX3imQOdEeZD9QCkheDv72z1lnd0dR07C02sZJUyXKMqUA/exec';
+
 
 export const SYSTEM_INSTRUCTION = `
 Bạn là một giáo viên tại Trường Tiểu học Ít Ong (Mường La, Sơn La).
