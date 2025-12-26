@@ -43,10 +43,6 @@ const App: React.FC = () => {
     });
 
     // --- DATA FETCHING ---
-    const [teacherClass, setTeacherClass] = useState<string | null>(() => {
-        const savedSession = localStorage.getItem('teacher_session');
-        return savedSession ? JSON.parse(savedSession).teacherClass || null : null;
-    });
     const loadData = async () => {
         setIsLoading(true);
         try {
@@ -232,11 +228,10 @@ const App: React.FC = () => {
             if (usernameInput === 'admin' && passwordInput === 'admin') {
                 setLoggedInTeacher('Admin');
                 setIsAdmin(true);
-                setTeacherClass(null); // Admin can view all classes
                 setView('teacher_dash');
                 setUsernameInput('');
                 setPasswordInput('');
-                localStorage.setItem('teacher_session', JSON.stringify({ name: 'Admin', isAdmin: true, teacherClass: null }));
+                localStorage.setItem('teacher_session', JSON.stringify({ name: 'Admin', isAdmin: true }));
                 return;
             }
 
@@ -245,12 +240,11 @@ const App: React.FC = () => {
 
             if (teacher) {
                 setLoggedInTeacher(teacher.fullName);
-                setIsAdmin(teacher.role === 'admin');
-                setTeacherClass(teacher.class || null);
+                setIsAdmin(false);
                 setView('teacher_dash');
                 setUsernameInput('');
                 setPasswordInput('');
-                localStorage.setItem('teacher_session', JSON.stringify({ name: teacher.fullName, isAdmin: teacher.role === 'admin', teacherClass: teacher.class || null }));
+                localStorage.setItem('teacher_session', JSON.stringify({ name: teacher.fullName, isAdmin: false }));
             } else {
                 setLoginError(true);
             }
@@ -267,7 +261,6 @@ const App: React.FC = () => {
             setView('home');
             setLoggedInTeacher(null);
             setIsAdmin(false);
-            setTeacherClass(null);
             localStorage.removeItem('teacher_session');
         };
 
@@ -276,7 +269,6 @@ const App: React.FC = () => {
                 <TeacherDashboard
                     onLogout={handleLogout}
                     isAdmin={isAdmin}
-                    teacherClass={teacherClass}
                     quizzes={quizzes}
                     results={results}
                     onSaveQuiz={saveQuizToStorage}

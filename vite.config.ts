@@ -25,6 +25,29 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       }
-    }
+    },
+    // Code Splitting Configuration
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // Vendor chunks - rarely change, cache well
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-icons': ['lucide-react'],
+
+            // State management
+            'vendor-state': ['zustand'],
+
+            // Data parsing
+            'vendor-data': ['papaparse', 'zod'],
+
+            // Heavy animation library (if used)
+            'vendor-motion': ['framer-motion'],
+          },
+        },
+      },
+      // Increase chunk size warning limit (optional)
+      chunkSizeWarningLimit: 500,
+    },
   };
 });

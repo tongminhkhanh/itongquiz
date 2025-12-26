@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Quiz, QuestionType, StudentResult, Question } from '../types';
 import { Clock, CheckCircle, AlertCircle, RefreshCcw, Home } from 'lucide-react';
 import { SCHOOL_NAME } from '../constants';
+import { AccessCodeForm, StudentInfoForm, QuizSidebar, SubmitConfirmModal } from './student';
 
 interface Props {
   quiz: Quiz;
@@ -289,110 +290,28 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
   // ACCESS CODE VERIFICATION VIEW
   if (step === 'code') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-200 p-4">
-        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border-t-4 border-orange-500">
-          <div className="text-center mb-6">
-            <div className="text-6xl mb-4">🔐</div>
-            <h2 className="text-2xl font-bold text-gray-800">{quiz.title}</h2>
-            <p className="text-gray-500 mt-2">Bài kiểm tra này yêu cầu mã truy cập</p>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Nhập mã làm bài</label>
-              <input
-                type="text"
-                value={enteredCode}
-                onChange={e => setEnteredCode(e.target.value.toUpperCase())}
-                onKeyDown={e => e.key === 'Enter' && handleCodeVerify()}
-                placeholder="Nhập mã 6 ký tự..."
-                maxLength={6}
-                className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-center font-mono text-2xl tracking-widest uppercase"
-                autoFocus
-              />
-              {codeError && (
-                <p className="mt-2 text-red-500 text-sm text-center font-medium">
-                  ❌ {codeError}
-                </p>
-              )}
-            </div>
-
-            <button
-              onClick={handleCodeVerify}
-              disabled={enteredCode.length < 1}
-              className="w-full bg-orange-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-orange-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-            >
-              Xác nhận mã
-            </button>
-
-            <button
-              onClick={onExit}
-              className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-            >
-              ← Quay lại trang chủ
-            </button>
-          </div>
-
-          <p className="text-xs text-gray-400 text-center mt-4">
-            Mã làm bài được giáo viên cung cấp trước khi kiểm tra
-          </p>
-        </div>
-      </div>
+      <AccessCodeForm
+        quizTitle={quiz.title}
+        enteredCode={enteredCode}
+        codeError={codeError}
+        onCodeChange={setEnteredCode}
+        onVerify={handleCodeVerify}
+        onExit={onExit}
+      />
     );
   }
 
   if (step === 'info') {
     return (
-      <div className="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-lg mt-10 border-t-4 border-orange-500">
-        <h2 className="text-2xl font-bold text-center text-orange-600 mb-2">{SCHOOL_NAME}</h2>
-        <h3 className="text-xl font-semibold text-center text-gray-800 mb-6">{quiz.title}</h3>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Họ và tên học sinh</label>
-            <input
-              type="text"
-              value={studentName}
-              onChange={(e) => setStudentName(e.target.value)}
-              className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-400 outline-none"
-              placeholder="Ví dụ: Lò Văn A"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Lớp</label>
-            <select
-              value={studentClass}
-              onChange={(e) => setStudentClass(e.target.value)}
-              className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-400 outline-none"
-            >
-              <option value="">Chọn lớp...</option>
-              {Array.from({ length: 9 }, (_, i) => i + 1).map(num => (
-                <option key={`${quiz.classLevel}A${num}`} value={`${quiz.classLevel}A${num}`}>
-                  {quiz.classLevel}A{num}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
-            <p className="text-sm text-yellow-800 font-semibold flex items-center">
-              <Clock className="w-4 h-4 mr-2" /> Thời gian làm bài: {quiz.timeLimit} phút
-            </p>
-          </div>
-
-          <button
-            onClick={handleStart}
-            disabled={!studentName || !studentClass}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed text-lg shadow-md"
-          >
-            Bắt đầu làm bài
-          </button>
-
-          <button onClick={onExit} className="w-full text-gray-500 hover:text-gray-700 mt-2 text-sm">
-            Quay lại
-          </button>
-        </div>
-      </div>
+      <StudentInfoForm
+        quiz={quiz}
+        studentName={studentName}
+        studentClass={studentClass}
+        onNameChange={setStudentName}
+        onClassChange={setStudentClass}
+        onStart={handleStart}
+        onExit={onExit}
+      />
     );
   }
 
@@ -1087,56 +1006,15 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         </div>
       </div>
 
-      {/* Custom Confirmation Modal */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="w-8 h-8 text-orange-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Nộp bài ngay?</h3>
-
-              {(() => {
-                const unansweredCount = shuffledQuestions.length - Object.keys(answers).length; // Rough estimate
-                if (unansweredCount > 0) {
-                  return (
-                    <p className="text-gray-600">
-                      Bạn vẫn còn <span className="font-bold text-red-500">{unansweredCount}</span> câu hỏi chưa làm.
-                      <br />Bạn có chắc chắn muốn nộp bài không?
-                    </p>
-                  );
-                } else {
-                  return (
-                    <p className="text-gray-600">
-                      Bạn đã hoàn thành tất cả câu hỏi.
-                      <br />Xác nhận nộp bài để xem kết quả?
-                    </p>
-                  );
-                }
-              })()}
-            </div>
-
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors"
-              >
-                Quay lại
-              </button>
-              <button
-                onClick={() => {
-                  setShowConfirmModal(false);
-                  handleSubmit();
-                }}
-                className="flex-1 py-3 px-4 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-lg transition-colors"
-              >
-                Đồng ý nộp
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Custom Confirmation Modal */}      <SubmitConfirmModal
+        isOpen={showConfirmModal}
+        unansweredCount={shuffledQuestions.length - Object.keys(answers).length}
+        onConfirm={() => {
+          setShowConfirmModal(false);
+          handleSubmit();
+        }}
+        onCancel={() => setShowConfirmModal(false)}
+      />
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-10 flex justify-center md:hidden">
         <button
