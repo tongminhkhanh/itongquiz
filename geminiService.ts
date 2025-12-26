@@ -280,24 +280,58 @@ const generateWithGemini = async (
 
   if (file) {
     const base64Data = await fileToBase64(file);
+    const isPDF = file.type === 'application/pdf';
     parts.push({
-      text: `⚠️ TÀI LIỆU ĐÍNH KÈM (Attached File) - ƯU TIÊN CAO NHẤT:
-Đây là tài liệu bài học/nội dung do giáo viên tải lên.
+      text: `⛔⛔⛔ TÀI LIỆU ĐÍNH KÈM - BẮT BUỘC SỬ DỤNG NGUYÊN VĂN ⛔⛔⛔
 
-🔴 YÊU CẦU BẮT BUỘC:
-1. ĐỌC KỸ VÀ HIỂU nội dung trong tài liệu này.
-2. TẠO CÂU HỎI DỰA TRÊN NỘI DUNG TRONG TÀI LIỆU NÀY LÀ CHÍNH.
-3. Tất cả câu hỏi phải liên quan trực tiếp đến kiến thức trong tài liệu.
-4. Không tự bịa nội dung ngoài tài liệu trừ khi cần bổ sung.
-5. Nếu là ảnh chụp bài học, hãy đọc văn bản trong ảnh và tạo câu hỏi từ đó.
-6. Nếu là PDF, hãy phân tích và trích xuất nội dung để tạo câu hỏi.
+📄 LOẠI FILE: ${isPDF ? 'PDF - Tài liệu văn bản' : 'HÌNH ẢNH - Ảnh chụp bài học'}
+📁 TÊN FILE: ${file.name}
 
-Tài liệu đính kèm:` });
+⛔⛔⛔ QUY TẮC TUYỆT ĐỐI - VI PHẠM SẼ BỊ HỦY ĐỀ ⛔⛔⛔
+
+1. 🔴 ĐỌC KỸ TOÀN BỘ NỘI DUNG trong tài liệu này TRƯỚC TIÊN.
+
+2. 🔴 NẾU TÀI LIỆU CÓ CÂU HỎI/BÀI TẬP:
+   ⚠️ BẮT BUỘC TUYỆT ĐỐI:
+   - COPY NGUYÊN VĂN đề bài, KHÔNG ĐƯỢC THAY ĐỔI BẤT KỲ TỪ NÀO
+   - COPY NGUYÊN VĂN các đáp án, KHÔNG ĐƯỢC DIỄN ĐẠT LẠI
+   - KHÔNG ĐƯỢC thêm bớt, sửa đổi, paraphrase hay viết lại câu hỏi
+   - KHÔNG ĐƯỢC thay đổi số liệu, tên riêng, đơn vị trong đề
+   - Giữ ĐÚNG thứ tự đáp án A, B, C, D như trong tài liệu
+   - Giữ ĐÚNG cách diễn đạt, dấu câu, chính tả từ tài liệu gốc
+
+3. 🔴 CHỈ ĐƯỢC TẠO CÂU HỎI MỚI KHI:
+   - Tài liệu KHÔNG có câu hỏi nào (chỉ là nội dung bài học)
+   - HOẶC số câu hỏi trong tài liệu ÍT HƠN số câu yêu cầu
+
+4. 🔴 KHI TẠO CÂU HỎI TỪ NỘI DUNG BÀI HỌC:
+   - Lấy CHÍNH XÁC các thông tin, số liệu từ tài liệu
+   - KHÔNG bịa thêm thông tin ngoài tài liệu
+   - Sử dụng ĐÚNG thuật ngữ trong tài liệu
+
+5. 📋 ĐỐI VỚI PDF:
+   - Đọc từng trang, trích xuất CHÍNH XÁC văn bản
+   - Giữ nguyên định dạng bảng biểu nếu có
+   - Nhận diện công thức toán học và giữ nguyên
+
+6. 📷 ĐỐI VỚI HÌNH ẢNH:
+   - OCR và lấy CHÍNH XÁC văn bản trong ảnh
+   - Đọc kỹ và COPY ĐÚNG các phép tính, số liệu
+
+⚠️ CẢNH BÁO: Nếu bạn thay đổi, diễn đạt lại, hoặc sửa nội dung câu hỏi trong tài liệu, đề thi sẽ BỊ HỦY!
+
+⏬⏬⏬ TÀI LIỆU BẮT ĐẦU TỪ ĐÂY - ĐỌC VÀ COPY NGUYÊN VĂN ⏬⏬⏬`
+    });
     parts.push({
       inline_data: {
         mime_type: file.type,
         data: base64Data
       }
+    });
+    parts.push({
+      text: `⏫⏫⏫ KẾT THÚC TÀI LIỆU ⏫⏫⏫
+      
+⚠️ NHẮC LẠI: Lấy NGUYÊN VĂN các câu hỏi trong tài liệu trên. KHÔNG ĐƯỢC tự ý sửa đổi hay diễn đạt lại bất kỳ nội dung nào!`
     });
   }
 

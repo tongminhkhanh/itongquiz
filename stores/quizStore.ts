@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Quiz, StudentResult } from '../types';
+import { fetchQuizzesFromSheets, fetchResultsFromSheets, saveQuizToSheet, saveResultToSheet, updateQuizInSheet, deleteQuizFromSheet } from '../googleSheetService';
+import { GOOGLE_SHEET_ID, QUIZ_GID, QUESTION_GID, RESULTS_GID, GOOGLE_SCRIPT_URL } from '../constants';
 
 type ViewType = 'home' | 'student' | 'teacher_login' | 'teacher_dash';
 
@@ -33,11 +35,19 @@ interface QuizState {
     // UI actions
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
+
+    // Async Actions
+    loadQuizzes: () => Promise<void>;
+    loadResults: () => Promise<void>;
+    createQuiz: (quiz: Quiz) => Promise<void>;
+    modifyQuiz: (quiz: Quiz) => Promise<void>;
+    removeQuiz: (id: string) => Promise<void>;
+    submitResult: (result: StudentResult) => Promise<void>;
 }
 
 export const useQuizStore = create<QuizState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             // Initial state
             view: 'home',
             quizzes: [],
@@ -77,7 +87,100 @@ export const useQuizStore = create<QuizState>()(
 
             // UI actions
             setLoading: (isLoading) => set({ isLoading }),
-            setError: (error) => set({ error })
+            setError: (error) => set({ error }),
+
+            // Async Actions
+            loadQuizzes: async () => {
+                set({ isLoading: true, error: null });
+                try {
+                    const quizzes = await fetchQuizzesFromSheets(GOOGLE_SHEET_ID, QUIZ_GID, QUESTION_GID);
+                    set({ quizzes, isLoading: false });
+                } catch (err: any) {
+                    set({ error: err.message || 'Failed to load quizzes', isLoading: false });
+                }
+            },
+
+            loadResults: async () => {
+                // Don't set global loading for results to avoid blocking UI if not necessary, or separate loading state?
+                // For now, let's just fetch silently or set loading if needed.
+                // But TeacherDashboard uses it.
+                try {
+                    const results = await fetchResultsFromSheets(GOOGLE_SHEET_ID, RESULTS_GID);
+                    set({ results });
+                } catch (err: any) {
+                    console.error('Failed to load results:', err);
+                    // set({ error: 'Failed to load results' }); // Optional
+                }
+            },
+
+            createQuiz: async (quiz) => {
+                set({ isLoading: true, error: null });
+                try {
+                    const success = await saveQuizToSheet(quiz, GOOGLE_SCRIPT_URL);
+                    if (success) {
+                        set((state) => ({
+                            quizzes: [...state.quizzes, quiz],
+                            isLoading: false
+                        }));
+                    } else {
+                        throw new Error('Failed to save quiz to Google Sheets');
+                    }
+                } catch (err: any) {
+                    set({ error: err.message, isLoading: false });
+                    throw err;
+                }
+            },
+
+            modifyQuiz: async (quiz) => {
+                set({ isLoading: true, error: null });
+                try {
+                    const success = await updateQuizInSheet(quiz, GOOGLE_SCRIPT_URL);
+                    if (success) {
+                        set((state) => ({
+                            quizzes: state.quizzes.map(q => q.id === quiz.id ? quiz : q),
+                            isLoading: false
+                        }));
+                    } else {
+                        throw new Error('Failed to update quiz in Google Sheets');
+                    }
+                } catch (err: any) {
+                    set({ error: err.message, isLoading: false });
+                    throw err;
+                }
+            },
+
+            removeQuiz: async (id) => {
+                set({ isLoading: true, error: null });
+                try {
+                    const success = await deleteQuizFromSheet(id, GOOGLE_SCRIPT_URL);
+                    if (success) {
+                        set((state) => ({
+                            quizzes: state.quizzes.filter(q => q.id !== id),
+                            isLoading: false
+                        }));
+                    } else {
+                        throw new Error('Failed to delete quiz from Google Sheets');
+                    }
+                } catch (err: any) {
+                    set({ error: err.message, isLoading: false });
+                    throw err;
+                }
+            },
+
+            submitResult: async (result) => {
+                // This might be called by student view
+                try {
+                    const success = await saveResultToSheet(result, GOOGLE_SCRIPT_URL);
+                    if (success) {
+                        set((state) => ({
+                            results: [...state.results, result]
+                        }));
+                    }
+                } catch (err) {
+                    console.error('Failed to submit result:', err);
+                    throw err;
+                }
+            }
         }),
         {
             name: 'itongquiz-store',
@@ -85,6 +188,9 @@ export const useQuizStore = create<QuizState>()(
             // Only persist selected fields to avoid stale data
             partialize: (state) => ({
                 selectedClassLevel: state.selectedClassLevel,
+                // Maybe persist quizzes too to work offline/faster load?
+                // quizzes: state.quizzes, 
+                // Let's stick to current behavior for now.
             }),
         }
     )
