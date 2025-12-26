@@ -103,9 +103,19 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
 
     // Handle quiz generation
     const handleGenerate = async () => {
-        if (!topic.trim()) {
-            setError('Vui lòng nhập chủ đề bài học');
-            return;
+        const isPdfMode = (quizMode as any) === 'pdf';
+
+        // Validate based on mode
+        if (isPdfMode) {
+            if (!uploadedFile) {
+                setError('Vui lòng tải lên file PDF hoặc ảnh');
+                return;
+            }
+        } else {
+            if (!topic.trim()) {
+                setError('Vui lòng nhập chủ đề bài học');
+                return;
+            }
         }
 
         const enabledTypes = Object.entries(selectedTypes)
@@ -127,10 +137,22 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
         setIsGenerating(true);
 
         try {
-            const titlePrefix = quizMode === 'exam' ? 'Kiểm tra' : 'Ôn tập';
+            const isPdfMode = (quizMode as any) === 'pdf';
+            const titlePrefix = isPdfMode ? 'Đề từ PDF' : (quizMode === 'exam' ? 'Kiểm tra' : 'Ôn tập');
+
+            // Special prompt for PDF mode
+            let finalCustomPrompt = customPrompt.trim() || undefined;
+            if (isPdfMode) {
+                finalCustomPrompt = `⛔ CHẾ ĐỘ TẠO ĐỀ TỪ PDF - BẮT BUỘC TUÂN THỦ:
+1. ĐỌC KỸ TOÀN BỘ NỘI DUNG trong file đính kèm.
+2. NẾU FILE CÓ CÂU HỎI: COPY NGUYÊN VĂN tất cả câu hỏi, đáp án - KHÔNG ĐƯỢC sửa đổi.
+3. NẾU FILE LÀ BÀI HỌC: Tạo câu hỏi DỰA TRÊN nội dung trong file.
+4. KHÔNG ĐƯỢC tự bịa nội dung ngoài file.
+${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.trim()}` : ''}`;
+            }
 
             const options: QuizGenerationOptions = {
-                title: quizTitle || `${titlePrefix}: ${topic}`,
+                title: quizTitle || `${titlePrefix}: ${topic || uploadedFile?.name?.replace(/\.[^/.]+$/, '') || 'Bài kiểm tra'}`,
                 questionCount,
                 questionTypes: enabledTypes,
                 difficultyLevels: {
@@ -143,7 +165,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     name: img.name,
                     data: img.data,
                 })),
-                customPrompt: quizMode === 'exam' ? customPrompt.trim() : (customPrompt.trim() || undefined),
+                customPrompt: isPdfMode ? finalCustomPrompt : (quizMode === 'exam' ? customPrompt.trim() : (customPrompt.trim() || undefined)),
             };
 
             const result = await generateQuiz(
@@ -444,6 +466,21 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
 
                 {/* Generate Buttons */}
                 <div className="space-y-3">
+                    {/* PDF-based generation button - Featured prominently when file is uploaded */}
+                    {uploadedFile && (
+                        <Button
+                            onClick={() => { setQuizMode('pdf' as any); handleGenerate(); }}
+                            loading={isGenerating && (quizMode as any) === 'pdf'}
+                            disabled={!uploadedFile || questionCount === 0}
+                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                            size="lg"
+                            variant="primary"
+                            icon={<FileText className="w-5 h-5" />}
+                        >
+                            {isGenerating && (quizMode as any) === 'pdf' ? 'Đang đọc PDF...' : `📄 TẠO ĐỀ TỪ FILE: ${uploadedFile.name.substring(0, 20)}...`}
+                        </Button>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3">
                         <Button
                             onClick={() => { setQuizMode('exam'); handleGenerate(); }}
@@ -469,7 +506,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                         </Button>
                     </div>
                     <p className="text-xs text-gray-500 text-center">
-                        💡 <strong>Đề thi:</strong> AI ưu tiên theo yêu cầu đặc biệt của giáo viên | <strong>Đề ôn tập:</strong> AI tự động tạo theo cấu hình
+                        💡 <strong>Đề từ PDF:</strong> AI đọc file và lấy nguyên văn câu hỏi | <strong>Đề thi:</strong> Theo yêu cầu GV | <strong>Ôn tập:</strong> AI tự tạo
                     </p>
                 </div>
             </div>
