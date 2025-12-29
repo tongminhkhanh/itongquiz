@@ -1,8 +1,8 @@
 import React from 'react';
 import { Quiz, QuestionType } from '../../types';
-import { Card, Button } from '../../src/components/common';
+import { Card, Button } from '../common';
 import { Save, PlusCircle } from 'lucide-react';
-import { formatMathText } from '../../src/utils/formatters';
+import { formatMathText } from '../../utils/formatters';
 
 interface QuizPreviewProps {
     quiz: Quiz | null;

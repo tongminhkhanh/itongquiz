@@ -1,7 +1,7 @@
-import { SYSTEM_INSTRUCTION } from "./constants";
-import { QuestionType } from "./types";
+import { SYSTEM_INSTRUCTION } from "../config/constants";
+import { QuestionType } from "../types";
 
-export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux';
+export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux' | 'native-ocr';
 
 export interface QuizGenerationOptions {
   title: string;
@@ -14,6 +14,7 @@ export interface QuizGenerationOptions {
   };
   imageLibrary?: Array<{ id: string; name: string; data?: string; }>;
   customPrompt?: string; // Custom prompt từ giáo viên - ưu tiên cao nhất
+  isPdfMode?: boolean; // Chế độ tạo đề từ PDF - không cần chủ đề
 }
 
 // Build the prompt for quiz generation
@@ -31,7 +32,8 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     'SHORT_ANSWER': 'SHORT_ANSWER (Điền đáp án ngắn, thường là 1-4 ký tự hoặc số)',
     'MATCHING': 'MATCHING (Nối các ý ở cột A với cột B. ⚠️ BẮT BUỘC: Cột A (left) và Cột B (right) PHẢI CÓ CÙNG SỐ LƯỢNG mục, thường là 3-4 cặp. Mỗi mục ở cột A chỉ nối với 1 mục ở cột B)',
     'MULTIPLE_SELECT': 'MULTIPLE_SELECT (Chọn TẤT CẢ các đáp án đúng, có thể 2-3 đáp án đúng trong 4 lựa chọn, correctAnswers là mảng như ["A", "C"])',
-    'DRAG_DROP': 'DRAG_DROP (Điền từ vào chỗ trống. Text chứa các từ cần điền trong ngoặc vuông, ví dụ: "Con mèo [trèo] cây cau". Blanks là mảng các từ trong ngoặc ["trèo"]. Distractors là mảng các từ gây nhiễu ["bơi", "bay"])'
+    'DRAG_DROP': 'DRAG_DROP (⚠️ NHẬN DIỆN: Câu hỏi có dạng "điền từ vào chỗ trống", "điền từ thích hợp", "điền vào (...)", "chọn từ trong ngoặc điền vào". CÁCH TẠO: question chứa đề bài gốc + danh sách từ cho sẵn, text chứa đoạn văn/thơ với từ ĐÚNG đã điền trong [ngoặc vuông], blanks là mảng các từ đúng, distractors là mảng các từ còn lại không dùng. VD: đề "Điền từ (suối,đồng,xoan) vào: Mưa giăng trên... Hoa... theo gió" → text: "Mưa giăng trên [đồng]. Hoa [xoan] theo gió", blanks: ["đồng","xoan"], distractors: ["suối"])',
+    'ORDERING': 'ORDERING (Sắp xếp thứ tự câu trong đoạn văn. ⚠️ BẮT BUỘC: Phải TÌM KIẾM đoạn văn THẬT từ sách giáo khoa, truyện cổ tích Việt Nam, bài thơ, bài văn mẫu - KHÔNG ĐƯỢC TỰ BỊA. Đoạn văn 4-5 câu ngắn gọn, phù hợp lứa tuổi. items là mảng các câu ĐÃ XÁO TRỘN, correctOrder là mảng chỉ thứ tự đúng. VD: items=["Câu 2","Câu 1","Câu 3"], correctOrder=[1,0,2] nghĩa là items[1] đứng đầu, items[0] đứng 2, items[2] đứng 3. Nên lấy từ: truyện Tấm Cám, Thạch Sanh, Sọ Dừa, thơ Trần Đăng Khoa, Võ Quảng...)'
   };
 
   const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');
@@ -132,8 +134,15 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     ⚠️ CHỈ ĐƯỢC PHÉP SỬ DỤNG CÁC DẠNG CÂU HỎI SAU (KHÔNG ĐƯỢC DÙNG DẠNG KHÁC):
     - ${typesDescription}
     
+    ${options?.isPdfMode ? `
+    🔴🔴🔴 CHẾ ĐỘ TẠO ĐỀ TỪ FILE PDF - ƯU TIÊN TUYỆT ĐỐI 🔴🔴🔴
+    ⛔ KHÔNG cần tuân theo chủ đề "${topic}" - CHỈ lấy nội dung từ FILE ĐÍNH KÈM
+    ⛔ KHÔNG được tự bịa câu hỏi - CHỈ trích xuất từ file
+    ⛔ Lấy NGUYÊN VĂN câu hỏi trong file và TỰ XÁC ĐỊNH đáp án đúng
+    ` : `
     NỘI DUNG THAM KHẢO:
     ${content ? `"${content}"` : "Không có nội dung cụ thể. Hãy tự động sinh câu hỏi dựa trên kiến thức chuẩn của sách giáo khoa Tiểu học Việt Nam phù hợp với Chủ đề và Lớp học đã nêu trên."}
+    `}
 
     ⛔ QUY TẮC BẮT BUỘC:
     1. TẠO ĐÚNG ${count} CÂU - ĐÂY LÀ GIỚI HẠN CỨNG, KHÔNG ĐƯỢC VƯỢT QUÁ.
@@ -282,45 +291,61 @@ const generateWithGemini = async (
     const base64Data = await fileToBase64(file);
     const isPDF = file.type === 'application/pdf';
     parts.push({
-      text: `⛔⛔⛔ TÀI LIỆU ĐÍNH KÈM - BẮT BUỘC SỬ DỤNG NGUYÊN VĂN ⛔⛔⛔
+      text: `⛔⛔⛔ TÀI LIỆU ĐÍNH KÈM - ƯU TIÊN TUYỆT ĐỐI ⛔⛔⛔
 
 📄 LOẠI FILE: ${isPDF ? 'PDF - Tài liệu văn bản' : 'HÌNH ẢNH - Ảnh chụp bài học'}
 📁 TÊN FILE: ${file.name}
 
-⛔⛔⛔ QUY TẮC TUYỆT ĐỐI - VI PHẠM SẼ BỊ HỦY ĐỀ ⛔⛔⛔
+🔴🔴🔴 NHIỆM VỤ BẮT BUỘC - ƯU TIÊN CAO NHẤT 🔴🔴🔴
 
-1. 🔴 ĐỌC KỸ TOÀN BỘ NỘI DUNG trong tài liệu này TRƯỚC TIÊN.
+BƯỚC 1: ĐỌC VÀ TRÍCH XUẤT CÂU HỎI
+- ĐỌC KỸ toàn bộ nội dung trong file
+- TRÍCH XUẤT NGUYÊN VĂN tất cả câu hỏi/bài tập trong file
+- GIỮ NGUYÊN 100% nội dung đề bài, các đáp án (nếu có)
+- KHÔNG ĐƯỢC thay đổi, diễn đạt lại, hay sửa bất kỳ từ nào
 
-2. 🔴 NẾU TÀI LIỆU CÓ CÂU HỎI/BÀI TẬP:
-   ⚠️ BẮT BUỘC TUYỆT ĐỐI:
-   - COPY NGUYÊN VĂN đề bài, KHÔNG ĐƯỢC THAY ĐỔI BẤT KỲ TỪ NÀO
-   - COPY NGUYÊN VĂN các đáp án, KHÔNG ĐƯỢC DIỄN ĐẠT LẠI
-   - KHÔNG ĐƯỢC thêm bớt, sửa đổi, paraphrase hay viết lại câu hỏi
-   - KHÔNG ĐƯỢC thay đổi số liệu, tên riêng, đơn vị trong đề
-   - Giữ ĐÚNG thứ tự đáp án A, B, C, D như trong tài liệu
-   - Giữ ĐÚNG cách diễn đạt, dấu câu, chính tả từ tài liệu gốc
+📝 QUY TẮC ĐỊNH DẠNG VĂN BẢN:
+⚠️ QUAN TRỌNG - GIỮ NGUYÊN ĐỊNH DẠNG:
+- Nếu có từ GẠCH CHÂN trong câu hỏi → dùng thẻ <u>từ gạch chân</u>
+- Nếu có từ IN ĐẬM → dùng thẻ <b>từ in đậm</b>
+- Nếu có từ IN NGHIÊNG → dùng thẻ <i>từ in nghiêng</i>
+- VÍ DỤ: "Từ <u>gạch chân</u> thuộc loại từ nào?"
 
-3. 🔴 CHỈ ĐƯỢC TẠO CÂU HỎI MỚI KHI:
-   - Tài liệu KHÔNG có câu hỏi nào (chỉ là nội dung bài học)
-   - HOẶC số câu hỏi trong tài liệu ÍT HƠN số câu yêu cầu
+📖 QUY TẮC VỚI ĐOẠN VĂN/THƠ/BÀI ĐỌC:
+⚠️ RẤT QUAN TRỌNG - NẾU CÂU HỎI CÓ ĐOẠN THƠ, ĐOẠN VĂN, BÀI VĂN ĐI KÈM:
+- PHẢI LẤY TOÀN BỘ đoạn thơ/văn/bài đọc vào trường "question"
+- Format: "[Nội dung đoạn thơ/văn]\\n\\n[Câu hỏi về đoạn đó]"
+- VÍ DỤ: Nếu có bài thơ rồi hỏi "Mẹ của bạn nhỏ làm nghề gì?" 
+  → question phải chứa CẢ bài thơ VÀ câu hỏi
+- GIỮ NGUYÊN VĂN đoạn thơ/văn, kể cả tên tác giả nếu có
 
-4. 🔴 KHI TẠO CÂU HỎI TỪ NỘI DUNG BÀI HỌC:
-   - Lấy CHÍNH XÁC các thông tin, số liệu từ tài liệu
-   - KHÔNG bịa thêm thông tin ngoài tài liệu
-   - Sử dụng ĐÚNG thuật ngữ trong tài liệu
+⚠️ QUY TẮC LỌC CÂU HỎI:
+- BỎ QUA các câu hỏi cần HÌNH ẢNH/BIỂU ĐỒ/SƠ ĐỒ để trả lời
+- NHƯNG GIỮ LẠI các câu có ĐOẠN VĂN/THƠ/BÀI ĐỌC bằng chữ
+- ƯU TIÊN các câu hỏi có thể hiểu và làm được chỉ bằng chữ
 
-5. 📋 ĐỐI VỚI PDF:
-   - Đọc từng trang, trích xuất CHÍNH XÁC văn bản
-   - Giữ nguyên định dạng bảng biểu nếu có
-   - Nhận diện công thức toán học và giữ nguyên
+BƯỚC 2: TỰ ĐỘNG TẠO ĐÁP ÁN ĐÚNG
+⚠️ ĐÂY LÀ YÊU CẦU QUAN TRỌNG NHẤT:
+- Nếu file KHÔNG có đáp án: AI PHẢI TỰ GIẢI và đưa ra đáp án đúng
+- Nếu file CÓ đáp án: Sử dụng đáp án trong file
+- Với câu trắc nghiệm: Xác định đáp án đúng (A, B, C, D)
+- Với câu điền số: Tính toán và đưa ra kết quả đúng
+- Với câu Đúng/Sai: Xác định phát biểu nào Đúng, nào Sai
+- Với câu nối: Xác định cặp nối đúng
 
-6. 📷 ĐỐI VỚI HÌNH ẢNH:
-   - OCR và lấy CHÍNH XÁC văn bản trong ảnh
-   - Đọc kỹ và COPY ĐÚNG các phép tính, số liệu
+BƯỚC 3: FORMAT JSON CHUẨN
+- question: NGUYÊN VĂN từ file (bao gồm cả đoạn thơ/văn nếu có)
+- options: NGUYÊN VĂN từ file (nếu có)
+- correctAnswer: Đáp án đúng (AI tự xác định hoặc lấy từ file)
 
-⚠️ CẢNH BÁO: Nếu bạn thay đổi, diễn đạt lại, hoặc sửa nội dung câu hỏi trong tài liệu, đề thi sẽ BỊ HỦY!
+⚠️ LƯU Ý QUAN TRỌNG:
+1. Câu hỏi phải COPY NGUYÊN VĂN từ file - KHÔNG được sửa đổi
+2. Nếu có đoạn thơ/văn → PHẢI đưa vào question cùng câu hỏi
+3. Đáp án AI phải TỰ XÁC ĐỊNH nếu file không có
+4. BỎ QUA câu cần hình ảnh - GIỮ câu có đoạn văn/thơ bằng chữ
+5. Chỉ bổ sung câu hỏi mới nếu file không đủ số lượng yêu cầu
 
-⏬⏬⏬ TÀI LIỆU BẮT ĐẦU TỪ ĐÂY - ĐỌC VÀ COPY NGUYÊN VĂN ⏬⏬⏬`
+⏬⏬⏬ TÀI LIỆU BẮT ĐẦU - ĐỌC VÀ TRÍCH XUẤT CÂU HỎI ⏬⏬⏬`
     });
     parts.push({
       inline_data: {
@@ -330,8 +355,11 @@ const generateWithGemini = async (
     });
     parts.push({
       text: `⏫⏫⏫ KẾT THÚC TÀI LIỆU ⏫⏫⏫
-      
-⚠️ NHẮC LẠI: Lấy NGUYÊN VĂN các câu hỏi trong tài liệu trên. KHÔNG ĐƯỢC tự ý sửa đổi hay diễn đạt lại bất kỳ nội dung nào!`
+
+📋 NHẮC LẠI NHIỆM VỤ:
+1. Lấy NGUYÊN VĂN câu hỏi từ file (kèm đoạn thơ/văn nếu có)
+2. TỰ XÁC ĐỊNH đáp án đúng cho mỗi câu hỏi
+3. Format theo JSON schema đã định nghĩa`
     });
   }
 
@@ -623,6 +651,251 @@ export const generateQuiz = async (
   } else {
     return generateWithGemini(promptText, apiKey, file, options?.imageLibrary);
   }
+};
+
+// =====================================================
+// FUNCTION: Extract Text from PDF (OCR Mode)
+// Returns raw text instead of JSON for editing purposes
+// Supports: Gemini (direct) and LLM-Mux (OpenAI-compatible)
+// =====================================================
+export const extractTextFromPdf = async (
+  file: File,
+  provider: AIProvider = 'gemini',
+  customApiKey?: string
+): Promise<string> => {
+  console.log('extractTextFromPdf called with provider:', provider);
+
+  // ========== NATIVE OCR (Tesseract local at localhost:8000) ==========
+  if (provider === 'native-ocr') {
+    const OCR_URL = 'http://localhost:8000/extract';
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(OCR_URL, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Lỗi OCR Backend (${response.status}): ${errorData.detail || response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error('OCR Backend trả về lỗi');
+      }
+
+      console.log(`Extracted ${data.text.length} chars using ${data.method} method from ${data.pages} pages`);
+      return data.text;
+
+    } catch (err: any) {
+      console.error('Native OCR Error:', err);
+      if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+        throw new Error('Không thể kết nối đến OCR Backend (localhost:8000). Vui lòng đảm bảo bạn đã chạy "uvicorn main:app" trong folder ocr-backend.');
+      }
+      throw err;
+    }
+  }
+
+  // Only Gemini and LLM-Mux support file upload for AI-based OCR
+  if (provider !== 'gemini' && provider !== 'llm-mux') {
+    throw new Error('Chức năng trích xuất văn bản từ PDF chỉ hỗ trợ với Gemini, LLM-Mux hoặc Native OCR. Vui lòng chọn một trong các provider này.');
+  }
+
+  console.log('Converting file to base64...');
+  const base64Data = await fileToBase64(file);
+  console.log('Base64 conversion complete. Length:', base64Data.length);
+  const isPDF = file.type === 'application/pdf';
+
+  const ocrPrompt = `🔍 CHẾ ĐỘ TRÍCH XUẤT VĂN BẢN (OCR) - KHÔNG TRẢ VỀ JSON
+
+📄 LOẠI FILE: ${isPDF ? 'PDF - Tài liệu văn bản' : 'HÌNH ẢNH - Ảnh chụp đề thi'}
+📁 TÊN FILE: ${file.name}
+
+🎯 NHIỆM VỤ: Trích xuất TOÀN BỘ văn bản từ file này.
+
+📝 QUY TẮC BẮT BUỘC:
+1. ĐỌC và TRÍCH XUẤT nguyên văn tất cả nội dung trong file
+2. SỬA LỖI OCR phổ biến:
+   - "l" bị nhận thành "1" → sửa lại thành "l"
+   - "O" bị nhận thành "0" → sửa lại thành "O"
+   - Dấu tiếng Việt bị sai → sửa lại đúng
+   - Từ bị thiếu dấu → bổ sung dấu
+3. GIỮ NGUYÊN cấu trúc:
+   - Số thứ tự câu hỏi (Câu 1, Câu 2...)
+   - Đánh dấu đáp án (A, B, C, D)
+   - Đoạn văn, bài thơ nếu có
+4. Format OUTPUT:
+   - Mỗi câu hỏi cách nhau 1 dòng trống
+   - Đáp án thụt lề rõ ràng
+   - Nếu có hình ảnh ghi: [Hình: mô tả ngắn]
+
+⚠️ CHỈ TRẢ VỀ VĂN BẢN THUẦN TÚY - KHÔNG JSON, KHÔNG MARKDOWN CODE BLOCK
+
+Hãy trích xuất TOÀN BỘ văn bản từ file, đã sửa lỗi OCR.`;
+
+  const systemPrompt = `Bạn là trợ lý OCR chuyên nghiệp. Nhiệm vụ của bạn là đọc file PDF/ảnh và trích xuất văn bản một cách chính xác nhất.
+
+QUY TẮC QUAN TRỌNG:
+- Trả về VĂN BẢN THUẦN TÚY, không phải JSON
+- Sửa lỗi OCR nhưng KHÔNG thay đổi nội dung
+- Giữ nguyên cấu trúc đề thi: số thứ tự câu, đáp án A/B/C/D
+- Nếu có đoạn văn/thơ, giữ nguyên format với xuống dòng`;
+
+  // ========== LLM-MUX (OpenAI-compatible API) ==========
+  if (provider === 'llm-mux') {
+    const baseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || 'http://localhost:8317/v1';
+    const envKey = (import.meta as any).env.VITE_LLM_MUX_API_KEY || 'sk-dummy-key';
+    const apiKey = (customApiKey || envKey || '').trim();
+
+    const API_URL = `${baseUrl}/chat/completions`;
+    const MODEL_NAME = 'gemini-2.0-flash'; // LLM-Mux will route to appropriate model
+
+    const messages: any[] = [
+      { role: 'system', content: systemPrompt }
+    ];
+
+    const userContent: any[] = [{ type: 'text', text: ocrPrompt }];
+
+    if (isPDF) {
+      // For PDF with LLM-Mux, use 'input_file' type which is supported by its parser
+      userContent.push({
+        type: 'input_file',
+        file_data: `data:${file.type};base64,${base64Data}`,
+        filename: file.name
+      });
+    } else {
+      // For Images, use standard image_url
+      userContent.push({
+        type: 'image_url',
+        image_url: {
+          url: `data:${file.type};base64,${base64Data}`
+        }
+      });
+    }
+
+    messages.push({
+      role: 'user',
+      content: userContent
+    });
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        mode: 'cors', // Explicitly enable CORS
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: MODEL_NAME,
+          messages: messages,
+          temperature: 0.2,
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("LLM-Mux API Error Details:", errorData);
+        throw new Error(`Lỗi LLM-Mux API (${response.status}): ${errorData.error?.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      const text = data.choices?.[0]?.message?.content;
+      if (!text) throw new Error("AI trả về dữ liệu rỗng.");
+
+      return text.trim();
+    } catch (err: any) {
+      console.error("LLM-Mux Fetch Error:", err);
+      if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+        throw new Error('Không thể kết nối đến LLM-Mux (localhost:8317). Vui lòng đảm bảo bạn đã chạy "llm-mux" trong terminal.');
+      }
+      throw err;
+    }
+
+
+  }
+
+  // ========== GEMINI (Direct API) ==========
+  const envKey = (import.meta as any).env.VITE_GEMINI_API_KEY || (import.meta as any).env.VITE_API_KEY || '';
+  const apiKey = (customApiKey || envKey || '').trim();
+  if (!apiKey) throw new Error('Vui lòng nhập Gemini API Key trong phần Cấu hình.');
+
+  const MODEL_NAME = 'gemini-2.0-flash';
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
+
+  const parts: any[] = [
+    { text: ocrPrompt },
+    {
+      inline_data: {
+        mime_type: file.type,
+        data: base64Data
+      }
+    }
+  ];
+
+  const requestBody = {
+    contents: [{ parts }],
+    system_instruction: {
+      parts: [{ text: systemPrompt }]
+    },
+    generation_config: {
+      temperature: 0.2,
+    }
+  };
+
+  const maxRetries = 3;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+
+        if (response.status === 429 || response.status === 503) {
+          attempt++;
+          if (attempt >= maxRetries) {
+            throw new Error("Hệ thống đang quá tải. Vui lòng đợi 1-2 phút rồi thử lại.");
+          }
+          const delay = Math.pow(2, attempt) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        throw new Error(`Lỗi API (${response.status}): ${errorData.error?.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.candidates || data.candidates.length === 0) {
+        throw new Error("AI không trả về kết quả nào.");
+      }
+
+      const text = data.candidates[0].content.parts[0].text;
+      if (!text) throw new Error("AI trả về dữ liệu rỗng.");
+
+      return text.trim();
+
+    } catch (error: any) {
+      if (attempt >= maxRetries) {
+        console.error("Extract Text Error:", error);
+        throw error;
+      }
+      attempt++;
+    }
+  }
+
+  throw new Error("Không thể trích xuất văn bản sau nhiều lần thử.");
 };
 
 async function urlToBase64(url: string): Promise<{ data: string; mimeType: string }> {

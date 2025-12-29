@@ -5,13 +5,14 @@
  */
 
 import React from 'react';
-import { AIProvider } from '../../../../geminiService';
+import { AIProvider } from '../../../services/geminiService';
 import { Bot } from 'lucide-react';
 
 const AI_PROVIDERS = [
     { id: 'gemini', name: 'Google Gemini', description: '2.0 Flash (Miễn phí)' },
     { id: 'perplexity', name: 'Perplexity', description: 'Sonar model' },
     { id: 'llm-mux', name: 'LLM-Mux', description: 'Local proxy' },
+    { id: 'native-ocr', name: 'Native OCR', description: 'Tesseract OCR (localhost:8000)' },
 ];
 
 interface AIProviderSelectorProps {
@@ -36,8 +37,8 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
                         type="button"
                         onClick={() => onChange(provider.id as AIProvider)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${value === provider.id
-                                ? 'bg-orange-600 text-white shadow-md'
-                                : 'bg-white border border-gray-200 text-gray-700 hover:border-orange-300'
+                            ? 'bg-orange-600 text-white shadow-md'
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-orange-300'
                             }`}
                     >
                         {provider.name}

@@ -5,9 +5,9 @@
  */
 
 import React from 'react';
-import { ImageLibraryItem } from '../../../../types';
+import { ImageLibraryItem } from '../../../types';
 import { Image, Upload, X, Loader2 } from 'lucide-react';
-import { uploadToCloudinary } from '../../../../cloudinaryService';
+import { uploadToCloudinary } from '../../../services/cloudinaryService';
 
 const MAX_IMAGE_SIZE_MB = 5;
 const MAX_IMAGE_COUNT = 20;

@@ -1,6 +1,6 @@
-import { Quiz, Question, QuestionType, MCQQuestion, TrueFalseQuestion, ShortAnswerQuestion, Teacher, StudentResult } from './types';
-import { cacheService, CacheKeys, CacheTTL } from './services/CacheService';
-import { GOOGLE_SCRIPT_URL } from './constants';
+import { Quiz, Question, QuestionType, MCQQuestion, TrueFalseQuestion, ShortAnswerQuestion, Teacher, StudentResult } from '../types';
+import { cacheService, CacheKeys, CacheTTL } from './CacheService';
+import { GOOGLE_SCRIPT_URL } from '../config/constants';
 
 // Security: API token for GAS authentication
 const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';

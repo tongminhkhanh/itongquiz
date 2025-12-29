@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { QuestionType } from '../../../../types';
+import { QuestionType } from '../../../types';
 
 const QUESTION_TYPE_CONFIG = [
     { type: QuestionType.MCQ, label: 'Trắc nghiệm', emoji: '📝' },
@@ -14,6 +14,7 @@ const QUESTION_TYPE_CONFIG = [
     { type: QuestionType.MATCHING, label: 'Nối cột', emoji: '🔗' },
     { type: QuestionType.MULTIPLE_SELECT, label: 'Chọn nhiều', emoji: '☑️' },
     { type: QuestionType.DRAG_DROP, label: 'Kéo thả', emoji: '🎯' },
+    { type: QuestionType.ORDERING, label: 'Sắp xếp thứ tự', emoji: '🔢' },
 ];
 
 interface QuestionTypeSelectorProps {
@@ -42,8 +43,8 @@ export const QuestionTypeSelector: React.FC<QuestionTypeSelectorProps> = ({
                     <label
                         key={type}
                         className={`flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-all ${selectedTypes[type]
-                                ? 'bg-indigo-100 border-2 border-indigo-400'
-                                : 'bg-white border-2 border-gray-200 hover:border-gray-300'
+                            ? 'bg-indigo-100 border-2 border-indigo-400'
+                            : 'bg-white border-2 border-gray-200 hover:border-gray-300'
                             }`}
                     >
                         <input

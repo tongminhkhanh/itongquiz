@@ -1,7 +1,7 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
 import { Quiz } from '../../types';
-import { SCHOOL_NAME } from '../../constants';
+import { SCHOOL_NAME } from '../../config/constants';
 
 interface StudentInfoFormProps {
     quiz: Quiz;

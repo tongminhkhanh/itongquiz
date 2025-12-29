@@ -18,6 +18,17 @@ const formatText = (text: string) => {
         .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
 };
 
+// Helper function to render HTML content (supports <u>, <b>, <i> tags from PDF)
+const renderHtml = (text: string) => {
+    if (!text) return null;
+    const formatted = formatText(text);
+    // Check if text contains HTML tags
+    if (/<[^>]+>/.test(formatted)) {
+        return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
+    }
+    return <>{formatted}</>;
+};
+
 // Color palette for matching pairs
 const pairColors = [
     { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-700' },
@@ -44,9 +55,9 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Câu hỏi {index + 1}</h3>
                 <div className="text-gray-700 font-medium">
                     {q.type === QuestionType.TRUE_FALSE || q.type === QuestionType.MATCHING ? (
-                        <p>{formatText(q.mainQuestion || "")}</p>
+                        <p>{renderHtml(q.mainQuestion || "")}</p>
                     ) : (
-                        <p>{formatText((q as any).question || "")}</p>
+                        <p>{renderHtml((q as any).question || "")}</p>
                     )}
                 </div>
 
@@ -345,6 +356,65 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                             </div>
 
                             <div className="flex justify-end">
+                                <button
+                                    onClick={() => onAnswerChange(q.id, {})}
+                                    className="text-xs text-red-500 hover:underline flex items-center"
+                                >
+                                    <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {/* Ordering - Sắp xếp thứ tự câu */}
+                {q.type === QuestionType.ORDERING && (() => {
+                    const currentAnswers = (answers[q.id] as Record<number, number>) || {};
+                    const items = (q as any).items || [];
+
+                    const handleOrderChange = (itemIndex: number, orderValue: string) => {
+                        const num = parseInt(orderValue, 10);
+                        if (orderValue === '' || (!isNaN(num) && num >= 1 && num <= items.length)) {
+                            onAnswerChange(q.id, {
+                                ...currentAnswers,
+                                [itemIndex]: orderValue === '' ? undefined : num
+                            });
+                        }
+                    };
+
+                    return (
+                        <div className="space-y-4">
+                            <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 mb-4">
+                                <p className="text-sm text-amber-800">
+                                    📝 <strong>Hướng dẫn:</strong> Điền số thứ tự (1, 2, 3...) vào ô trống để sắp xếp các câu thành đoạn văn hoàn chỉnh.
+                                </p>
+                            </div>
+
+                            <div className="space-y-3">
+                                {items.map((item: string, idx: number) => (
+                                    <div key={idx} className="flex items-start gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                        <div className="flex-shrink-0">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max={items.length}
+                                                value={currentAnswers[idx] || ''}
+                                                onChange={(e) => handleOrderChange(idx, e.target.value)}
+                                                placeholder="?"
+                                                className="w-12 h-12 text-center text-xl font-bold border-2 border-amber-400 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                                            />
+                                        </div>
+                                        <div className="flex-1 pt-2">
+                                            <p className="text-gray-800">{renderHtml(item)}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="flex justify-between items-center mt-4">
+                                <p className="text-xs text-gray-500">
+                                    Đã điền: {Object.values(currentAnswers).filter(v => v !== undefined).length}/{items.length}
+                                </p>
                                 <button
                                     onClick={() => onAnswerChange(q.id, {})}
                                     className="text-xs text-red-500 hover:underline flex items-center"

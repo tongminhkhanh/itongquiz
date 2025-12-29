@@ -5,7 +5,7 @@
  * Follows Single Responsibility - only handles Perplexity-specific logic.
  */
 
-import { SYSTEM_INSTRUCTION } from '../../../../constants';
+import { SYSTEM_INSTRUCTION } from '../../../config/constants';
 import type { IAIProvider, AIProviderType, QuizGenerationOptions, QuizGenerationResult } from '../ai.types';
 import { buildPrompt } from '../shared/prompt-builder';
 import { parseAndRepairJSON } from '../shared/json-repair';
