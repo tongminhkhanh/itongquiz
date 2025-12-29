@@ -115,7 +115,7 @@ function saveResult(sheet, data) {
     let resultSheet = sheet.getSheetByName("Results");
     if (!resultSheet) {
         resultSheet = sheet.insertSheet("Results");
-        resultSheet.appendRow(["Student Name", "Class", "Quiz Title", "Score", "Total Questions", "Submitted At"]);
+        resultSheet.appendRow(["Student Name", "Class", "Quiz Title", "Score", "correctCount", "Total Questions", "Submitted At"]);
     }
 
     resultSheet.appendRow([
