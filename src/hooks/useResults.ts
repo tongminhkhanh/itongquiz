@@ -6,7 +6,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { StudentResult } from '../../types';
+import { StudentResult } from '../types';
 
 export interface UseResultsProps {
     results: StudentResult[];

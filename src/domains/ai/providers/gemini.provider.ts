@@ -5,7 +5,7 @@
  * Follows Single Responsibility - only handles Gemini-specific logic.
  */
 
-import { SYSTEM_INSTRUCTION } from '../../../../constants';
+import { SYSTEM_INSTRUCTION } from '../../../config/constants';
 import type { IAIProvider, AIProviderType, QuizGenerationOptions, QuizGenerationResult } from '../ai.types';
 import { buildPrompt, buildFileAttachmentPrompt } from '../shared/prompt-builder';
 import { parseAndRepairJSON, formatMathSymbols } from '../shared/json-repair';

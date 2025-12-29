@@ -6,8 +6,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import { QuestionType, Quiz, Question, ImageLibraryItem } from '../../types';
-import { generateQuiz, QuizGenerationOptions, AIProvider } from '../../geminiService';
+import { QuestionType, Quiz, Question, ImageLibraryItem } from '../types';
+import { generateQuiz, QuizGenerationOptions, AIProvider } from '../services/geminiService';
 
 export interface DifficultyLevels {
     level1: number;

@@ -1,8 +1,8 @@
 import React from 'react';
 import { Quiz, StudentResult } from '../../types';
-import { Card, Button } from '../../src/components/common';
-import { StatsCards, ResultsTable } from '../../src/components/teacher/ResultsView';
-import { useResults } from '../../src/hooks';
+import { Card, Button } from '../common';
+import { StatsCards, ResultsTable } from '../teacher/ResultsView';
+import { useResults } from '../../hooks';
 import { RefreshCw, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 

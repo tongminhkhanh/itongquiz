@@ -1,15 +1,15 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { Analytics } from '@vercel/analytics/react';
-import { Quiz, QuestionType } from './types';
-import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID } from './constants';
+import { Quiz, QuestionType } from './src/types';
+import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID } from './src/config/constants';
 import { BookOpen, GraduationCap, Lock, KeyRound, RefreshCw, Loader2 } from 'lucide-react';
-import { fetchTeachersFromSheets } from './googleSheetService';
+import { fetchTeachersFromSheets } from './src/services/googleSheetService';
 import { useAuthStore } from './stores/authStore';
 import { useQuizStore } from './stores/quizStore';
 
 // Lazy load main views
-const StudentView = React.lazy(() => import('./components/StudentView'));
-const TeacherDashboard = React.lazy(() => import('./components/TeacherDashboard'));
+const StudentView = React.lazy(() => import('./src/components/StudentView'));
+const TeacherDashboard = React.lazy(() => import('./src/components/TeacherDashboard'));
 
 const App: React.FC = () => {
     // --- STORES ---

@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { StudentResult, Quiz } from '../../../../types';
+import { StudentResult, Quiz } from '../../../types';
 import { ArrowUpDown } from 'lucide-react';
 
 export interface ResultsTableProps {

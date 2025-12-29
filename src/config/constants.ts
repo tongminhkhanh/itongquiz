@@ -115,11 +115,31 @@ The output must be a valid JSON object with this structure:
    - KHÔNG giống MCQ! MCQ chỉ có 1 đáp án, MULTIPLE_SELECT có 2-3 đáp án đúng
    - Câu hỏi nên bắt đầu bằng: "Chọn tất cả...", "Những... nào...", "Các... nào..."
 
-6. DRAG_DROP (Kéo thả điền khuyết):
-   - Đoạn văn bản (text) chứa các từ cần điền trong ngoặc vuông []
-   - blanks: mảng các từ đúng cần điền theo thứ tự xuất hiện trong text
-   - distractors: mảng 2-3 từ gây nhiễu (sai)
-   - Ví dụ: text là "Con mèo [trèo] cây cau", blanks là ["trèo"], distractors là ["bơi", "bay"]
+6. DRAG_DROP (Kéo thả điền khuyết) - HƯỚNG DẪN CHI TIẾT:
+   ⚠️ NHẬN DIỆN: Đây là dạng "điền từ vào chỗ trống", "điền từ thích hợp", "điền vào chỗ (...)", "điền từ trong ngoặc"
+   
+   📝 CÁCH TẠO:
+   - question: Câu yêu cầu gốc (VD: "Điền các từ thích hợp trong ngoặc vào chỗ trống sau:")
+   - text: Đoạn văn/thơ với từ cần điền đặt trong ngoặc vuông []
+     VD gốc: "Mưa giăng trên (...). Uốn mềm ngọn lúa" với đáp án "đồng"
+     → text: "Mưa giăng trên [đồng]. Uốn mềm ngọn lúa"
+   - blanks: Mảng các từ ĐÚNG cần điền, theo thứ tự xuất hiện trong text
+     VD: ["đồng", "xoan"]
+   - distractors: Mảng các từ GÂY NHIỄU (không đúng vị trí hoặc sai hoàn toàn)
+     VD: nếu đề cho (suối, đồng, cau, xoan) và đáp án là đồng, xoan
+     → distractors: ["suối", "cau"] (các từ còn lại không dùng)
+   
+   📋 VÍ DỤ HOÀN CHỈNH:
+   Đề gốc: "Điền từ thích hợp (suối, đồng, cau, xoan):
+            Mưa giăng trên (...). Hoa (...) theo gió."
+   → JSON output:
+   {
+     "type": "DRAG_DROP",
+     "question": "Điền các từ thích hợp trong ngoặc vào chỗ trống sau:\n(suối, đồng, cau, xoan)",
+     "text": "Mưa giăng trên [đồng].\nUốn mềm ngọn lúa\nHoa [xoan] theo gió\nRải tím mặt đường.",
+     "blanks": ["đồng", "xoan"],
+     "distractors": ["suối", "cau"]
+   }
 
 Rules:
 1. Language: Vietnamese.

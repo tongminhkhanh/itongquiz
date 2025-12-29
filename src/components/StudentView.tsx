@@ -211,6 +211,25 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         });
 
         if (allCorrect && blanks.length > 0) correctCount++;
+      } else if (q.type === QuestionType.ORDERING) {
+        totalItems++;
+        const studentAns = (answers[q.id] as Record<number, number>) || {};
+        const correctOrder = (q as any).correctOrder || [];
+        const items = (q as any).items || [];
+
+        // Check if student's ordering matches correct order
+        // correctOrder[i] = index in items array that should be at position i+1
+        let allCorrect = true;
+        for (let i = 0; i < correctOrder.length; i++) {
+          const expectedItemIndex = correctOrder[i];
+          const studentOrder = studentAns[expectedItemIndex];
+          // studentOrder should be i+1 (1-indexed position)
+          if (studentOrder !== i + 1) {
+            allCorrect = false;
+            break;
+          }
+        }
+        if (allCorrect && items.length > 0) correctCount++;
       }
     });
 
@@ -225,6 +244,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     const resultData: StudentResult = {
       id: crypto.randomUUID(),
       quizId: quiz.id,
+      quizTitle: quiz.title, // ✅ Thêm quizTitle để lưu vào Google Sheets
       studentName,
       studentClass,
       score,

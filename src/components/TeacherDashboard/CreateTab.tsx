@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, QuestionType, ImageLibraryItem } from '../../types';
-import { Card, Button } from '../../src/components/common';
+import { Card, Button } from '../common';
 import { FileText, Sparkles, Upload, X, FileCheck } from 'lucide-react';
-import { AIProvider, generateQuiz, QuizGenerationOptions } from '../../geminiService';
-import { QuestionTypeSelector, DifficultyLevelSelector, ImageLibrary, AIProviderSelector } from '../../src/components/teacher/QuizCreator';
+import { AIProvider, generateQuiz, QuizGenerationOptions } from '../../services/geminiService';
+import { QuestionTypeSelector, DifficultyLevelSelector, ImageLibrary, AIProviderSelector } from '../teacher/QuizCreator';
 import QuizPreview from './QuizPreview';
 
 interface CreateTabProps {
@@ -166,6 +166,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     data: img.data,
                 })),
                 customPrompt: isPdfMode ? finalCustomPrompt : (quizMode === 'exam' ? customPrompt.trim() : (customPrompt.trim() || undefined)),
+                isPdfMode: isPdfMode, // Flag để AI biết chỉ dùng nội dung từ PDF
             };
 
             const result = await generateQuiz(

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Quiz } from '../../types';
-import { Card, Button } from '../../src/components/common';
-import { useQuizManager } from '../../src/hooks';
+import { Card, Button } from '../common';
+import { useQuizManager } from '../../hooks';
 import { Search, Key, Edit, Trash2 } from 'lucide-react';
 
 interface ManageTabProps {

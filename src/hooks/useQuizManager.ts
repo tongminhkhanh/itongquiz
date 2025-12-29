@@ -5,7 +5,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { Quiz } from '../../types';
+import { Quiz } from '../types';
 
 export interface UseQuizManagerProps {
     quizzes: Quiz[];
