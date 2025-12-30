@@ -19,7 +19,17 @@
  * formatMathText("5 / 7") // "5 : 7"
  * formatMathText("1/2") // "1/2" (unchanged)
  */
-export const formatMathText = (text: string): string => {
+export const formatMathText = (text: string | any): string => {
+    // Handle non-string inputs: undefined, null, arrays, objects
+    if (text === null || text === undefined) return "";
+    if (typeof text !== 'string') {
+        // If it's an array (like correctAnswers), join with comma
+        if (Array.isArray(text)) {
+            return text.join(', ');
+        }
+        // Convert other types to string
+        return String(text);
+    }
     if (!text) return "";
     return text
         .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 x $2')

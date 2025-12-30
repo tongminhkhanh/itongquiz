@@ -140,6 +140,7 @@ function saveQuiz(sheet, data) {
         data.id,
         sanitizeInput(data.title),
         data.classLevel,
+        data.category || "",  // Danh mục: vioedu, trang-nguyen, on-tap
         data.timeLimit,
         data.createdAt,
         data.accessCode || "",

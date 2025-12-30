@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { Quiz, QuestionType } from './src/types';
-import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID } from './src/config/constants';
+import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID, QUIZ_CATEGORIES } from './src/config/constants';
 import { BookOpen, GraduationCap, Lock, KeyRound, RefreshCw, Loader2 } from 'lucide-react';
 import { fetchTeachersFromSheets } from './src/services/googleSheetService';
 import { useAuthStore } from './stores/authStore';
@@ -9,6 +9,8 @@ import { useQuizStore } from './stores/quizStore';
 
 // Lazy load main views
 const StudentView = React.lazy(() => import('./src/components/StudentView'));
+import { CategorySelector } from './src/components/CategorySelector';
+import { QuizListByCategory } from './src/components/QuizListByCategory';
 const TeacherDashboard = React.lazy(() => import('./src/components/TeacherDashboard'));
 
 const App: React.FC = () => {
@@ -372,52 +374,23 @@ const App: React.FC = () => {
                                     </div>
                                 </button>
                             </>
+                        ) : quizStore.selectedClassLevel && !quizStore.selectedCategory ? (
+                            // Category Selection
+                            <CategorySelector
+                                selectedClassLevel={quizStore.selectedClassLevel}
+                                quizzes={quizStore.quizzes}
+                                onSelectCategory={(catId) => quizStore.setCategory(catId)}
+                                onBack={() => quizStore.setClassLevel(null)}
+                            />
                         ) : (
-                            // Quiz List for Selected Level
-                            <>
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-bold text-gray-800">Bài kiểm tra Lớp {quizStore.selectedClassLevel}</h3>
-                                    <button
-                                        onClick={() => quizStore.setClassLevel(null)}
-                                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600 transition-all"
-                                    >
-                                        ← Quay lại
-                                    </button>
-                                </div>
-                                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                                    {quizStore.quizzes.filter(q => q.classLevel === quizStore.selectedClassLevel).length === 0 ? (
-                                        <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                                            <div className="text-5xl mb-3 text-gray-300">∅</div>
-                                            <p className="text-gray-400">Chưa có bài kiểm tra nào cho Lớp {quizStore.selectedClassLevel}.</p>
-                                        </div>
-                                    ) : (
-                                        quizStore.quizzes
-                                            .filter(q => q.classLevel === quizStore.selectedClassLevel)
-                                            .map((q, index) => (
-                                                <button
-                                                    key={q.id}
-                                                    onClick={() => { quizStore.selectQuiz(q); quizStore.setView('student'); }}
-                                                    className="w-full text-left p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-all border border-green-100 hover:border-green-300 group shadow-sm hover:shadow-md"
-                                                    style={{ animationDelay: `${index * 50}ms` }}
-                                                >
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="font-bold text-green-800 group-hover:text-green-900 flex items-center gap-2">
-                                                            {q.requireCode && <Lock className="w-4 h-4 text-amber-500" />}
-                                                            {q.title}
-                                                        </span>
-                                                        <span className="bg-gradient-to-r from-green-500 to-emerald-500 px-3 py-1 rounded-full text-xs font-bold text-white shadow group-hover:shadow-md group-hover:scale-105 transition-all">
-                                                            Bắt đầu →
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                                        <span>{q.questions.length} câu hỏi</span>
-                                                        <span>{q.timeLimit} phút</span>
-                                                    </div>
-                                                </button>
-                                            ))
-                                    )}
-                                </div>
-                            </>
+                            // Quiz List by Category
+                            <QuizListByCategory
+                                selectedClassLevel={quizStore.selectedClassLevel!}
+                                selectedCategory={quizStore.selectedCategory!}
+                                quizzes={quizStore.quizzes}
+                                onSelectQuiz={(quiz) => { quizStore.selectQuiz(quiz); quizStore.setView('student'); }}
+                                onBack={() => quizStore.setCategory(null)}
+                            />
                         )}
                     </div>
                 </div>
@@ -428,7 +401,7 @@ const App: React.FC = () => {
                 </p>
             </div>
             <Analytics />
-        </div>
+        </div >
     );
 };
 

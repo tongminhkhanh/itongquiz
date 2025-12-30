@@ -5,6 +5,7 @@ import { FileText, Sparkles, Upload, X, FileCheck } from 'lucide-react';
 import { AIProvider, generateQuiz, QuizGenerationOptions } from '../../services/geminiService';
 import { QuestionTypeSelector, DifficultyLevelSelector, ImageLibrary, AIProviderSelector } from '../teacher/QuizCreator';
 import QuizPreview from './QuizPreview';
+import { QUIZ_CATEGORIES } from '../../config/constants';
 
 interface CreateTabProps {
     editingQuiz: Quiz | null;
@@ -18,6 +19,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     const [topic, setTopic] = useState('');
     const [quizTitle, setQuizTitle] = useState('');
     const [classLevel, setClassLevel] = useState('3');
+    const [category, setCategory] = useState('vioedu'); // Danh mục quiz
     const [content, setContent] = useState('');
     const [manualTimeLimit, setManualTimeLimit] = useState<number | ''>('');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -65,6 +67,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             setGeneratedQuiz(editingQuiz);
             setRequireCode(!!editingQuiz.requireCode);
             setAccessCode(editingQuiz.accessCode || '');
+            setCategory(editingQuiz.category || 'vioedu');
             // We don't restore selectedTypes/difficultyLevels from quiz yet as it's complex to reverse engineer
         } else {
             // Reset form for new quiz
@@ -78,6 +81,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             setAccessCode('');
             setCustomPrompt('');
             setUploadedFile(null);
+            setCategory('vioedu');
         }
     }, [editingQuiz]);
 
@@ -191,6 +195,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                 createdAt: editingQuiz ? editingQuiz.createdAt : new Date().toISOString(),
                 accessCode: requireCode ? accessCode.toUpperCase() : undefined,
                 requireCode: requireCode,
+                category: category, // Lưu danh mục
             };
 
             setGeneratedQuiz(quiz);
@@ -261,6 +266,20 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
                                 />
                             </div>
+                        </div>
+
+                        {/* Category Selector */}
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Danh mục</label>
+                            <select
+                                value={category}
+                                onChange={e => setCategory(e.target.value)}
+                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                            >
+                                {QUIZ_CATEGORIES.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div>
@@ -517,6 +536,11 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                 <QuizPreview
                     quiz={generatedQuiz}
                     onSave={handleSaveQuiz}
+                    onUpdateQuestions={(questions) => {
+                        if (generatedQuiz) {
+                            setGeneratedQuiz({ ...generatedQuiz, questions });
+                        }
+                    }}
                 />
             </div>
         </div>

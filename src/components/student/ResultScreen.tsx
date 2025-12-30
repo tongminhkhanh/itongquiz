@@ -113,11 +113,12 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                     {/* True/False Review */}
                                     {q.type === QuestionType.TRUE_FALSE && (
                                         <div className="grid grid-cols-1 gap-1 mt-2">
-                                            {(q.items || []).map(item => {
-                                                const studentVal = answers[q.id]?.[item.id];
+                                            {(q.items || []).map((item, idx) => {
+                                                const itemKey = item.id || `item-${idx}`;
+                                                const studentVal = answers[q.id]?.[itemKey];
                                                 const isCorrect = studentVal === item.isCorrect;
                                                 return (
-                                                    <div key={item.id} className={`p-2 rounded ${isCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
+                                                    <div key={itemKey} className={`p-2 rounded ${isCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
                                                         <div className="flex items-center justify-between">
                                                             <span className="flex-1">{formatText(item.statement)}</span>
                                                             <span className={isCorrect ? "text-green-600 font-bold text-xs" : "text-red-500 font-bold text-xs"}>
@@ -128,13 +129,16 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                     </div>
                                                 )
                                             })}
-                                            {(q.items || []).some(item => answers[q.id]?.[item.id] !== item.isCorrect) && (
-                                                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                                    <p className="text-blue-800 text-sm">
-                                                        💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy đọc kỹ lại các phát biểu nhé!"}
-                                                    </p>
-                                                </div>
-                                            )}
+                                            {(q.items || []).some((item, idx) => {
+                                                const itemKey = item.id || `item-${idx}`;
+                                                return answers[q.id]?.[itemKey] !== item.isCorrect;
+                                            }) && (
+                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                                        <p className="text-blue-800 text-sm">
+                                                            💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy đọc kỹ lại các phát biểu nhé!"}
+                                                        </p>
+                                                    </div>
+                                                )}
                                         </div>
                                     )}
 

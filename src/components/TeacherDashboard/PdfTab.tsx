@@ -4,6 +4,7 @@ import { Card, Button, Modal } from '../common';
 import { Upload, FileText, Save, Loader2, X, FileCheck, Sparkles, CheckCircle, AlertCircle, Edit3, Wand2, Trash2, Bot, Lock, Clock, ListChecks } from 'lucide-react';
 import { AIProvider, generateQuiz, QuizGenerationOptions, extractTextFromPdf } from '../../services/geminiService';
 import { AIProviderSelector } from '../teacher/QuizCreator';
+import { QUIZ_CATEGORIES } from '../../config/constants';
 
 interface PdfTabProps {
     onSaveQuiz: (quiz: Quiz) => Promise<void>;
@@ -55,6 +56,7 @@ const PdfTab: React.FC<PdfTabProps> = ({ onSaveQuiz, onSuccess }) => {
 
     // Settings - Basic
     const [classLevel, setClassLevel] = useState('3');
+    const [category, setCategory] = useState('vioedu'); // Danh mục quiz
     const [quizTitle, setQuizTitle] = useState('');
     const [timeLimit, setTimeLimit] = useState<number | ''>(''); // Empty = auto
 
@@ -290,6 +292,7 @@ ${editedText}
                 timeLimit: timeLimit || Math.ceil(extractedQuestions.length * 2), // Use custom time or auto-calculate
                 questions: extractedQuestions,
                 createdAt: new Date().toISOString(),
+                category: category, // Lưu danh mục
                 ...(requireAccessCode && accessCode ? { accessCode } : {}), // Add access code if enabled
             };
 
@@ -477,6 +480,20 @@ ${editedText}
                             </div>
                         </div>
 
+                        {/* Category Selector */}
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Danh mục</label>
+                            <select
+                                value={category}
+                                onChange={e => setCategory(e.target.value)}
+                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                            >
+                                {QUIZ_CATEGORIES.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
                         {/* AI Provider */}
                         <AIProviderSelector
                             value={aiProvider}
@@ -619,6 +636,22 @@ ${editedText}
                                         />
                                     </div>
                                 </div>
+
+                                {/* Category Selector */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Danh mục
+                                    </label>
+                                    <select
+                                        value={category}
+                                        onChange={e => setCategory(e.target.value)}
+                                        className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                                    >
+                                        {QUIZ_CATEGORIES.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         </Card>
 
@@ -709,13 +742,13 @@ ${editedText}
                                     key={opt.type}
                                     onClick={() => toggleQuestionType(opt.type)}
                                     className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${selectedQuestionTypes.includes(opt.type)
-                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                                         }`}
                                 >
                                     <span className={`w-5 h-5 rounded flex items-center justify-center text-xs ${selectedQuestionTypes.includes(opt.type)
-                                            ? 'bg-blue-500 text-white'
-                                            : 'bg-gray-200 text-gray-400'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-gray-200 text-gray-400'
                                         }`}>
                                         {selectedQuestionTypes.includes(opt.type) ? '✓' : ''}
                                     </span>
