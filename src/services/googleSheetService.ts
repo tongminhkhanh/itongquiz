@@ -244,6 +244,7 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                 id: row.id,
                 title: row.title,
                 classLevel: String(row.classLevel), // Ensure it's a string for comparison
+                category: row.category || '', // Danh mục quiz
                 timeLimit: parseInt(row.timeLimit, 10) || 15,
                 createdAt: row.createdAt || new Date().toISOString(),
                 questions: questionsByQuizId[row.id] || [],

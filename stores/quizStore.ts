@@ -12,6 +12,7 @@ interface QuizState {
     quizzes: Quiz[];
     selectedQuiz: Quiz | null;
     selectedClassLevel: string | null;
+    selectedCategory: string | null;
     results: StudentResult[];
     isLoading: boolean;
     error: string | null;
@@ -27,6 +28,7 @@ interface QuizState {
     deleteQuiz: (id: string) => void;
     selectQuiz: (quiz: Quiz | null) => void;
     setClassLevel: (level: string | null) => void;
+    setCategory: (category: string | null) => void;
 
     // Results actions
     setResults: (results: StudentResult[]) => void;
@@ -53,6 +55,7 @@ export const useQuizStore = create<QuizState>()(
             quizzes: [],
             selectedQuiz: null,
             selectedClassLevel: null,
+            selectedCategory: null,
             results: [],
             isLoading: false,
             error: null,
@@ -62,7 +65,8 @@ export const useQuizStore = create<QuizState>()(
             goHome: () => set({
                 view: 'home',
                 selectedQuiz: null,
-                selectedClassLevel: null
+                selectedClassLevel: null,
+                selectedCategory: null
             }),
 
             // Quiz actions
@@ -77,7 +81,8 @@ export const useQuizStore = create<QuizState>()(
                 quizzes: state.quizzes.filter(q => q.id !== id)
             })),
             selectQuiz: (quiz) => set({ selectedQuiz: quiz }),
-            setClassLevel: (level) => set({ selectedClassLevel: level }),
+            setClassLevel: (level) => set({ selectedClassLevel: level, selectedCategory: null }),
+            setCategory: (category) => set({ selectedCategory: category }),
 
             // Results actions
             setResults: (results) => set({ results }),

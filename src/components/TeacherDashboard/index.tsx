@@ -1,6 +1,6 @@
 import React, { useState, Suspense } from 'react';
 import { Quiz } from '../../types';
-import { Tabs, TabItem, Button } from '../common';
+import { Tabs, TabItem, Button, ErrorBoundary } from '../common';
 import { LogOut, FileText, List, Settings, Bot, Key, X, Save, Loader2, FileUp } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
@@ -106,58 +106,60 @@ const TeacherDashboard: React.FC = () => {
                     />
                 </div>
 
-                <Suspense fallback={
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-                    </div>
-                }>
-                    {activeTab === 'results' && (
-                        <ResultsTab
-                            results={filteredResultsByClass}
-                            quizzes={quizStore.quizzes}
-                            onRefresh={async () => {
-                                await quizStore.loadResults();
-                                return quizStore.results;
-                            }}
-                        />
-                    )}
+                <ErrorBoundary onReset={() => setActiveTab('manage')}>
+                    <Suspense fallback={
+                        <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+                        </div>
+                    }>
+                        {activeTab === 'results' && (
+                            <ResultsTab
+                                results={filteredResultsByClass}
+                                quizzes={quizStore.quizzes}
+                                onRefresh={async () => {
+                                    await quizStore.loadResults();
+                                    return quizStore.results;
+                                }}
+                            />
+                        )}
 
-                    {activeTab === 'manage' && (
-                        <ManageTab
-                            quizzes={quizStore.quizzes}
-                            onDelete={quizStore.removeQuiz}
-                            onEdit={(quiz) => {
-                                setEditingQuiz(quiz);
-                                setActiveTab('create');
-                            }}
-                            onManageCode={(quizId, currentCode) => {
-                                setEditingAccessCode({ quizId, currentCode });
-                                setNewAccessCode(currentCode);
-                            }}
-                        />
-                    )}
+                        {activeTab === 'manage' && (
+                            <ManageTab
+                                quizzes={quizStore.quizzes}
+                                onDelete={quizStore.removeQuiz}
+                                onEdit={(quiz) => {
+                                    setEditingQuiz(quiz);
+                                    setActiveTab('create');
+                                }}
+                                onManageCode={(quizId, currentCode) => {
+                                    setEditingAccessCode({ quizId, currentCode });
+                                    setNewAccessCode(currentCode);
+                                }}
+                            />
+                        )}
 
-                    {activeTab === 'create' && (
-                        <CreateTab
-                            editingQuiz={editingQuiz}
-                            onSaveQuiz={quizStore.createQuiz}
-                            onUpdateQuiz={quizStore.modifyQuiz}
-                            onSuccess={() => {
-                                setEditingQuiz(null);
-                                setActiveTab('manage');
-                            }}
-                        />
-                    )}
+                        {activeTab === 'create' && (
+                            <CreateTab
+                                editingQuiz={editingQuiz}
+                                onSaveQuiz={quizStore.createQuiz}
+                                onUpdateQuiz={quizStore.modifyQuiz}
+                                onSuccess={() => {
+                                    setEditingQuiz(null);
+                                    setActiveTab('manage');
+                                }}
+                            />
+                        )}
 
-                    {activeTab === 'pdfCreate' && (
-                        <PdfTab
-                            onSaveQuiz={quizStore.createQuiz}
-                            onSuccess={() => {
-                                setActiveTab('manage');
-                            }}
-                        />
-                    )}
-                </Suspense>
+                        {activeTab === 'pdfCreate' && (
+                            <PdfTab
+                                onSaveQuiz={quizStore.createQuiz}
+                                onSuccess={() => {
+                                    setActiveTab('manage');
+                                }}
+                            />
+                        )}
+                    </Suspense>
+                </ErrorBoundary>
             </main>
 
             {/* Access Code Edit Modal */}

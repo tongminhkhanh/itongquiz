@@ -7,8 +7,14 @@ export const QUIZ_GID = '0'; // Default first sheet
 export const QUESTION_GID = '1395660327';
 export const TEACHER_GID = '1482913865';
 export const RESULTS_GID = '1960978030';
-export const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwbfluTcn5UjnKCBOLJRJvtsX3imQOdEeZD9QCkheDv72z1lnd0dR07C02sZJUyXKMqUA/exec';
+export const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyTJML5cetenuycWKo_u-05SfOvAwoOh6iRNh1cZZN98jyvcBdtAXlEhpZXZmu5A7fnRw/exec';
 
+// Danh mục quiz cho học sinh
+export const QUIZ_CATEGORIES = [
+  { id: 'vioedu', name: 'VioEdu', color: 'from-blue-400 to-indigo-500' },
+  { id: 'trang-nguyen', name: 'Trạng Nguyên Tiếng Việt', color: 'from-red-400 to-pink-500' },
+  { id: 'on-tap', name: 'Ôn tập theo chủ đề', color: 'from-emerald-400 to-green-500' }
+];
 
 export const SYSTEM_INSTRUCTION = `
 Bạn là một giáo viên tại Trường Tiểu học Ít Ong (Mường La, Sơn La).

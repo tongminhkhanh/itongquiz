@@ -13,3 +13,5 @@ export type { ModalProps } from './Modal';
 
 export { Tabs } from './Tabs';
 export type { TabItem, TabsProps } from './Tabs';
+
+export { default as ErrorBoundary } from './ErrorBoundary';

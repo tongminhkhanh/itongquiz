@@ -109,6 +109,7 @@ export interface Quiz {
     id: string;
     title: string; // e.g., "Ôn tập Khoa học lớp 3: Không khí và Nước"
     classLevel: string; // 1, 2, 3, 4, 5
+    category?: string; // 'vioedu' | 'trang-nguyen' | 'on-tap'
     timeLimit: number; // in minutes
     questions: Question[];
     createdAt: string;
