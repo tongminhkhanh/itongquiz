@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Question, QuestionType } from '../../types';
 import { CheckCircle, RefreshCcw } from 'lucide-react';
+import { renderMath } from '../../utils/mathJax';
+import GeometryRenderer, { GeometryData } from '../common/GeometryRenderer';
 
 interface QuestionRendererProps {
     question: Question;
@@ -10,13 +12,59 @@ interface QuestionRendererProps {
     onMatchingClick: (questionId: string, item: string, type: 'left' | 'right') => void;
 }
 
-// Helper function to format math text
+// Helper function to format math text and fix common LaTeX errors
 const formatText = (text: string) => {
     if (!text) return "";
-    return text
-        .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 x $2')
+
+    let result = text;
+
+    // Fix common LaTeX rendering errors (backslash gets stripped)
+    // These patterns catch cases where \times becomes "times", \div becomes "div", etc.
+
+    // Fix "imes" (from \times with backslash-t becoming tab or stripped)
+    result = result.replace(/(\d+)\s*imes\s*(\d+)/gi, '$1 × $2');
+    result = result.replace(/imes/gi, '×');
+
+    // Fix "times" standalone 
+    result = result.replace(/(\d+)\s*times\s*(\d+)/gi, '$1 × $2');
+
+    // Fix "div" (from \div)
+    result = result.replace(/(\d+)\s*div\s*(\d+)/gi, '$1 ÷ $2');
+
+    // Fix "cdot" (from \cdot)
+    result = result.replace(/(\d+)\s*cdot\s*(\d+)/gi, '$1 · $2');
+
+    // Fix "pm" (from \pm - plus minus)
+    result = result.replace(/pm/g, '±');
+
+    // Fix "leq" and "geq" (from \leq, \geq)
+    result = result.replace(/leq/g, '≤');
+    result = result.replace(/geq/g, '≥');
+
+    // Fix "neq" (from \neq - not equal)
+    result = result.replace(/neq/g, '≠');
+
+    // Fix "sqrt" (from \sqrt) - basic case
+    result = result.replace(/sqrt\{([^}]+)\}/g, '√($1)');
+    result = result.replace(/sqrt(\d+)/g, '√$1');
+
+    // Fix "frac" (from \frac) - convert to readable format
+    result = result.replace(/frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)');
+
+    // Clean up orphaned $ signs that didn't get processed by MathJax
+    // Only if they appear at the start/end or around simple expressions
+    result = result.replace(/^\$\s*/, '');
+    result = result.replace(/\s*\$$/, '');
+    result = result.replace(/\$([^$]+)\$/g, '$1');
+
+    // Standard formatting
+    result = result
+        .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 × $2')
         .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
+
+    return result;
 };
+
 
 // Helper function to render HTML content (supports <u>, <b>, <i> tags from PDF)
 const renderHtml = (text: string) => {
@@ -48,8 +96,17 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
     onAnswerChange,
     onMatchingClick,
 }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Trigger MathJax rendering when question content changes
+    useEffect(() => {
+        if (containerRef.current) {
+            renderMath([containerRef.current]);
+        }
+    }, [q, answers]);
+
     return (
-        <div id={`question-${index}`} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 scroll-mt-24">
+        <div ref={containerRef} id={`question-${index}`} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 scroll-mt-24">
             {/* Question Header */}
             <div className="mb-4">
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Câu hỏi {index + 1}</h3>
@@ -67,6 +124,16 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                             src={q.image}
                             alt="Question Illustration"
                             className="max-h-64 rounded-lg border border-gray-200 object-contain"
+                        />
+                    </div>
+                )}
+
+                {/* Geometry SVG Illustration */}
+                {(q as any).geometry && (
+                    <div className="mt-3 flex justify-center">
+                        <GeometryRenderer
+                            data={(q as any).geometry as GeometryData}
+                            className="border border-gray-200 rounded-lg"
                         />
                     </div>
                 )}
@@ -418,6 +485,168 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                 </p>
                                 <button
                                     onClick={() => onAnswerChange(q.id, {})}
+                                    className="text-xs text-red-500 hover:underline flex items-center"
+                                >
+                                    <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {/* Image Question - MCQ với hình bắt buộc */}
+                {q.type === QuestionType.IMAGE_QUESTION && (
+                    <div className="space-y-4">
+                        {/* Hình ảnh - hiển thị nổi bật */}
+                        {(q as any).image && (
+                            <div className="flex justify-center">
+                                <img
+                                    src={(q as any).image}
+                                    alt="Question illustration"
+                                    className="max-h-72 rounded-xl border-2 border-gray-200 shadow-md object-contain"
+                                />
+                            </div>
+                        )}
+                        {/* Options giống MCQ */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {((q as any).options || []).map((opt: string, idx: number) => {
+                                const label = String.fromCharCode(65 + idx);
+                                const isSelected = answers[q.id] === label;
+                                return (
+                                    <button
+                                        key={idx}
+                                        onClick={() => onAnswerChange(q.id, label)}
+                                        className={`text-left p-3 rounded-lg border transition-all flex items-center ${isSelected
+                                            ? 'border-orange-500 bg-orange-50 text-orange-900 ring-1 ring-orange-500'
+                                            : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        <span className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mr-3 flex-shrink-0 ${isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-gray-300 text-gray-500'
+                                            }`}>
+                                            {label}
+                                        </span>
+                                        <span>{formatText(opt)}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Dropdown Question - Điền vào chỗ trống bằng dropdown */}
+                {q.type === QuestionType.DROPDOWN && (() => {
+                    const currentAnswers = (answers[q.id] as Record<string, string>) || {};
+                    const blanks = (q as any).blanks || [];
+                    const text = (q as any).text || "";
+                    // Parse text: "Thủ đô là [1] có dân số [2] triệu"
+                    const parts = text.split(/(\[\d+\])/g);
+
+                    return (
+                        <div className="space-y-4">
+                            <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                {parts.map((part: string, idx: number) => {
+                                    const match = part.match(/\[(\d+)\]/);
+                                    if (match) {
+                                        const blankIndex = parseInt(match[1]) - 1;
+                                        const blank = blanks[blankIndex];
+                                        if (blank) {
+                                            return (
+                                                <select
+                                                    key={idx}
+                                                    value={currentAnswers[blank.id] || ''}
+                                                    onChange={(e) => onAnswerChange(q.id, e.target.value, blank.id)}
+                                                    className={`mx-1 px-3 py-1.5 border-2 rounded-lg font-medium transition-all cursor-pointer ${currentAnswers[blank.id]
+                                                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                                                        : 'border-gray-300 bg-gray-50 text-gray-600 hover:border-indigo-300'
+                                                        }`}
+                                                >
+                                                    <option value="">-- Chọn --</option>
+                                                    {(blank.options || []).map((opt: string, i: number) => (
+                                                        <option key={i} value={opt}>{opt}</option>
+                                                    ))}
+                                                </select>
+                                            );
+                                        }
+                                    }
+                                    return <span key={idx}>{formatText(part)}</span>;
+                                })}
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <p className="text-xs text-gray-500">
+                                    Đã điền: {Object.keys(currentAnswers).length}/{blanks.length}
+                                </p>
+                                <button
+                                    onClick={() => onAnswerChange(q.id, {})}
+                                    className="text-xs text-red-500 hover:underline flex items-center"
+                                >
+                                    <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {/* Underline Question - Gạch chân từ trong câu */}
+                {q.type === QuestionType.UNDERLINE && (() => {
+                    const selectedIndexes = (answers[q.id] as number[]) || [];
+                    const words = (q as any).words || [];
+
+                    const toggleWord = (index: number) => {
+                        if (selectedIndexes.includes(index)) {
+                            onAnswerChange(q.id, selectedIndexes.filter(i => i !== index));
+                        } else {
+                            onAnswerChange(q.id, [...selectedIndexes, index].sort((a, b) => a - b));
+                        }
+                    };
+
+                    return (
+                        <div className="space-y-4">
+                            <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 mb-4">
+                                <p className="text-sm text-amber-800">
+                                    📝 <strong>Hướng dẫn:</strong> Nhấn vào từ để gạch chân. Nhấn lại để bỏ gạch chân.
+                                </p>
+                            </div>
+
+                            {/* Sentence with clickable words */}
+                            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                <p className="text-lg leading-loose text-gray-800 text-center">
+                                    {words.map((word: string, idx: number) => {
+                                        const isSelected = selectedIndexes.includes(idx);
+                                        return (
+                                            <span key={idx}>
+                                                <button
+                                                    onClick={() => toggleWord(idx)}
+                                                    className={`mx-1 px-2 py-1 rounded transition-all font-medium ${isSelected
+                                                        ? 'bg-yellow-100 border-b-4 border-yellow-500 text-yellow-800'
+                                                        : 'hover:bg-gray-100 text-gray-700'
+                                                        }`}
+                                                    style={isSelected ? { textDecoration: 'underline', textDecorationThickness: '3px' } : {}}
+                                                >
+                                                    {formatText(word)}
+                                                </button>
+                                                {idx < words.length - 1 && ' '}
+                                            </span>
+                                        );
+                                    })}
+                                </p>
+                            </div>
+
+                            {/* Selected words display */}
+                            {selectedIndexes.length > 0 && (
+                                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                                    <p className="text-sm text-yellow-800">
+                                        <strong>Đã gạch chân:</strong>{' '}
+                                        {selectedIndexes.map(i => words[i]).join(', ')}
+                                    </p>
+                                </div>
+                            )}
+
+                            <div className="flex justify-between items-center">
+                                <p className="text-xs text-gray-500">
+                                    Đã chọn: {selectedIndexes.length} từ
+                                </p>
+                                <button
+                                    onClick={() => onAnswerChange(q.id, [])}
                                     className="text-xs text-red-500 hover:underline flex items-center"
                                 >
                                     <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này

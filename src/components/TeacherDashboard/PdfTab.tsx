@@ -30,6 +30,9 @@ const QUESTION_TYPE_OPTIONS = [
     { type: QuestionType.MULTIPLE_SELECT, label: 'Chọn nhiều', icon: '☑️', color: 'indigo' },
     { type: QuestionType.DRAG_DROP, label: 'Kéo thả', icon: '🎯', color: 'pink' },
     { type: QuestionType.ORDERING, label: 'Sắp xếp thứ tự', icon: '📋', color: 'cyan' },
+    { type: QuestionType.IMAGE_QUESTION, label: 'Câu hỏi hình', icon: '🖼️', color: 'teal' },
+    { type: QuestionType.DROPDOWN, label: 'Dropdown', icon: '🔽', color: 'amber' },
+    { type: QuestionType.UNDERLINE, label: 'Gạch chân', icon: '✏️', color: 'rose' },
 ];
 
 const PdfTab: React.FC<PdfTabProps> = ({ onSaveQuiz, onSuccess }) => {
@@ -253,6 +256,9 @@ ${editedText}
                 undefined,
                 genAiProvider // Use generation AI provider
             );
+
+            // DEBUG: Log AI response
+            console.log('🔍 AI Quiz Generation Result:', JSON.stringify(result, null, 2));
 
             if (result.questions && result.questions.length > 0) {
                 const questionsWithIds = result.questions.map((q: any, idx: number) => ({

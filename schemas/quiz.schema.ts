@@ -9,7 +9,11 @@ export const QuestionTypeSchema = z.enum([
     'SHORT_ANSWER',
     'MATCHING',
     'MULTIPLE_SELECT',
-    'DRAG_DROP'
+    'DRAG_DROP',
+    'ORDERING',
+    'IMAGE_QUESTION',
+    'DROPDOWN',
+    'UNDERLINE'
 ]);
 
 // ===============================
@@ -91,6 +95,54 @@ export const DragDropQuestionSchema = BaseQuestionSchema.extend({
 });
 
 // ===============================
+// Ordering Question
+// ===============================
+export const OrderingQuestionSchema = BaseQuestionSchema.extend({
+    type: z.literal('ORDERING'),
+    question: z.string().min(1),
+    items: z.array(z.string()).min(2),
+    correctOrder: z.array(z.number())
+});
+
+// ===============================
+// Image Question (MCQ with required image)
+// ===============================
+export const ImageQuestionSchema = BaseQuestionSchema.extend({
+    type: z.literal('IMAGE_QUESTION'),
+    question: z.string().min(1),
+    image: z.string().min(1), // Override to make required
+    options: z.array(z.string()).min(2).max(6),
+    correctAnswer: z.string().regex(/^[A-F]$/)
+});
+
+// ===============================
+// Dropdown Question
+// ===============================
+export const DropdownBlankSchema = z.object({
+    id: z.string().min(1),
+    options: z.array(z.string()).min(2),
+    correctAnswer: z.string().min(1)
+});
+
+export const DropdownQuestionSchema = BaseQuestionSchema.extend({
+    type: z.literal('DROPDOWN'),
+    question: z.string().min(1),
+    text: z.string().min(1),
+    blanks: z.array(DropdownBlankSchema).min(1)
+});
+
+// ===============================
+// Underline Question
+// ===============================
+export const UnderlineQuestionSchema = BaseQuestionSchema.extend({
+    type: z.literal('UNDERLINE'),
+    question: z.string().min(1),
+    sentence: z.string().min(1),
+    words: z.array(z.string()).min(2),
+    correctWordIndexes: z.array(z.number()).min(1)
+});
+
+// ===============================
 // Union of all Question Types
 // ===============================
 export const QuestionSchema = z.discriminatedUnion('type', [
@@ -99,7 +151,11 @@ export const QuestionSchema = z.discriminatedUnion('type', [
     TrueFalseQuestionSchema,
     ShortAnswerQuestionSchema,
     MatchingQuestionSchema,
-    DragDropQuestionSchema
+    DragDropQuestionSchema,
+    OrderingQuestionSchema,
+    ImageQuestionSchema,
+    DropdownQuestionSchema,
+    UnderlineQuestionSchema
 ]);
 
 // ===============================

@@ -193,9 +193,9 @@ export const useQuizStore = create<QuizState>()(
             // Only persist selected fields to avoid stale data
             partialize: (state) => ({
                 selectedClassLevel: state.selectedClassLevel,
-                // Maybe persist quizzes too to work offline/faster load?
-                // quizzes: state.quizzes, 
-                // Let's stick to current behavior for now.
+                // Persist quizzes to ensure complex question types (UNDERLINE, etc.) are preserved
+                // Google Sheets doesn't properly store all fields for new question types
+                quizzes: state.quizzes,
             }),
         }
     )

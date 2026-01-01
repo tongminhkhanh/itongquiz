@@ -16,6 +16,8 @@ interface Props {
 }
 
 const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
+  // DEBUG: Log quiz data to see structure
+  console.log('🎓 StudentView quiz data:', JSON.stringify(quiz, null, 2));
   // Determine initial step based on whether quiz requires access code
   const [step, setStep] = useState<'code' | 'info' | 'quiz' | 'result'>(
     quiz.requireCode ? 'code' : 'info'
@@ -231,6 +233,39 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
           }
         }
         if (allCorrect && items.length > 0) correctCount++;
+      } else if (q.type === QuestionType.IMAGE_QUESTION) {
+        // Giống MCQ - so sánh đáp án đã chọn với correctAnswer
+        totalItems++;
+        if (answers[q.id] === (q as any).correctAnswer) correctCount++;
+      } else if (q.type === QuestionType.DROPDOWN) {
+        // Kiểm tra tất cả dropdown đã chọn đúng
+        totalItems++;
+        const studentAns = (answers[q.id] as Record<string, string>) || {};
+        const blanks = (q as any).blanks || [];
+        let allCorrect = true;
+
+        for (const blank of blanks) {
+          if (studentAns[blank.id] !== blank.correctAnswer) {
+            allCorrect = false;
+            break;
+          }
+        }
+
+        if (allCorrect && blanks.length > 0) correctCount++;
+      } else if (q.type === QuestionType.UNDERLINE) {
+        // Kiểm tra các từ đã gạch chân có khớp với đáp án đúng không
+        totalItems++;
+        const studentSelection = (answers[q.id] as number[]) || [];
+        const correctIndexes = (q as any).correctWordIndexes || [];
+
+        // So sánh 2 mảng (sorted)
+        const studentSorted = [...studentSelection].sort((a, b) => a - b);
+        const correctSorted = [...correctIndexes].sort((a, b) => a - b);
+
+        const isCorrect = studentSorted.length === correctSorted.length &&
+          studentSorted.every((val, idx) => val === correctSorted[idx]);
+
+        if (isCorrect) correctCount++;
       }
     });
 
@@ -291,6 +326,18 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       });
       const currentAnswers = (answers[q.id] as Record<number, string>) || {};
       return blanks.length > 0 && blanks.every(idx => currentAnswers[idx] !== undefined);
+    } else if (q.type === QuestionType.IMAGE_QUESTION) {
+      // Giống MCQ - chỉ cần có đáp án
+      return !!answers[q.id];
+    } else if (q.type === QuestionType.DROPDOWN) {
+      // Kiểm tra tất cả dropdown đã được chọn
+      const blanks = (q as any).blanks || [];
+      const currentAnswers = (answers[q.id] as Record<string, string>) || {};
+      return blanks.length > 0 && blanks.every((b: any) => currentAnswers[b.id]);
+    } else if (q.type === QuestionType.UNDERLINE) {
+      // Kiểm tra có chọn ít nhất 1 từ
+      const selectedIndexes = (answers[q.id] as number[]) || [];
+      return selectedIndexes.length > 0;
     }
     return !!answers[q.id];
   };

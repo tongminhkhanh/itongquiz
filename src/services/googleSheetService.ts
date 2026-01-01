@@ -232,6 +232,40 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         blanks: row.blanks ? JSON.parse(row.blanks) : [],
                         distractors: row.distractors ? JSON.parse(row.distractors) : []
                     } as any;
+                } else if (row.type === QuestionType.ORDERING) {
+                    question = {
+                        id: row.id,
+                        type: QuestionType.ORDERING,
+                        question: row.question,
+                        items: row.items ? JSON.parse(row.items) : [],
+                        correctOrder: row.correctOrder ? JSON.parse(row.correctOrder) : []
+                    } as any;
+                } else if (row.type === QuestionType.IMAGE_QUESTION) {
+                    question = {
+                        id: row.id,
+                        type: QuestionType.IMAGE_QUESTION,
+                        question: row.question,
+                        image: row.image || "",
+                        options: row.options ? row.options.split('|').map((o: string) => o.trim()) : [],
+                        correctAnswer: row.correctAnswer
+                    } as any;
+                } else if (row.type === QuestionType.DROPDOWN) {
+                    question = {
+                        id: row.id,
+                        type: QuestionType.DROPDOWN,
+                        question: row.question,
+                        text: row.text || "",
+                        blanks: row.blanks ? JSON.parse(row.blanks) : []
+                    } as any;
+                } else if (row.type === QuestionType.UNDERLINE) {
+                    question = {
+                        id: row.id,
+                        type: QuestionType.UNDERLINE,
+                        question: row.question,
+                        sentence: row.sentence || "",
+                        words: row.words ? JSON.parse(row.words) : [],
+                        correctWordIndexes: row.correctWordIndexes ? JSON.parse(row.correctWordIndexes) : []
+                    } as any;
                 }
 
                 if (question) {

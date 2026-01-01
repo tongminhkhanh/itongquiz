@@ -12,6 +12,9 @@ export enum QuestionType {
     MULTIPLE_SELECT = 'MULTIPLE_SELECT',
     DRAG_DROP = 'DRAG_DROP',
     ORDERING = 'ORDERING', // Sắp xếp thứ tự câu trong đoạn văn
+    IMAGE_QUESTION = 'IMAGE_QUESTION', // Câu hỏi có hình vẽ bắt buộc
+    DROPDOWN = 'DROPDOWN', // Câu hỏi điền dropdown
+    UNDERLINE = 'UNDERLINE', // Câu hỏi gạch chân từ/cụm từ
 }
 
 export interface MCQQuestion {
@@ -103,7 +106,48 @@ export interface OrderingQuestion {
     explanation?: string;
 }
 
-export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion;
+// Image Question - Câu hỏi trắc nghiệm có hình vẽ BẮT BUỘC
+export interface ImageQuestion {
+    id: string;
+    type: QuestionType.IMAGE_QUESTION;
+    question: string;
+    image: string; // Base64 hoặc URL - BẮT BUỘC
+    options: string[]; // [A, B, C, D]
+    correctAnswer: string; // "A", "B", "C", or "D"
+    explanation?: string;
+}
+
+// Dropdown blank item
+export interface DropdownBlank {
+    id: string;
+    options: string[]; // Các lựa chọn trong dropdown
+    correctAnswer: string; // Đáp án đúng
+}
+
+// Dropdown Question - Câu hỏi điền vào chỗ trống bằng dropdown
+export interface DropdownQuestion {
+    id: string;
+    type: QuestionType.DROPDOWN;
+    question: string; // "Chọn đáp án đúng cho các chỗ trống"
+    text: string; // "Thủ đô Việt Nam là [1]. Dân số khoảng [2] triệu."
+    blanks: DropdownBlank[]; // Danh sách dropdown tương ứng [1], [2]...
+    image?: string;
+    explanation?: string;
+}
+
+// Underline Question - Câu hỏi gạch chân từ/cụm từ trong câu
+export interface UnderlineQuestion {
+    id: string;
+    type: QuestionType.UNDERLINE;
+    question: string; // "Gạch chân động từ trong câu sau"
+    sentence: string; // "Mặt trời ngả nắng đằng tây"
+    words: string[]; // ["Mặt trời", "ngả", "nắng", "đằng tây"]
+    correctWordIndexes: number[]; // [1] - index của từ "ngả" cần gạch chân
+    image?: string;
+    explanation?: string;
+}
+
+export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion;
 
 export interface Quiz {
     id: string;
