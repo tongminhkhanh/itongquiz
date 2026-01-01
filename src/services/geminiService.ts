@@ -27,14 +27,40 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
 
   // Map question types to Vietnamese descriptions for better AI understanding
   const typeDescriptions: Record<string, string> = {
-    'MCQ': 'MCQ (Trắc nghiệm chọn 1 đáp án đúng trong 4 lựa chọn A, B, C, D)',
-    'TRUE_FALSE': 'TRUE_FALSE (Cho một câu hỏi chính và nhiều phát biểu, học sinh chọn Đúng hoặc Sai cho mỗi phát biểu)',
-    'SHORT_ANSWER': 'SHORT_ANSWER (Điền đáp án ngắn, thường là 1-4 ký tự hoặc số)',
-    'MATCHING': 'MATCHING (Nối các ý ở cột A với cột B. ⚠️ BẮT BUỘC: Cột A (left) và Cột B (right) PHẢI CÓ CÙNG SỐ LƯỢNG mục, thường là 3-4 cặp. Mỗi mục ở cột A chỉ nối với 1 mục ở cột B)',
-    'MULTIPLE_SELECT': 'MULTIPLE_SELECT (Chọn TẤT CẢ các đáp án đúng, có thể 2-3 đáp án đúng trong 4 lựa chọn, correctAnswers là mảng như ["A", "C"])',
+    'MCQ': 'MCQ (Trắc nghiệm chọn 1 đáp án đúng. Format: {"type": "MCQ", "question": "Nội dung câu hỏi (TUYỆT ĐỐI KHÔNG xuống dòng, dùng inline math $...$ thay vì $$...$$)", "options": ["A...", "B...", "C...", "D..."], "correctAnswer": "A", "explanation": "Giải thích..."})',
+    'TRUE_FALSE': 'TRUE_FALSE (Câu hỏi đúng sai. Format: {"type": "TRUE_FALSE", "mainQuestion": "Câu hỏi chính (1 dòng)", "items": [{"statement": "Ý 1", "isCorrect": true}, {"statement": "Ý 2", "isCorrect": false}]})',
+    'SHORT_ANSWER': 'SHORT_ANSWER (Điền đáp án ngắn. Format: {"type": "SHORT_ANSWER", "question": "Câu hỏi (1 dòng)", "correctAnswer": "Đáp án đúng"})',
+    'MATCHING': 'MATCHING (Nối cột. Format: {"type": "MATCHING", "question": "Câu hỏi (1 dòng)", "pairs": [{"left": "A", "right": "1"}, {"left": "B", "right": "2"}]})',
+    'MULTIPLE_SELECT': 'MULTIPLE_SELECT (Chọn TẤT CẢ đáp án đúng. Format: {"type": "MULTIPLE_SELECT", "question": "Câu hỏi (1 dòng)", "options": ["A", "B", "C", "D"], "correctAnswers": ["A", "C"]})',
     'DRAG_DROP': 'DRAG_DROP (⚠️ NHẬN DIỆN: Câu hỏi có dạng "điền từ vào chỗ trống", "điền từ thích hợp", "điền vào (...)", "chọn từ trong ngoặc điền vào". CÁCH TẠO: question chứa đề bài gốc + danh sách từ cho sẵn, text chứa đoạn văn/thơ với từ ĐÚNG đã điền trong [ngoặc vuông], blanks là mảng các từ đúng, distractors là mảng các từ còn lại không dùng. VD: đề "Điền từ (suối,đồng,xoan) vào: Mưa giăng trên... Hoa... theo gió" → text: "Mưa giăng trên [đồng]. Hoa [xoan] theo gió", blanks: ["đồng","xoan"], distractors: ["suối"])',
     'ORDERING': 'ORDERING (Sắp xếp thứ tự câu trong đoạn văn. ⚠️ BẮT BUỘC: Phải TÌM KIẾM đoạn văn THẬT từ sách giáo khoa, truyện cổ tích Việt Nam, bài thơ, bài văn mẫu - KHÔNG ĐƯỢC TỰ BỊA. Đoạn văn 4-5 câu ngắn gọn, phù hợp lứa tuổi. items là mảng các câu ĐÃ XÁO TRỘN, correctOrder là mảng chỉ thứ tự đúng. VD: items=["Câu 2","Câu 1","Câu 3"], correctOrder=[1,0,2] nghĩa là items[1] đứng đầu, items[0] đứng 2, items[2] đứng 3. Nên lấy từ: truyện Tấm Cám, Thạch Sanh, Sọ Dừa, thơ Trần Đăng Khoa, Võ Quảng...)',
-    'IMAGE_QUESTION': 'IMAGE_QUESTION (Câu hỏi trắc nghiệm CÓ HÌNH ẢNH minh họa BẮT BUỘC. ⚠️ QUAN TRỌNG: Trường "image" là BẮT BUỘC - phải là URL hình ảnh từ internet hoặc từ thư viện hình đã upload. Format: {"type": "IMAGE_QUESTION", "question": "Dựa vào hình bên, ...", "image": "URL_HOẶC_ID_HÌNH", "options": ["A...", "B...", "C...", "D..."], "correctAnswer": "A"}. Dùng cho câu hỏi cần quan sát hình: đếm số, nhận diện hình, so sánh hình, tìm quy luật trong hình...)',
+    'IMAGE_QUESTION': `IMAGE_QUESTION (Câu hỏi trắc nghiệm CÓ HÌNH ẢNH minh họa. 
+    ⚠️ QUAN TRỌNG VỀ NỘI DUNG:
+    1. Nếu hình ảnh chỉ có 1 đối tượng (VD: 1 con mèo): Câu hỏi phải là "Con vật trong hình là gì?", "Con vật này có đặc điểm gì?", "Con vật này có ích lợi gì?". TUYỆT ĐỐI KHÔNG hỏi kiểu "Con vật nào trong hình..." nếu chỉ có 1 con.
+    2. Nếu muốn hỏi "Chọn con vật...", hình ảnh phải chứa nhiều con vật được đánh số hoặc gán nhãn A, B, C, D.
+    3. Vì bạn đang dùng hình ảnh từ thư viện (thường là ảnh đơn), hãy ưu tiên dạng câu hỏi NHẬN DIỆN hoặc SUY LUẬN từ đối tượng duy nhất trong hình.
+    
+    ⚠️ QUAN TRỌNG VỀ KỸ THUẬT (TỰ ĐỘNG TẠO ẢNH):
+    Trường "image" là BẮT BUỘC. Format: {"type": "IMAGE_QUESTION", "question": "...", "image": "URL_HOẶC_ID_HÌNH", "options": ["A...", "B...", "C...", "D..."], "correctAnswer": "A"}. 
+    
+    ${options?.imageLibrary?.length ? '✅ CÓ THƯ VIỆN ẢNH: Hãy dùng ID hình ảnh từ thư viện đã upload.' : '⚠️ KHÔNG CÓ HÌNH UPLOAD - HÃY TỰ TẠO ẢNH NHƯ SAU:'}
+    
+    1. 📐 NẾU LÀ HÌNH HỌC (Tam giác, Vuông, Tròn, Góc...): 
+       - KHÔNG dùng trường "image".
+       - HÃY DÙNG trường "geometry".
+       - CÁCH 1 (Cơ bản): Dùng mẫu SVG GEOMETRY JSON (Xem bên dưới). Hỗ trợ: triangle, square, rectangle, circle, line, angle.
+       - Ví dụ Angle: {"type": "IMAGE_QUESTION", "question": "Góc này là góc gì?", "geometry": {"type": "angle", "angle": {"vertex": {"x": 50, "y": 150, "label": "O"}, "start": {"x": 150, "y": 150, "label": "x"}, "end": {"x": 50, "y": 50, "label": "y"}, "showArc": true}}, ...}
+       - CÁCH 2 (Nâng cao - TikZ): Dùng mã TikZ (LaTeX). Bắt đầu bằng "\\begin{tikzpicture}" và kết thúc bằng "\\end{tikzpicture}".
+       - Ví dụ TikZ: {"type": "IMAGE_QUESTION", "question": "...", "geometry": "\\begin{tikzpicture} \\draw (0,0) -- (4,0) -- (2,3.46) -- cycle; \\end{tikzpicture}", ...}
+       - ⚠️ LƯU Ý: Phải escape dấu backslash trong JSON (dùng \\\\ thay vì \\).
+    
+    2. 🖼️ NẾU KHÔNG PHẢI HÌNH HỌC (Con vật, đồ vật...):
+       - BẮT BUỘC dùng trường "image" với URL placeholder.
+       - Cú pháp: "https://placehold.co/600x400?text=Ten+Hinh+Anh"
+       - Ví dụ: Muốn ảnh con mèo -> "https://placehold.co/600x400?text=Con+Meo"
+       - Ví dụ: Muốn ảnh quả táo -> "https://placehold.co/600x400?text=Qua+Tao"
+       - TUYỆT ĐỐI KHÔNG để trống hoặc dùng URL bịa đặt.
+    })`,
     'DROPDOWN': 'DROPDOWN (Câu hỏi điền vào chỗ trống bằng DROPDOWN. Format: {"type": "DROPDOWN", "question": "Chọn từ đúng điền vào chỗ trống", "text": "Thủ đô Việt Nam là [1]. Dân số khoảng [2] triệu người.", "blanks": [{"id": "blank-1", "options": ["Hà Nội", "TP.HCM", "Đà Nẵng"], "correctAnswer": "Hà Nội"}, {"id": "blank-2", "options": ["90", "100", "80"], "correctAnswer": "100"}]}. Trong text dùng [1], [2]... để đánh dấu vị trí dropdown. Mảng blanks chứa các dropdown tương ứng với options và correctAnswer)',
     'UNDERLINE': 'UNDERLINE (Câu hỏi gạch chân từ/cụm từ trong câu. Học sinh click vào từ để gạch chân. Format: {"type": "UNDERLINE", "question": "Gạch chân động từ trong câu sau", "sentence": "Mặt trời ngả nắng đằng tây", "words": ["Mặt trời", "ngả", "nắng", "đằng tây"], "correctWordIndexes": [1]}. Lưu ý: words là mảng các từ/cụm từ tách ra từ sentence. correctWordIndexes là mảng index các từ cần gạch chân (0-indexed). VD: Với câu trên, "ngả" ở index 1 là động từ cần gạch chân.)'
   };
@@ -613,44 +639,79 @@ Tài liệu đính kèm:`
     response_format: { type: "json_object" }
   };
 
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(requestBody)
-  });
+  console.log(`[AIClient] Sending request to ${API_URL} with model ${MODEL_NAME}`);
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    console.error("OpenAI API Error:", errorData);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
-    if (response.status === 429) {
-      throw new Error("Hết tiền trong tài khoản OpenAI (Quota Exceeded). Vui lòng nạp thêm tiền hoặc chuyển sang dùng Google Gemini (Miễn phí).");
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    console.log(`[AIClient] Response status: ${response.status} ${response.statusText}`);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("OpenAI API Error:", errorData);
+
+      if (response.status === 429) {
+        throw new Error("Hết tiền trong tài khoản OpenAI (Quota Exceeded). Vui lòng nạp thêm tiền hoặc chuyển sang dùng Google Gemini (Miễn phí).");
+      }
+
+      throw new Error(`Lỗi OpenAI API (${response.status}): ${errorData.error?.message || response.statusText}`);
     }
 
-    throw new Error(`Lỗi OpenAI API (${response.status}): ${errorData.error?.message || response.statusText}`);
+    const data = await response.json();
+    console.log(`[AIClient] Received data from proxy`);
+    const text = data.choices[0].message.content;
+    if (!text) throw new Error("AI trả về dữ liệu rỗng.");
+
+    // Format multiplication signs: Replace ALL * with x in math contexts
+    // Format division signs: Replace / with : ONLY if surrounded by spaces
+    const formattedText = text
+      // Replace * when surrounded by spaces: " * " -> " x "
+      .replace(/\s\*\s/g, ' x ')
+      // Replace * after parenthesis: ") * " -> ") x "
+      .replace(/\)\s*\*\s*/g, ') x ')
+      // Replace * before parenthesis: " * (" -> " x ("
+      .replace(/\s*\*\s*\(/g, ' x (')
+      // Replace * between alphanumeric: "a * b", "5 * 3" -> "a x b", "5 x 3"
+      .replace(/([a-zA-Z0-9?])\s*\*\s*([a-zA-Z0-9?(])/g, '$1 x $2')
+      // Division with spaces
+      .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
+
+    const parsedQuiz = parseAndRepairJSON(formattedText);
+
+    // Map image IDs to data URLs if imageLibrary is provided
+    if (imageLibrary && imageLibrary.length > 0 && parsedQuiz.questions) {
+      parsedQuiz.questions = parsedQuiz.questions.map((q: any) => {
+        if (q.type === 'IMAGE_QUESTION' && q.image) {
+          const imageItem = imageLibrary.find(img => img.id === q.image || img.name === q.image);
+          if (imageItem && imageItem.data) {
+            return { ...q, image: imageItem.data };
+          }
+        }
+        return q;
+      });
+    }
+
+    return parsedQuiz;
+
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error("Yêu cầu quá thời gian (Timeout). Vui lòng thử lại.");
+    }
+    console.error("GenerateWithOpenAI Error:", error);
+    throw error;
   }
-
-  const data = await response.json();
-  const text = data.choices[0].message.content;
-
-  // Format multiplication signs: Replace ALL * with x in math contexts
-  // Format division signs: Replace / with : ONLY if surrounded by spaces
-  const formattedText = text
-    // Replace * when surrounded by spaces: " * " -> " x "
-    .replace(/\s\*\s/g, ' x ')
-    // Replace * after parenthesis: ") * " -> ") x "
-    .replace(/\)\s*\*\s*/g, ') x ')
-    // Replace * before parenthesis: " * (" -> " x ("
-    .replace(/\s*\*\s*\(/g, ' x (')
-    // Replace * between alphanumeric: "a * b", "5 * 3" -> "a x b", "5 x 3"
-    .replace(/([a-zA-Z0-9?])\s*\*\s*([a-zA-Z0-9?(])/g, '$1 x $2')
-    // Division with spaces
-    .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
-
-  return parseAndRepairJSON(formattedText);
 };
 
 // Main export function

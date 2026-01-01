@@ -12,70 +12,21 @@ interface QuestionRendererProps {
     onMatchingClick: (questionId: string, item: string, type: 'left' | 'right') => void;
 }
 
-// Helper function to format math text and fix common LaTeX errors
-const formatText = (text: string) => {
-    if (!text) return "";
-
-    let result = text;
-
-    // Fix common LaTeX rendering errors (backslash gets stripped)
-    // These patterns catch cases where \times becomes "times", \div becomes "div", etc.
-
-    // Fix "imes" (from \times with backslash-t becoming tab or stripped)
-    result = result.replace(/(\d+)\s*imes\s*(\d+)/gi, '$1 × $2');
-    result = result.replace(/imes/gi, '×');
-
-    // Fix "times" standalone 
-    result = result.replace(/(\d+)\s*times\s*(\d+)/gi, '$1 × $2');
-
-    // Fix "div" (from \div)
-    result = result.replace(/(\d+)\s*div\s*(\d+)/gi, '$1 ÷ $2');
-
-    // Fix "cdot" (from \cdot)
-    result = result.replace(/(\d+)\s*cdot\s*(\d+)/gi, '$1 · $2');
-
-    // Fix "pm" (from \pm - plus minus)
-    result = result.replace(/pm/g, '±');
-
-    // Fix "leq" and "geq" (from \leq, \geq)
-    result = result.replace(/leq/g, '≤');
-    result = result.replace(/geq/g, '≥');
-
-    // Fix "neq" (from \neq - not equal)
-    result = result.replace(/neq/g, '≠');
-
-    // Fix "sqrt" (from \sqrt) - basic case
-    result = result.replace(/sqrt\{([^}]+)\}/g, '√($1)');
-    result = result.replace(/sqrt(\d+)/g, '√$1');
-
-    // Fix "frac" (from \frac) - convert to readable format
-    result = result.replace(/frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)');
-
-    // Clean up orphaned $ signs that didn't get processed by MathJax
-    // Only if they appear at the start/end or around simple expressions
-    result = result.replace(/^\$\s*/, '');
-    result = result.replace(/\s*\$$/, '');
-    result = result.replace(/\$([^$]+)\$/g, '$1');
-
-    // Standard formatting
-    result = result
-        .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 × $2')
-        .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
-
-    return result;
-};
-
+import { formatMathText } from '../../utils/formatters';
 
 // Helper function to render HTML content (supports <u>, <b>, <i> tags from PDF)
 const renderHtml = (text: string) => {
     if (!text) return null;
-    const formatted = formatText(text);
+    const formatted = formatMathText(text);
     // Check if text contains HTML tags
     if (/<[^>]+>/.test(formatted)) {
         return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
     }
     return <>{formatted}</>;
 };
+
+
+
 
 // Color palette for matching pairs
 const pairColors = [
@@ -160,7 +111,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                         }`}>
                                         {label}
                                     </span>
-                                    <span>{formatText(opt)}</span>
+                                    <span>{formatMathText(opt)}</span>
                                 </button>
                             )
                         })}
@@ -192,7 +143,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                             return (
                                 <div key={itemKey} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
                                     <span className="text-gray-700 mr-4 flex-1 text-sm">
-                                        {String.fromCharCode(97 + i)}. {formatText(item.statement)}
+                                        {String.fromCharCode(97 + i)}. {formatMathText(item.statement)}
                                     </span>
                                     <div className="flex gap-2 flex-shrink-0">
                                         <button
@@ -242,7 +193,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                 onClick={() => onMatchingClick(q.id, pair.left, 'left')}
                                             >
                                                 {color && <span className="mr-2">●</span>}
-                                                {formatText(pair.left)}
+                                                {formatMathText(pair.left)}
                                             </div>
                                         );
                                     })}
@@ -267,7 +218,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                     onClick={() => onMatchingClick(q.id, rightItem as string, 'right')}
                                                 >
                                                     {color && <span className="mr-2">●</span>}
-                                                    {formatText(rightItem as string)}
+                                                    {formatMathText(rightItem as string)}
                                                     {pairedLefts.length > 1 && (
                                                         <span className="ml-2 text-xs bg-white/50 px-1.5 py-0.5 rounded-full border border-black/10">
                                                             x{pairedLefts.length}
@@ -288,7 +239,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             const color = pairColors[colorIdx];
                                             return (
                                                 <span key={left} className={`text-xs px-2 py-1 rounded ${color.bg} ${color.text} ${color.border} border`}>
-                                                    {formatText(left)} ↔ {formatText(currentAnswers[left])}
+                                                    {formatMathText(left)} ↔ {formatMathText(currentAnswers[left])}
                                                 </span>
                                             );
                                         })}
@@ -333,7 +284,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                     <div className={`w-5 h-5 rounded border mr-3 flex items-center justify-center ${isSelected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-300'}`}>
                                         {isSelected && <CheckCircle className="w-3 h-3" />}
                                     </div>
-                                    {formatText(opt)}
+                                    {formatMathText(opt)}
                                 </button>
                             )
                         })}
@@ -394,7 +345,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             </span>
                                         );
                                     }
-                                    return <span key={idx}>{formatText(part)}</span>;
+                                    return <span key={idx}>{formatMathText(part)}</span>;
                                 })}
                             </div>
 
@@ -525,7 +476,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             }`}>
                                             {label}
                                         </span>
-                                        <span>{formatText(opt)}</span>
+                                        <span>{formatMathText(opt)}</span>
                                     </button>
                                 );
                             })}
@@ -568,7 +519,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             );
                                         }
                                     }
-                                    return <span key={idx}>{formatText(part)}</span>;
+                                    return <span key={idx}>{formatMathText(part)}</span>;
                                 })}
                             </div>
                             <div className="flex justify-between items-center">
@@ -622,7 +573,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                         }`}
                                                     style={isSelected ? { textDecoration: 'underline', textDecorationThickness: '3px' } : {}}
                                                 >
-                                                    {formatText(word)}
+                                                    {formatMathText(word)}
                                                 </button>
                                                 {idx < words.length - 1 && ' '}
                                             </span>

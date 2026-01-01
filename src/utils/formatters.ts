@@ -31,9 +31,66 @@ export const formatMathText = (text: string | any): string => {
         return String(text);
     }
     if (!text) return "";
-    return text
+
+    let result = text;
+
+    // 1. Fix mixed delimiters like $\( ... )$ or $\( ... )
+    result = result.replace(/\$\\\(/g, '$'); // Replace $\( with $
+    result = result.replace(/\\\)\$/g, '$'); // Replace )$ with $
+
+    // 2. Normalize LaTeX delimiters
+    // Replace \( ... \) with $ ... $
+    result = result.replace(/\\\((.*?)\\\)/g, '$$$1$$');
+    // Replace \[ ... \] with $$ ... $$
+    result = result.replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$');
+
+    // 3. Fix common LaTeX rendering errors (backslash gets stripped or missing)
+    // Fix "imes" (from \times)
+    result = result.replace(/(\d+)\s*imes\s*(\d+)/gi, '$1 × $2');
+    result = result.replace(/imes/gi, '×');
+
+    // Fix "times" standalone 
+    result = result.replace(/(\d+)\s*times\s*(\d+)/gi, '$1 × $2');
+
+    // Fix "div" (from \div)
+    result = result.replace(/(\d+)\s*div\s*(\d+)/gi, '$1 ÷ $2');
+
+    // Fix "cdot" (from \cdot)
+    result = result.replace(/(\d+)\s*cdot\s*(\d+)/gi, '$1 · $2');
+
+    // Fix "pm" (from \pm - plus minus)
+    result = result.replace(/pm/g, '±');
+
+    // Fix "leq" and "geq" (from \leq, \geq)
+    result = result.replace(/leq/g, '≤');
+    result = result.replace(/geq/g, '≥');
+
+    // Fix "neq" (from \neq - not equal)
+    result = result.replace(/neq/g, '≠');
+
+    // Fix "sqrt" (from \sqrt) - basic case
+    result = result.replace(/sqrt\{([^}]+)\}/g, '√($1)');
+    result = result.replace(/sqrt(\d+)/g, '√$1');
+
+    // Fix "frac" (from \frac) - convert to readable format if not in math mode
+    // Note: If inside $...$, MathJax handles it. But sometimes it's outside.
+    // We'll leave \frac for MathJax if it looks like valid LaTeX, but fix broken ones if needed.
+
+    // 4. Normalize block math to inline math to force single line
+    // Replace $$ ... $$ with $ ... $
+    result = result.replace(/\$\$([^$]+)\$\$/g, '$$$1$$');
+    // Replace \[ ... \] with $ ... $
+    result = result.replace(/\\\[(.*?)\\\]/g, '$$$1$$');
+
+    // 5. Standard formatting (newlines, * to x, / to :)
+    result = result
+        .replace(/\\n/g, ' ') // Replace literal \n
+        .replace(/\n/g, ' ')  // Replace actual newlines
+        .replace(/\s+/g, ' ') // Collapse multiple spaces
         .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 x $2')
         .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
+
+    return result.trim();
 };
 
 /**

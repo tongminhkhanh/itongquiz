@@ -11,7 +11,7 @@ import { Bot } from 'lucide-react';
 const AI_PROVIDERS = [
     { id: 'gemini', name: 'Google Gemini', description: '2.0 Flash (Miễn phí)' },
     { id: 'perplexity', name: 'Perplexity', description: 'Sonar model' },
-    { id: 'llm-mux', name: 'LLM-Mux', description: 'Local proxy' },
+    { id: 'llm-mux', name: 'AI Client Pro', description: 'Multi-Model (Gemini/Claude/OpenAI)' },
     { id: 'native-ocr', name: 'Native OCR', description: 'Tesseract OCR (localhost:8000)' },
 ];
 
