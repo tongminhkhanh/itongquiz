@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Quiz, Question, QuestionType } from '../../types';
 import { Card, Button, Modal } from '../common';
-import { Save, PlusCircle, Edit3, Trash2, X } from 'lucide-react';
+import { Save, PlusCircle, Edit3, Trash2, X, FileDown } from 'lucide-react';
 import { formatMathText } from '../../utils/formatters';
+import GeometryPreview from './GeometryPreview';
+import MathJaxWrapper from '../common/MathJaxWrapper';
+import TikZPreview from '../common/TikZPreview';
+import { generateQuizDocx } from '../../utils/docxGenerator';
 
 interface QuizPreviewProps {
     quiz: Quiz | null;
@@ -107,13 +111,22 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                     Lớp {quiz.classLevel} • {quiz.questions.length} câu • {quiz.timeLimit} phút
                                 </p>
                             </div>
-                            <Button
-                                onClick={onSave}
-                                variant="success"
-                                icon={<Save className="w-4 h-4" />}
-                            >
-                                Lưu đề
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={() => quiz && generateQuizDocx(quiz)}
+                                    variant="secondary"
+                                    icon={<FileDown className="w-4 h-4" />}
+                                >
+                                    Tải file Word
+                                </Button>
+                                <Button
+                                    onClick={onSave}
+                                    variant="success"
+                                    icon={<Save className="w-4 h-4" />}
+                                >
+                                    Lưu đề
+                                </Button>
+                            </div>
                         </div>
 
                         <div className="border-t pt-4 max-h-[500px] overflow-y-auto space-y-4">
@@ -127,7 +140,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                             </span>
                                             <div className="flex-1">
                                                 <p className="text-gray-800 font-medium">
-                                                    {formatMathText((q as any).question || (q as any).mainQuestion || '')}
+                                                    <MathJaxWrapper content={formatMathText((q as any).question || (q as any).mainQuestion || '')} />
                                                 </p>
                                             </div>
                                         </div>
@@ -159,10 +172,12 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                             {((q as any).options || []).map((opt: string, i: number) => {
                                                 const letter = String.fromCharCode(65 + i);
                                                 const isCorrect = letter === (q as any).correctAnswer;
+                                                // Strip existing prefix like "A. ", "B. ", "a. ", "a) "
+                                                const cleanOpt = opt.replace(/^[A-Da-d][.)]\s*/, '');
                                                 return (
                                                     <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${isCorrect ? 'bg-green-100 text-green-800 font-semibold' : 'text-gray-600'}`}>
                                                         <span className={`font-bold ${isCorrect ? 'text-green-700' : 'text-gray-500'}`}>{letter}.</span>
-                                                        <span>{formatMathText(opt)}</span>
+                                                        <span><MathJaxWrapper content={formatMathText(cleanOpt)} /></span>
                                                         {isCorrect && <span className="ml-auto text-green-600">✓</span>}
                                                     </div>
                                                 );
@@ -176,10 +191,12 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                             {((q as any).options || []).map((opt: string, i: number) => {
                                                 const letter = String.fromCharCode(65 + i);
                                                 const isCorrect = ((q as any).correctAnswers || []).includes(letter);
+                                                // Strip existing prefix like "A. ", "B. ", "a. ", "a) "
+                                                const cleanOpt = opt.replace(/^[A-Da-d][.)]\s*/, '');
                                                 return (
                                                     <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${isCorrect ? 'bg-green-100 text-green-800 font-semibold' : 'text-gray-600'}`}>
                                                         <span className={`font-bold ${isCorrect ? 'text-green-700' : 'text-gray-500'}`}>{letter}.</span>
-                                                        <span>{formatMathText(opt)}</span>
+                                                        <span><MathJaxWrapper content={formatMathText(cleanOpt)} /></span>
                                                         {isCorrect && <span className="ml-auto text-green-600">✓</span>}
                                                     </div>
                                                 );
@@ -192,7 +209,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                         <div className="ml-8 space-y-1">
                                             {((q as any).items || []).map((item: any, i: number) => (
                                                 <div key={i} className="flex items-center justify-between px-3 py-1.5 bg-gray-50 rounded-lg text-sm">
-                                                    <span className="text-gray-700">{String.fromCharCode(97 + i)}. {formatMathText(item.statement)}</span>
+                                                    <span className="text-gray-700">{String.fromCharCode(97 + i)}. <MathJaxWrapper content={formatMathText(item.statement)} /></span>
                                                     <span className={`font-bold px-2 py-0.5 rounded ${item.isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                         {item.isCorrect ? 'Đ' : 'S'}
                                                     </span>
@@ -205,7 +222,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                     {q.type === QuestionType.SHORT_ANSWER && (
                                         <div className="ml-8">
                                             <p className="text-sm text-gray-600">
-                                                Đáp án: <span className="font-bold text-green-700">{formatMathText((q as any).correctAnswer)}</span>
+                                                Đáp án: <span className="font-bold text-green-700"><MathJaxWrapper content={formatMathText((q as any).correctAnswer)} /></span>
                                             </p>
                                         </div>
                                     )}
@@ -215,9 +232,9 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                         <div className="ml-8 space-y-1">
                                             {((q as any).pairs || []).map((pair: any, i: number) => (
                                                 <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg text-sm">
-                                                    <span className="text-gray-800 font-medium">{formatMathText(pair.left)}</span>
+                                                    <span className="text-gray-800 font-medium"><MathJaxWrapper content={formatMathText(pair.left)} /></span>
                                                     <span className="text-gray-400">→</span>
-                                                    <span className="text-green-700 font-semibold">{formatMathText(pair.right)}</span>
+                                                    <span className="text-green-700 font-semibold"><MathJaxWrapper content={formatMathText(pair.right)} /></span>
                                                 </div>
                                             ))}
                                         </div>
@@ -226,11 +243,11 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                     {/* DRAG_DROP */}
                                     {q.type === QuestionType.DRAG_DROP && (
                                         <div className="ml-8 space-y-2">
-                                            <p className="text-sm text-gray-600">{formatMathText((q as any).text)}</p>
+                                            <p className="text-sm text-gray-600"><MathJaxWrapper content={formatMathText((q as any).text)} /></p>
                                             <div className="flex flex-wrap gap-2">
                                                 {((q as any).blanks || []).map((blank: string, i: number) => (
                                                     <span key={i} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-medium">
-                                                        {formatMathText(blank)}
+                                                        <MathJaxWrapper content={formatMathText(blank)} />
                                                     </span>
                                                 ))}
                                             </div>
@@ -245,7 +262,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                                     <span className="w-6 h-6 flex items-center justify-center bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
                                                         {i + 1}
                                                     </span>
-                                                    <span className="text-gray-700">{formatMathText(item)}</span>
+                                                    <span className="text-gray-700"><MathJaxWrapper content={formatMathText(item)} /></span>
                                                 </div>
                                             ))}
                                         </div>
@@ -254,16 +271,28 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                     {/* IMAGE_QUESTION */}
                                     {q.type === QuestionType.IMAGE_QUESTION && (
                                         <div className="ml-8 space-y-2">
-                                            {(q as any).image && (
-                                                <img src={(q as any).image} alt="Question" className="max-h-32 rounded-lg border" />
+                                            {(q as any).geometry ? (
+                                                typeof (q as any).geometry === 'string' && (q as any).geometry.includes('\\begin{tikzpicture}') ? (
+                                                    <TikZPreview code={(q as any).geometry} />
+                                                ) : (
+                                                    <GeometryPreview data={(q as any).geometry} />
+                                                )
+                                            ) : (q as any).image && (
+                                                (q as any).image.includes('\\begin{tikzpicture}') ? (
+                                                    <TikZPreview code={(q as any).image} />
+                                                ) : (
+                                                    <img src={(q as any).image} alt="Question" className="max-h-32 rounded-lg border" />
+                                                )
                                             )}
                                             {((q as any).options || []).map((opt: string, i: number) => {
                                                 const letter = String.fromCharCode(65 + i);
                                                 const isCorrect = letter === (q as any).correctAnswer;
+                                                // Strip existing prefix like "A. ", "B. ", "a. ", "a) "
+                                                const cleanOpt = opt.replace(/^[A-Da-d][.)]\s*/, '');
                                                 return (
                                                     <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${isCorrect ? 'bg-green-100 text-green-800 font-semibold' : 'text-gray-600'}`}>
                                                         <span className="font-bold">{letter}.</span>
-                                                        <span>{formatMathText(opt)}</span>
+                                                        <span><MathJaxWrapper content={formatMathText(cleanOpt)} /></span>
                                                         {isCorrect && <span className="ml-auto text-green-600">✓</span>}
                                                     </div>
                                                 );
@@ -274,12 +303,12 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                     {/* DROPDOWN */}
                                     {q.type === QuestionType.DROPDOWN && (
                                         <div className="ml-8 space-y-2">
-                                            <p className="text-sm text-gray-600">{formatMathText((q as any).text)}</p>
+                                            <p className="text-sm text-gray-600"><MathJaxWrapper content={formatMathText((q as any).text)} /></p>
                                             <div className="space-y-1">
                                                 {((q as any).blanks || []).map((blank: any, i: number) => (
                                                     <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg text-sm">
                                                         <span className="text-gray-500">Ô {i + 1}:</span>
-                                                        <span className="font-bold text-green-700">{blank.correctAnswer}</span>
+                                                        <span className="font-bold text-green-700"><MathJaxWrapper content={blank.correctAnswer} /></span>
                                                         <span className="text-gray-400 text-xs">({(blank.options || []).join(', ')})</span>
                                                     </div>
                                                 ))}
@@ -291,7 +320,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                     {q.type === QuestionType.UNDERLINE && (
                                         <div className="ml-8 space-y-2">
                                             <p className="text-sm text-gray-600 mb-2">
-                                                <strong>Câu:</strong> {(q as any).sentence}
+                                                <strong>Câu:</strong> <MathJaxWrapper content={(q as any).sentence} />
                                             </p>
                                             <div className="flex flex-wrap gap-2">
                                                 {((q as any).words || []).map((word: string, i: number) => {
@@ -300,11 +329,11 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                                         <span
                                                             key={i}
                                                             className={`px-2 py-1 rounded text-sm ${isCorrect
-                                                                    ? 'bg-green-100 text-green-800 font-semibold underline'
-                                                                    : 'bg-gray-100 text-gray-600'
+                                                                ? 'bg-green-100 text-green-800 font-semibold underline'
+                                                                : 'bg-gray-100 text-gray-600'
                                                                 }`}
                                                         >
-                                                            {word}
+                                                            <MathJaxWrapper content={word} />
                                                             {isCorrect && <span className="ml-1 text-green-600">✓</span>}
                                                         </span>
                                                     );
