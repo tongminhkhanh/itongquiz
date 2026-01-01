@@ -88,6 +88,9 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
             [QuestionType.MULTIPLE_SELECT]: 'Chọn nhiều',
             [QuestionType.DRAG_DROP]: 'Kéo thả',
             [QuestionType.ORDERING]: 'Sắp xếp',
+            [QuestionType.IMAGE_QUESTION]: 'Có hình',
+            [QuestionType.DROPDOWN]: 'Dropdown',
+            [QuestionType.UNDERLINE]: 'Gạch chân',
         };
         return labels[type] || type;
     };
@@ -245,6 +248,68 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                                     <span className="text-gray-700">{formatMathText(item)}</span>
                                                 </div>
                                             ))}
+                                        </div>
+                                    )}
+
+                                    {/* IMAGE_QUESTION */}
+                                    {q.type === QuestionType.IMAGE_QUESTION && (
+                                        <div className="ml-8 space-y-2">
+                                            {(q as any).image && (
+                                                <img src={(q as any).image} alt="Question" className="max-h-32 rounded-lg border" />
+                                            )}
+                                            {((q as any).options || []).map((opt: string, i: number) => {
+                                                const letter = String.fromCharCode(65 + i);
+                                                const isCorrect = letter === (q as any).correctAnswer;
+                                                return (
+                                                    <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${isCorrect ? 'bg-green-100 text-green-800 font-semibold' : 'text-gray-600'}`}>
+                                                        <span className="font-bold">{letter}.</span>
+                                                        <span>{formatMathText(opt)}</span>
+                                                        {isCorrect && <span className="ml-auto text-green-600">✓</span>}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {/* DROPDOWN */}
+                                    {q.type === QuestionType.DROPDOWN && (
+                                        <div className="ml-8 space-y-2">
+                                            <p className="text-sm text-gray-600">{formatMathText((q as any).text)}</p>
+                                            <div className="space-y-1">
+                                                {((q as any).blanks || []).map((blank: any, i: number) => (
+                                                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg text-sm">
+                                                        <span className="text-gray-500">Ô {i + 1}:</span>
+                                                        <span className="font-bold text-green-700">{blank.correctAnswer}</span>
+                                                        <span className="text-gray-400 text-xs">({(blank.options || []).join(', ')})</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* UNDERLINE */}
+                                    {q.type === QuestionType.UNDERLINE && (
+                                        <div className="ml-8 space-y-2">
+                                            <p className="text-sm text-gray-600 mb-2">
+                                                <strong>Câu:</strong> {(q as any).sentence}
+                                            </p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {((q as any).words || []).map((word: string, i: number) => {
+                                                    const isCorrect = ((q as any).correctWordIndexes || []).includes(i);
+                                                    return (
+                                                        <span
+                                                            key={i}
+                                                            className={`px-2 py-1 rounded text-sm ${isCorrect
+                                                                    ? 'bg-green-100 text-green-800 font-semibold underline'
+                                                                    : 'bg-gray-100 text-gray-600'
+                                                                }`}
+                                                        >
+                                                            {word}
+                                                            {isCorrect && <span className="ml-1 text-green-600">✓</span>}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     )}
 

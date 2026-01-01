@@ -3,10 +3,10 @@ export const SCHOOL_NAME = "Trường Tiểu học Ít Ong";
 // --- CONFIGURATION ---
 // Replace these with your actual Google Sheet ID and GIDs
 export const GOOGLE_SHEET_ID = '1mrqbJ3Xzj4CBF_B2vyI7-ANLaVPAfWCe_TdmCd9_gx4';
-export const QUIZ_GID = '0'; // Default first sheet
-export const QUESTION_GID = '1395660327';
-export const TEACHER_GID = '1482913865';
-export const RESULTS_GID = '1960978030';
+export const QUIZ_GID = '130202697'; // Quizzes sheet
+export const QUESTION_GID = '306226482'; // Questions sheet
+export const TEACHER_GID = '1020504406'; // Teachers sheet
+export const RESULTS_GID = '766571865'; // Results sheet
 export const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyTJML5cetenuycWKo_u-05SfOvAwoOh6iRNh1cZZN98jyvcBdtAXlEhpZXZmu5A7fnRw/exec';
 
 // Danh mục quiz cho học sinh

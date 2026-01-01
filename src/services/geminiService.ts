@@ -33,7 +33,10 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     'MATCHING': 'MATCHING (Nối các ý ở cột A với cột B. ⚠️ BẮT BUỘC: Cột A (left) và Cột B (right) PHẢI CÓ CÙNG SỐ LƯỢNG mục, thường là 3-4 cặp. Mỗi mục ở cột A chỉ nối với 1 mục ở cột B)',
     'MULTIPLE_SELECT': 'MULTIPLE_SELECT (Chọn TẤT CẢ các đáp án đúng, có thể 2-3 đáp án đúng trong 4 lựa chọn, correctAnswers là mảng như ["A", "C"])',
     'DRAG_DROP': 'DRAG_DROP (⚠️ NHẬN DIỆN: Câu hỏi có dạng "điền từ vào chỗ trống", "điền từ thích hợp", "điền vào (...)", "chọn từ trong ngoặc điền vào". CÁCH TẠO: question chứa đề bài gốc + danh sách từ cho sẵn, text chứa đoạn văn/thơ với từ ĐÚNG đã điền trong [ngoặc vuông], blanks là mảng các từ đúng, distractors là mảng các từ còn lại không dùng. VD: đề "Điền từ (suối,đồng,xoan) vào: Mưa giăng trên... Hoa... theo gió" → text: "Mưa giăng trên [đồng]. Hoa [xoan] theo gió", blanks: ["đồng","xoan"], distractors: ["suối"])',
-    'ORDERING': 'ORDERING (Sắp xếp thứ tự câu trong đoạn văn. ⚠️ BẮT BUỘC: Phải TÌM KIẾM đoạn văn THẬT từ sách giáo khoa, truyện cổ tích Việt Nam, bài thơ, bài văn mẫu - KHÔNG ĐƯỢC TỰ BỊA. Đoạn văn 4-5 câu ngắn gọn, phù hợp lứa tuổi. items là mảng các câu ĐÃ XÁO TRỘN, correctOrder là mảng chỉ thứ tự đúng. VD: items=["Câu 2","Câu 1","Câu 3"], correctOrder=[1,0,2] nghĩa là items[1] đứng đầu, items[0] đứng 2, items[2] đứng 3. Nên lấy từ: truyện Tấm Cám, Thạch Sanh, Sọ Dừa, thơ Trần Đăng Khoa, Võ Quảng...)'
+    'ORDERING': 'ORDERING (Sắp xếp thứ tự câu trong đoạn văn. ⚠️ BẮT BUỘC: Phải TÌM KIẾM đoạn văn THẬT từ sách giáo khoa, truyện cổ tích Việt Nam, bài thơ, bài văn mẫu - KHÔNG ĐƯỢC TỰ BỊA. Đoạn văn 4-5 câu ngắn gọn, phù hợp lứa tuổi. items là mảng các câu ĐÃ XÁO TRỘN, correctOrder là mảng chỉ thứ tự đúng. VD: items=["Câu 2","Câu 1","Câu 3"], correctOrder=[1,0,2] nghĩa là items[1] đứng đầu, items[0] đứng 2, items[2] đứng 3. Nên lấy từ: truyện Tấm Cám, Thạch Sanh, Sọ Dừa, thơ Trần Đăng Khoa, Võ Quảng...)',
+    'IMAGE_QUESTION': 'IMAGE_QUESTION (Câu hỏi trắc nghiệm CÓ HÌNH ẢNH minh họa BẮT BUỘC. ⚠️ QUAN TRỌNG: Trường "image" là BẮT BUỘC - phải là URL hình ảnh từ internet hoặc từ thư viện hình đã upload. Format: {"type": "IMAGE_QUESTION", "question": "Dựa vào hình bên, ...", "image": "URL_HOẶC_ID_HÌNH", "options": ["A...", "B...", "C...", "D..."], "correctAnswer": "A"}. Dùng cho câu hỏi cần quan sát hình: đếm số, nhận diện hình, so sánh hình, tìm quy luật trong hình...)',
+    'DROPDOWN': 'DROPDOWN (Câu hỏi điền vào chỗ trống bằng DROPDOWN. Format: {"type": "DROPDOWN", "question": "Chọn từ đúng điền vào chỗ trống", "text": "Thủ đô Việt Nam là [1]. Dân số khoảng [2] triệu người.", "blanks": [{"id": "blank-1", "options": ["Hà Nội", "TP.HCM", "Đà Nẵng"], "correctAnswer": "Hà Nội"}, {"id": "blank-2", "options": ["90", "100", "80"], "correctAnswer": "100"}]}. Trong text dùng [1], [2]... để đánh dấu vị trí dropdown. Mảng blanks chứa các dropdown tương ứng với options và correctAnswer)',
+    'UNDERLINE': 'UNDERLINE (Câu hỏi gạch chân từ/cụm từ trong câu. Học sinh click vào từ để gạch chân. Format: {"type": "UNDERLINE", "question": "Gạch chân động từ trong câu sau", "sentence": "Mặt trời ngả nắng đằng tây", "words": ["Mặt trời", "ngả", "nắng", "đằng tây"], "correctWordIndexes": [1]}. Lưu ý: words là mảng các từ/cụm từ tách ra từ sentence. correctWordIndexes là mảng index các từ cần gạch chân (0-indexed). VD: Với câu trên, "ngả" ở index 1 là động từ cần gạch chân.)'
   };
 
   const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');
@@ -156,6 +159,42 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
        - Phép chia: Viết có khoảng cách (ví dụ: 10 / 2, 15 / 3).
        - Phép nhân: Viết có khoảng cách (ví dụ: 5 * 3).
     
+    📐 QUY TẮC LATEX CHO CÔNG THỨC TOÁN HỌC (QUAN TRỌNG):
+    Khi câu hỏi có công thức toán học phức tạp, PHẢI dùng cú pháp LaTeX:
+    - Phân số: $\\frac{a}{b}$ (ví dụ: $\\frac{1}{2}$, $\\frac{3}{4}$)
+    - Lũy thừa: $x^n$ (ví dụ: $2^3$, $x^2$, $10^5$)
+    - Chỉ số dưới: $x_n$ (ví dụ: $a_1$, $x_n$)
+    - Căn bậc hai: $\\sqrt{x}$ (ví dụ: $\\sqrt{4}$, $\\sqrt{16}$)
+    - Căn bậc n: $\\sqrt[n]{x}$ (ví dụ: $\\sqrt[3]{8}$)
+    - Pi: $\\pi$
+    - Nhân: $\\times$ hoặc $\\cdot$
+    - Chia: $\\div$
+    - Lớn hơn hoặc bằng: $\\geq$
+    - Nhỏ hơn hoặc bằng: $\\leq$
+    - Không bằng: $\\neq$
+    - Tổng: $\\sum_{i=1}^{n}$
+    - Tích phân: $\\int_{a}^{b}$
+    - Góc: $\\angle ABC$
+    - Độ: $90^\\circ$
+    - Tam giác: $\\triangle ABC$
+    - Song song: $\\parallel$
+    - Vuông góc: $\\perp$
+    
+    ⚠️ LƯU Ý LATEX - QUAN TRỌNG:
+    - LUÔN dùng inline math $...$ để công thức CÙNG DÒNG với câu hỏi
+    - KHÔNG dùng display math $$...$$ (sẽ làm công thức xuống dòng riêng)
+    - VÍ DỤ ĐÚNG: "Rút gọn kết quả của $\\\\frac{2}{6} + \\\\frac{1}{3}$?"
+    - VÍ DỤ SAI: "Rút gọn kết quả của $$\\\\frac{2}{6} + \\\\frac{1}{3}$$?"
+    - LUÔN escape dấu backslash trong JSON: dùng \\\\\\\\ thay vì \\\\
+    
+    🎨 HÌNH MINH HỌA - SVG GEOMETRY (Cho câu hỏi hình học):
+    Khi câu hỏi CẦN HÌNH VẼ (tam giác, hình vuông, đường tròn), thêm trường "geometry":
+    
+    📐 TAM GIÁC: {"type": "triangle", "vertices": [{"x": 20, "y": 20, "label": "A"}, {"x": 180, "y": 20, "label": "B"}, {"x": 100, "y": 160, "label": "C"}], "measurements": {"AB": "5cm"}}
+    ⬜ HÌNH VUÔNG: {"type": "square", "vertices": [{"x": 30, "y": 30, "label": "A"}, {"x": 150, "y": 30, "label": "B"}, {"x": 150, "y": 150, "label": "C"}, {"x": 30, "y": 150, "label": "D"}]}
+    ⭕ ĐƯỜNG TRÒN: {"type": "circle", "circles": [{"center": {"x": 100, "y": 100}, "radius": 60, "label": "O", "radiusLabel": "r = 5cm"}]}
+    📏 ĐOẠN THẲNG: {"type": "line", "lines": [{"from": {"x": 20, "y": 100, "label": "A"}, "to": {"x": 180, "y": 100, "label": "B"}, "label": "6cm"}]}
+    
     ⚠️ KIỂM TRA LẦN CUỐI: Đếm lại số câu hỏi trước khi trả về. Nếu không đúng ${count} câu, hãy điều chỉnh.
   `;
 };
@@ -242,7 +281,7 @@ const generateWithPerplexity = async (
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${apiKey} `,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(requestBody)
@@ -259,7 +298,7 @@ const generateWithPerplexity = async (
       throw new Error("Đã vượt quá giới hạn request. Vui lòng đợi một chút rồi thử lại.");
     }
 
-    throw new Error(`Lỗi Perplexity API (${response.status}): ${errorData.error?.message || response.statusText}`);
+    throw new Error(`Lỗi Perplexity API(${response.status}): ${errorData.error?.message || response.statusText} `);
   }
 
   const data = await response.json();

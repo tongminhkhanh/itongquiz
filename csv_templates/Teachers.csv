@@ -1,0 +1,3 @@
+id,name,email,password,createdAt
+teacher_001,Nguyễn Văn A,nguyenvana@school.edu.vn,password123,2026-01-01T10:00:00Z
+teacher_002,Trần Thị B,tranthib@school.edu.vn,password456,2026-01-01T10:00:00Z

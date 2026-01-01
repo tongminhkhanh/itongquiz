@@ -50,7 +50,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                 <div className="flex items-start mb-2">
                                     <span className="bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded mr-2 mt-0.5">Câu {idx + 1}</span>
                                     <div>
-                                        {q.type === QuestionType.TRUE_FALSE || q.type === QuestionType.MATCHING ? (
+                                        {q.type === QuestionType.TRUE_FALSE ? (
                                             <p className="font-medium text-gray-800">{q.mainQuestion}</p>
                                         ) : (
                                             <p className="font-medium text-gray-800">{(q as any).question}</p>
@@ -72,16 +72,29 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                     {/* MCQ Review */}
                                     {q.type === QuestionType.MCQ && (() => {
                                         const isCorrect = answers[q.id] === q.correctAnswer;
+                                        const correctIndex = ['A', 'B', 'C', 'D'].indexOf(q.correctAnswer);
+                                        const correctOptionText = q.options[correctIndex] || q.correctAnswer;
                                         return (
                                             <div>
                                                 <p className={isCorrect ? "text-green-600 font-bold" : "text-red-500 font-bold"}>
                                                     Em chọn: {answers[q.id] || "Không trả lời"}
                                                 </p>
                                                 {!isCorrect && (
-                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                                        <p className="text-blue-800 text-sm">
-                                                            💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy xem lại kiến thức phần này nhé!"}
-                                                        </p>
+                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                                                        <div className="flex items-start">
+                                                            <span className="text-green-600 font-bold mr-2">✓</span>
+                                                            <p className="text-green-700">
+                                                                <strong>Đáp án đúng:</strong> {q.correctAnswer}. {correctOptionText}
+                                                            </p>
+                                                        </div>
+                                                        <div className="border-t border-blue-200 pt-2">
+                                                            <p className="text-blue-800 text-sm">
+                                                                💡 <strong>Hướng dẫn giải:</strong>
+                                                            </p>
+                                                            <p className="text-blue-700 text-sm mt-1">
+                                                                {(q as any).explanation || `Câu hỏi: "${formatText((q as any).question)}". Đáp án đúng là "${correctOptionText}". Em hãy đọc lại câu hỏi và so sánh các đáp án để hiểu tại sao đáp án này đúng nhé!`}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 )}
                                                 {isCorrect && <span className="text-green-600">✓ Chính xác!</span>}
@@ -91,18 +104,30 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
 
                                     {/* Short Answer Review */}
                                     {q.type === QuestionType.SHORT_ANSWER && (() => {
-                                        const correctAns = (q.correctAnswer || "").toString().toLowerCase();
-                                        const isCorrect = (answers[q.id] || "").toString().toLowerCase() === correctAns;
+                                        const correctAns = (q.correctAnswer || "").toString();
+                                        const studentAns = (answers[q.id] || "").toString();
+                                        const isCorrect = studentAns.toLowerCase() === correctAns.toLowerCase();
                                         return (
                                             <div>
                                                 <p className={isCorrect ? "text-green-600 font-bold" : "text-red-500 font-bold"}>
-                                                    Em ghi: {answers[q.id] || "..."}
+                                                    Em ghi: {studentAns || "(Không trả lời)"}
                                                 </p>
                                                 {!isCorrect && (
-                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                                        <p className="text-blue-800 text-sm">
-                                                            💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy tính toán lại cẩn thận nhé!"}
-                                                        </p>
+                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                                                        <div className="flex items-start">
+                                                            <span className="text-green-600 font-bold mr-2">✓</span>
+                                                            <p className="text-green-700">
+                                                                <strong>Đáp án đúng:</strong> {correctAns}
+                                                            </p>
+                                                        </div>
+                                                        <div className="border-t border-blue-200 pt-2">
+                                                            <p className="text-blue-800 text-sm">
+                                                                💡 <strong>Hướng dẫn giải:</strong>
+                                                            </p>
+                                                            <p className="text-blue-700 text-sm mt-1">
+                                                                {(q as any).explanation || `Từ câu hỏi "${formatText((q as any).question)}", em cần tính/suy luận để ra kết quả là "${correctAns}". Hãy kiểm tra lại từng bước tính toán của mình nhé!`}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 )}
                                                 {isCorrect && <span className="text-green-600">✓ Chính xác!</span>}
@@ -133,10 +158,34 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                 const itemKey = item.id || `item-${idx}`;
                                                 return answers[q.id]?.[itemKey] !== item.isCorrect;
                                             }) && (
-                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                                        <p className="text-blue-800 text-sm">
-                                                            💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy đọc kỹ lại các phát biểu nhé!"}
-                                                        </p>
+                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                                                        <p className="text-blue-800 text-sm font-bold">💡 Hướng dẫn giải:</p>
+                                                        <div className="text-sm space-y-1">
+                                                            {(q.items || []).map((item, idx) => {
+                                                                const itemKey = item.id || `item-${idx}`;
+                                                                const studentVal = answers[q.id]?.[itemKey];
+                                                                const isItemCorrect = studentVal === item.isCorrect;
+                                                                if (isItemCorrect) return null;
+                                                                return (
+                                                                    <div key={itemKey} className="bg-white p-2 rounded border-l-4 border-blue-400">
+                                                                        <p className="text-gray-700">
+                                                                            <span className="font-medium">"{formatText(item.statement)}"</span>
+                                                                        </p>
+                                                                        <p className="text-blue-700 mt-1">
+                                                                            → Đáp án đúng là <strong>{item.isCorrect ? "ĐÚNG" : "SAI"}</strong>.
+                                                                            {item.isCorrect
+                                                                                ? " Phát biểu này hoàn toàn chính xác theo nội dung bài học."
+                                                                                : " Phát biểu này không đúng, em cần xem lại kiến thức liên quan."}
+                                                                        </p>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                        {(q as any).explanation && (
+                                                            <p className="text-blue-700 text-sm border-t border-blue-200 pt-2">
+                                                                📝 {(q as any).explanation}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 )}
                                         </div>
@@ -166,9 +215,19 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                     );
                                                 })}
                                                 {hasIncorrect && (
-                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                                        <p className="text-blue-800 text-sm">
-                                                            💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy xem lại mối quan hệ giữa các cột nhé!"}
+                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                                                        <p className="text-blue-800 text-sm font-bold">💡 Hướng dẫn giải:</p>
+                                                        <div className="text-sm space-y-1">
+                                                            {incorrectPairs.map(pair => (
+                                                                <div key={pair.left} className="bg-white p-2 rounded border-l-4 border-green-400">
+                                                                    <p className="text-green-700">
+                                                                        ✓ <strong>{formatText(pair.left)}</strong> → <strong>{formatText(pair.right)}</strong>
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <p className="text-blue-700 text-sm border-t border-blue-200 pt-2">
+                                                            📝 {(q as any).explanation || "Hãy ghi nhớ mối liên hệ giữa các cặp trên. Mỗi phần tử bên trái chỉ nối với đúng một phần tử bên phải."}
                                                         </p>
                                                     </div>
                                                 )}
@@ -192,10 +251,31 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                 {isCorrect ? (
                                                     <span className="text-green-600 font-bold text-sm">✓ Chính xác!</span>
                                                 ) : (
-                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                                        <p className="text-blue-800 text-sm">
-                                                            💡 <strong>Hướng dẫn giải:</strong> {(q as any).explanation || "Hãy kiểm tra kỹ từng lựa chọn nhé!"}
-                                                        </p>
+                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                                                        <div className="flex items-start">
+                                                            <span className="text-green-600 font-bold mr-2">✓</span>
+                                                            <div>
+                                                                <p className="text-green-700 font-bold">Đáp án đúng:</p>
+                                                                <ul className="list-disc list-inside text-green-700 text-sm">
+                                                                    {correctAns.map((ans: string) => {
+                                                                        const optIdx = ['A', 'B', 'C', 'D'].indexOf(ans);
+                                                                        return (
+                                                                            <li key={ans}>
+                                                                                {ans}. {q.options[optIdx] || ans}
+                                                                            </li>
+                                                                        );
+                                                                    })}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                        <div className="border-t border-blue-200 pt-2">
+                                                            <p className="text-blue-800 text-sm">
+                                                                💡 <strong>Hướng dẫn giải:</strong>
+                                                            </p>
+                                                            <p className="text-blue-700 text-sm mt-1">
+                                                                {(q as any).explanation || `Câu hỏi này có ${correctAns.length} đáp án đúng. Em cần chọn tất cả các đáp án: ${correctAns.join(', ')}. Hãy đọc kỹ từng lựa chọn và kiểm tra xem chúng có thỏa mãn yêu cầu của đề bài không.`}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>

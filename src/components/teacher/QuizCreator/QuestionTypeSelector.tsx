@@ -15,6 +15,9 @@ const QUESTION_TYPE_CONFIG = [
     { type: QuestionType.MULTIPLE_SELECT, label: 'Chọn nhiều', emoji: '☑️' },
     { type: QuestionType.DRAG_DROP, label: 'Kéo thả', emoji: '🎯' },
     { type: QuestionType.ORDERING, label: 'Sắp xếp thứ tự', emoji: '🔢' },
+    { type: QuestionType.IMAGE_QUESTION, label: 'Câu hỏi hình', emoji: '🖼️' },
+    { type: QuestionType.DROPDOWN, label: 'Dropdown', emoji: '🔽' },
+    { type: QuestionType.UNDERLINE, label: 'Gạch chân', emoji: '✏️' },
 ];
 
 interface QuestionTypeSelectorProps {

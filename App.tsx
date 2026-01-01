@@ -39,37 +39,7 @@ const App: React.FC = () => {
         }
     }, []);
 
-    // Seed data if empty (only once)
-    useEffect(() => {
-        if (!quizStore.isLoading && quizStore.quizzes.length === 0) {
-            const seedQuiz: Quiz = {
-                id: 'demo-1',
-                title: 'Ôn tập Khoa học lớp 3: Không khí và Nước',
-                classLevel: '3',
-                timeLimit: 30,
-                createdAt: new Date().toISOString(),
-                questions: [
-                    {
-                        id: 'q1', type: QuestionType.MCQ, question: 'Không khí gồm những khí nào?',
-                        options: ['Oxy và Nitrogen', 'Chỉ Oxy', 'Chỉ Nitrogen', 'Khí Cacbon dioxit'],
-                        correctAnswer: 'A'
-                    },
-                    {
-                        id: 'q2', type: QuestionType.TRUE_FALSE, mainQuestion: 'Về nước:',
-                        items: [
-                            { id: 'i1', statement: 'Nước không có màu, không có mùi', isCorrect: true },
-                            { id: 'i2', statement: 'Nước chiếm 3/4 bề mặt Trái Đất', isCorrect: true }
-                        ]
-                    },
-                    {
-                        id: 'q3', type: QuestionType.SHORT_ANSWER, question: 'Nước sôi ở bao nhiêu độ C?', correctAnswer: '100'
-                    }
-                ]
-            };
-            quizStore.addQuiz(seedQuiz);
-        }
-    }, [quizStore.isLoading, quizStore.quizzes.length]);
-
+    // Effect to handle deep linking once quizzes are loaded
     // Effect to handle deep linking once quizzes are loaded
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
