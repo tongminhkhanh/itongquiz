@@ -153,9 +153,35 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         if (answers[q.id] === q.correctAnswer) correctCount++;
       } else if (q.type === QuestionType.SHORT_ANSWER) {
         totalItems++;
-        const studentAns = (answers[q.id] || "").toString().trim().toLowerCase();
-        const correctAns = q.correctAnswer.toString().trim().toLowerCase();
-        if (studentAns === correctAns) correctCount++;
+        const questionText = (q as any).question || "";
+        const hasInlineBlanks = /\[blank\]|\[_+\]|_{3,}|\[\d+\]/.test(questionText);
+
+        if (hasInlineBlanks) {
+          // Inline blanks mode: check each blank
+          const studentAns = (answers[q.id] as Record<number, string>) || {};
+          const correctAnswers = (q as any).correctAnswers || []; // Array of correct answers
+          let allCorrect = true;
+
+          for (let i = 0; i < correctAnswers.length; i++) {
+            const studentVal = (studentAns[i] || "").toString().trim().toLowerCase();
+            const correctVal = correctAnswers[i].toString().trim().toLowerCase();
+            // Support multiple correct answers separated by |
+            const correctOptions = correctVal.split('|').map((s: string) => s.trim());
+            if (!correctOptions.includes(studentVal)) {
+              allCorrect = false;
+              break;
+            }
+          }
+
+          if (allCorrect && correctAnswers.length > 0) correctCount++;
+        } else {
+          // Legacy mode: single answer
+          const studentAns = (answers[q.id] || "").toString().trim().toLowerCase();
+          const correctAns = q.correctAnswer.toString().trim().toLowerCase();
+          // Support multiple correct answers separated by |
+          const correctOptions = correctAns.split('|').map((s: string) => s.trim());
+          if (correctOptions.includes(studentAns)) correctCount++;
+        }
       } else if (q.type === QuestionType.TRUE_FALSE) {
         totalItems++;
         let allSubItemsCorrect = true;
@@ -338,6 +364,18 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       // Kiểm tra có chọn ít nhất 1 từ
       const selectedIndexes = (answers[q.id] as number[]) || [];
       return selectedIndexes.length > 0;
+    } else if (q.type === QuestionType.SHORT_ANSWER) {
+      // Check for inline blanks
+      const questionText = (q as any).question || "";
+      const hasInlineBlanks = /\[blank\]|\[_+\]|_{3,}|\[\d+\]/.test(questionText);
+      if (hasInlineBlanks) {
+        const parts = questionText.split(/(\[blank\]|\[_+\]|_{3,}|\[\d+\])/g);
+        const blankCount = parts.filter((p: string) => /^\[blank\]$|\[_+\]$|^_{3,}$|^\[\d+\]$/.test(p)).length;
+        const currentAnswers = (answers[q.id] as Record<number, string>) || {};
+        const filledCount = Object.values(currentAnswers).filter(v => v).length;
+        return filledCount >= blankCount;
+      }
+      return !!answers[q.id];
     }
     return !!answers[q.id];
   };

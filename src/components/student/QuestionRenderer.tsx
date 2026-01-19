@@ -119,21 +119,76 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                     </div>
                 )}
 
-                {/* Short Answer */}
-                {q.type === QuestionType.SHORT_ANSWER && (
-                    <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300">
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Trả lời:</label>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="text"
-                                value={answers[q.id] || ''}
-                                onChange={(e) => onAnswerChange(q.id, e.target.value)}
-                                className="flex-1 p-2 border-b-2 border-gray-400 bg-transparent focus:border-orange-500 outline-none font-mono text-lg"
-                                placeholder="Nhập đáp án..."
-                            />
-                        </div>
-                    </div>
-                )}
+                {/* Short Answer - hỗ trợ cả legacy và inline blank */}
+                {q.type === QuestionType.SHORT_ANSWER && (() => {
+                    const questionText = (q as any).question || "";
+                    // Check if question has inline blanks: [blank], _____, [1], [2], etc.
+                    const hasInlineBlanks = /\[blank\]|\[_+\]|_{3,}|\[\d+\]/.test(questionText);
+
+                    if (hasInlineBlanks) {
+                        // Mode 2: Inline blanks - render input boxes inline with text
+                        const parts = questionText.split(/(\[blank\]|\[_+\]|_{3,}|\[\d+\])/g);
+                        let blankIndex = 0;
+                        const currentAnswers = (answers[q.id] as Record<number, string>) || {};
+
+                        return (
+                            <div className="space-y-4">
+                                <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                    {parts.map((part, idx) => {
+                                        if (/^\[blank\]$|\[_+\]$|^_{3,}$|^\[\d+\]$/.test(part)) {
+                                            const currentIdx = blankIndex;
+                                            blankIndex++;
+                                            return (
+                                                <input
+                                                    key={idx}
+                                                    type="text"
+                                                    value={currentAnswers[currentIdx] || ''}
+                                                    onChange={(e) => {
+                                                        const newAnswers = { ...currentAnswers };
+                                                        newAnswers[currentIdx] = e.target.value;
+                                                        onAnswerChange(q.id, newAnswers);
+                                                    }}
+                                                    className="inline-block w-28 mx-1 px-3 py-1.5 border-2 border-gray-300 rounded-lg bg-gray-50 text-center font-medium focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition-all"
+                                                    placeholder="..."
+                                                />
+                                            );
+                                        }
+                                        return <span key={idx}>{formatMathText(part)}</span>;
+                                    })}
+                                </div>
+
+                                {/* Show filled count */}
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-500">
+                                        Đã điền: {Object.values(currentAnswers).filter(v => v).length}/{blankIndex}
+                                    </span>
+                                    <button
+                                        onClick={() => onAnswerChange(q.id, {})}
+                                        className="text-red-500 hover:underline flex items-center gap-1"
+                                    >
+                                        <RefreshCcw className="w-3 h-3" /> Xóa tất cả
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    } else {
+                        // Mode 1: Legacy single input
+                        return (
+                            <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300">
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Trả lời:</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={answers[q.id] || ''}
+                                        onChange={(e) => onAnswerChange(q.id, e.target.value)}
+                                        className="flex-1 p-2 border-b-2 border-gray-400 bg-transparent focus:border-orange-500 outline-none font-mono text-lg"
+                                        placeholder="Nhập đáp án..."
+                                    />
+                                </div>
+                            </div>
+                        );
+                    }
+                })()}
 
                 {/* True/False */}
                 {q.type === QuestionType.TRUE_FALSE && (
