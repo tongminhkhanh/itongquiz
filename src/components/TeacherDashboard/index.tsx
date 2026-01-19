@@ -1,7 +1,7 @@
 import React, { useState, Suspense } from 'react';
 import { Quiz } from '../../types';
 import { Tabs, TabItem, Button, ErrorBoundary } from '../common';
-import { LogOut, FileText, List, Settings, Bot, Key, X, Save, Loader2, FileUp } from 'lucide-react';
+import { LogOut, FileText, List, Settings, Bot, Key, X, Save, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
 
@@ -9,7 +9,7 @@ import { useQuizStore } from '../../../stores/quizStore';
 const ResultsTab = React.lazy(() => import('./ResultsTab'));
 const ManageTab = React.lazy(() => import('./ManageTab'));
 const CreateTab = React.lazy(() => import('./CreateTab'));
-const PdfTab = React.lazy(() => import('./PdfTab'));
+
 
 const TeacherDashboard: React.FC = () => {
     // --- STORES ---
@@ -36,7 +36,6 @@ const TeacherDashboard: React.FC = () => {
         { id: 'results', label: 'Kết quả', icon: <FileText className="w-4 h-4" /> },
         { id: 'manage', label: 'Quản lý đề', icon: <List className="w-4 h-4" /> },
         { id: 'create', label: 'Tạo đề mới', icon: <Settings className="w-4 h-4" /> },
-        { id: 'pdfCreate', label: 'Tạo đề PDF', icon: <FileUp className="w-4 h-4" /> },
     ];
 
     const tabs = authStore.isAdmin ? allTabs : allTabs.filter(tab => tab.id === 'results');
@@ -150,14 +149,7 @@ const TeacherDashboard: React.FC = () => {
                             />
                         )}
 
-                        {activeTab === 'pdfCreate' && (
-                            <PdfTab
-                                onSaveQuiz={quizStore.createQuiz}
-                                onSuccess={() => {
-                                    setActiveTab('manage');
-                                }}
-                            />
-                        )}
+
                     </Suspense>
                 </ErrorBoundary>
             </main>
