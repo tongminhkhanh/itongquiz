@@ -14,11 +14,10 @@ interface PdfTabProps {
 // Step enum for the workflow
 type Step = 'upload' | 'edit' | 'preview';
 
-// AI Providers for quiz generation (excluding native-ocr which is OCR only)
+// AI Providers for quiz generation
 const QUIZ_GEN_PROVIDERS = [
-    { id: 'gemini', name: 'Google Gemini', description: '2.0 Flash (Miễn phí)' },
     { id: 'perplexity', name: 'Perplexity', description: 'Sonar model' },
-    { id: 'llm-mux', name: 'LLM-Mux', description: 'Local proxy' },
+    { id: 'llm-mux', name: 'AI Client Pro', description: 'Multi-Model (Gemini/Claude/OpenAI)' },
 ];
 
 // Question type options for selection
@@ -77,11 +76,11 @@ const PdfTab: React.FC<PdfTabProps> = ({ onSaveQuiz, onSuccess }) => {
 
     // AI Provider states
     const [aiProvider, setAiProvider] = useState<AIProvider>(() =>
-        (localStorage.getItem('ai_provider') as AIProvider) || 'gemini'
+        (localStorage.getItem('ai_provider') as AIProvider) || 'llm-mux'
     );
     // Separate AI provider for quiz generation (step 2)
     const [genAiProvider, setGenAiProvider] = useState<AIProvider>(() =>
-        (localStorage.getItem('gen_ai_provider') as AIProvider) || 'gemini'
+        (localStorage.getItem('gen_ai_provider') as AIProvider) || 'llm-mux'
     );
 
     // Save state
@@ -155,9 +154,9 @@ const PdfTab: React.FC<PdfTabProps> = ({ onSaveQuiz, onSuccess }) => {
             return;
         }
 
-        // Check if using supported provider for OCR (Gemini, LLM-Mux, or Native OCR)
-        if (aiProvider !== 'gemini' && aiProvider !== 'llm-mux' && aiProvider !== 'native-ocr') {
-            setError('Chức năng trích xuất văn bản từ PDF chỉ hỗ trợ với Gemini, LLM-Mux hoặc Native OCR. Vui lòng chọn một trong các provider này.');
+        // Check if using supported provider for OCR (LLM-Mux or Perplexity)
+        if (aiProvider !== 'llm-mux' && aiProvider !== 'perplexity') {
+            setError('Chức năng trích xuất văn bản từ PDF chỉ hỗ trợ với AI Client Pro hoặc Perplexity. Vui lòng chọn một trong các provider này.');
             return;
         }
 
