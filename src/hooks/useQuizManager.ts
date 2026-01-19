@@ -76,10 +76,19 @@ export const useQuizManager = ({ quizzes, onDelete }: UseQuizManagerProps): UseQ
 
     // Handle delete
     const handleDelete = useCallback(async (quizId: string) => {
-        if (!onDelete) return;
+        if (!onDelete) {
+            alert('Chức năng xóa chưa được cấu hình.');
+            return;
+        }
 
         if (window.confirm('Bạn có chắc chắn muốn xóa bài kiểm tra này?')) {
-            await onDelete(quizId);
+            try {
+                await onDelete(quizId);
+                alert('Đã xóa bài kiểm tra thành công!');
+            } catch (error: any) {
+                console.error('Delete quiz error:', error);
+                alert('Lỗi khi xóa: ' + (error.message || 'Không thể xóa bài kiểm tra. Vui lòng thử lại.'));
+            }
         }
     }, [onDelete]);
 

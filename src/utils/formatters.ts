@@ -72,7 +72,14 @@ export const formatMathText = (text: string | any): string => {
     result = result.replace(/sqrt\{([^}]+)\}/g, '√($1)');
     result = result.replace(/sqrt(\d+)/g, '√$1');
 
-    // Fix "frac" (from \frac) - convert to readable format if not in math mode
+    // Fix "frac" (from \frac) - convert broken patterns to proper LaTeX
+    // Pattern 1: "frac12" -> "$\\frac{1}{2}$" (single digit numerator and denominator)
+    result = result.replace(/\bfrac(\d)(\d+)\b/g, '$\\frac{$1}{$2}$');
+    // Pattern 2: "frac{1}{2}" missing backslash -> "$\\frac{1}{2}$"
+    result = result.replace(/\bfrac\{([^}]+)\}\{([^}]+)\}/g, '$\\frac{$1}{$2}$');
+    // Pattern 3: Handle multiple fracs in one expression like "frac12 + frac13"
+    // Already handled by pattern 1 above
+
     // Note: If inside $...$, MathJax handles it. But sometimes it's outside.
     // We'll leave \frac for MathJax if it looks like valid LaTeX, but fix broken ones if needed.
 

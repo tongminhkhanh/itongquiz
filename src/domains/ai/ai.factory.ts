@@ -50,7 +50,7 @@ export const createProvider = (config: CreateProviderConfig): IAIProvider => {
             return new OpenAIProvider(apiKey, 'openai', 'https://api.openai.com/v1', model);
 
         case 'llm-mux':
-            const muxBaseUrl = baseUrl || 'http://localhost:8317/v1';
+            const muxBaseUrl = baseUrl || 'http://localhost:3000/v1';
             return new OpenAIProvider(apiKey || 'sk-dummy-key', 'llm-mux', muxBaseUrl, model);
 
         default:
