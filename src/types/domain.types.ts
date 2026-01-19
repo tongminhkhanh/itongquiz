@@ -15,6 +15,7 @@ export enum QuestionType {
     IMAGE_QUESTION = 'IMAGE_QUESTION', // Câu hỏi có hình vẽ bắt buộc
     DROPDOWN = 'DROPDOWN', // Câu hỏi điền dropdown
     UNDERLINE = 'UNDERLINE', // Câu hỏi gạch chân từ/cụm từ
+    CATEGORIZATION = 'CATEGORIZATION', // Kéo thả phân loại vào nhóm
 }
 
 export interface MCQQuestion {
@@ -147,7 +148,32 @@ export interface UnderlineQuestion {
     explanation?: string;
 }
 
-export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion;
+// Category group for categorization question
+export interface CategoryGroup {
+    id: string;
+    name: string; // Tên nhóm, ví dụ: "Câu thơ sử dụng biện pháp so sánh"
+}
+
+// Item cần phân loại
+export interface CategorizationItem {
+    id: string;
+    content: string; // Nội dung item, ví dụ: "Bão giăng giằng mặt biển..."
+    categoryId: string; // ID của category đúng (rỗng nếu không thuộc nhóm nào)
+}
+
+// Categorization Question - Kéo thả phân loại vào nhóm
+export interface CategorizationQuestion {
+    id: string;
+    type: QuestionType.CATEGORIZATION;
+    question: string; // "Hãy xếp các câu thơ sau vào nhóm thích hợp"
+    categories: CategoryGroup[]; // Các nhóm/danh mục
+    items: CategorizationItem[]; // Các mục cần phân loại
+    instruction?: string; // Hướng dẫn thêm, ví dụ "Với câu thơ không thuộc nhóm nào, em không xếp"
+    image?: string;
+    explanation?: string;
+}
+
+export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion | CategorizationQuestion;
 
 export interface Quiz {
     id: string;

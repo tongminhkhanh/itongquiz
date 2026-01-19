@@ -292,6 +292,32 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
           studentSorted.every((val, idx) => val === correctSorted[idx]);
 
         if (isCorrect) correctCount++;
+      } else if (q.type === QuestionType.CATEGORIZATION) {
+        // Kiểm tra tất cả items đã được phân loại đúng
+        totalItems++;
+        const studentAns = (answers[q.id] as Record<string, string>) || {};
+        const items = (q as any).items || [];
+
+        let allCorrect = true;
+        for (const item of items) {
+          const studentCatId = studentAns[item.id];
+          // Nếu item không thuộc nhóm nào (categoryId rỗng), học sinh không nên xếp vào đâu cả
+          if (item.categoryId === '' || item.categoryId === null || item.categoryId === undefined) {
+            // Item này không thuộc nhóm nào, học sinh không nên phân loại nó
+            if (studentCatId) {
+              allCorrect = false;
+              break;
+            }
+          } else {
+            // Item thuộc một nhóm, kiểm tra học sinh có xếp đúng không
+            if (studentCatId !== item.categoryId) {
+              allCorrect = false;
+              break;
+            }
+          }
+        }
+
+        if (allCorrect && items.length > 0) correctCount++;
       }
     });
 
@@ -376,6 +402,12 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         return filledCount >= blankCount;
       }
       return !!answers[q.id];
+    } else if (q.type === QuestionType.CATEGORIZATION) {
+      // Kiểm tra có phân loại ít nhất 1 item
+      const currentAnswers = (answers[q.id] as Record<string, string>) || {};
+      // Loại bỏ _selected khỏi count
+      const placedCount = Object.keys(currentAnswers).filter(k => k !== '_selected').length;
+      return placedCount > 0;
     }
     return !!answers[q.id];
   };

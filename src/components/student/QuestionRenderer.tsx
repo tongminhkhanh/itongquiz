@@ -662,6 +662,165 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                         </div>
                     );
                 })()}
+
+                {/* Categorization - Kéo thả phân loại vào nhóm */}
+                {q.type === QuestionType.CATEGORIZATION && (() => {
+                    const categories = (q as any).categories || [];
+                    const items = (q as any).items || [];
+                    const instruction = (q as any).instruction || '';
+                    const currentAnswers = (answers[q.id] as Record<string, string>) || {};
+                    const selectedItem = currentAnswers._selected || null;
+
+                    // Items chưa được phân loại
+                    const unplacedItems = items.filter((item: any) => !currentAnswers[item.id]);
+
+                    // Lấy items đã phân loại vào category
+                    const getItemsInCategory = (catId: string) => {
+                        return items.filter((item: any) => currentAnswers[item.id] === catId);
+                    };
+
+                    const handleItemClick = (itemId: string) => {
+                        if (currentAnswers[itemId]) {
+                            // Item đã được phân loại → trả về vùng chưa phân loại
+                            const newAnswers = { ...currentAnswers };
+                            delete newAnswers[itemId];
+                            onAnswerChange(q.id, newAnswers);
+                        } else if (selectedItem === itemId) {
+                            // Bỏ chọn item
+                            const newAnswers = { ...currentAnswers };
+                            delete newAnswers._selected;
+                            onAnswerChange(q.id, newAnswers);
+                        } else {
+                            // Chọn item
+                            onAnswerChange(q.id, { ...currentAnswers, _selected: itemId });
+                        }
+                    };
+
+                    const handleCategoryClick = (catId: string) => {
+                        if (selectedItem && !currentAnswers[selectedItem]) {
+                            // Di chuyển item vào category
+                            const newAnswers = { ...currentAnswers, [selectedItem]: catId };
+                            delete newAnswers._selected;
+                            onAnswerChange(q.id, newAnswers);
+                        }
+                    };
+
+                    // Màu sắc cho các items
+                    const categoryColors = [
+                        { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-700', hover: 'hover:bg-blue-200' },
+                        { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-700', hover: 'hover:bg-green-200' },
+                        { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-700', hover: 'hover:bg-purple-200' },
+                        { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-700', hover: 'hover:bg-orange-200' },
+                        { bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-700', hover: 'hover:bg-pink-200' },
+                    ];
+
+                    const getCategoryColor = (catIndex: number) => categoryColors[catIndex % categoryColors.length];
+
+                    return (
+                        <div className="space-y-4">
+                            {/* Instruction */}
+                            {instruction && (
+                                <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                                    <p className="text-sm text-amber-800">
+                                        📝 <em>{instruction}</em>
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Items chưa phân loại */}
+                            <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300">
+                                <p className="text-xs font-bold text-gray-600 mb-3 uppercase tracking-wide">
+                                    Các mục cần phân loại (Chạm để chọn):
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    {unplacedItems.length === 0 ? (
+                                        <p className="text-gray-400 text-sm italic">Đã phân loại hết!</p>
+                                    ) : (
+                                        unplacedItems.map((item: any) => {
+                                            const isSelected = selectedItem === item.id;
+                                            return (
+                                                <button
+                                                    key={item.id}
+                                                    onClick={() => handleItemClick(item.id)}
+                                                    className={`px-4 py-2 rounded-lg font-medium text-sm shadow-sm transition-all transform active:scale-95 ${isSelected
+                                                            ? 'bg-indigo-500 text-white ring-2 ring-indigo-300 ring-offset-2 scale-105'
+                                                            : 'bg-white border border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
+                                                        }`}
+                                                >
+                                                    {item.content}
+                                                </button>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                                {selectedItem && (
+                                    <p className="text-xs text-indigo-600 mt-3 font-medium">
+                                        👆 Đã chọn! Giờ hãy chạm vào nhóm bên dưới để xếp vào.
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Categories */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {categories.map((cat: any, catIdx: number) => {
+                                    const color = getCategoryColor(catIdx);
+                                    const itemsInCat = getItemsInCategory(cat.id);
+                                    const isHighlighted = selectedItem && !currentAnswers[selectedItem];
+
+                                    return (
+                                        <div
+                                            key={cat.id}
+                                            onClick={() => handleCategoryClick(cat.id)}
+                                            className={`p-4 rounded-xl border-2 min-h-[120px] transition-all ${isHighlighted
+                                                    ? `${color.border} ${color.bg} cursor-pointer ring-2 ring-offset-1 ring-indigo-300`
+                                                    : `border-gray-200 bg-white`
+                                                }`}
+                                        >
+                                            <p className={`font-bold text-sm mb-3 ${color.text}`}>
+                                                {cat.name}
+                                            </p>
+                                            <div className="flex flex-wrap gap-2 min-h-[40px]">
+                                                {itemsInCat.length === 0 ? (
+                                                    <p className="text-gray-300 text-xs italic">
+                                                        {isHighlighted ? 'Chạm vào đây để thả...' : 'Chưa có mục nào'}
+                                                    </p>
+                                                ) : (
+                                                    itemsInCat.map((item: any) => (
+                                                        <button
+                                                            key={item.id}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleItemClick(item.id);
+                                                            }}
+                                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium ${color.bg} ${color.text} ${color.border} border transition-all hover:opacity-80`}
+                                                            title="Chạm để bỏ ra"
+                                                        >
+                                                            {item.content}
+                                                            <span className="ml-1 opacity-60">×</span>
+                                                        </button>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Status and Reset */}
+                            <div className="flex justify-between items-center">
+                                <p className="text-xs text-gray-500">
+                                    Đã phân loại: {Object.keys(currentAnswers).filter(k => k !== '_selected').length}/{items.length}
+                                </p>
+                                <button
+                                    onClick={() => onAnswerChange(q.id, {})}
+                                    className="text-xs text-red-500 hover:underline flex items-center"
+                                >
+                                    <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
             </div>
         </div>
     );

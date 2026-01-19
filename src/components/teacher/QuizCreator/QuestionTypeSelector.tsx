@@ -18,6 +18,7 @@ const QUESTION_TYPE_CONFIG = [
     { type: QuestionType.IMAGE_QUESTION, label: 'Câu hỏi hình', emoji: '🖼️' },
     { type: QuestionType.DROPDOWN, label: 'Dropdown', emoji: '🔽' },
     { type: QuestionType.UNDERLINE, label: 'Gạch chân', emoji: '✏️' },
+    { type: QuestionType.CATEGORIZATION, label: 'Phân loại', emoji: '📦' },
 ];
 
 interface QuestionTypeSelectorProps {

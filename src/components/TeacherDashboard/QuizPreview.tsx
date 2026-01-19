@@ -95,6 +95,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
             [QuestionType.IMAGE_QUESTION]: 'Có hình',
             [QuestionType.DROPDOWN]: 'Dropdown',
             [QuestionType.UNDERLINE]: 'Gạch chân',
+            [QuestionType.CATEGORIZATION]: 'Phân loại',
         };
         return labels[type] || type;
     };
@@ -339,6 +340,59 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                                     );
                                                 })}
                                             </div>
+                                        </div>
+                                    )}
+
+                                    {/* CATEGORIZATION */}
+                                    {q.type === QuestionType.CATEGORIZATION && (
+                                        <div className="ml-8 space-y-3">
+                                            {((q as any).instruction) && (
+                                                <p className="text-sm text-amber-700 italic bg-amber-50 p-2 rounded">
+                                                    <MathJaxWrapper content={(q as any).instruction} />
+                                                </p>
+                                            )}
+                                            {((q as any).categories || []).map((cat: any) => {
+                                                const itemsInCat = ((q as any).items || []).filter((item: any) => item.categoryId === cat.id);
+                                                return (
+                                                    <div key={cat.id} className="border rounded-lg p-3 bg-gray-50">
+                                                        <p className="font-bold text-indigo-700 text-sm mb-2">
+                                                            <MathJaxWrapper content={cat.name} />
+                                                        </p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {itemsInCat.length === 0 ? (
+                                                                <span className="text-gray-400 text-xs italic">Không có mục nào</span>
+                                                            ) : (
+                                                                itemsInCat.map((item: any) => (
+                                                                    <span key={item.id} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                                                                        <MathJaxWrapper content={item.content} />
+                                                                    </span>
+                                                                ))
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            {/* Hiển thị items không thuộc nhóm nào */}
+                                            {(() => {
+                                                const itemsWithNoCategory = ((q as any).items || []).filter((item: any) =>
+                                                    !item.categoryId || item.categoryId === ''
+                                                );
+                                                if (itemsWithNoCategory.length > 0) {
+                                                    return (
+                                                        <div className="border border-dashed rounded-lg p-3 bg-gray-100">
+                                                            <p className="font-bold text-gray-500 text-sm mb-2">Không thuộc nhóm nào:</p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {itemsWithNoCategory.map((item: any) => (
+                                                                    <span key={item.id} className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-medium">
+                                                                        <MathJaxWrapper content={item.content} />
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
                                         </div>
                                     )}
 

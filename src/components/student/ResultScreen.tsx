@@ -344,6 +344,109 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                             </div>
                                         );
                                     })()}
+
+                                    {/* Categorization Review */}
+                                    {q.type === QuestionType.CATEGORIZATION && (() => {
+                                        const studentAns = (answers[q.id] as Record<string, string>) || {};
+                                        const categories = (q as any).categories || [];
+                                        const items = (q as any).items || [];
+
+                                        // Kiểm tra tất cả items đã được phân loại đúng
+                                        let allCorrect = true;
+                                        for (const item of items) {
+                                            const studentCatId = studentAns[item.id];
+                                            if (item.categoryId === '' || item.categoryId === null || item.categoryId === undefined) {
+                                                if (studentCatId) {
+                                                    allCorrect = false;
+                                                    break;
+                                                }
+                                            } else {
+                                                if (studentCatId !== item.categoryId) {
+                                                    allCorrect = false;
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        // Lấy tên category từ id
+                                        const getCategoryName = (catId: string) => {
+                                            const cat = categories.find((c: any) => c.id === catId);
+                                            return cat ? cat.name : 'Không xác định';
+                                        };
+
+                                        return (
+                                            <div>
+                                                <p className="font-bold mb-2">Cách em phân loại:</p>
+                                                <div className="space-y-3">
+                                                    {categories.map((cat: any) => {
+                                                        const itemsInCat = items.filter((item: any) => studentAns[item.id] === cat.id);
+                                                        const correctItemsInCat = items.filter((item: any) => item.categoryId === cat.id);
+
+                                                        return (
+                                                            <div key={cat.id} className="border rounded-lg p-3 bg-gray-50">
+                                                                <p className="font-bold text-indigo-700 text-sm mb-2">{cat.name}</p>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {itemsInCat.length === 0 ? (
+                                                                        <span className="text-gray-400 text-xs italic">Trống</span>
+                                                                    ) : (
+                                                                        itemsInCat.map((item: any) => {
+                                                                            const isCorrect = item.categoryId === cat.id;
+                                                                            return (
+                                                                                <span
+                                                                                    key={item.id}
+                                                                                    className={`px-2 py-1 rounded text-xs font-medium ${isCorrect
+                                                                                            ? 'bg-green-100 text-green-700 border border-green-300'
+                                                                                            : 'bg-red-100 text-red-700 border border-red-300'
+                                                                                        }`}
+                                                                                >
+                                                                                    {item.content}
+                                                                                    {isCorrect ? ' ✓' : ' ✗'}
+                                                                                </span>
+                                                                            );
+                                                                        })
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {!allCorrect && (
+                                                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                                        <p className="text-blue-800 text-sm font-bold">💡 Đáp án đúng:</p>
+                                                        <div className="mt-2 space-y-2">
+                                                            {categories.map((cat: any) => {
+                                                                const correctItems = items.filter((item: any) => item.categoryId === cat.id);
+                                                                if (correctItems.length === 0) return null;
+                                                                return (
+                                                                    <div key={cat.id} className="text-sm">
+                                                                        <span className="font-medium text-indigo-700">{cat.name}:</span>
+                                                                        <span className="text-green-700 ml-2">
+                                                                            {correctItems.map((item: any) => item.content).join(', ')}
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                            {items.filter((item: any) => !item.categoryId || item.categoryId === '').length > 0 && (
+                                                                <div className="text-sm">
+                                                                    <span className="font-medium text-gray-500">Không thuộc nhóm nào:</span>
+                                                                    <span className="text-gray-600 ml-2">
+                                                                        {items.filter((item: any) => !item.categoryId || item.categoryId === '').map((item: any) => item.content).join(', ')}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {(q as any).explanation && (
+                                                            <p className="text-blue-700 text-sm mt-2 border-t border-blue-200 pt-2">
+                                                                📝 {(q as any).explanation}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {allCorrect && <span className="text-green-600 font-bold text-sm mt-2 block">✓ Phân loại chính xác!</span>}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         ))}
