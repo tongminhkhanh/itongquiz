@@ -96,6 +96,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
             [QuestionType.DROPDOWN]: 'Dropdown',
             [QuestionType.UNDERLINE]: 'Gạch chân',
             [QuestionType.CATEGORIZATION]: 'Phân loại',
+            [QuestionType.WORD_SCRAMBLE]: 'Ghép chữ',
         };
         return labels[type] || type;
     };
@@ -393,6 +394,27 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                                 }
                                                 return null;
                                             })()}
+                                        </div>
+                                    )}
+
+                                    {/* WORD_SCRAMBLE */}
+                                    {q.type === QuestionType.WORD_SCRAMBLE && (
+                                        <div className="ml-8 space-y-2">
+                                            <div className="flex flex-wrap gap-1">
+                                                <span className="text-sm text-gray-500 mr-2">Chữ cái:</span>
+                                                {((q as any).letters || []).map((letter: string, i: number) => (
+                                                    <span key={i} className="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-700 rounded font-bold text-sm">
+                                                        {letter}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <p className="text-sm">
+                                                <span className="text-gray-500">Đáp án:</span>
+                                                <span className="font-bold text-green-700 ml-2">{(q as any).correctWord}</span>
+                                            </p>
+                                            {(q as any).hint && (
+                                                <p className="text-xs text-amber-600 italic">💡 Gợi ý: {(q as any).hint}</p>
+                                            )}
                                         </div>
                                     )}
 

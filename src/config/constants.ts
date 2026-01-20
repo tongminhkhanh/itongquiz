@@ -110,6 +110,13 @@ The output must be a valid JSON object with this structure:
         { "id": "item6", "content": "Lược chải tóc", "categoryId": "ca_nhan" }
       ],
       "explanation": "Đồ dùng học tập dùng để học ở trường. Đồ dùng cá nhân dùng để vệ sinh cơ thể."
+    },
+    {
+      "type": "WORD_SCRAMBLE",
+      "question": "Sắp xếp các chữ sau thành một tính từ.",
+      "letters": ["k", "i", "ê", "n", "t", "r", "i"],
+      "correctWord": "kiên trì",
+      "explanation": "Kiên trì là tính từ chỉ sự bền bỉ, không bỏ cuộc."
     }
   ]
 }

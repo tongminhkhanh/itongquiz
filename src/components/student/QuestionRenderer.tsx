@@ -743,8 +743,8 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                     key={item.id}
                                                     onClick={() => handleItemClick(item.id)}
                                                     className={`px-4 py-2 rounded-lg font-medium text-sm shadow-sm transition-all transform active:scale-95 ${isSelected
-                                                            ? 'bg-indigo-500 text-white ring-2 ring-indigo-300 ring-offset-2 scale-105'
-                                                            : 'bg-white border border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
+                                                        ? 'bg-indigo-500 text-white ring-2 ring-indigo-300 ring-offset-2 scale-105'
+                                                        : 'bg-white border border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
                                                         }`}
                                                 >
                                                     {item.content}
@@ -772,8 +772,8 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             key={cat.id}
                                             onClick={() => handleCategoryClick(cat.id)}
                                             className={`p-4 rounded-xl border-2 min-h-[120px] transition-all ${isHighlighted
-                                                    ? `${color.border} ${color.bg} cursor-pointer ring-2 ring-offset-1 ring-indigo-300`
-                                                    : `border-gray-200 bg-white`
+                                                ? `${color.border} ${color.bg} cursor-pointer ring-2 ring-offset-1 ring-indigo-300`
+                                                : `border-gray-200 bg-white`
                                                 }`}
                                         >
                                             <p className={`font-bold text-sm mb-3 ${color.text}`}>
@@ -813,6 +813,99 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                 </p>
                                 <button
                                     onClick={() => onAnswerChange(q.id, {})}
+                                    className="text-xs text-red-500 hover:underline flex items-center"
+                                >
+                                    <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
+            </div>
+
+            {/* WORD_SCRAMBLE - Sắp xếp chữ cái thành từ */}
+            <div className="mt-4">
+                {q.type === QuestionType.WORD_SCRAMBLE && (() => {
+                    const letters = (q as any).letters || [];
+                    const correctWord = (q as any).correctWord || '';
+                    const hint = (q as any).hint || '';
+                    const currentAnswer = answers[q.id] || [];
+
+                    // Letters that haven't been selected yet
+                    const availableLetters = letters.map((letter: string, idx: number) => ({
+                        letter,
+                        originalIndex: idx,
+                        isUsed: currentAnswer.includes(idx)
+                    }));
+
+                    const handleLetterClick = (originalIndex: number) => {
+                        if (currentAnswer.includes(originalIndex)) {
+                            // Remove from selection
+                            onAnswerChange(q.id, currentAnswer.filter((i: number) => i !== originalIndex));
+                        } else {
+                            // Add to selection
+                            onAnswerChange(q.id, [...currentAnswer, originalIndex]);
+                        }
+                    };
+
+                    const getCurrentWord = () => {
+                        return currentAnswer.map((idx: number) => letters[idx]).join('');
+                    };
+
+                    return (
+                        <div className="space-y-4">
+                            {/* Hint */}
+                            {hint && (
+                                <p className="text-sm text-gray-500 italic">💡 Gợi ý: {hint}</p>
+                            )}
+
+                            {/* Current word being built */}
+                            <div className="bg-green-50 p-4 rounded-lg border-2 border-dashed border-green-300 min-h-[60px]">
+                                <p className="text-xs text-green-600 mb-2">Từ của bạn:</p>
+                                <div className="flex flex-wrap gap-1">
+                                    {currentAnswer.length === 0 ? (
+                                        <span className="text-gray-400 italic">Chọn các chữ cái bên dưới...</span>
+                                    ) : (
+                                        currentAnswer.map((idx: number, i: number) => (
+                                            <button
+                                                key={`selected-${i}`}
+                                                onClick={() => handleLetterClick(idx)}
+                                                className="w-10 h-10 bg-green-500 text-white rounded-lg font-bold text-lg hover:bg-green-600 transition-colors shadow"
+                                            >
+                                                {letters[idx]}
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Available letters */}
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <p className="text-xs text-gray-600 mb-2">Chọn chữ cái:</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {availableLetters.map((item: any, i: number) => (
+                                        <button
+                                            key={`letter-${i}`}
+                                            onClick={() => handleLetterClick(item.originalIndex)}
+                                            disabled={item.isUsed}
+                                            className={`w-10 h-10 rounded-lg font-bold text-lg transition-all shadow ${item.isUsed
+                                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-50'
+                                                    : 'bg-blue-500 text-white hover:bg-blue-600 hover:scale-105'
+                                                }`}
+                                        >
+                                            {item.letter}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Status and Reset */}
+                            <div className="flex justify-between items-center">
+                                <p className="text-xs text-gray-500">
+                                    Đã chọn: {currentAnswer.length}/{letters.length} chữ
+                                </p>
+                                <button
+                                    onClick={() => onAnswerChange(q.id, [])}
                                     className="text-xs text-red-500 hover:underline flex items-center"
                                 >
                                     <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này

@@ -71,7 +71,14 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
         + "content": NỘI DUNG CỤ THỂ - KHÔNG ĐƯỢC ĐỂ TRỐNG! (VD: "Bút chì", "1/4 + 2/4", "Trăng tròn như cái đĩa")
         + "categoryId": ID của nhóm mà item thuộc về
       - ❌ SAI: {"id": "item1", "content": "", "categoryId": "cat1"} - content RỖNG
-      - ✅ ĐÚNG: {"id": "item1", "content": "Bút chì", "categoryId": "hoc_tap"} - content CÓ NỘI DUNG)`
+      - ✅ ĐÚNG: {"id": "item1", "content": "Bút chì", "categoryId": "hoc_tap"} - content CÓ NỘI DUNG)`,
+    'WORD_SCRAMBLE': `WORD_SCRAMBLE (Sắp xếp chữ cái thành từ. Format: {"type": "WORD_SCRAMBLE", "question": "Sắp xếp các chữ sau thành một tính từ", "letters": ["k", "i", "ê", "n", "t", "r", "i"], "correctWord": "kiên trì", "explanation": "..."}.
+      ⚠️ QUAN TRỌNG:
+      - letters: Mảng các chữ cái ĐÃ XÁO TRỘN (không theo thứ tự đúng)
+      - correctWord: Từ đúng khi sắp xếp lại các chữ cái
+      - Nên chọn từ có 4-10 chữ cái
+      - Ví dụ: "chăm chỉ" → letters: ["c", "h", "ă", "m", "c", "h", "ỉ"] (xáo trộn)
+      - Ví dụ: "thông minh" → letters: ["m", "i", "n", "h", "t", "h", "ô", "n", "g"] (xáo trộn))`
   };
 
   const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');

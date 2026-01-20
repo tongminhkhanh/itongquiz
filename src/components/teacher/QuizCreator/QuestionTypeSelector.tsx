@@ -19,6 +19,7 @@ const QUESTION_TYPE_CONFIG = [
     { type: QuestionType.DROPDOWN, label: 'Dropdown', emoji: '🔽' },
     { type: QuestionType.UNDERLINE, label: 'Gạch chân', emoji: '✏️' },
     { type: QuestionType.CATEGORIZATION, label: 'Phân loại', emoji: '📦' },
+    { type: QuestionType.WORD_SCRAMBLE, label: 'Ghép chữ', emoji: '🔤' },
 ];
 
 interface QuestionTypeSelectorProps {

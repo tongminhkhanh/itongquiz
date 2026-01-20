@@ -318,6 +318,17 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         }
 
         if (allCorrect && items.length > 0) correctCount++;
+      } else if (q.type === QuestionType.WORD_SCRAMBLE) {
+        // Kiểm tra học sinh đã sắp xếp chữ cái đúng thành từ chưa
+        totalItems++;
+        const letters = (q as any).letters || [];
+        const correctWord = ((q as any).correctWord || '').toLowerCase().replace(/\s+/g, '');
+        const studentSelection = (answers[q.id] as number[]) || [];
+
+        // Build student's word from selected letter indices
+        const studentWord = studentSelection.map((idx: number) => letters[idx]).join('').toLowerCase();
+
+        if (studentWord === correctWord) correctCount++;
       }
     });
 
@@ -408,6 +419,11 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       // Loại bỏ _selected khỏi count
       const placedCount = Object.keys(currentAnswers).filter(k => k !== '_selected').length;
       return placedCount > 0;
+    } else if (q.type === QuestionType.WORD_SCRAMBLE) {
+      // Kiểm tra đã chọn ít nhất 1 chữ cái
+      const letters = (q as any).letters || [];
+      const currentAnswer = (answers[q.id] as number[]) || [];
+      return currentAnswer.length === letters.length; // Phải chọn đủ số chữ cái
     }
     return !!answers[q.id];
   };

@@ -395,8 +395,8 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                                                 <span
                                                                                     key={item.id}
                                                                                     className={`px-2 py-1 rounded text-xs font-medium ${isCorrect
-                                                                                            ? 'bg-green-100 text-green-700 border border-green-300'
-                                                                                            : 'bg-red-100 text-red-700 border border-red-300'
+                                                                                        ? 'bg-green-100 text-green-700 border border-green-300'
+                                                                                        : 'bg-red-100 text-red-700 border border-red-300'
                                                                                         }`}
                                                                                 >
                                                                                     {item.content}
@@ -444,6 +444,58 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                     </div>
                                                 )}
                                                 {allCorrect && <span className="text-green-600 font-bold text-sm mt-2 block">✓ Phân loại chính xác!</span>}
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Word Scramble Review */}
+                                    {q.type === QuestionType.WORD_SCRAMBLE && (() => {
+                                        const letters = (q as any).letters || [];
+                                        const correctWord = (q as any).correctWord || '';
+                                        const studentSelection = (answers[q.id] as number[]) || [];
+                                        const studentWord = studentSelection.map((idx: number) => letters[idx]).join('');
+                                        const isCorrect = studentWord.toLowerCase().replace(/\s+/g, '') === correctWord.toLowerCase().replace(/\s+/g, '');
+
+                                        return (
+                                            <div>
+                                                <p className="font-bold mb-2">Từ em ghép được:</p>
+                                                <div className="flex flex-wrap gap-1 mb-2">
+                                                    {studentSelection.length === 0 ? (
+                                                        <span className="text-gray-400 italic">Chưa trả lời</span>
+                                                    ) : (
+                                                        studentSelection.map((idx: number, i: number) => (
+                                                            <span
+                                                                key={i}
+                                                                className={`w-10 h-10 flex items-center justify-center rounded-lg font-bold text-lg ${isCorrect
+                                                                        ? 'bg-green-100 text-green-700 border border-green-300'
+                                                                        : 'bg-red-100 text-red-700 border border-red-300'
+                                                                    }`}
+                                                            >
+                                                                {letters[idx]}
+                                                            </span>
+                                                        ))
+                                                    )}
+                                                </div>
+                                                <p className={`font-bold ${isCorrect ? 'text-green-600' : 'text-red-500'}`}>
+                                                    = "{studentWord || '(trống)'}"
+                                                    {isCorrect && ' ✓'}
+                                                </p>
+
+                                                {!isCorrect && (
+                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                                        <div className="flex items-start">
+                                                            <span className="text-green-600 font-bold mr-2">✓</span>
+                                                            <p className="text-green-700">
+                                                                <strong>Đáp án đúng:</strong> {correctWord}
+                                                            </p>
+                                                        </div>
+                                                        {(q as any).explanation && (
+                                                            <p className="text-blue-700 text-sm mt-2 border-t border-blue-200 pt-2">
+                                                                💡 {(q as any).explanation}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })()}

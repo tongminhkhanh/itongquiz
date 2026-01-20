@@ -16,6 +16,7 @@ export enum QuestionType {
     DROPDOWN = 'DROPDOWN', // Câu hỏi điền dropdown
     UNDERLINE = 'UNDERLINE', // Câu hỏi gạch chân từ/cụm từ
     CATEGORIZATION = 'CATEGORIZATION', // Kéo thả phân loại vào nhóm
+    WORD_SCRAMBLE = 'WORD_SCRAMBLE', // Sắp xếp chữ cái thành từ
 }
 
 export interface MCQQuestion {
@@ -173,7 +174,19 @@ export interface CategorizationQuestion {
     explanation?: string;
 }
 
-export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion | CategorizationQuestion;
+// Word Scramble Question - Sắp xếp chữ cái thành từ
+export interface WordScrambleQuestion {
+    id: string;
+    type: QuestionType.WORD_SCRAMBLE;
+    question: string; // "Sắp xếp các chữ sau thành một tính từ"
+    letters: string[]; // ["k", "i", "ê", "n", "t", "r", "i"] - các chữ đã xáo trộn
+    correctWord: string; // "kiên trì" - từ đúng
+    hint?: string; // Gợi ý (tùy chọn)
+    image?: string;
+    explanation?: string;
+}
+
+export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion | CategorizationQuestion | WordScrambleQuestion;
 
 export interface Quiz {
     id: string;
