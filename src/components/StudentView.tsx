@@ -330,7 +330,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
         if (studentWord === correctWord) correctCount++;
       } else if (q.type === QuestionType.RIDDLE) {
-        // So sánh đáp án học sinh nhập với đáp án đúng (không phân biệt hoa thường, bỏ khoảng trắng thừa)
+        // So sánh 1 đáp án (từ gốc hoặc từ biến đổi tùy theo câu hỏi)
         totalItems++;
         const correctAns = ((q as any).correctAnswer || '').toLowerCase().trim();
         const studentAns = (answers[q.id] || '').toString().toLowerCase().trim();

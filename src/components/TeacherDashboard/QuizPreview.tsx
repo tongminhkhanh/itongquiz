@@ -20,6 +20,14 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
     const [editQuestionText, setEditQuestionText] = useState('');
     const [editOptions, setEditOptions] = useState<string[]>([]);
     const [editCorrectAnswer, setEditCorrectAnswer] = useState('');
+    const [editRiddleLines, setEditRiddleLines] = useState<string[]>([]);
+    const [editAnswerLabel, setEditAnswerLabel] = useState('');
+    // Additional states for other question types
+    const [editItems, setEditItems] = useState<any[]>([]); // TRUE_FALSE items, ORDERING items
+    const [editPairs, setEditPairs] = useState<{ left: string, right: string }[]>([]); // MATCHING pairs
+    const [editLetters, setEditLetters] = useState<string[]>([]); // WORD_SCRAMBLE letters
+    const [editCorrectWord, setEditCorrectWord] = useState(''); // WORD_SCRAMBLE correctWord
+    const [editCorrectAnswers, setEditCorrectAnswers] = useState<string[]>([]); // MULTIPLE_SELECT correctAnswers
 
     // Delete a question
     const handleDeleteQuestion = (questionId: string) => {
@@ -41,6 +49,31 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
         }
         if ('correctAnswer' in question) {
             setEditCorrectAnswer((question as any).correctAnswer);
+        }
+        if ('correctAnswers' in question) {
+            setEditCorrectAnswers([...(question as any).correctAnswers]);
+        }
+        // RIDDLE specific
+        if ('riddleLines' in question) {
+            setEditRiddleLines([...(question as any).riddleLines]);
+        }
+        if ('answerLabel' in question) {
+            setEditAnswerLabel((question as any).answerLabel);
+        }
+        // TRUE_FALSE & ORDERING items
+        if ('items' in question) {
+            setEditItems([...(question as any).items]);
+        }
+        // MATCHING pairs
+        if ('pairs' in question) {
+            setEditPairs([...(question as any).pairs]);
+        }
+        // WORD_SCRAMBLE
+        if ('letters' in question) {
+            setEditLetters([...(question as any).letters]);
+        }
+        if ('correctWord' in question) {
+            setEditCorrectWord((question as any).correctWord);
         }
     };
 
@@ -67,6 +100,33 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                 updated.correctAnswer = editCorrectAnswer;
             }
 
+            // RIDDLE specific
+            if ('riddleLines' in updated) {
+                updated.riddleLines = editRiddleLines;
+            }
+            if ('answerLabel' in updated) {
+                updated.answerLabel = editAnswerLabel;
+            }
+            // TRUE_FALSE & ORDERING items
+            if ('items' in updated) {
+                updated.items = editItems;
+            }
+            // MATCHING pairs
+            if ('pairs' in updated) {
+                updated.pairs = editPairs;
+            }
+            // WORD_SCRAMBLE
+            if ('letters' in updated) {
+                updated.letters = editLetters;
+            }
+            if ('correctWord' in updated) {
+                updated.correctWord = editCorrectWord;
+            }
+            // MULTIPLE_SELECT correctAnswers
+            if ('correctAnswers' in updated) {
+                updated.correctAnswers = editCorrectAnswers;
+            }
+
             return updated as Question;
         });
 
@@ -80,6 +140,13 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
         setEditQuestionText('');
         setEditOptions([]);
         setEditCorrectAnswer('');
+        setEditRiddleLines([]);
+        setEditAnswerLabel('');
+        setEditItems([]);
+        setEditPairs([]);
+        setEditLetters([]);
+        setEditCorrectWord('');
+        setEditCorrectAnswers([]);
     };
 
     // Get question type label
@@ -428,7 +495,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                                 ))}
                                             </div>
                                             <p className="text-sm">
-                                                <span className="text-gray-500">Đáp án:</span>
+                                                <span className="text-gray-500">{(q as any).answerLabel || 'Đáp án'}:</span>
                                                 <span className="font-bold text-green-700 ml-2">{(q as any).correctAnswer}</span>
                                             </p>
                                             {(q as any).hint && (
@@ -511,7 +578,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                 </div>
                             )}
 
-                            {/* Correct Answer */}
+                            {/* Correct Answer for MCQ/SHORT_ANSWER */}
                             {(editingQuestion.type === QuestionType.MCQ || editingQuestion.type === QuestionType.SHORT_ANSWER) && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -524,6 +591,221 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                         placeholder={editingQuestion.type === QuestionType.MCQ ? "A, B, C hoặc D" : "Nhập đáp án"}
                                     />
+                                </div>
+                            )}
+
+                            {/* RIDDLE Edit */}
+                            {editingQuestion.type === QuestionType.RIDDLE && (
+                                <div className="space-y-4">
+                                    {/* Riddle Lines */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Các dòng câu đố
+                                        </label>
+                                        <div className="space-y-2">
+                                            {editRiddleLines.map((line, i) => (
+                                                <div key={i} className="flex items-center gap-2">
+                                                    <span className="w-6 text-center text-gray-500 text-sm">{i + 1}.</span>
+                                                    <input
+                                                        type="text"
+                                                        value={line}
+                                                        onChange={(e) => {
+                                                            const newLines = [...editRiddleLines];
+                                                            newLines[i] = e.target.value;
+                                                            setEditRiddleLines(newLines);
+                                                        }}
+                                                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500"
+                                                    />
+                                                    {editRiddleLines.length > 2 && (
+                                                        <button
+                                                            onClick={() => {
+                                                                const newLines = editRiddleLines.filter((_, idx) => idx !== i);
+                                                                setEditRiddleLines(newLines);
+                                                            }}
+                                                            className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {editRiddleLines.length < 5 && (
+                                                <button
+                                                    onClick={() => setEditRiddleLines([...editRiddleLines, ''])}
+                                                    className="text-sm text-blue-600 hover:underline"
+                                                >
+                                                    + Thêm dòng
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Answer Label */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Label câu hỏi (VD: "Từ bỏ sắc", "Từ để nguyên")
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editAnswerLabel}
+                                            onChange={(e) => setEditAnswerLabel(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500"
+                                            placeholder="Từ bỏ sắc, Từ để nguyên..."
+                                        />
+                                    </div>
+
+                                    {/* Correct Answer */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Đáp án đúng (1 tiếng)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editCorrectAnswer}
+                                            onChange={(e) => setEditCorrectAnswer(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                                            placeholder="Nhập đáp án (1 từ)..."
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TRUE_FALSE Edit */}
+                            {editingQuestion.type === QuestionType.TRUE_FALSE && (
+                                <div className="space-y-3">
+                                    <label className="block text-sm font-medium text-gray-700">
+                                        Các mệnh đề (Đúng/Sai)
+                                    </label>
+                                    {editItems.map((item, i) => (
+                                        <div key={i} className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
+                                            <span className="text-gray-500 text-sm">{String.fromCharCode(97 + i)}.</span>
+                                            <input
+                                                type="text"
+                                                value={item.statement || ''}
+                                                onChange={(e) => {
+                                                    const newItems = [...editItems];
+                                                    newItems[i] = { ...newItems[i], statement: e.target.value };
+                                                    setEditItems(newItems);
+                                                }}
+                                                className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <select
+                                                value={item.isCorrect ? 'true' : 'false'}
+                                                onChange={(e) => {
+                                                    const newItems = [...editItems];
+                                                    newItems[i] = { ...newItems[i], isCorrect: e.target.value === 'true' };
+                                                    setEditItems(newItems);
+                                                }}
+                                                className="px-2 py-1 border rounded-lg text-sm"
+                                            >
+                                                <option value="true">Đúng</option>
+                                                <option value="false">Sai</option>
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* MATCHING Edit */}
+                            {editingQuestion.type === QuestionType.MATCHING && (
+                                <div className="space-y-3">
+                                    <label className="block text-sm font-medium text-gray-700">
+                                        Các cặp nối
+                                    </label>
+                                    {editPairs.map((pair, i) => (
+                                        <div key={i} className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
+                                            <input
+                                                type="text"
+                                                value={pair.left || ''}
+                                                onChange={(e) => {
+                                                    const newPairs = [...editPairs];
+                                                    newPairs[i] = { ...newPairs[i], left: e.target.value };
+                                                    setEditPairs(newPairs);
+                                                }}
+                                                className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                placeholder="Vế trái"
+                                            />
+                                            <span className="text-gray-400">→</span>
+                                            <input
+                                                type="text"
+                                                value={pair.right || ''}
+                                                onChange={(e) => {
+                                                    const newPairs = [...editPairs];
+                                                    newPairs[i] = { ...newPairs[i], right: e.target.value };
+                                                    setEditPairs(newPairs);
+                                                }}
+                                                className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                                                placeholder="Vế phải"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* WORD_SCRAMBLE Edit */}
+                            {editingQuestion.type === QuestionType.WORD_SCRAMBLE && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Từ đúng
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editCorrectWord}
+                                            onChange={(e) => setEditCorrectWord(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                                            placeholder="Nhập từ đúng..."
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Các chữ cái (đã xáo trộn)
+                                        </label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {editLetters.map((letter, i) => (
+                                                <input
+                                                    key={i}
+                                                    type="text"
+                                                    value={letter}
+                                                    onChange={(e) => {
+                                                        const newLetters = [...editLetters];
+                                                        newLetters[i] = e.target.value.slice(0, 1);
+                                                        setEditLetters(newLetters);
+                                                    }}
+                                                    className="w-10 h-10 text-center border rounded-lg focus:ring-2 focus:ring-blue-500 font-bold"
+                                                    maxLength={1}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* MULTIPLE_SELECT correctAnswers */}
+                            {editingQuestion.type === QuestionType.MULTIPLE_SELECT && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Đáp án đúng (chọn nhiều)
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['A', 'B', 'C', 'D'].map((letter) => (
+                                            <label key={letter} className="flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={editCorrectAnswers.includes(letter)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setEditCorrectAnswers([...editCorrectAnswers, letter].sort());
+                                                        } else {
+                                                            setEditCorrectAnswers(editCorrectAnswers.filter(a => a !== letter));
+                                                        }
+                                                    }}
+                                                    className="w-4 h-4 text-green-600"
+                                                />
+                                                <span className="font-medium">{letter}</span>
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 

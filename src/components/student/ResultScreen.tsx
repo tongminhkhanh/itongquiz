@@ -504,6 +504,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                     {q.type === QuestionType.RIDDLE && (() => {
                                         const riddleLines = (q as any).riddleLines || [];
                                         const correctAns = (q as any).correctAnswer || '';
+                                        const answerLabel = (q as any).answerLabel || 'Đáp án';
                                         const studentAns = (answers[q.id] || '').toString().trim();
                                         const isCorrect = studentAns.toLowerCase() === correctAns.toLowerCase();
 
@@ -516,7 +517,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                 </div>
 
                                                 <p className={`font-bold ${isCorrect ? 'text-green-600' : 'text-red-500'}`}>
-                                                    Em trả lời: "{studentAns || '(trống)'}"
+                                                    {answerLabel}: "{studentAns || '(trống)'}"
                                                     {isCorrect && ' ✓'}
                                                 </p>
 

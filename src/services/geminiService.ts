@@ -79,14 +79,22 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
       - Nên chọn từ có 4-10 chữ cái
       - Ví dụ: "chăm chỉ" → letters: ["c", "h", "ă", "m", "c", "h", "ỉ"] (xáo trộn)
       - Ví dụ: "thông minh" → letters: ["m", "i", "n", "h", "t", "h", "ô", "n", "g"] (xáo trộn))`,
-    'RIDDLE': `RIDDLE (Giải câu đố - học sinh đọc câu đố và nhập đáp án. Format: {"type": "RIDDLE", "question": "Giải câu đố sau:", "riddleLines": ["Để nguyên đường nét mảnh mai", "Thêm huyền trái nghĩa với \"bạn\" ơi.", "Khi thêm dấu huyền, ta được từ gì?"], "correctAnswer": "bạc", "hint": "Đây là một kim loại quý", "explanation": "..."}.
+    'RIDDLE': `RIDDLE (Câu đố chữ tiếng Việt - thêm/bớt dấu thanh hoặc chữ cái. CHỈ CÓ 1 ĐÁP ÁN.
+      Format: {"type": "RIDDLE", "question": "Giải câu đố sau:", "riddleLines": ["Để nguyên là tiếng chim kêu,", "Bỏ sắc, thành ngôi sao chiếu sáng đêm.", "Từ bỏ sắc là gì?"], "correctAnswer": "sao", "answerType": "transformed", "answerLabel": "Từ bỏ sắc", "hint": "Vật sáng trên trời đêm", "explanation": "sáo bỏ dấu sắc thành sao"}.
       ⚠️ QUAN TRỌNG:
-      - riddleLines: Mảng các dòng câu đố (mỗi dòng là 1 string riêng)
-      - correctAnswer: Đáp án đúng (từ/cụm từ ngắn)
-      - hint: Gợi ý cho học sinh (tùy chọn)
-      - Ví dụ câu đố Việt Nam truyền thống:
-        + "Cái gì có chân mà không đi được?" → "cái bàn"
-        + "Con gì 2 cánh, bay cao bay xa?" → "cái máy bay")`
+      - riddleLines: Mảng 2-4 dòng câu đố thơ (có vần), DÒNG CUỐI CÓ THỂ HỎI "Từ để nguyên là gì?" HOẶC "Từ thêm/bỏ dấu là gì?"
+      - correctAnswer: CHỈ 1 TIẾNG (1 âm tiết) - đây là đáp án duy nhất
+      - answerType: "original" nếu hỏi từ gốc, "transformed" nếu hỏi từ biến đổi
+      - answerLabel: Label hiển thị cho học sinh, VD: "Từ để nguyên", "Từ bỏ sắc", "Từ thêm huyền"
+      - DẠNG CÂU ĐỐ:
+        + Hỏi từ để nguyên: riddleLines có "Từ để nguyên là gì?", answerType="original", correctAnswer=từ gốc
+        + Hỏi từ biến đổi: riddleLines có "Từ bỏ sắc/thêm huyền là gì?", answerType="transformed", correctAnswer=từ biến đổi
+      - VÍ DỤ 1 (hỏi từ biến đổi):
+        + riddleLines: ["Để nguyên là tiếng chim kêu,", "Bỏ sắc, thành ngôi sao chiếu sáng đêm.", "Từ bỏ sắc là gì?"]
+        + correctAnswer: "sao", answerType: "transformed", answerLabel: "Từ bỏ sắc"
+      - VÍ DỤ 2 (hỏi từ gốc):
+        + riddleLines: ["Thêm huyền thành nơi thầy cô giảng bài,", "Để nguyên em đi ngoài đường mỗi ngày.", "Từ để nguyên là gì?"]
+        + correctAnswer: "ban", answerType: "original", answerLabel: "Từ để nguyên")`
   };
 
   const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');

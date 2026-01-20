@@ -187,13 +187,15 @@ export interface WordScrambleQuestion {
     explanation?: string;
 }
 
-// Riddle Question - Giải câu đố
+// Riddle Question - Giải câu đố (Thêm/bớt dấu thanh)
 export interface RiddleQuestion {
     id: string;
     type: QuestionType.RIDDLE;
     question: string; // "Giải câu đố sau:"
-    riddleLines: string[]; // Các dòng câu đố, VD: ["Để nguyên đường nét...", "Thêm huyền trái nghĩa..."]
-    correctAnswer: string; // "bạc" - đáp án
+    riddleLines: string[]; // Các dòng câu đố, VD: ["Để nguyên là tiếng chim kêu,", "Bỏ sắc, thành ngôi sao chiếu sáng đêm."]
+    correctAnswer: string; // Đáp án đúng (1 từ): "sáo" hoặc "sao" tùy answerType
+    answerType: 'original' | 'transformed'; // "original" = hỏi từ gốc, "transformed" = hỏi từ biến đổi
+    answerLabel: string; // Label hiển thị: "Từ để nguyên" hoặc "Từ bỏ sắc" 
     hint?: string; // Gợi ý (tùy chọn)
     image?: string;
     explanation?: string;

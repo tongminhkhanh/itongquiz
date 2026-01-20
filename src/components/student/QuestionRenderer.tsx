@@ -921,6 +921,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 {q.type === QuestionType.RIDDLE && (() => {
                     const riddleLines = (q as any).riddleLines || [];
                     const hint = (q as any).hint || '';
+                    const answerLabel = (q as any).answerLabel || 'Đáp án';
                     const currentAnswer = answers[q.id] || '';
 
                     return (
@@ -943,15 +944,15 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                 </p>
                             )}
 
-                            {/* Answer Input */}
-                            <div className="flex items-center gap-3">
-                                <span className="text-gray-700 font-medium">Đáp án: từ</span>
+                            {/* Single Answer Input */}
+                            <div className="flex items-center gap-3 bg-indigo-50 p-3 rounded-lg border border-indigo-200">
+                                <span className="text-indigo-700 font-medium whitespace-nowrap">{answerLabel}:</span>
                                 <input
                                     type="text"
                                     value={currentAnswer}
                                     onChange={(e) => onAnswerChange(q.id, e.target.value)}
-                                    placeholder="Nhập đáp án..."
-                                    className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-bold text-center"
+                                    placeholder="Nhập đáp án (1 tiếng)..."
+                                    className="flex-1 px-4 py-2 border-2 border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg font-bold text-center bg-white"
                                 />
                             </div>
 

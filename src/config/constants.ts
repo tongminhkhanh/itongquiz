@@ -122,13 +122,13 @@ The output must be a valid JSON object with this structure:
       "type": "RIDDLE",
       "question": "Giải câu đố sau:",
       "riddleLines": [
-        "Để nguyên đường nét mảnh mai",
-        "Thêm huyền trái nghĩa với \"bạn\" ơi.",
-        "Khi thêm dấu huyền, ta được từ gì?"
+        "Để nguyên tôi là bạn thân",
+        "Thêm huyền tôi biến thành vật bốn chân.",
+        "Tôi là từ gì?"
       ],
-      "correctAnswer": "bạc",
-      "hint": "Đây là một kim loại quý",
-      "explanation": "Từ 'bạc' khi thêm dấu huyền thành 'bạc' - trái nghĩa với 'bạn' (bạn vs bạc bẽo)."
+      "correctAnswer": "bàn",
+      "hint": "Một vật dụng trong nhà",
+      "explanation": "Từ 'bạn' (người bạn) khi thêm dấu huyền thành 'bàn' (cái bàn - vật có 4 chân)."
     }
   ]
 }
