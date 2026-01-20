@@ -47,10 +47,10 @@ export const createProvider = (config: CreateProviderConfig): IAIProvider => {
             return new PerplexityProvider(apiKey);
 
         case 'openai':
-            return new OpenAIProvider(apiKey, 'openai', 'https://api.openai.com/v1', model);
+            return new OpenAIProvider(apiKey, 'openai', import.meta.env.VITE_OPENAI_BASE_URL || 'https://api.openai.com/v1', model);
 
         case 'llm-mux':
-            const muxBaseUrl = baseUrl || 'http://localhost:3000/v1';
+            const muxBaseUrl = baseUrl || import.meta.env.VITE_LLM_MUX_BASE_URL || 'http://localhost:3000/v1';
             return new OpenAIProvider(apiKey || 'sk-dummy-key', 'llm-mux', muxBaseUrl, model);
 
         default:

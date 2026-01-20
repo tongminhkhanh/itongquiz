@@ -62,7 +62,16 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
        - TUYỆT ĐỐI KHÔNG để trống hoặc dùng URL bịa đặt.
     })`,
     'DROPDOWN': 'DROPDOWN (Câu hỏi điền vào chỗ trống bằng DROPDOWN. Format: {"type": "DROPDOWN", "question": "Chọn từ đúng điền vào chỗ trống", "text": "Thủ đô Việt Nam là [1]. Dân số khoảng [2] triệu người.", "blanks": [{"id": "blank-1", "options": ["Hà Nội", "TP.HCM", "Đà Nẵng"], "correctAnswer": "Hà Nội"}, {"id": "blank-2", "options": ["90", "100", "80"], "correctAnswer": "100"}]}. Trong text dùng [1], [2]... để đánh dấu vị trí dropdown. Mảng blanks chứa các dropdown tương ứng với options và correctAnswer)',
-    'UNDERLINE': 'UNDERLINE (Câu hỏi gạch chân từ/cụm từ trong câu. Học sinh click vào từ để gạch chân. Format: {"type": "UNDERLINE", "question": "Gạch chân động từ trong câu sau", "sentence": "Mặt trời ngả nắng đằng tây", "words": ["Mặt trời", "ngả", "nắng", "đằng tây"], "correctWordIndexes": [1]}. Lưu ý: words là mảng các từ/cụm từ tách ra từ sentence. correctWordIndexes là mảng index các từ cần gạch chân (0-indexed). VD: Với câu trên, "ngả" ở index 1 là động từ cần gạch chân.)'
+    'UNDERLINE': 'UNDERLINE (Câu hỏi gạch chân từ/cụm từ trong câu. Học sinh click vào từ để gạch chân. Format: {"type": "UNDERLINE", "question": "Gạch chân động từ trong câu sau", "sentence": "Mặt trời ngả nắng đằng tây", "words": ["Mặt trời", "ngả", "nắng", "đằng tây"], "correctWordIndexes": [1]}. Lưu ý: words là mảng các từ/cụm từ tách ra từ sentence. correctWordIndexes là mảng index các từ cần gạch chân (0-indexed). VD: Với câu trên, "ngả" ở index 1 là động từ cần gạch chân.)',
+    'CATEGORIZATION': `CATEGORIZATION (Kéo thả phân loại vào nhóm. Format: {"type": "CATEGORIZATION", "question": "Sắp xếp các đồ vật sau vào nhóm phù hợp.", "categories": [{"id": "hoc_tap", "name": "Đồ dùng học tập"}, {"id": "ca_nhan", "name": "Đồ dùng cá nhân"}], "items": [{"id": "item1", "content": "Bút chì", "categoryId": "hoc_tap"}, {"id": "item2", "content": "Thước kẻ", "categoryId": "hoc_tap"}, {"id": "item3", "content": "Bàn chải đánh răng", "categoryId": "ca_nhan"}, {"id": "item4", "content": "Khăn mặt", "categoryId": "ca_nhan"}], "explanation": "..."}.
+      ⚠️ QUAN TRỌNG - ITEMS PHẢI CÓ CONTENT:
+      - categories: Mảng 2-4 nhóm, mỗi nhóm có "id" và "name"
+      - items: Mảng 4-8 mục, MỖI MỤC BẮT BUỘC CÓ:
+        + "id": ID duy nhất (item1, item2...)
+        + "content": NỘI DUNG CỤ THỂ - KHÔNG ĐƯỢC ĐỂ TRỐNG! (VD: "Bút chì", "1/4 + 2/4", "Trăng tròn như cái đĩa")
+        + "categoryId": ID của nhóm mà item thuộc về
+      - ❌ SAI: {"id": "item1", "content": "", "categoryId": "cat1"} - content RỖNG
+      - ✅ ĐÚNG: {"id": "item1", "content": "Bút chì", "categoryId": "hoc_tap"} - content CÓ NỘI DUNG)`
   };
 
   const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');
@@ -280,6 +289,60 @@ const parseAndRepairJSON = (text: string): any => {
   }
 };
 
+// Validate and fix quiz data, especially CATEGORIZATION questions
+const validateAndFixQuiz = (quiz: any): any => {
+  console.log('[validateAndFixQuiz] Called with quiz:', quiz?.title || 'No title');
+  if (!quiz || !quiz.questions) {
+    console.log('[validateAndFixQuiz] No quiz or questions found');
+    return quiz;
+  }
+
+  console.log('[validateAndFixQuiz] Processing', quiz.questions.length, 'questions');
+
+  quiz.questions = quiz.questions.map((q: any, index: number) => {
+    // Fix CATEGORIZATION questions
+    if (q.type === 'CATEGORIZATION') {
+      console.log(`[CATEGORIZATION] Câu ${index + 1}: Found CATEGORIZATION question`);
+      console.log(`[CATEGORIZATION] Câu ${index + 1}: Raw question data:`, JSON.stringify(q, null, 2));
+
+      const categories = q.categories || [];
+      const items = q.items || [];
+
+      console.log(`[CATEGORIZATION] Câu ${index + 1}: categories count = ${categories.length}, items count = ${items.length}`);
+
+      // Log warning if items is empty
+      if (items.length === 0) {
+        console.error(`[CATEGORIZATION] ❌ Câu ${index + 1}: items array is EMPTY! AI did not create items.`);
+        console.error(`[CATEGORIZATION] Question text: "${q.question}"`);
+      } else {
+        // Log each item
+        items.forEach((item: any, i: number) => {
+          console.log(`[CATEGORIZATION] Câu ${index + 1}, Item ${i}: id="${item.id}", content="${item.content}", categoryId="${item.categoryId}"`);
+          if (!item.content || item.content.trim() === '') {
+            console.error(`[CATEGORIZATION] ❌ Item ${i} has EMPTY content!`);
+            item.content = item.content || `(Mục ${i + 1})`;
+          }
+          if (!item.id) item.id = `item_${i + 1}`;
+          if (!item.categoryId && categories.length > 0) {
+            item.categoryId = categories[0].id;
+          }
+        });
+      }
+
+      // Ensure categories have required fields
+      categories.forEach((cat: any, i: number) => {
+        if (!cat.id) cat.id = `cat_${i + 1}`;
+        if (!cat.name) cat.name = `Nhóm ${i + 1}`;
+      });
+
+      return { ...q, categories, items };
+    }
+    return q;
+  });
+
+  return quiz;
+};
+
 // Generate quiz using Perplexity API
 const generateWithPerplexity = async (
   promptText: string,
@@ -336,7 +399,7 @@ const generateWithPerplexity = async (
   const text = data.choices[0].message.content;
   if (!text) throw new Error("AI trả về dữ liệu rỗng.");
 
-  return parseAndRepairJSON(text);
+  return validateAndFixQuiz(parseAndRepairJSON(text));
 };
 
 // Generate quiz using Gemini API
@@ -551,7 +614,7 @@ BƯỚC 3: FORMAT JSON CHUẨN
         // Division with spaces
         .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
 
-      return parseAndRepairJSON(formattedText);
+      return validateAndFixQuiz(parseAndRepairJSON(formattedText));
 
     } catch (error: any) {
       if (attempt >= maxRetries || !error.message.includes("429")) {
@@ -688,7 +751,7 @@ Tài liệu đính kèm:`
       // Division with spaces
       .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
 
-    const parsedQuiz = parseAndRepairJSON(formattedText);
+    const parsedQuiz = validateAndFixQuiz(parseAndRepairJSON(formattedText));
 
     // Map image IDs to data URLs if imageLibrary is provided
     if (imageLibrary && imageLibrary.length > 0 && parsedQuiz.questions) {
