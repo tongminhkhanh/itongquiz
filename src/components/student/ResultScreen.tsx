@@ -467,8 +467,8 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                             <span
                                                                 key={i}
                                                                 className={`w-10 h-10 flex items-center justify-center rounded-lg font-bold text-lg ${isCorrect
-                                                                        ? 'bg-green-100 text-green-700 border border-green-300'
-                                                                        : 'bg-red-100 text-red-700 border border-red-300'
+                                                                    ? 'bg-green-100 text-green-700 border border-green-300'
+                                                                    : 'bg-red-100 text-red-700 border border-red-300'
                                                                     }`}
                                                             >
                                                                 {letters[idx]}
@@ -487,6 +487,45 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                             <span className="text-green-600 font-bold mr-2">✓</span>
                                                             <p className="text-green-700">
                                                                 <strong>Đáp án đúng:</strong> {correctWord}
+                                                            </p>
+                                                        </div>
+                                                        {(q as any).explanation && (
+                                                            <p className="text-blue-700 text-sm mt-2 border-t border-blue-200 pt-2">
+                                                                💡 {(q as any).explanation}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Riddle Review */}
+                                    {q.type === QuestionType.RIDDLE && (() => {
+                                        const riddleLines = (q as any).riddleLines || [];
+                                        const correctAns = (q as any).correctAnswer || '';
+                                        const studentAns = (answers[q.id] || '').toString().trim();
+                                        const isCorrect = studentAns.toLowerCase() === correctAns.toLowerCase();
+
+                                        return (
+                                            <div>
+                                                <div className="bg-amber-50 p-3 rounded-lg mb-3">
+                                                    {riddleLines.map((line: string, i: number) => (
+                                                        <p key={i} className="text-amber-900 italic text-sm">{line}</p>
+                                                    ))}
+                                                </div>
+
+                                                <p className={`font-bold ${isCorrect ? 'text-green-600' : 'text-red-500'}`}>
+                                                    Em trả lời: "{studentAns || '(trống)'}"
+                                                    {isCorrect && ' ✓'}
+                                                </p>
+
+                                                {!isCorrect && (
+                                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                                        <div className="flex items-start">
+                                                            <span className="text-green-600 font-bold mr-2">✓</span>
+                                                            <p className="text-green-700">
+                                                                <strong>Đáp án đúng:</strong> {correctAns}
                                                             </p>
                                                         </div>
                                                         {(q as any).explanation && (

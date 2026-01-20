@@ -329,6 +329,13 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         const studentWord = studentSelection.map((idx: number) => letters[idx]).join('').toLowerCase();
 
         if (studentWord === correctWord) correctCount++;
+      } else if (q.type === QuestionType.RIDDLE) {
+        // So sánh đáp án học sinh nhập với đáp án đúng (không phân biệt hoa thường, bỏ khoảng trắng thừa)
+        totalItems++;
+        const correctAns = ((q as any).correctAnswer || '').toLowerCase().trim();
+        const studentAns = (answers[q.id] || '').toString().toLowerCase().trim();
+
+        if (studentAns === correctAns) correctCount++;
       }
     });
 
@@ -424,6 +431,10 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       const letters = (q as any).letters || [];
       const currentAnswer = (answers[q.id] as number[]) || [];
       return currentAnswer.length === letters.length; // Phải chọn đủ số chữ cái
+    } else if (q.type === QuestionType.RIDDLE) {
+      // Kiểm tra đã nhập đáp án chưa
+      const currentAnswer = (answers[q.id] || '').toString().trim();
+      return currentAnswer.length > 0;
     }
     return !!answers[q.id];
   };

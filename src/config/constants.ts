@@ -117,6 +117,18 @@ The output must be a valid JSON object with this structure:
       "letters": ["k", "i", "ê", "n", "t", "r", "i"],
       "correctWord": "kiên trì",
       "explanation": "Kiên trì là tính từ chỉ sự bền bỉ, không bỏ cuộc."
+    },
+    {
+      "type": "RIDDLE",
+      "question": "Giải câu đố sau:",
+      "riddleLines": [
+        "Để nguyên đường nét mảnh mai",
+        "Thêm huyền trái nghĩa với \"bạn\" ơi.",
+        "Khi thêm dấu huyền, ta được từ gì?"
+      ],
+      "correctAnswer": "bạc",
+      "hint": "Đây là một kim loại quý",
+      "explanation": "Từ 'bạc' khi thêm dấu huyền thành 'bạc' - trái nghĩa với 'bạn' (bạn vs bạc bẽo)."
     }
   ]
 }

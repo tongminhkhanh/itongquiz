@@ -17,6 +17,7 @@ export enum QuestionType {
     UNDERLINE = 'UNDERLINE', // Câu hỏi gạch chân từ/cụm từ
     CATEGORIZATION = 'CATEGORIZATION', // Kéo thả phân loại vào nhóm
     WORD_SCRAMBLE = 'WORD_SCRAMBLE', // Sắp xếp chữ cái thành từ
+    RIDDLE = 'RIDDLE', // Giải câu đố
 }
 
 export interface MCQQuestion {
@@ -186,7 +187,19 @@ export interface WordScrambleQuestion {
     explanation?: string;
 }
 
-export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion | CategorizationQuestion | WordScrambleQuestion;
+// Riddle Question - Giải câu đố
+export interface RiddleQuestion {
+    id: string;
+    type: QuestionType.RIDDLE;
+    question: string; // "Giải câu đố sau:"
+    riddleLines: string[]; // Các dòng câu đố, VD: ["Để nguyên đường nét...", "Thêm huyền trái nghĩa..."]
+    correctAnswer: string; // "bạc" - đáp án
+    hint?: string; // Gợi ý (tùy chọn)
+    image?: string;
+    explanation?: string;
+}
+
+export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion | CategorizationQuestion | WordScrambleQuestion | RiddleQuestion;
 
 export interface Quiz {
     id: string;

@@ -20,6 +20,7 @@ const QUESTION_TYPE_CONFIG = [
     { type: QuestionType.UNDERLINE, label: 'Gạch chân', emoji: '✏️' },
     { type: QuestionType.CATEGORIZATION, label: 'Phân loại', emoji: '📦' },
     { type: QuestionType.WORD_SCRAMBLE, label: 'Ghép chữ', emoji: '🔤' },
+    { type: QuestionType.RIDDLE, label: 'Câu đố', emoji: '❓' },
 ];
 
 interface QuestionTypeSelectorProps {

@@ -97,6 +97,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
             [QuestionType.UNDERLINE]: 'Gạch chân',
             [QuestionType.CATEGORIZATION]: 'Phân loại',
             [QuestionType.WORD_SCRAMBLE]: 'Ghép chữ',
+            [QuestionType.RIDDLE]: 'Câu đố',
         };
         return labels[type] || type;
     };
@@ -414,6 +415,24 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                             </p>
                                             {(q as any).hint && (
                                                 <p className="text-xs text-amber-600 italic">💡 Gợi ý: {(q as any).hint}</p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* RIDDLE */}
+                                    {q.type === QuestionType.RIDDLE && (
+                                        <div className="ml-8 space-y-2">
+                                            <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                                                {((q as any).riddleLines || []).map((line: string, i: number) => (
+                                                    <p key={i} className="text-amber-900 italic text-sm">{line}</p>
+                                                ))}
+                                            </div>
+                                            <p className="text-sm">
+                                                <span className="text-gray-500">Đáp án:</span>
+                                                <span className="font-bold text-green-700 ml-2">{(q as any).correctAnswer}</span>
+                                            </p>
+                                            {(q as any).hint && (
+                                                <p className="text-xs text-blue-600 italic">💡 Gợi ý: {(q as any).hint}</p>
                                             )}
                                         </div>
                                     )}

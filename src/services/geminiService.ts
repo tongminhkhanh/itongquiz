@@ -78,7 +78,15 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
       - correctWord: Từ đúng khi sắp xếp lại các chữ cái
       - Nên chọn từ có 4-10 chữ cái
       - Ví dụ: "chăm chỉ" → letters: ["c", "h", "ă", "m", "c", "h", "ỉ"] (xáo trộn)
-      - Ví dụ: "thông minh" → letters: ["m", "i", "n", "h", "t", "h", "ô", "n", "g"] (xáo trộn))`
+      - Ví dụ: "thông minh" → letters: ["m", "i", "n", "h", "t", "h", "ô", "n", "g"] (xáo trộn))`,
+    'RIDDLE': `RIDDLE (Giải câu đố - học sinh đọc câu đố và nhập đáp án. Format: {"type": "RIDDLE", "question": "Giải câu đố sau:", "riddleLines": ["Để nguyên đường nét mảnh mai", "Thêm huyền trái nghĩa với \"bạn\" ơi.", "Khi thêm dấu huyền, ta được từ gì?"], "correctAnswer": "bạc", "hint": "Đây là một kim loại quý", "explanation": "..."}.
+      ⚠️ QUAN TRỌNG:
+      - riddleLines: Mảng các dòng câu đố (mỗi dòng là 1 string riêng)
+      - correctAnswer: Đáp án đúng (từ/cụm từ ngắn)
+      - hint: Gợi ý cho học sinh (tùy chọn)
+      - Ví dụ câu đố Việt Nam truyền thống:
+        + "Cái gì có chân mà không đi được?" → "cái bàn"
+        + "Con gì 2 cánh, bay cao bay xa?" → "cái máy bay")`
   };
 
   const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');

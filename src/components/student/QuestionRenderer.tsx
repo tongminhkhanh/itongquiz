@@ -889,8 +889,8 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             onClick={() => handleLetterClick(item.originalIndex)}
                                             disabled={item.isUsed}
                                             className={`w-10 h-10 rounded-lg font-bold text-lg transition-all shadow ${item.isUsed
-                                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-50'
-                                                    : 'bg-blue-500 text-white hover:bg-blue-600 hover:scale-105'
+                                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-50'
+                                                : 'bg-blue-500 text-white hover:bg-blue-600 hover:scale-105'
                                                 }`}
                                         >
                                             {item.letter}
@@ -909,6 +909,59 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                     className="text-xs text-red-500 hover:underline flex items-center"
                                 >
                                     <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
+            </div>
+
+            {/* RIDDLE - Giải câu đố */}
+            <div className="mt-4">
+                {q.type === QuestionType.RIDDLE && (() => {
+                    const riddleLines = (q as any).riddleLines || [];
+                    const hint = (q as any).hint || '';
+                    const currentAnswer = answers[q.id] || '';
+
+                    return (
+                        <div className="space-y-4">
+                            {/* Riddle Text */}
+                            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                                <div className="text-lg text-amber-900 leading-relaxed">
+                                    {riddleLines.map((line: string, i: number) => (
+                                        <p key={i} className="mb-1 italic">
+                                            {line}
+                                        </p>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Hint */}
+                            {hint && (
+                                <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                                    💡 <strong>Gợi ý:</strong> {hint}
+                                </p>
+                            )}
+
+                            {/* Answer Input */}
+                            <div className="flex items-center gap-3">
+                                <span className="text-gray-700 font-medium">Đáp án: từ</span>
+                                <input
+                                    type="text"
+                                    value={currentAnswer}
+                                    onChange={(e) => onAnswerChange(q.id, e.target.value)}
+                                    placeholder="Nhập đáp án..."
+                                    className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-bold text-center"
+                                />
+                            </div>
+
+                            {/* Reset */}
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={() => onAnswerChange(q.id, '')}
+                                    className="text-xs text-red-500 hover:underline flex items-center"
+                                >
+                                    <RefreshCcw className="w-3 h-3 mr-1" /> Xóa đáp án
                                 </button>
                             </div>
                         </div>
