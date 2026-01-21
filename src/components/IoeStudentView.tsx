@@ -390,13 +390,28 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                             <div className="mb-6">
                                                 <button
                                                     onClick={() => {
-                                                        // Extract full sentence from explanation
+                                                        // Extract full sentence from explanation or construct it
                                                         const explanation = (currentQuestion as any).explanation || '';
-                                                        // Try to get sentence after "Full sentence:" or use explanation directly
-                                                        const fullSentenceMatch = explanation.match(/Full sentence:\s*(.+)/i);
-                                                        const textToSpeak = fullSentenceMatch
-                                                            ? fullSentenceMatch[1].trim()
-                                                            : explanation.replace(/Full sentence:/i, '').trim();
+                                                        const correctAnswer = (currentQuestion as any).correctAnswer || '';
+                                                        const questionText = (currentQuestion as any).question || '';
+
+                                                        let textToSpeak = '';
+
+                                                        // Try explanation first
+                                                        if (explanation) {
+                                                            // Remove "Full sentence:" prefix if present
+                                                            textToSpeak = explanation.replace(/Full sentence:\s*/i, '').trim();
+                                                        }
+
+                                                        // Fallback: construct from question + correctAnswer
+                                                        if (!textToSpeak && questionText && correctAnswer) {
+                                                            // Remove emoji and clean question
+                                                            let cleanQ = questionText.replace(/🎧\s*/g, '').replace(/Listen and fill:\s*/gi, '').trim();
+                                                            // Replace ___ with correctAnswer
+                                                            textToSpeak = cleanQ.replace(/_+/, correctAnswer);
+                                                        }
+
+                                                        console.log('[TTS] Speaking:', textToSpeak); // Debug log
 
                                                         if (textToSpeak && 'speechSynthesis' in window) {
                                                             // Cancel any ongoing speech
@@ -407,6 +422,8 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                             utterance.rate = 0.85; // Slightly slower for kids
                                                             utterance.pitch = 1;
                                                             window.speechSynthesis.speak(utterance);
+                                                        } else {
+                                                            console.warn('[TTS] No text to speak or speechSynthesis not supported');
                                                         }
                                                     }}
                                                     className="w-20 h-20 bg-gradient-to-br from-sky-400 to-blue-500 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all active:scale-95 mx-auto border-4 border-white"
