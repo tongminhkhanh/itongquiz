@@ -445,6 +445,24 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                         {currentQuestion.items.map((item, i) => {
                                             const itemKey = item.id || `item-${i}`;
                                             const val = answers[currentQuestion.id]?.[itemKey];
+
+                                            // Handler for TRUE/FALSE with auto-advance
+                                            const handleTrueFalseClick = (value: boolean) => {
+                                                const newAnswers = { ...answers[currentQuestion.id], [itemKey]: value };
+                                                handleAnswerChange(currentQuestion.id, newAnswers);
+
+                                                // Check if all items are now answered
+                                                const allAnswered = currentQuestion.items.every((it, idx) => {
+                                                    const key = it.id || `item-${idx}`;
+                                                    return key === itemKey ? true : newAnswers[key] !== undefined;
+                                                });
+
+                                                // Auto-advance if all answered and not last question
+                                                if (allAnswered && currentIndex < shuffledQuestions.length - 1) {
+                                                    setTimeout(() => setCurrentIndex(prev => prev + 1), 500);
+                                                }
+                                            };
+
                                             return (
                                                 <div key={itemKey} className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border-2 border-slate-200">
                                                     <span className="text-lg text-slate-700 flex-1 mr-4 font-medium">
@@ -452,7 +470,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                     </span>
                                                     <div className="flex gap-2">
                                                         <button
-                                                            onClick={() => handleAnswerChange(currentQuestion.id, { ...answers[currentQuestion.id], [itemKey]: true })}
+                                                            onClick={() => handleTrueFalseClick(true)}
                                                             className={`px-5 py-2 rounded-xl font-bold transition-all active:scale-95 ${val === true
                                                                 ? 'bg-emerald-500 text-white shadow-lg'
                                                                 : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-emerald-50'
@@ -461,7 +479,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                             TRUE
                                                         </button>
                                                         <button
-                                                            onClick={() => handleAnswerChange(currentQuestion.id, { ...answers[currentQuestion.id], [itemKey]: false })}
+                                                            onClick={() => handleTrueFalseClick(false)}
                                                             className={`px-5 py-2 rounded-xl font-bold transition-all active:scale-95 ${val === false
                                                                 ? 'bg-red-500 text-white shadow-lg'
                                                                 : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-red-50'
@@ -518,9 +536,9 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                         key={`card-${idx}`}
                                                         onClick={() => !isUsed && handleOrderingCardClick(idx)}
                                                         disabled={isUsed}
-                                                        className={`px-8 py-5 rounded-2xl border-3 font-semibold text-lg md:text-xl transition-all shadow-md ${isUsed
+                                                        className={`px-8 py-5 rounded-2xl border-2 font-semibold text-lg md:text-xl transition-all shadow-md ${isUsed
                                                             ? 'bg-slate-100 border-slate-200 text-slate-300 opacity-50'
-                                                            : 'bg-white border-amber-300 text-slate-700 hover:scale-105 hover:shadow-xl hover:border-amber-500 cursor-pointer active:scale-95'
+                                                            : 'bg-white border-slate-300 text-slate-700 hover:scale-105 hover:shadow-xl hover:border-amber-500 hover:bg-amber-50 cursor-pointer active:scale-95'
                                                             }`}
                                                     >
                                                         {item}
