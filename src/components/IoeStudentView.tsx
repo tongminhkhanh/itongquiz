@@ -385,15 +385,50 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                 {/* SHORT ANSWER - Inline Input */}
                                 {currentQuestion.type === QuestionType.SHORT_ANSWER && (
                                     <div className="text-center">
+                                        {/* Listening Question - Play Button */}
+                                        {((currentQuestion as any).question || '').includes('🎧') && (
+                                            <div className="mb-6">
+                                                <button
+                                                    onClick={() => {
+                                                        // Extract full sentence from explanation
+                                                        const explanation = (currentQuestion as any).explanation || '';
+                                                        // Try to get sentence after "Full sentence:" or use explanation directly
+                                                        const fullSentenceMatch = explanation.match(/Full sentence:\s*(.+)/i);
+                                                        const textToSpeak = fullSentenceMatch
+                                                            ? fullSentenceMatch[1].trim()
+                                                            : explanation.replace(/Full sentence:/i, '').trim();
+
+                                                        if (textToSpeak && 'speechSynthesis' in window) {
+                                                            // Cancel any ongoing speech
+                                                            window.speechSynthesis.cancel();
+
+                                                            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                                                            utterance.lang = 'en-US';
+                                                            utterance.rate = 0.85; // Slightly slower for kids
+                                                            utterance.pitch = 1;
+                                                            window.speechSynthesis.speak(utterance);
+                                                        }
+                                                    }}
+                                                    className="w-20 h-20 bg-gradient-to-br from-sky-400 to-blue-500 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all active:scale-95 mx-auto border-4 border-white"
+                                                    title="Bấm để nghe câu"
+                                                >
+                                                    <span className="text-4xl">🔊</span>
+                                                </button>
+                                                <p className="text-sm text-slate-500 mt-2 font-medium">Bấm để nghe câu đầy đủ</p>
+                                            </div>
+                                        )}
+
                                         <div className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-700 leading-relaxed inline-flex flex-wrap items-center justify-center gap-2">
                                             {(() => {
                                                 const questionText = (currentQuestion as any).question || '';
+                                                // Remove 🎧 emoji for display
+                                                const cleanQuestion = questionText.replace(/🎧\s*/g, '').replace(/Listen and fill:\s*/gi, '');
                                                 // Check if question has underscore/placeholder pattern
-                                                const hasPlaceholder = /_+|\[\.{2,}\]|\[…\]/.test(questionText);
+                                                const hasPlaceholder = /_+|\[\.{2,}\]|\[…\]/.test(cleanQuestion);
 
                                                 if (hasPlaceholder) {
                                                     // Split by underscore patterns: _, __, ___, ____, or [...] 
-                                                    const parts = questionText.split(/(_+|\[\.{2,}\]|\[…\])/);
+                                                    const parts = cleanQuestion.split(/(_+|\[\.{2,}\]|\[…\])/);
 
                                                     return parts.map((part: string, idx: number) => {
                                                         // Check if this part is a blank placeholder
@@ -422,7 +457,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                     // No placeholder - show question + input below
                                                     return (
                                                         <>
-                                                            <span dangerouslySetInnerHTML={{ __html: formatHtmlText(questionText) }} />
+                                                            <span dangerouslySetInnerHTML={{ __html: formatHtmlText(cleanQuestion) }} />
                                                             <input
                                                                 type="text"
                                                                 value={answers[currentQuestion.id] || ''}

@@ -11,13 +11,14 @@ interface IoeTabProps {
     onSuccess: () => void;
 }
 
-// IOE Question Types - 6 dạng bài chính theo chuẩn IOE
+// IOE Question Types - 7 dạng bài chính theo chuẩn IOE
 const IOE_QUESTION_TYPES = [
     { id: 'phonetics', name: '🔊 Ngữ âm (Phonetics)', defaultCount: 3, description: 'Tìm từ phát âm giống/khác' },
     { id: 'word_stress', name: '🎵 Trọng âm (Word Stress)', defaultCount: 3, description: 'Chọn từ có trọng âm khác' },
     { id: 'vocabulary', name: '📝 Từ vựng & Chính tả', defaultCount: 5, description: 'Điền chữ thiếu, xáo trộn' },
     { id: 'grammar', name: '📖 Ngữ pháp & Câu', defaultCount: 5, description: 'Chọn câu đúng, tìm lỗi' },
     { id: 'sentence_order', name: '🔀 Sắp xếp câu', defaultCount: 3, description: 'Sắp xếp từ thành câu' },
+    { id: 'listening', name: '🎧 Nghe điền từ (Listening)', defaultCount: 3, description: 'Nghe và điền từ còn thiếu' },
     { id: 'reading', name: '📚 Đọc hiểu (True/False)', defaultCount: 4, description: 'Đọc đoạn văn, chọn Đ/S' },
 ];
 
@@ -213,6 +214,43 @@ Structure:
 - Create statements based on text, ask TRUE or FALSE.
 Output: { "type": "TRUE_FALSE", "mainQuestion": "I am Mary. I get up at six o'clock. I have breakfast at six thirty. I go to school at seven.\\n\\nRead and choose True or False:", "items": [{"statement": "Mary gets up at 6 o'clock.", "isCorrect": true}, {"statement": "Mary has breakfast at 7 o'clock.", "isCorrect": false}] }
 
+📌 DẠNG 7: LISTENING GAP-FILL (Nghe điền từ) - type: "SHORT_ANSWER"
+### ROLE
+You are an English Content Developer for IOE exam (Grade 3-5).
+Your task is to create "Listening & Gap-Fill" questions.
+
+### DIFFICULTY CONSTRAINTS
+1. Grammar: Present Simple Tense (Subject + to be + Preposition + Place).
+2. Vocabulary:
+   - Common Objects: ball, book, pen, cat, dog, bag, hat, toy.
+   - Prepositions: in, on, under, behind, next to, near.
+   - Furniture/Places: table, chair, box, desk, bed, floor, room.
+3. Length: Short sentences (5-8 words).
+
+### FORMAT RULES
+1. Create a simple English sentence (audio script).
+2. Replace ONE word with ___ (usually the last Noun or Preposition).
+3. correctAnswer is the hidden word ONLY (not the full word, just the missing part).
+4. ⚠️ CRITICAL: "explanation" field MUST contain the EXACT full sentence that will be spoken aloud by text-to-speech!
+
+### OUTPUT FORMAT
+{ 
+  "type": "SHORT_ANSWER", 
+  "question": "🎧 The ball is on the ___.", 
+  "correctAnswer": "table",
+  "explanation": "The ball is on the table."
+}
+
+⚠️ IMPORTANT: 
+- question MUST start with 🎧 emoji
+- explanation MUST be the complete sentence WITHOUT "Full sentence:" prefix - just the sentence itself!
+- The explanation is used for TEXT-TO-SPEECH, so it must be clean and readable
+
+Examples:
+{ "type": "SHORT_ANSWER", "question": "🎧 My cat is under the ___.", "correctAnswer": "bed", "explanation": "My cat is under the bed." }
+{ "type": "SHORT_ANSWER", "question": "🎧 The book is ___ the desk.", "correctAnswer": "on", "explanation": "The book is on the desk." }
+{ "type": "SHORT_ANSWER", "question": "🎧 There is a ___ in the box.", "correctAnswer": "toy", "explanation": "There is a toy in the box." }
+
 ===== OUTPUT JSON FORMAT =====
 {
   "title": "IOE Grade X: Topic Name",
@@ -350,6 +388,7 @@ TOTAL: ${totalQuestions} questions
             }
             if (questionCounts['grammar'] > 0) enabledTypes.push(QuestionType.MCQ);
             if (questionCounts['sentence_order'] > 0) enabledTypes.push(QuestionType.ORDERING);
+            if (questionCounts['listening'] > 0) enabledTypes.push(QuestionType.SHORT_ANSWER);
             if (questionCounts['reading'] > 0) enabledTypes.push(QuestionType.TRUE_FALSE);
 
             const result = await generateQuiz(
