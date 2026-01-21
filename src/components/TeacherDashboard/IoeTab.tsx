@@ -11,9 +11,10 @@ interface IoeTabProps {
     onSuccess: () => void;
 }
 
-// IOE Question Types - 5 dạng bài chính theo chuẩn IOE
+// IOE Question Types - 6 dạng bài chính theo chuẩn IOE
 const IOE_QUESTION_TYPES = [
     { id: 'phonetics', name: '🔊 Ngữ âm (Phonetics)', defaultCount: 3, description: 'Tìm từ phát âm giống/khác' },
+    { id: 'word_stress', name: '🎵 Trọng âm (Word Stress)', defaultCount: 3, description: 'Chọn từ có trọng âm khác' },
     { id: 'vocabulary', name: '📝 Từ vựng & Chính tả', defaultCount: 5, description: 'Điền chữ thiếu, xáo trộn' },
     { id: 'grammar', name: '📖 Ngữ pháp & Câu', defaultCount: 5, description: 'Chọn câu đúng, tìm lỗi' },
     { id: 'sentence_order', name: '🔀 Sắp xếp câu', defaultCount: 3, description: 'Sắp xếp từ thành câu' },
@@ -88,6 +89,46 @@ Example Type B:
   "options": ["A. open", "B. nose", "C. do", "D. cold"],
   "correctAnswer": "C",
   "explanation": "'do' is pronounced /uː/, others are /əʊ/ (/ˈəʊ.pən/, /nəʊz/, /kəʊld/)."
+}
+
+📌 DẠNG 6: WORD STRESS (Trọng âm) - type: "MCQ"
+### ROLE
+You are an Expert English Teacher specializing in Word Stress for Vietnamese IOE curriculum (Grade 3-5).
+
+### PHONOLOGICAL RULES (CRITICAL)
+1. IPA Verification: You MUST internally verify IPA transcription for every word to identify the primary stress mark (ˈ).
+2. Grade-appropriate Vocabulary: Use words from Grade 3-5 curriculum (Topics: Family, School, Animals, Daily routines, Hobbies, Future jobs, Health, Seasons).
+3. Pattern Consistency: In a single question, keep syllable count SIMILAR (all 2-syllable OR all 3-syllable words) to make it a fair test.
+4. No Ambiguity: Avoid words with dual stress patterns (e.g., 'present' can be noun or verb). The odd-one-out must be UNAMBIGUOUS.
+
+### QUESTION TYPE
+"Choose the word that has a DIFFERENT stress pattern from the others."
+(3 options share the same stress pattern; 1 option is different - the "odd one out", marked by is_odd_out: true)
+
+### DIFFICULTY LEVELS TO MIX
+- Level 1 (2-syllable): Focus on Noun/Adjective (stress 1st) vs Verb (stress 2nd)
+  Examples: 'visit' (1), 'listen' (1), 'enjoy' (2), 'travel' (1)
+- Level 2 (3-syllable - Common in IOE Grade 5):
+  Examples: 'holiday' (1), 'family' (1), 'volunteer' (3), 'beautiful' (1)
+  User Examples: 'organise' (1), 'decorate' (1), 'divorce' (2), 'promise' (1)
+- Level 3 (Suffix Rules): Words ending in -tion (stress on syllable before), -ic (stress on syllable before), -ese (stress on itself)
+
+### OUTPUT FORMAT
+{
+  "type": "MCQ",
+  "question": "Choose the word that has a DIFFERENT stress pattern from the others.",
+  "options": ["A. organise", "B. decorate", "C. divorce", "D. promise"],
+  "correctAnswer": "C",
+  "explanation": "'divorce' /dɪˈvɔːs/ is stressed on the 2nd syllable, while others are stressed on the 1st: 'organise' /ˈɔː.ɡən.aɪz/, 'decorate' /ˈdek.ə.reɪt/, 'promise' /ˈprɒm.ɪs/."
+}
+
+Example 2 (2-syllable words):
+{
+  "type": "MCQ",
+  "question": "Choose the word that has a DIFFERENT stress pattern from the others.",
+  "options": ["A. visit", "B. listen", "C. enjoy", "D. travel"],
+  "correctAnswer": "C",
+  "explanation": "'enjoy' /ɪnˈdʒɔɪ/ is stressed on the 2nd syllable (verb pattern), while others are stressed on the 1st: 'visit' /ˈvɪz.ɪt/, 'listen' /ˈlɪs.ən/, 'travel' /ˈtræv.əl/."
 }
 📌 DẠNG 2: VOCABULARY & UNSCRAMBLE (Từ vựng) - type: "MCQ" or "SHORT_ANSWER"
 Mix the following styles:
@@ -286,6 +327,7 @@ TOTAL: ${totalQuestions} questions
             // Map IOE question types to app question types
             const enabledTypes: QuestionType[] = [];
             if (questionCounts['phonetics'] > 0) enabledTypes.push(QuestionType.MCQ);
+            if (questionCounts['word_stress'] > 0) enabledTypes.push(QuestionType.MCQ);
             if (questionCounts['vocabulary'] > 0) {
                 enabledTypes.push(QuestionType.MCQ);
                 enabledTypes.push(QuestionType.SHORT_ANSWER);

@@ -122,8 +122,9 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
             }
         });
 
-        const score = totalItems === 0 ? 0 : (correctCount / totalItems) * 10;
-        return { score: parseFloat(score.toFixed(1)), correctCount, totalItems };
+        // IOE Scoring: Mỗi câu đúng = 10 điểm
+        const score = correctCount * 10;
+        return { score, correctCount, totalItems };
     }, [shuffledQuestions, answers]);
 
     const handleSubmit = useCallback(() => {
