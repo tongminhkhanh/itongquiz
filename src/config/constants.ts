@@ -11,8 +11,9 @@ export const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || '';
 
 // Danh mục quiz cho học sinh
 export const QUIZ_CATEGORIES = [
-  { id: 'vioedu', name: 'VioEdu', color: 'from-blue-400 to-indigo-500' },
+  { id: 'vioedu', name: 'VioEdu', color: 'from-green-400 to-emerald-500' },
   { id: 'trang-nguyen', name: 'Trạng Nguyên Tiếng Việt', color: 'from-red-400 to-pink-500' },
+  { id: 'ioe', name: 'IOE - Olympic Tiếng Anh', color: 'from-sky-400 to-blue-500' },
   { id: 'on-tap', name: 'Ôn tập theo chủ đề', color: 'from-emerald-400 to-green-500' }
 ];
 

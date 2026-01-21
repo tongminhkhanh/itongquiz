@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, QuestionType, ImageLibraryItem } from '../../types';
 import { Card, Button } from '../common';
-import { FileText, Sparkles, Upload, X, FileCheck } from 'lucide-react';
+import { FileText, Sparkles, Upload, X, FileCheck, Copy, Check, Link2 } from 'lucide-react';
 import { AIProvider, generateQuiz, QuizGenerationOptions } from '../../services/geminiService';
 import { QuestionTypeSelector, DifficultyLevelSelector, ImageLibrary, AIProviderSelector } from '../teacher/QuizCreator';
 import QuizPreview from './QuizPreview';
@@ -49,6 +49,11 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     // PDF/Document file upload
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Quiz link modal state
+    const [showLinkModal, setShowLinkModal] = useState(false);
+    const [savedQuizLink, setSavedQuizLink] = useState('');
+    const [linkCopied, setLinkCopied] = useState(false);
 
     // Image library
     const [imageLibrary, setImageLibrary] = useState<ImageLibraryItem[]>(() => {
@@ -259,6 +264,12 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                 await onSaveQuiz(generatedQuiz);
             }
 
+            // Generate shareable link
+            const quizLink = `${window.location.origin}/?quiz=${generatedQuiz.id}`;
+            setSavedQuizLink(quizLink);
+            setLinkCopied(false);
+            setShowLinkModal(true);
+
             // Reset form
             setTopic('');
             setQuizTitle('');
@@ -269,10 +280,20 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
             setUploadedFile(null);
             setGeneratedQuiz(null);
 
-            alert('Đã lưu bài kiểm tra thành công!');
             onSuccess();
         } catch (err: any) {
             setError(err.message || 'Lỗi khi lưu bài kiểm tra');
+        }
+    };
+
+    // Copy link to clipboard
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(savedQuizLink);
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 3000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
         }
     };
 
@@ -595,8 +616,65 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     }}
                 />
             </div>
+
+            {/* Quiz Link Modal */}
+            {showLinkModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-scale-in">
+                        {/* Success Icon */}
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                <Check className="w-8 h-8 text-white" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800">Lưu đề thành công!</h3>
+                            <p className="text-gray-500 text-sm mt-1">Chia sẻ link bên dưới cho học sinh để làm bài</p>
+                        </div>
+
+                        {/* Link Display */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Link2 className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm font-medium text-gray-700">Link làm bài:</span>
+                            </div>
+                            <div className="bg-white border border-gray-300 rounded-lg p-3 font-mono text-sm text-blue-600 break-all">
+                                {savedQuizLink}
+                            </div>
+                        </div>
+
+                        {/* Copy Button */}
+                        <button
+                            onClick={handleCopyLink}
+                            className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${linkCopied
+                                ? 'bg-green-100 text-green-700 border-2 border-green-300'
+                                : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:shadow-lg'
+                                }`}
+                        >
+                            {linkCopied ? (
+                                <>
+                                    <Check className="w-5 h-5" />
+                                    Đã copy link!
+                                </>
+                            ) : (
+                                <>
+                                    <Copy className="w-5 h-5" />
+                                    Copy link gửi học sinh
+                                </>
+                            )}
+                        </button>
+
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setShowLinkModal(false)}
+                            className="w-full mt-3 py-2 text-gray-500 hover:text-gray-700 text-sm font-medium"
+                        >
+                            Đóng
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
 export default CreateTab;
+
