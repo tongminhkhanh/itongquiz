@@ -419,8 +419,26 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
                                                             const utterance = new SpeechSynthesisUtterance(textToSpeak);
                                                             utterance.lang = 'en-US';
-                                                            utterance.rate = 0.85; // Slightly slower for kids
+                                                            utterance.rate = 0.7; // Slow speed for young students
                                                             utterance.pitch = 1;
+
+                                                            // Try to select native female English voice
+                                                            const voices = window.speechSynthesis.getVoices();
+                                                            const femaleVoice = voices.find(v =>
+                                                                (v.lang.startsWith('en-US') || v.lang.startsWith('en-GB')) &&
+                                                                (v.name.toLowerCase().includes('female') ||
+                                                                    v.name.includes('Samantha') || // macOS
+                                                                    v.name.includes('Zira') || // Windows
+                                                                    v.name.includes('Google US English') ||
+                                                                    v.name.includes('Karen') || // Australian
+                                                                    v.name.includes('Moira')) // Irish
+                                                            ) || voices.find(v => v.lang.startsWith('en-US') || v.lang.startsWith('en-GB'));
+
+                                                            if (femaleVoice) {
+                                                                utterance.voice = femaleVoice;
+                                                                console.log('[TTS] Using voice:', femaleVoice.name);
+                                                            }
+
                                                             window.speechSynthesis.speak(utterance);
                                                         } else {
                                                             console.warn('[TTS] No text to speak or speechSynthesis not supported');
