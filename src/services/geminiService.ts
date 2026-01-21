@@ -421,7 +421,8 @@ const fixQuestionLatex = (q: any): any => {
 };
 
 // Validate and fix quiz data, especially CATEGORIZATION questions
-const validateAndFixQuiz = (quiz: any): any => {
+// maxQuestions: Optional limit - if AI returns more questions than requested, slice to this limit
+const validateAndFixQuiz = (quiz: any, maxQuestions?: number): any => {
   console.log('[validateAndFixQuiz] Called with quiz:', quiz?.title || 'No title');
   if (!quiz || !quiz.questions) {
     console.log('[validateAndFixQuiz] No quiz or questions found');
@@ -429,6 +430,13 @@ const validateAndFixQuiz = (quiz: any): any => {
   }
 
   console.log('[validateAndFixQuiz] Processing', quiz.questions.length, 'questions');
+
+  // ⚠️ CRITICAL: Slice questions if AI returned more than requested
+  if (maxQuestions && quiz.questions.length > maxQuestions) {
+    console.warn(`[validateAndFixQuiz] ⚠️ AI returned ${quiz.questions.length} questions but only ${maxQuestions} requested. Slicing...`);
+    quiz.questions = quiz.questions.slice(0, maxQuestions);
+    console.log(`[validateAndFixQuiz] After slicing: ${quiz.questions.length} questions`);
+  }
 
   quiz.questions = quiz.questions.map((q: any, index: number) => {
     // First, fix LaTeX in all text fields
@@ -937,17 +945,28 @@ export const generateQuiz = async (
   if (!apiKey && provider !== 'llm-mux') throw new Error(`Vui lòng nhập API Key cho ${provider.toUpperCase()} trong phần Cấu hình.`);
 
   const promptText = buildPrompt(topic, classLevel, content, options);
+  const requestedCount = options?.questionCount || 10;
+
+  let result: any;
 
   if (provider === 'perplexity') {
-    return generateWithPerplexity(promptText, apiKey);
+    result = await generateWithPerplexity(promptText, apiKey);
   } else if (provider === 'openai') {
-    return generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary);
+    result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary);
   } else if (provider === 'llm-mux') {
     const baseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || 'http://localhost:8317/v1';
-    return generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary, baseUrl);
+    result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary, baseUrl);
   } else {
-    return generateWithGemini(promptText, apiKey, file, options?.imageLibrary);
+    result = await generateWithGemini(promptText, apiKey, file, options?.imageLibrary);
   }
+
+  // ⚠️ CRITICAL: Ensure question count matches requested count
+  if (result?.questions?.length > requestedCount) {
+    console.warn(`[generateQuiz] ⚠️ AI returned ${result.questions.length} questions but only ${requestedCount} requested. Slicing to ${requestedCount}...`);
+    result.questions = result.questions.slice(0, requestedCount);
+  }
+
+  return result;
 };
 
 // =====================================================
