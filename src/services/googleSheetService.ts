@@ -279,7 +279,13 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                 title: row.title,
                 classLevel: String(row.classLevel), // Ensure it's a string for comparison
                 category: row.category || '', // Danh mục quiz
-                timeLimit: parseInt(row.timeLimit, 10) || 15,
+                timeLimit: (() => {
+                    const parsed = parseInt(row.timeLimit, 10);
+                    // Validate: timeLimit should be between 1-180 minutes
+                    // If invalid (e.g., year 2026 stored by mistake), default to 60
+                    if (isNaN(parsed) || parsed < 1 || parsed > 180) return 60;
+                    return parsed;
+                })(),
                 createdAt: row.createdAt || new Date().toISOString(),
                 questions: questionsByQuizId[row.id] || [],
                 accessCode: row.accessCode || "",

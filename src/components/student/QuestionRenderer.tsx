@@ -90,9 +90,9 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Câu hỏi {index + 1}</h3>
                 <div className="text-gray-700 font-medium">
                     {q.type === QuestionType.TRUE_FALSE || q.type === QuestionType.MATCHING ? (
-                        <p>{renderHtml(q.mainQuestion || "")}</p>
+                        <p style={{ whiteSpace: 'pre-wrap' }}>{renderHtml(q.mainQuestion || "")}</p>
                     ) : (
-                        <p>{renderHtml((q as any).question || "")}</p>
+                        <p style={{ whiteSpace: 'pre-wrap' }}>{renderHtml((q as any).question || "")}</p>
                     )}
                 </div>
 
