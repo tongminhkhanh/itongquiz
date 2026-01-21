@@ -240,5 +240,14 @@ export const formatHtmlText = (text: string | any): string => {
         result = result.replace(closePattern, `</${tag}>`);
     });
 
+    // Convert underscore patterns to underline for IOE phonetics questions
+    // Pattern 1: _text_ -> <u>text</u> (e.g., "_o_" -> "<u>o</u>")
+    result = result.replace(/_([^_\s]+)_/g, '<u>$1</u>');
+
+    // Pattern 2: letter_X_letter pattern (e.g., "h_o_t" means 'o' is underlined)
+    // Match: word_char + underscore + single letter/group + underscore + word_char
+    // Convert the middle part to underlined
+    result = result.replace(/([a-zA-Z])_([a-zA-Z]+)_([a-zA-Z])/g, '$1<u>$2</u>$3');
+
     return result;
 };

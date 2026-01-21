@@ -132,10 +132,26 @@ Example 2 (2-syllable words):
 }
 📌 DẠNG 2: VOCABULARY & UNSCRAMBLE (Từ vựng) - type: "MCQ" or "SHORT_ANSWER"
 Mix the following styles:
-Style A - Unscramble Word: Take a word, scramble letters (e.g., 'RULER' -> 'LURRE'). Task: 'Unscramble this word'.
-Style B - Missing Character: Remove 1-2 letters (e.g., 'F_IEND'). Provide context: 'He is my best ______.'
-Output: { "type": "MCQ", "question": "Unscramble: LURRE - A thing used to draw lines.", "options": ["A. RULER", "B. RURAL", "C. RULED", "D. RUNNER"], "correctAnswer": "A" }
-Or: { "type": "SHORT_ANSWER", "question": "He is my best F_IEND.", "correctAnswer": "FRIEND" }
+
+Style A - Unscramble Word (MCQ): Scramble letters of a word, give 4 options.
+Example: { "type": "MCQ", "question": "Unscramble: LURRE - A thing used to draw lines.", "options": ["A. RULER", "B. RURAL", "C. RULED", "D. RUNNER"], "correctAnswer": "A" }
+
+Style B - Missing Character (SHORT_ANSWER): 
+⚠️ CRITICAL FORMAT RULES:
+1. The blank must be shown as underscore(s) INLINE with the word
+2. Use format: WORD with missing letters shown as _ (e.g., "B_DY" for BODY, "FR_END" for FRIEND)
+3. The question should be ONE COMPLETE SENTENCE with the incomplete word
+4. Put the definition in parentheses ONLY at the end
+5. correctAnswer is ONLY the missing letter(s), NOT the full word
+
+✅ CORRECT FORMAT:
+{ "type": "SHORT_ANSWER", "question": "I have two hands and two feet on my B_DY. (body part)", "correctAnswer": "O" }
+{ "type": "SHORT_ANSWER", "question": "He is my best FR__ND.", "correctAnswer": "IE" }
+{ "type": "SHORT_ANSWER", "question": "The T__CHER teaches us English.", "correctAnswer": "EA" }
+
+❌ WRONG FORMAT (DO NOT DO THIS):
+{ "question": "B [blank] DY - The physical structure..." } // DON'T split word
+{ "question": "What is BODY?", "correctAnswer": "BODY" } // DON'T ask for full word
 
 📌 DẠNG 3: GRAMMAR & ERROR IDENTIFICATION (Ngữ pháp) - type: "MCQ"
 Focus: Subject-Verb Agreement (am/is/are), Possessive Adjectives (my/his/her), Prepositions (in/on/at).
