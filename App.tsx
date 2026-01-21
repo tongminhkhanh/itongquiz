@@ -4,6 +4,7 @@ import { Quiz, QuestionType } from './src/types';
 import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID, QUIZ_CATEGORIES } from './src/config/constants';
 import { GraduationCap, Lock, KeyRound, RefreshCw, Loader2 } from 'lucide-react';
 import { fetchTeachersFromSheets } from './src/services/googleSheetService';
+import { fetchIoeQuizzes, saveIoeResult } from './src/services/ioeSheetService';
 import { useAuthStore } from './stores/authStore';
 import { useQuizStore } from './stores/quizStore';
 
@@ -27,33 +28,70 @@ const App: React.FC = () => {
     const [welcomeName, setWelcomeName] = useState('');
     const [activeTab, setActiveTab] = useState<'class' | 'trang-nguyen' | 'vioedu' | 'ioe'>('class');
 
+    // IOE Separate System State
+    const [ioeQuizzes, setIoeQuizzes] = useState<Quiz[]>([]);
+    const [ioeLoading, setIoeLoading] = useState(false);
+
     // --- INITIALIZATION ---
     useEffect(() => {
         // Load data on mount
         quizStore.loadQuizzes();
         quizStore.loadResults();
 
-        // Check URL for quizId
+        // Check URL for quizId - if it's an IOE quiz, load IOE quizzes
         const params = new URLSearchParams(window.location.search);
-        const quizId = params.get('quizId');
-        if (quizId) {
-            // We'll handle deep linking in the next effect
+        const quizId = params.get('quizId') || params.get('quiz');
+        if (quizId && quizId.startsWith('ioe-')) {
+            // Load IOE quizzes for deep linking
+            setIoeLoading(true);
+            fetchIoeQuizzes()
+                .then(quizzes => {
+                    setIoeQuizzes(quizzes);
+                    console.log('[IOE] Loaded', quizzes.length, 'quizzes for deep link');
+                })
+                .catch(err => console.error('[IOE] Load error:', err))
+                .finally(() => setIoeLoading(false));
         }
     }, []);
 
-    // Effect to handle deep linking once quizzes are loaded
+    // Load IOE quizzes when IOE tab is active
+    useEffect(() => {
+        const loadIoeData = async () => {
+            if (activeTab === 'ioe' && !ioeLoading) {
+                setIoeLoading(true);
+                try {
+                    const quizzes = await fetchIoeQuizzes();
+                    setIoeQuizzes(quizzes);
+                    console.log('[IOE] Loaded', quizzes.length, 'quizzes');
+                } catch (err) {
+                    console.error('[IOE] Load error:', err);
+                } finally {
+                    setIoeLoading(false);
+                }
+            }
+        };
+        loadIoeData();
+    }, [activeTab]);
+
     // Effect to handle deep linking once quizzes are loaded
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const quizId = params.get('quizId');
-        if (quizId && quizStore.quizzes.length > 0 && !quizStore.selectedQuiz) {
-            const foundQuiz = quizStore.quizzes.find(q => q.id === quizId);
+        const quizId = params.get('quizId') || params.get('quiz');
+        if (quizId && !quizStore.selectedQuiz) {
+            // First check main quizzes
+            let foundQuiz = quizStore.quizzes.find(q => q.id === quizId);
+
+            // If not found in main, check IOE quizzes
+            if (!foundQuiz && ioeQuizzes.length > 0) {
+                foundQuiz = ioeQuizzes.find(q => q.id === quizId);
+            }
+
             if (foundQuiz) {
                 quizStore.selectQuiz(foundQuiz);
                 quizStore.setView('student');
             }
         }
-    }, [quizStore.quizzes]);
+    }, [quizStore.quizzes, ioeQuizzes]);
 
     // --- HANDLERS ---
     const handleTeacherLogin = async () => {
@@ -136,7 +174,7 @@ const App: React.FC = () => {
                         <IoeStudentView
                             quiz={quizStore.selectedQuiz}
                             onExit={() => { quizStore.selectQuiz(null); quizStore.setView('home'); }}
-                            onSaveResult={quizStore.submitResult}
+                            onSaveResult={saveIoeResult}
                         />
                     ) : (
                         <StudentView
@@ -350,7 +388,8 @@ const App: React.FC = () => {
                                             } else if (activeTab === 'trang-nguyen') {
                                                 quizCount = quizStore.quizzes.filter(q => q.classLevel === level && q.category === 'trang-nguyen').length;
                                             } else if (activeTab === 'ioe') {
-                                                quizCount = quizStore.quizzes.filter(q => q.classLevel === level && q.category === 'ioe').length;
+                                                // Use IOE separate system quizzes
+                                                quizCount = ioeQuizzes.filter(q => q.classLevel === level).length;
                                             } else if (activeTab === 'vioedu') {
                                                 quizCount = quizStore.quizzes.filter(q => q.classLevel === level && q.category === 'vioedu').length;
                                             }
@@ -400,11 +439,17 @@ const App: React.FC = () => {
                             ) : (
                                 (() => {
                                     const categoryFilter = activeTab === 'class' ? null : activeTab;
-                                    const filteredQuizzes = quizStore.quizzes.filter(q => {
-                                        const matchClass = q.classLevel === quizStore.selectedClassLevel;
-                                        if (categoryFilter === null) return matchClass;
-                                        return matchClass && q.category === categoryFilter;
-                                    });
+                                    // For IOE tab, use separate IOE quizzes state
+                                    let filteredQuizzes: Quiz[];
+                                    if (activeTab === 'ioe') {
+                                        filteredQuizzes = ioeQuizzes.filter(q => q.classLevel === quizStore.selectedClassLevel);
+                                    } else {
+                                        filteredQuizzes = quizStore.quizzes.filter(q => {
+                                            const matchClass = q.classLevel === quizStore.selectedClassLevel;
+                                            if (categoryFilter === null) return matchClass;
+                                            return matchClass && q.category === categoryFilter;
+                                        });
+                                    }
 
                                     const categoryName = activeTab === 'class' ? 'Tất cả bài kiểm tra'
                                         : activeTab === 'trang-nguyen' ? 'Trạng Nguyên Tiếng Việt'

@@ -3,6 +3,7 @@ import { Quiz, QuestionType } from '../../types';
 import { Card, Button } from '../common';
 import { Globe, Sparkles, Zap, BookOpen, Trophy, Copy, Check, Link2, X } from 'lucide-react';
 import { generateQuiz, AIProvider } from '../../services/geminiService';
+import { saveIoeQuiz } from '../../services/ioeSheetService';
 import QuizPreview from './QuizPreview';
 
 interface IoeTabProps {
@@ -325,12 +326,15 @@ TOTAL: ${totalQuestions} questions
         }
     };
 
-    // Handle save
+    // Handle save - Use IOE Sheet Service instead of main quiz store
     const handleSaveQuiz = async () => {
         if (!generatedQuiz) return;
 
         try {
-            await onSaveQuiz(generatedQuiz);
+            const success = await saveIoeQuiz(generatedQuiz);
+            if (!success) {
+                throw new Error('Không thể lưu quiz vào IOE Sheet');
+            }
 
             // Generate shareable link
             const quizLink = `${window.location.origin}/?quiz=${generatedQuiz.id}`;

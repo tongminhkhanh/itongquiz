@@ -196,3 +196,49 @@ export const formatPercentage = (value: number, total: number, decimals: number 
     const percent = (value / total) * 100;
     return `${percent.toFixed(decimals)}%`;
 };
+
+/**
+ * Format text with safe HTML rendering for IOE questions
+ * Allows only specific safe tags like <u> for underline (used in phonetics questions)
+ * 
+ * @param text - Raw text that may contain HTML tags like <u>
+ * @returns Sanitized HTML string safe to use with dangerouslySetInnerHTML
+ */
+export const formatHtmlText = (text: string | any): string => {
+    if (text === null || text === undefined) return "";
+    if (typeof text !== 'string') {
+        if (Array.isArray(text)) {
+            return text.join(', ');
+        }
+        return String(text);
+    }
+    if (!text) return "";
+
+    // First apply math formatting
+    let result = formatMathText(text);
+
+    // Already contains HTML tags - no escaping needed for allowed tags
+    // Only allow: <u>, </u>, <b>, </b>, <i>, </i>, <em>, </em>, <strong>, </strong>
+    // All other tags should be escaped
+
+    // Escape all HTML first
+    result = result
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    // Now restore only allowed safe tags
+    const allowedTags = ['u', 'b', 'i', 'em', 'strong'];
+    allowedTags.forEach(tag => {
+        // Opening tag: &lt;u&gt; -> <u>
+        const openPattern = new RegExp(`&lt;${tag}&gt;`, 'gi');
+        result = result.replace(openPattern, `<${tag}>`);
+        // Closing tag: &lt;/u&gt; -> </u>
+        const closePattern = new RegExp(`&lt;/${tag}&gt;`, 'gi');
+        result = result.replace(closePattern, `</${tag}>`);
+    });
+
+    return result;
+};

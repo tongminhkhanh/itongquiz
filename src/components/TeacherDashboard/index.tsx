@@ -11,6 +11,8 @@ const ResultsTab = React.lazy(() => import('./ResultsTab'));
 const ManageTab = React.lazy(() => import('./ManageTab'));
 const CreateTab = React.lazy(() => import('./CreateTab'));
 const IoeTab = React.lazy(() => import('./IoeTab'));
+const IoeManageTab = React.lazy(() => import('./IoeManageTab'));
+const IoeResultsTab = React.lazy(() => import('./IoeResultsTab'));
 
 
 const TeacherDashboard: React.FC = () => {
@@ -39,6 +41,8 @@ const TeacherDashboard: React.FC = () => {
         { id: 'manage', label: 'Quản lý đề', icon: <List className="w-4 h-4" /> },
         { id: 'create', label: 'Tạo đề mới', icon: <Settings className="w-4 h-4" /> },
         { id: 'ioe', label: 'Tạo đề IOE', icon: <Globe className="w-4 h-4" /> },
+        { id: 'ioe-manage', label: 'IOE Quản lý', icon: <Globe className="w-4 h-4" /> },
+        { id: 'ioe-results', label: 'IOE Kết quả', icon: <Globe className="w-4 h-4" /> },
     ];
 
     // Filter tabs based on role and allowed users
@@ -49,8 +53,8 @@ const TeacherDashboard: React.FC = () => {
         // If not admin, only see Results
         if (!authStore.isAdmin) return false;
 
-        // IOE Tab Restriction
-        if (tab.id === 'ioe') {
+        // IOE Tabs Restriction (applies to all IOE-related tabs)
+        if (tab.id === 'ioe' || tab.id === 'ioe-manage' || tab.id === 'ioe-results') {
             const currentUsername = authStore.username || '';
             const isAllowed = IOE_ALLOWED_USERS.includes(currentUsername);
             return isAllowed;
@@ -173,9 +177,17 @@ const TeacherDashboard: React.FC = () => {
                             <IoeTab
                                 onSaveQuiz={quizStore.createQuiz}
                                 onSuccess={() => {
-                                    setActiveTab('manage');
+                                    setActiveTab('ioe-manage');
                                 }}
                             />
+                        )}
+
+                        {activeTab === 'ioe-manage' && (
+                            <IoeManageTab />
+                        )}
+
+                        {activeTab === 'ioe-results' && (
+                            <IoeResultsTab />
                         )}
 
 

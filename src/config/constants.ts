@@ -9,6 +9,13 @@ export const TEACHER_GID = '1020504406'; // Teachers sheet
 export const RESULTS_GID = '766571865'; // Results sheet
 export const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || '';
 
+// --- IOE SEPARATE SYSTEM ---
+export const IOE_GOOGLE_SHEET_ID = '1C9Ou0Z30-ayJlEPN29VnUOs52e4-7zh--Lv1egFo-lw';
+export const IOE_QUIZ_GID = '51945496'; // IoeQuizzes sheet
+export const IOE_QUESTION_GID = '1563920370'; // IoeQuestions sheet
+export const IOE_RESULTS_GID = '974092705'; // IoeResults sheet
+export const IOE_GOOGLE_SCRIPT_URL = import.meta.env.VITE_IOE_GOOGLE_SCRIPT_URL || '';
+
 // Danh mục quiz cho học sinh
 export const QUIZ_CATEGORIES = [
   { id: 'vioedu', name: 'VioEdu', color: 'from-green-400 to-emerald-500' },

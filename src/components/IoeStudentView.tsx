@@ -5,7 +5,7 @@ import {
     StudentInfoForm,
     ResultScreen
 } from './student';
-import { formatMathText } from '../utils/formatters';
+import { formatMathText, formatHtmlText } from '../utils/formatters';
 
 interface Props {
     quiz: Quiz;
@@ -415,9 +415,11 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                     )}
 
                                     {/* Question Text */}
-                                    <div className="text-white text-center text-xl font-medium mb-6" style={{ whiteSpace: 'pre-wrap' }}>
-                                        {formatMathText((currentQuestion as any).question || '')}
-                                    </div>
+                                    <div
+                                        className="text-white text-center text-xl font-medium mb-6"
+                                        style={{ whiteSpace: 'pre-wrap' }}
+                                        dangerouslySetInnerHTML={{ __html: formatHtmlText((currentQuestion as any).question || '') }}
+                                    />
 
                                     {/* Options as Cards */}
                                     <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
@@ -444,7 +446,8 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                         boxShadow: 'inset 0 -3px 0 rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.2)'
                                                     }}
                                                 >
-                                                    <span className="font-bold">{label}.</span> {formatMathText(opt.replace(/^[A-D]\.\s*/, ''))}
+                                                    <span className="font-bold">{label}.</span>{' '}
+                                                    <span dangerouslySetInnerHTML={{ __html: formatHtmlText(opt.replace(/^[A-D]\.\s*/, '')) }} />
                                                 </button>
                                             );
                                         })}
