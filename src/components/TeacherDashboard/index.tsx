@@ -1,7 +1,8 @@
 import React, { useState, Suspense } from 'react';
 import { Quiz } from '../../types';
 import { Tabs, TabItem, Button, ErrorBoundary } from '../common';
-import { LogOut, FileText, List, Settings, Bot, Key, X, Save, Loader2 } from 'lucide-react';
+import { LogOut, FileText, List, Settings, Bot, Key, X, Save, Loader2, Globe } from 'lucide-react';
+import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID, QUIZ_CATEGORIES, IOE_ALLOWED_USERS } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
 
@@ -9,6 +10,7 @@ import { useQuizStore } from '../../../stores/quizStore';
 const ResultsTab = React.lazy(() => import('./ResultsTab'));
 const ManageTab = React.lazy(() => import('./ManageTab'));
 const CreateTab = React.lazy(() => import('./CreateTab'));
+const IoeTab = React.lazy(() => import('./IoeTab'));
 
 
 const TeacherDashboard: React.FC = () => {
@@ -36,9 +38,27 @@ const TeacherDashboard: React.FC = () => {
         { id: 'results', label: 'Kết quả', icon: <FileText className="w-4 h-4" /> },
         { id: 'manage', label: 'Quản lý đề', icon: <List className="w-4 h-4" /> },
         { id: 'create', label: 'Tạo đề mới', icon: <Settings className="w-4 h-4" /> },
+        { id: 'ioe', label: 'Tạo đề IOE', icon: <Globe className="w-4 h-4" /> },
     ];
 
-    const tabs = authStore.isAdmin ? allTabs : allTabs.filter(tab => tab.id === 'results');
+    // Filter tabs based on role and allowed users
+    const tabs = allTabs.filter(tab => {
+        // Results tab is always visible (limited by role inside)
+        if (tab.id === 'results') return true;
+
+        // If not admin, only see Results
+        if (!authStore.isAdmin) return false;
+
+        // IOE Tab Restriction
+        if (tab.id === 'ioe') {
+            const currentUsername = authStore.username || '';
+            const isAllowed = IOE_ALLOWED_USERS.includes(currentUsername);
+            return isAllowed;
+        }
+
+        // Other tabs (manage, create) visible to admins
+        return true;
+    });
 
     // Handle update access code
     const handleUpdateAccessCode = async () => {
@@ -144,6 +164,15 @@ const TeacherDashboard: React.FC = () => {
                                 onUpdateQuiz={quizStore.modifyQuiz}
                                 onSuccess={() => {
                                     setEditingQuiz(null);
+                                    setActiveTab('manage');
+                                }}
+                            />
+                        )}
+
+                        {activeTab === 'ioe' && (
+                            <IoeTab
+                                onSaveQuiz={quizStore.createQuiz}
+                                onSuccess={() => {
                                     setActiveTab('manage');
                                 }}
                             />

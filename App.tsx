@@ -9,6 +9,7 @@ import { useQuizStore } from './stores/quizStore';
 
 // Lazy load main views
 const StudentView = React.lazy(() => import('./src/components/StudentView'));
+const IoeStudentView = React.lazy(() => import('./src/components/IoeStudentView'));
 import { CategorySelector } from './src/components/CategorySelector';
 import { QuizListByCategory } from './src/components/QuizListByCategory';
 const TeacherDashboard = React.lazy(() => import('./src/components/TeacherDashboard'));
@@ -68,7 +69,7 @@ const App: React.FC = () => {
         try {
             // Fallback login for development
             if (usernameInput === 'admin' && passwordInput === 'admin') {
-                authStore.loginSuccess('Admin', true, null);
+                authStore.loginSuccess('admin', 'Admin', true, null); // Pass username 'admin'
                 setWelcomeName('Admin');
                 quizStore.setView('home'); // Close login modal
                 setShowWelcome(true);
@@ -81,7 +82,7 @@ const App: React.FC = () => {
             const teacher = teachers.find(t => t.username === usernameInput && t.password === passwordInput);
 
             if (teacher) {
-                authStore.loginSuccess(teacher.fullName, teacher.role === 'admin', teacher.class);
+                authStore.loginSuccess(teacher.username, teacher.fullName, teacher.role === 'admin', teacher.class); // Pass actual username
                 setWelcomeName(teacher.fullName);
                 quizStore.setView('home'); // Close login modal
                 setShowWelcome(true);
@@ -117,21 +118,33 @@ const App: React.FC = () => {
     }
 
     if (quizStore.view === 'student' && quizStore.selectedQuiz) {
+        const isIoeQuiz = quizStore.selectedQuiz.category === 'ioe';
+
         return (
             <>
                 <Suspense fallback={
-                    <div className="min-h-screen flex items-center justify-center bg-white">
+                    <div className={`min-h-screen flex items-center justify-center ${isIoeQuiz ? 'bg-[#1a3a5c]' : 'bg-white'}`}>
                         <div className="flex flex-col items-center gap-4">
-                            <Loader2 className="w-12 h-12 text-green-500 animate-spin" />
-                            <p className="text-gray-500 font-medium">Đang tải bài kiểm tra...</p>
+                            <Loader2 className={`w-12 h-12 animate-spin ${isIoeQuiz ? 'text-[#c9a227]' : 'text-green-500'}`} />
+                            <p className={`font-medium ${isIoeQuiz ? 'text-white' : 'text-gray-500'}`}>
+                                {isIoeQuiz ? 'Loading IOE Quiz...' : 'Đang tải bài kiểm tra...'}
+                            </p>
                         </div>
                     </div>
                 }>
-                    <StudentView
-                        quiz={quizStore.selectedQuiz}
-                        onExit={() => { quizStore.selectQuiz(null); quizStore.setView('home'); }}
-                        onSaveResult={quizStore.submitResult}
-                    />
+                    {isIoeQuiz ? (
+                        <IoeStudentView
+                            quiz={quizStore.selectedQuiz}
+                            onExit={() => { quizStore.selectQuiz(null); quizStore.setView('home'); }}
+                            onSaveResult={quizStore.submitResult}
+                        />
+                    ) : (
+                        <StudentView
+                            quiz={quizStore.selectedQuiz}
+                            onExit={() => { quizStore.selectQuiz(null); quizStore.setView('home'); }}
+                            onSaveResult={quizStore.submitResult}
+                        />
+                    )}
                 </Suspense>
                 <Analytics />
             </>

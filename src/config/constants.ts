@@ -17,6 +17,9 @@ export const QUIZ_CATEGORIES = [
   { id: 'on-tap', name: 'Ôn tập theo chủ đề', color: 'from-emerald-400 to-green-500' }
 ];
 
+// Danh sách tài khoản được phép truy cập tab IOE (username)
+export const IOE_ALLOWED_USERS = ['admin', 'huong', 'lan']; // Thêm username vào đây
+
 export const SYSTEM_INSTRUCTION = `
 Bạn là một giáo viên tại Trường Tiểu học Ít Ong (Mường La, Sơn La).
 Nhiệm vụ của bạn là tạo đề kiểm tra trắc nghiệm JSON dựa trên nội dung được cung cấp.

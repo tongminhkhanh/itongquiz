@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 interface AuthState {
     // State
     isLoggedIn: boolean;
+    username: string | null; // Add username
     teacherName: string | null;
     isAdmin: boolean;
     teacherClass: string | null; // Class this teacher is responsible for
@@ -12,7 +13,7 @@ interface AuthState {
 
     // Actions
     loginStart: () => void;
-    loginSuccess: (name: string, isAdmin: boolean, teacherClass?: string | null) => void;
+    loginSuccess: (username: string, name: string, isAdmin: boolean, teacherClass?: string | null) => void; // Update signature
     loginFailure: () => void;
     logout: () => void;
     resetError: () => void;
@@ -23,6 +24,7 @@ export const useAuthStore = create<AuthState>()(
         (set) => ({
             // Initial state
             isLoggedIn: false,
+            username: null,
             teacherName: null,
             isAdmin: false,
             teacherClass: null,
@@ -32,8 +34,9 @@ export const useAuthStore = create<AuthState>()(
             // Actions
             loginStart: () => set({ isLoggingIn: true, loginError: false }),
 
-            loginSuccess: (name, isAdmin, teacherClass) => set({
+            loginSuccess: (username, name, isAdmin, teacherClass) => set({
                 isLoggedIn: true,
+                username,
                 teacherName: name,
                 isAdmin,
                 teacherClass: teacherClass || null,
@@ -48,6 +51,7 @@ export const useAuthStore = create<AuthState>()(
 
             logout: () => set({
                 isLoggedIn: false,
+                username: null,
                 teacherName: null,
                 isAdmin: false,
                 teacherClass: null,
@@ -61,6 +65,7 @@ export const useAuthStore = create<AuthState>()(
             name: 'auth-storage', // localStorage key
             partialize: (state) => ({
                 isLoggedIn: state.isLoggedIn,
+                username: state.username,
                 teacherName: state.teacherName,
                 isAdmin: state.isAdmin,
                 teacherClass: state.teacherClass
