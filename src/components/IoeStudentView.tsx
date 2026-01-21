@@ -13,6 +13,14 @@ interface Props {
     onSaveResult: (result: StudentResult) => void;
 }
 
+// Option colors for MCQ
+const OPTION_COLORS = [
+    { bg: 'bg-emerald-100', hoverBorder: 'hover:border-emerald-500', text: 'text-emerald-600', icon: 'bg-emerald-500' },
+    { bg: 'bg-pink-100', hoverBorder: 'hover:border-pink-500', text: 'text-pink-600', icon: 'bg-pink-500' },
+    { bg: 'bg-amber-100', hoverBorder: 'hover:border-amber-500', text: 'text-amber-600', icon: 'bg-amber-500' },
+    { bg: 'bg-sky-100', hoverBorder: 'hover:border-sky-500', text: 'text-sky-600', icon: 'bg-sky-500' },
+];
+
 const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     // Steps
     const [step, setStep] = useState<'code' | 'info' | 'quiz' | 'result'>(
@@ -32,9 +40,6 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     const [startTime, setStartTime] = useState<number>(0);
     const [result, setResult] = useState<StudentResult | null>(null);
     const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
-
-    // For ORDERING - drag and drop state
-    const [orderingAnswer, setOrderingAnswer] = useState<number[]>([]);
 
     // Fisher-Yates shuffle
     const shuffleArray = <T,>(array: T[]): T[] => {
@@ -61,7 +66,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         if (step === 'quiz') {
             const handleBeforeUnload = (e: BeforeUnloadEvent) => {
                 e.preventDefault();
-                e.returnValue = 'Bạn đang làm bài IOE! Nếu thoát, bài làm sẽ mất.';
+                e.returnValue = 'Bạn đang làm bài! Nếu thoát, bài làm sẽ mất.';
                 return e.returnValue;
             };
             window.addEventListener('beforeunload', handleBeforeUnload);
@@ -172,11 +177,9 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         const currentAns = (answers[currentQuestion.id] as number[]) || [];
 
         if (currentAns.includes(itemIndex)) {
-            // Remove from answer
             const newAns = currentAns.filter(i => i !== itemIndex);
             handleAnswerChange(currentQuestion.id, newAns);
         } else {
-            // Add to answer
             const newAns = [...currentAns, itemIndex];
             handleAnswerChange(currentQuestion.id, newAns);
         }
@@ -225,65 +228,68 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
     // Get current date/time
     const now = new Date();
-    const dateStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')} - ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    const dateStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} - ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
-    // IOE QUIZ INTERFACE - Official Style
+    // ========== PLAYFUL ENGLISH ADVENTURE INTERFACE ==========
     return (
-        <div className="min-h-screen bg-[#d4b896] p-2 md:p-4">
-            {/* Wooden Frame Border */}
-            <div className="rounded-lg overflow-hidden shadow-2xl" style={{
-                border: '12px solid #b8956e',
-                borderImage: 'linear-gradient(135deg, #d4b896 0%, #a67c52 50%, #8b6914 100%) 1',
-                boxShadow: 'inset 0 0 20px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.4)'
-            }}>
-                {/* Header Bar - Cream/Beige */}
-                <div className="bg-gradient-to-b from-[#f5e6d3] to-[#e8d4bc] px-4 py-3 flex items-center justify-between border-b-4 border-[#b8956e]">
-                    {/* Left: IOE Logo */}
-                    <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 rounded-full bg-[#1a3a5c] border-2 border-[#c9a227] flex items-center justify-center">
-                            <span className="text-[#c9a227] font-bold text-sm">IOE</span>
+        <div className="min-h-screen bg-sky-100 font-sans relative overflow-hidden">
+            {/* Decorative Background Icons */}
+            <div className="fixed inset-0 pointer-events-none opacity-20 overflow-hidden">
+                <span className="absolute top-10 left-10 text-8xl text-sky-400 rotate-12">🎨</span>
+                <span className="absolute bottom-20 right-10 text-9xl text-emerald-400 -rotate-12">🚀</span>
+                <span className="absolute top-1/4 right-20 text-7xl text-amber-400">💡</span>
+                <span className="absolute bottom-1/4 left-20 text-7xl text-pink-300 rotate-45">🧩</span>
+            </div>
+
+            {/* Header */}
+            <header className="relative z-10 bg-white/80 backdrop-blur-md border-b-4 border-dashed border-sky-400 p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center space-x-4">
+                    <div className="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center shadow-lg transform -rotate-3 border-4 border-white">
+                        <span className="text-white text-3xl">🌍</span>
+                    </div>
+                    <div>
+                        <h1 className="text-lg md:text-xl font-bold text-slate-700 tracking-tight">
+                            {quiz.title}
+                        </h1>
+                        <div className="flex items-center text-slate-500 text-sm font-medium">
+                            <span className="mr-1">👤</span>
+                            {studentName} <span className="mx-2 text-slate-300">|</span> {studentClass}
                         </div>
                     </div>
-
-                    {/* Center: Title + Timer */}
-                    <div className="text-center flex-1">
-                        <h1 className="text-[#1a3a5c] font-bold text-lg md:text-xl">{quiz.title}</h1>
-                        <div className="flex items-center justify-center gap-2 text-[#b8956e]">
-                            <span className="text-2xl">⏰</span>
-                            <span className="font-mono font-bold text-xl text-[#1a3a5c]">{formatTime(timeLeft)}</span>
-                        </div>
-                    </div>
-
-                    {/* Right: Student Info + Submit */}
-                    <div className="text-right">
-                        <p className="font-bold text-[#1a3a5c]">{studentName}</p>
-                        <p className="text-xs text-[#8b6914]">ID: {studentClass}</p>
-                        <button
-                            onClick={handleSubmit}
-                            className="mt-1 px-4 py-1 bg-[#f5e6d3] border-2 border-[#1a3a5c] rounded font-bold text-[#1a3a5c] hover:bg-[#1a3a5c] hover:text-white transition-all flex items-center gap-1"
-                        >
-                            SUBMIT <span>⬇</span>
-                        </button>
-                    </div>
                 </div>
-
-                {/* Sub Header - Date/Time */}
-                <div className="bg-[#e8d4bc] px-4 py-1 text-right text-sm text-[#8b6914] border-b border-[#b8956e]">
-                    {dateStr}
+                <div className="flex items-center space-x-4">
+                    {/* Timer */}
+                    <div className={`px-6 py-2 rounded-full border-4 border-white shadow-sm flex items-center space-x-2 ${timeLeft < 60 ? 'bg-red-100 animate-pulse' : 'bg-amber-100'}`}>
+                        <span className="text-amber-500 text-xl">⏰</span>
+                        <span className={`text-2xl font-mono font-bold ${timeLeft < 60 ? 'text-red-600' : 'text-slate-700'}`}>
+                            {formatTime(timeLeft)}
+                        </span>
+                    </div>
+                    {/* Submit Button */}
+                    <button
+                        onClick={handleSubmit}
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-6 rounded-2xl shadow-[0_4px_0_rgb(5,150,105)] hover:shadow-[0_2px_0_rgb(5,150,105)] hover:translate-y-[2px] flex items-center space-x-2 transition-all active:scale-95"
+                    >
+                        <span>NỘP BÀI</span>
+                        <span>➤</span>
+                    </button>
                 </div>
+            </header>
 
-                {/* Main Content Area - Dark Blue Chalkboard */}
-                <div className="bg-[#1a3a5c] min-h-[60vh] p-4 md:p-6 relative">
-                    {/* Navigation Bar with Pentagon Badges */}
-                    <div className="flex items-center justify-center gap-1 mb-6 flex-wrap">
-                        <button
-                            onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-                            disabled={currentIndex === 0}
-                            className="w-8 h-8 bg-[#2a4a6c] text-white rounded flex items-center justify-center disabled:opacity-30"
-                        >
-                            ◀
-                        </button>
+            {/* Question Navigation */}
+            <nav className="relative z-10 py-4 px-4">
+                <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-2">
+                    {/* Prev Button */}
+                    <button
+                        onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+                        disabled={currentIndex === 0}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-slate-400 border-2 border-slate-200 hover:border-sky-400 hover:text-sky-400 transition-colors disabled:opacity-30"
+                    >
+                        ◀
+                    </button>
 
+                    {/* Question Numbers */}
+                    <div className="flex flex-wrap justify-center gap-1.5 px-3 py-2 bg-white/50 rounded-3xl backdrop-blur-sm">
                         {shuffledQuestions.map((q, idx) => {
                             const isAnswered = isQuestionAnswered(q);
                             const isCurrent = idx === currentIndex;
@@ -292,232 +298,212 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                 <button
                                     key={q.id}
                                     onClick={() => setCurrentIndex(idx)}
-                                    className={`w-9 h-9 text-sm font-bold transition-all ${isCurrent
-                                        ? 'bg-[#c9a227] text-[#1a3a5c] scale-110 shadow-lg'
-                                        : isAnswered
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-[#3a5a7c] text-white hover:bg-[#4a6a8c]'
+                                    className={`w-9 h-9 flex items-center justify-center rounded-xl font-bold text-sm transition-all ${isCurrent
+                                            ? 'bg-sky-400 text-white border-4 border-white shadow-lg scale-110 -rotate-3'
+                                            : isAnswered
+                                                ? 'bg-emerald-400 text-white border-2 border-white'
+                                                : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-emerald-50'
                                         }`}
-                                    style={{
-                                        clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
-                                    }}
                                 >
                                     {idx + 1}
                                 </button>
                             );
                         })}
-
-                        <button
-                            onClick={() => setCurrentIndex(Math.min(shuffledQuestions.length - 1, currentIndex + 1))}
-                            disabled={currentIndex === shuffledQuestions.length - 1}
-                            className="w-8 h-8 bg-[#2a4a6c] text-white rounded flex items-center justify-center disabled:opacity-30"
-                        >
-                            ▶
-                        </button>
                     </div>
 
-                    {/* Question Content */}
-                    {currentQuestion && (
-                        <div className="max-w-4xl mx-auto">
-                            {/* ORDERING Question - Card Style like IOE */}
-                            {currentQuestion.type === QuestionType.ORDERING && (
-                                <div className="space-y-6">
-                                    {/* Question Text */}
-                                    <div className="text-white text-center text-lg mb-4">
-                                        {formatMathText((currentQuestion as any).question || 'Arrange the words to make a correct sentence:')}
-                                    </div>
+                    {/* Next Button */}
+                    <button
+                        onClick={() => setCurrentIndex(Math.min(shuffledQuestions.length - 1, currentIndex + 1))}
+                        disabled={currentIndex === shuffledQuestions.length - 1}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-slate-400 border-2 border-slate-200 hover:border-sky-400 hover:text-sky-400 transition-colors disabled:opacity-30"
+                    >
+                        ▶
+                    </button>
+                </div>
+            </nav>
 
-                                    {/* Answer Slots (top row with ?) */}
-                                    <div className="flex justify-center gap-4 mb-8">
-                                        {((currentQuestion as any).items || []).map((_: string, idx: number) => {
-                                            const selectedItems = (answers[currentQuestion.id] as number[]) || [];
-                                            const itemAtSlot = selectedItems[idx];
-                                            const word = itemAtSlot !== undefined ? ((currentQuestion as any).items || [])[itemAtSlot] : null;
+            {/* Main Content - Whiteboard */}
+            <main className="relative z-10 px-4 pb-12">
+                <div className="max-w-5xl mx-auto">
+                    <div className="bg-white rounded-3xl shadow-xl border-8 border-slate-100 min-h-[500px] p-6 md:p-12 flex flex-col items-center justify-center relative overflow-hidden">
+                        {/* Decorative Tape */}
+                        <div className="absolute top-0 left-16 w-24 h-8 bg-amber-400/40 rounded-b-xl border-x-4 border-b-4 border-white"></div>
 
-                                            return (
-                                                <div
-                                                    key={`slot-${idx}`}
-                                                    className="w-28 h-20 rounded-lg border-2 border-dashed border-[#c9a227] bg-[#0d2137] flex items-center justify-center"
-                                                    onClick={() => {
-                                                        if (itemAtSlot !== undefined) {
-                                                            // Remove this item from answer
-                                                            const newAns = selectedItems.filter((_, i) => i !== idx);
-                                                            handleAnswerChange(currentQuestion.id, newAns);
-                                                        }
-                                                    }}
-                                                >
-                                                    {word ? (
-                                                        <span className="text-white font-medium text-center px-2">{word}</span>
-                                                    ) : (
-                                                        <span className="text-[#c9a227] text-4xl font-bold">?</span>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                        {/* Sparkle Icon */}
+                        <span className="absolute top-8 left-8 text-3xl text-sky-400">✨</span>
 
-                                    {/* Word Cards (bottom row) */}
-                                    <div className="flex justify-center gap-4 flex-wrap">
-                                        {((currentQuestion as any).items || []).map((item: string, idx: number) => {
-                                            const selectedItems = (answers[currentQuestion.id] as number[]) || [];
-                                            const isUsed = selectedItems.includes(idx);
-
-                                            return (
-                                                <button
-                                                    key={`card-${idx}`}
-                                                    onClick={() => {
-                                                        if (!isUsed) {
-                                                            handleOrderingCardClick(idx);
-                                                        }
-                                                    }}
-                                                    disabled={isUsed}
-                                                    className={`px-6 py-4 rounded-lg border-2 font-medium transition-all ${isUsed
-                                                        ? 'bg-[#2a4a6c] border-[#3a5a7c] text-gray-500 opacity-50'
-                                                        : 'bg-gradient-to-b from-[#f5e6d3] to-[#e8d4bc] border-[#b8956e] text-[#1a3a5c] hover:scale-105 hover:shadow-lg cursor-pointer'
-                                                        }`}
-                                                    style={{
-                                                        boxShadow: isUsed ? 'none' : 'inset 0 -4px 0 rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.2)'
-                                                    }}
-                                                >
-                                                    {item}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-                                    {/* Answer Button */}
-                                    <div className="flex justify-center mt-8">
-                                        <button
-                                            onClick={() => setCurrentIndex(Math.min(shuffledQuestions.length - 1, currentIndex + 1))}
-                                            className="px-12 py-3 bg-gradient-to-b from-[#c9a227] to-[#a67c52] text-[#1a3a5c] font-bold text-lg rounded-lg shadow-lg hover:from-[#d4b02f] hover:to-[#b8956e] transition-all uppercase tracking-wide"
-                                            style={{
-                                                boxShadow: '0 4px 0 #7a5a1a, 0 8px 16px rgba(0,0,0,0.3)'
-                                            }}
-                                        >
-                                            ANSWER
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* MCQ Question */}
-                            {(currentQuestion.type === QuestionType.MCQ || currentQuestion.type === QuestionType.IMAGE_QUESTION) && (
-                                <div className="space-y-6">
-                                    {/* Question Image */}
-                                    {(currentQuestion as any).image && (
-                                        <div className="flex justify-center mb-4">
-                                            <img
-                                                src={(currentQuestion as any).image}
-                                                alt="Question"
-                                                className="max-h-48 rounded-lg border-2 border-[#c9a227]"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Question Text */}
-                                    <div
-                                        className="text-white text-center text-xl font-medium mb-6"
-                                        style={{ whiteSpace: 'pre-wrap' }}
-                                        dangerouslySetInnerHTML={{ __html: formatHtmlText((currentQuestion as any).question || '') }}
+                        {currentQuestion && (
+                            <div className="w-full max-w-4xl">
+                                {/* Question Text */}
+                                <div className="text-center mb-10">
+                                    <h2
+                                        className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-700 leading-relaxed"
+                                        dangerouslySetInnerHTML={{ __html: formatHtmlText((currentQuestion as any).question || (currentQuestion as any).mainQuestion || '') }}
                                     />
+                                </div>
 
-                                    {/* Options as Cards */}
-                                    <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
+                                {/* MCQ Options */}
+                                {(currentQuestion.type === QuestionType.MCQ || currentQuestion.type === QuestionType.IMAGE_QUESTION) && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                         {((currentQuestion as any).options || []).map((opt: string, idx: number) => {
                                             const label = String.fromCharCode(65 + idx);
                                             const isSelected = answers[currentQuestion.id] === label;
+                                            const color = OPTION_COLORS[idx % OPTION_COLORS.length];
+
                                             return (
                                                 <button
                                                     key={idx}
                                                     onClick={() => {
                                                         handleAnswerChange(currentQuestion.id, label);
-                                                        // Auto advance after short delay
+                                                        // Auto advance
                                                         if (currentIndex < shuffledQuestions.length - 1) {
-                                                            setTimeout(() => {
-                                                                setCurrentIndex(prev => prev + 1);
-                                                            }, 300);
+                                                            setTimeout(() => setCurrentIndex(prev => prev + 1), 300);
                                                         }
                                                     }}
-                                                    className={`p-4 rounded-lg border-2 text-left transition-all ${isSelected
-                                                        ? 'bg-[#c9a227] border-[#c9a227] text-[#1a3a5c]'
-                                                        : 'bg-gradient-to-b from-[#f5e6d3] to-[#e8d4bc] border-[#b8956e] text-[#1a3a5c] hover:scale-102'
+                                                    className={`flex items-center p-5 md:p-6 rounded-2xl text-left shadow-sm transition-all active:scale-95 border-4 ${isSelected
+                                                            ? `${color.bg} border-${color.text.replace('text-', '')} ring-4 ring-${color.text.replace('text-', '')}/30`
+                                                            : `${color.bg} border-white ${color.hoverBorder} hover:shadow-lg`
                                                         }`}
-                                                    style={{
-                                                        boxShadow: 'inset 0 -3px 0 rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.2)'
-                                                    }}
                                                 >
-                                                    <span className="font-bold">{label}.</span>{' '}
-                                                    <span dangerouslySetInnerHTML={{ __html: formatHtmlText(opt.replace(/^[A-D]\.\s*/, '')) }} />
+                                                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl font-black mr-4 md:mr-5 shadow-inner transition-colors ${isSelected ? `${color.icon} text-white` : `bg-white ${color.text}`
+                                                        }`}>
+                                                        {label}
+                                                    </div>
+                                                    <span
+                                                        className="text-xl md:text-2xl font-semibold text-slate-600 flex-1"
+                                                        dangerouslySetInnerHTML={{ __html: formatHtmlText(opt.replace(/^[A-D]\.\s*/, '')) }}
+                                                    />
                                                 </button>
                                             );
                                         })}
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {/* Short Answer */}
-                            {currentQuestion.type === QuestionType.SHORT_ANSWER && (
-                                <div className="space-y-6 text-center">
-                                    <div className="text-white text-xl font-medium mb-6" style={{ whiteSpace: 'pre-wrap' }}>
-                                        {formatMathText((currentQuestion as any).question || '')}
+                                {/* SHORT ANSWER */}
+                                {currentQuestion.type === QuestionType.SHORT_ANSWER && (
+                                    <div className="text-center">
+                                        <input
+                                            type="text"
+                                            value={answers[currentQuestion.id] || ''}
+                                            onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                                            placeholder="Nhập câu trả lời..."
+                                            className="w-full max-w-md mx-auto p-4 text-center text-2xl font-bold bg-amber-50 border-4 border-amber-200 rounded-2xl text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-amber-300/50 focus:border-amber-400"
+                                        />
                                     </div>
-                                    <input
-                                        type="text"
-                                        value={answers[currentQuestion.id] || ''}
-                                        onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                                        placeholder="Type your answer..."
-                                        className="w-full max-w-md mx-auto p-4 text-center text-xl font-bold bg-gradient-to-b from-[#f5e6d3] to-[#e8d4bc] border-2 border-[#b8956e] rounded-lg text-[#1a3a5c] placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#c9a227]/50"
-                                    />
-                                </div>
-                            )}
+                                )}
 
-                            {/* TRUE/FALSE */}
-                            {currentQuestion.type === QuestionType.TRUE_FALSE && (
-                                <div className="space-y-4">
-                                    <div className="text-white text-lg mb-4" style={{ whiteSpace: 'pre-wrap' }}>
-                                        {formatMathText((currentQuestion as any).mainQuestion || '')}
-                                    </div>
-                                    {currentQuestion.items.map((item, i) => {
-                                        const itemKey = item.id || `item-${i}`;
-                                        const val = answers[currentQuestion.id]?.[itemKey];
-                                        return (
-                                            <div key={itemKey} className="flex items-center justify-between bg-gradient-to-b from-[#f5e6d3] to-[#e8d4bc] p-4 rounded-lg border-2 border-[#b8956e]">
-                                                <span className="text-[#1a3a5c] flex-1 mr-4 font-medium">
-                                                    {String.fromCharCode(97 + i)}. {formatMathText(item.statement)}
-                                                </span>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => handleAnswerChange(currentQuestion.id, { ...answers[currentQuestion.id], [itemKey]: true })}
-                                                        className={`px-4 py-2 rounded-lg font-bold transition-all ${val === true
-                                                            ? 'bg-green-500 text-white'
-                                                            : 'bg-[#1a3a5c] text-white hover:bg-green-500/70'
-                                                            }`}
-                                                    >
-                                                        TRUE
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleAnswerChange(currentQuestion.id, { ...answers[currentQuestion.id], [itemKey]: false })}
-                                                        className={`px-4 py-2 rounded-lg font-bold transition-all ${val === false
-                                                            ? 'bg-red-500 text-white'
-                                                            : 'bg-[#1a3a5c] text-white hover:bg-red-500/70'
-                                                            }`}
-                                                    >
-                                                        FALSE
-                                                    </button>
+                                {/* TRUE/FALSE */}
+                                {currentQuestion.type === QuestionType.TRUE_FALSE && (
+                                    <div className="space-y-4">
+                                        {currentQuestion.items.map((item, i) => {
+                                            const itemKey = item.id || `item-${i}`;
+                                            const val = answers[currentQuestion.id]?.[itemKey];
+                                            return (
+                                                <div key={itemKey} className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border-2 border-slate-200">
+                                                    <span className="text-lg text-slate-700 flex-1 mr-4 font-medium">
+                                                        {String.fromCharCode(97 + i)}. <span dangerouslySetInnerHTML={{ __html: formatHtmlText(item.statement) }} />
+                                                    </span>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleAnswerChange(currentQuestion.id, { ...answers[currentQuestion.id], [itemKey]: true })}
+                                                            className={`px-5 py-2 rounded-xl font-bold transition-all active:scale-95 ${val === true
+                                                                    ? 'bg-emerald-500 text-white shadow-lg'
+                                                                    : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-emerald-50'
+                                                                }`}
+                                                        >
+                                                            TRUE
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleAnswerChange(currentQuestion.id, { ...answers[currentQuestion.id], [itemKey]: false })}
+                                                            className={`px-5 py-2 rounded-xl font-bold transition-all active:scale-95 ${val === false
+                                                                    ? 'bg-red-500 text-white shadow-lg'
+                                                                    : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-red-50'
+                                                                }`}
+                                                        >
+                                                            FALSE
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
 
-                {/* Footer */}
-                <div className="bg-[#b8956e] px-4 py-2 text-right text-xs text-[#1a3a5c]">
-                    v2026 • IOE Practice
+                                {/* ORDERING */}
+                                {currentQuestion.type === QuestionType.ORDERING && (
+                                    <div className="space-y-6">
+                                        {/* Answer Slots */}
+                                        <div className="flex justify-center gap-3 flex-wrap mb-8">
+                                            {((currentQuestion as any).items || []).map((_: string, idx: number) => {
+                                                const selectedItems = (answers[currentQuestion.id] as number[]) || [];
+                                                const itemAtSlot = selectedItems[idx];
+                                                const word = itemAtSlot !== undefined ? ((currentQuestion as any).items || [])[itemAtSlot] : null;
+
+                                                return (
+                                                    <div
+                                                        key={`slot-${idx}`}
+                                                        onClick={() => {
+                                                            if (itemAtSlot !== undefined) {
+                                                                const newAns = selectedItems.filter((_, i) => i !== idx);
+                                                                handleAnswerChange(currentQuestion.id, newAns);
+                                                            }
+                                                        }}
+                                                        className="w-24 h-16 rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 flex items-center justify-center cursor-pointer hover:bg-amber-100 transition-colors"
+                                                    >
+                                                        {word ? (
+                                                            <span className="text-slate-700 font-medium text-center px-2">{word}</span>
+                                                        ) : (
+                                                            <span className="text-amber-400 text-3xl font-bold">?</span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Word Cards */}
+                                        <div className="flex justify-center gap-3 flex-wrap">
+                                            {((currentQuestion as any).items || []).map((item: string, idx: number) => {
+                                                const selectedItems = (answers[currentQuestion.id] as number[]) || [];
+                                                const isUsed = selectedItems.includes(idx);
+
+                                                return (
+                                                    <button
+                                                        key={`card-${idx}`}
+                                                        onClick={() => !isUsed && handleOrderingCardClick(idx)}
+                                                        disabled={isUsed}
+                                                        className={`px-5 py-3 rounded-xl border-3 font-medium transition-all ${isUsed
+                                                                ? 'bg-slate-100 border-slate-200 text-slate-300 opacity-50'
+                                                                : 'bg-white border-amber-300 text-slate-700 hover:scale-105 hover:shadow-lg cursor-pointer active:scale-95'
+                                                            }`}
+                                                    >
+                                                        {item}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Footer Info */}
+                        <div className="absolute bottom-4 right-6 flex items-center space-x-4 text-slate-400 text-xs font-medium">
+                            <span className="flex items-center">📝 {dateStr}</span>
+                            <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-500">v2026</span>
+                        </div>
+                    </div>
                 </div>
+            </main>
+
+            {/* Floating Controls */}
+            <div className="fixed bottom-6 left-6 z-50 flex flex-col space-y-3">
+                <button
+                    onClick={onExit}
+                    className="w-12 h-12 bg-white rounded-2xl shadow-lg flex items-center justify-center text-slate-500 border-2 border-slate-100 hover:text-red-500 hover:border-red-200 transition-colors"
+                    title="Thoát"
+                >
+                    🚪
+                </button>
             </div>
         </div>
     );
