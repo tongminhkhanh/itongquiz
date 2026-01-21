@@ -1,9 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Question, QuestionType } from '../../types';
 import { CheckCircle, RefreshCcw } from 'lucide-react';
-import { renderMath } from '../../utils/mathJax';
 import GeometryRenderer, { GeometryData } from '../common/GeometryRenderer';
-import MathText from '../common/MathText';
+import { renderMathJax } from '../../hooks/useMathJax';
 
 interface QuestionRendererProps {
     question: Question;
@@ -53,9 +52,14 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
     // Trigger MathJax rendering when question content changes
     useEffect(() => {
         if (containerRef.current) {
-            renderMath([containerRef.current]);
+            // Small delay to ensure DOM is updated
+            const timeoutId = setTimeout(() => {
+                renderMathJax(containerRef.current);
+            }, 50);
+            return () => clearTimeout(timeoutId);
         }
-    }, [q, answers]);
+    }, [q, answers[q.id]]); // Re-render when question or answer changes
+
 
     return (
         <div ref={containerRef} id={`question-${index}`} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 scroll-mt-24">
@@ -249,7 +253,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                 onClick={() => onMatchingClick(q.id, pair.left, 'left')}
                                             >
                                                 {color && <span className="mr-2">●</span>}
-                                                <MathText text={pair.left} />
+                                                {formatMathText(pair.left)}
                                             </div>
                                         );
                                     })}
@@ -274,7 +278,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                     onClick={() => onMatchingClick(q.id, rightItem as string, 'right')}
                                                 >
                                                     {color && <span className="mr-2">●</span>}
-                                                    <MathText text={rightItem as string} />
+                                                    {formatMathText(rightItem as string)}
                                                     {pairedLefts.length > 1 && (
                                                         <span className="ml-2 text-xs bg-white/50 px-1.5 py-0.5 rounded-full border border-black/10">
                                                             x{pairedLefts.length}
@@ -295,7 +299,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             const color = pairColors[colorIdx];
                                             return (
                                                 <span key={left} className={`text-xs px-2 py-1 rounded ${color.bg} ${color.text} ${color.border} border`}>
-                                                    <MathText text={left} /> ↔ <MathText text={currentAnswers[left]} />
+                                                    {formatMathText(left)} ↔ {formatMathText(currentAnswers[left])}
                                                 </span>
                                             );
                                         })}
@@ -974,3 +978,4 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 };
 
 export default QuestionRenderer;
+

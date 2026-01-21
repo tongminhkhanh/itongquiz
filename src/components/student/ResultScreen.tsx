@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Quiz, QuestionType, StudentResult } from '../../types';
 import { Home } from 'lucide-react';
+import { formatMathText } from '../../utils/formatters';
+import { renderMathJax } from '../../hooks/useMathJax';
 
 interface Props {
     quiz: Quiz;
@@ -9,17 +11,21 @@ interface Props {
     onExit: () => void;
 }
 
-// Helper function to format math text
-const formatText = (text: string) => {
-    if (!text) return "";
-    return text
-        .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 x $2')
-        .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
-};
-
 const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Trigger MathJax rendering when component mounts
+    useEffect(() => {
+        if (containerRef.current) {
+            const timeoutId = setTimeout(() => {
+                renderMathJax(containerRef.current);
+            }, 100);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [quiz, answers]);
+
     return (
-        <div className="max-w-2xl mx-auto p-4 pb-20">
+        <div ref={containerRef} className="max-w-2xl mx-auto p-4 pb-20">
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                 {/* Score Header */}
                 <div className={`p-6 text-center ${result.score >= 5 ? 'bg-green-100' : 'bg-red-100'}`}>
@@ -92,7 +98,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                                 💡 <strong>Hướng dẫn giải:</strong>
                                                             </p>
                                                             <p className="text-blue-700 text-sm mt-1">
-                                                                {(q as any).explanation || `Câu hỏi: "${formatText((q as any).question)}". Đáp án đúng là "${correctOptionText}". Em hãy đọc lại câu hỏi và so sánh các đáp án để hiểu tại sao đáp án này đúng nhé!`}
+                                                                {(q as any).explanation || `Câu hỏi: "${formatMathText((q as any).question)}". Đáp án đúng là "${correctOptionText}". Em hãy đọc lại câu hỏi và so sánh các đáp án để hiểu tại sao đáp án này đúng nhé!`}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -125,7 +131,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                                 💡 <strong>Hướng dẫn giải:</strong>
                                                             </p>
                                                             <p className="text-blue-700 text-sm mt-1">
-                                                                {(q as any).explanation || `Từ câu hỏi "${formatText((q as any).question)}", em cần tính/suy luận để ra kết quả là "${correctAns}". Hãy kiểm tra lại từng bước tính toán của mình nhé!`}
+                                                                {(q as any).explanation || `Từ câu hỏi "${formatMathText((q as any).question)}", em cần tính/suy luận để ra kết quả là "${correctAns}". Hãy kiểm tra lại từng bước tính toán của mình nhé!`}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -145,7 +151,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                 return (
                                                     <div key={itemKey} className={`p-2 rounded ${isCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
                                                         <div className="flex items-center justify-between">
-                                                            <span className="flex-1">{formatText(item.statement)}</span>
+                                                            <span className="flex-1">{formatMathText(item.statement)}</span>
                                                             <span className={isCorrect ? "text-green-600 font-bold text-xs" : "text-red-500 font-bold text-xs"}>
                                                                 {studentVal === true ? "Đúng" : studentVal === false ? "Sai" : "Trống"}
                                                                 {isCorrect && " ✓"}
@@ -169,7 +175,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                                 return (
                                                                     <div key={itemKey} className="bg-white p-2 rounded border-l-4 border-blue-400">
                                                                         <p className="text-gray-700">
-                                                                            <span className="font-medium">"{formatText(item.statement)}"</span>
+                                                                            <span className="font-medium">"{formatMathText(item.statement)}"</span>
                                                                         </p>
                                                                         <p className="text-blue-700 mt-1">
                                                                             → Đáp án đúng là <strong>{item.isCorrect ? "ĐÚNG" : "SAI"}</strong>.
@@ -205,10 +211,10 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                     const isCorrect = studentRight === correctPair.right;
                                                     return (
                                                         <div key={correctPair.left} className={`flex justify-between items-center p-2 rounded mb-1 ${isCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
-                                                            <span className="font-medium">{formatText(correctPair.left)}</span>
+                                                            <span className="font-medium">{formatMathText(correctPair.left)}</span>
                                                             <span className="mx-2">→</span>
                                                             <span className={`${isCorrect ? 'text-green-700' : 'text-red-700'} font-bold`}>
-                                                                {formatText(studentRight || "Chưa nối")}
+                                                                {formatMathText(studentRight || "Chưa nối")}
                                                                 {isCorrect && " ✓"}
                                                             </span>
                                                         </div>
@@ -221,7 +227,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                             {incorrectPairs.map(pair => (
                                                                 <div key={pair.left} className="bg-white p-2 rounded border-l-4 border-green-400">
                                                                     <p className="text-green-700">
-                                                                        ✓ <strong>{formatText(pair.left)}</strong> → <strong>{formatText(pair.right)}</strong>
+                                                                        ✓ <strong>{formatMathText(pair.left)}</strong> → <strong>{formatMathText(pair.right)}</strong>
                                                                     </p>
                                                                 </div>
                                                             ))}
@@ -327,7 +333,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                                                                 </span>
                                                             );
                                                         }
-                                                        return <span key={idx}>{formatText(part)}</span>;
+                                                        return <span key={idx}>{formatMathText(part)}</span>;
                                                     })}
                                                 </div>
                                                 {!allCorrect && (

@@ -6,19 +6,69 @@
  */
 
 /**
- * Format math text for display.
- * - Replaces multiplication (*) with × symbol
- * - Replaces division (/) with ÷ symbol when surrounded by spaces
- * - Keeps fractions (1/2) intact
+ * Sanitize malformed LaTeX from AI output.
+ * Strategy: Parse text into segments (inside/outside $), fix each appropriately.
  * 
- * @param text - The text to format
- * @returns Formatted text string
- * 
- * @example
- * formatMathText("5 * 7") // "5 x 7"
- * formatMathText("5 / 7") // "5 : 7"
- * formatMathText("1/2") // "1/2" (unchanged)
+ * @param text - Raw text from AI
+ * @returns Text with properly sanitized LaTeX
  */
+export const sanitizeLatex = (text: string): string => {
+    if (!text) return text;
+
+    let result = text;
+
+    // Step 1: Normalize double backslashes (from JSON) to single
+    result = result.replace(/\\\\frac/g, '\\frac');
+    result = result.replace(/\\\\times/g, '\\times');
+    result = result.replace(/\\\\div/g, '\\div');
+    result = result.replace(/\\\\sqrt/g, '\\sqrt');
+    result = result.replace(/\\\\cdot/g, '\\cdot');
+
+    // Step 2: Fix mismatched delimiters $...$$ -> $...$
+    // Do this BEFORE splitting to avoid confusion
+    // Match: one $ + content + two $$, convert to $content$
+    result = result.replace(/\$([^$]+)\$\$/g, (_, content) => `$${content}$`);
+    // Match: two $$ + content + one $, convert to $content$
+    result = result.replace(/\$\$([^$]+)\$/g, (_, content) => `$${content}$`);
+
+    // Step 3: Split by $ to identify inside/outside segments
+    const dollarSplit = result.split('$');
+
+    // Rebuild: odd indexes (1, 3, 5...) are inside $...$
+    const rebuiltParts: string[] = [];
+
+    for (let i = 0; i < dollarSplit.length; i++) {
+        let segment = dollarSplit[i];
+
+        if (i % 2 === 0) {
+            // OUTSIDE $ - convert LaTeX and math symbols
+            segment = segment.replace(/\\times/g, 'x');
+            segment = segment.replace(/\*/g, ' x ');  // * -> x
+            segment = segment.replace(/\\div/g, ':');
+            segment = segment.replace(/\\cdot/g, '·');
+
+            // Handle \frac{a}{b} outside $ - wrap with $
+            segment = segment.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$\\frac{$1}{$2}$');
+
+            rebuiltParts.push(segment);
+        } else {
+            // INSIDE $ - keep as is, wrap with $
+            rebuiltParts.push('$' + segment + '$');
+        }
+    }
+
+    result = rebuiltParts.join('');
+
+    // Step 4: Clean up artifacts
+    // Remove empty $$ pairs
+    result = result.replace(/\$\$/g, '');
+
+    // Clean up spaces
+    result = result.replace(/\s+/g, ' ');
+
+    return result.trim();
+};
+
 export const formatMathText = (text: string | any): string => {
     // Handle non-string inputs: undefined, null, arrays, objects
     if (text === null || text === undefined) return "";
@@ -32,70 +82,57 @@ export const formatMathText = (text: string | any): string => {
     }
     if (!text) return "";
 
-    let result = text;
+    // First, sanitize malformed LaTeX from AI
+    let sanitized = sanitizeLatex(text);
 
-    // 1. Fix mixed delimiters like $\( ... )$ or $\( ... )
-    result = result.replace(/\$\\\(/g, '$'); // Replace $\( with $
-    result = result.replace(/\\\)\$/g, '$'); // Replace )$ with $
+    // Strategy: Split text into LaTeX and non-LaTeX parts
+    // Process ONLY non-LaTeX parts, preserve LaTeX for MathJax
 
-    // 2. Normalize LaTeX delimiters
-    // Replace \( ... \) with $ ... $
-    result = result.replace(/\\\((.*?)\\\)/g, '$$$1$$');
-    // Replace \[ ... \] with $$ ... $$
-    result = result.replace(/\\\[(.*?)\\\]/g, '$$$$$1$$$$');
+    // Match LaTeX patterns: $...$ (inline) and $$...$$ (block)
+    // Also match \(...\) and \[...\]
+    const latexPattern = /(\$\$[\s\S]*?\$\$|\$[^$]+\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\])/g;
 
-    // 3. Fix common LaTeX rendering errors (backslash gets stripped or missing)
-    // Fix "imes" (from \times)
-    result = result.replace(/(\d+)\s*imes\s*(\d+)/gi, '$1 × $2');
-    result = result.replace(/imes/gi, '×');
+    const parts = sanitized.split(latexPattern);
 
-    // Fix "times" standalone 
-    result = result.replace(/(\d+)\s*times\s*(\d+)/gi, '$1 × $2');
+    const processedParts = parts.map(part => {
+        // If this part is a LaTeX expression, preserve it exactly
+        if (/^\$\$[\s\S]*\$\$$|^\$[^$]+\$$|^\\\([\s\S]*\\\)$|^\\\[[\s\S]*\\\]$/.test(part)) {
+            return part;
+        }
 
-    // Fix "div" (from \div)
-    result = result.replace(/(\d+)\s*div\s*(\d+)/gi, '$1 ÷ $2');
+        // Process non-LaTeX text
+        let result = part;
 
-    // Fix "cdot" (from \cdot)
-    result = result.replace(/(\d+)\s*cdot\s*(\d+)/gi, '$1 · $2');
+        // Fix broken LaTeX (missing backslash) - convert to proper LaTeX
+        // "frac12" -> "$\\frac{1}{2}$"
+        result = result.replace(/\bfrac(\d)(\d+)\b/g, '$\\frac{$1}{$2}$');
+        // "frac{1}{2}" -> "$\\frac{1}{2}$"
+        result = result.replace(/\bfrac\{([^}]+)\}\{([^}]+)\}/g, '$\\frac{$1}{$2}$');
 
-    // Fix "pm" (from \pm - plus minus)
-    result = result.replace(/pm/g, '±');
+        // Fix broken math operators (when backslash is stripped)
+        result = result.replace(/(\d+)\s*imes\s*(\d+)/gi, '$1 x $2');
+        result = result.replace(/\bimes\b/gi, 'x');
+        result = result.replace(/(\d+)\s*times\s*(\d+)/gi, '$1 x $2');
+        result = result.replace(/(\d+)\s*div\s*(\d+)/gi, '$1 : $2');
+        result = result.replace(/(\d+)\s*cdot\s*(\d+)/gi, '$1 · $2');
 
-    // Fix "leq" and "geq" (from \leq, \geq)
-    result = result.replace(/leq/g, '≤');
-    result = result.replace(/geq/g, '≥');
+        // Replace * with × when between numbers/words (outside LaTeX)
+        result = result.replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 x $2');
 
-    // Fix "neq" (from \neq - not equal)
-    result = result.replace(/neq/g, '≠');
+        // Replace / with : when surrounded by spaces (division, not fraction)
+        result = result.replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
 
-    // Fix "sqrt" (from \sqrt) - basic case
-    result = result.replace(/sqrt\{([^}]+)\}/g, '√($1)');
-    result = result.replace(/sqrt(\d+)/g, '√$1');
+        return result;
+    });
 
-    // Fix "frac" (from \frac) - convert broken patterns to proper LaTeX
-    // Pattern 1: "frac12" -> "$\\frac{1}{2}$" (single digit numerator and denominator)
-    result = result.replace(/\bfrac(\d)(\d+)\b/g, '$\\frac{$1}{$2}$');
-    // Pattern 2: "frac{1}{2}" missing backslash -> "$\\frac{1}{2}$"
-    result = result.replace(/\bfrac\{([^}]+)\}\{([^}]+)\}/g, '$\\frac{$1}{$2}$');
-    // Pattern 3: Handle multiple fracs in one expression like "frac12 + frac13"
-    // Already handled by pattern 1 above
+    let result = processedParts.join('');
 
-    // Note: If inside $...$, MathJax handles it. But sometimes it's outside.
-    // We'll leave \frac for MathJax if it looks like valid LaTeX, but fix broken ones if needed.
+    // Clean up: remove literal \n and collapse spaces (but preserve LaTeX)
+    result = result.replace(/\\n/g, ' ');
+    result = result.replace(/\n/g, ' ');
 
-    // 4. Normalize block math to inline math to force single line
-    // Replace $$ ... $$ with $ ... $
-    result = result.replace(/\$\$([^$]+)\$\$/g, '$$$1$$');
-    // Replace \[ ... \] with $ ... $
-    result = result.replace(/\\\[(.*?)\\\]/g, '$$$1$$');
-
-    // 5. Standard formatting (newlines, * to x, / to :)
-    result = result
-        .replace(/\\n/g, ' ') // Replace literal \n
-        .replace(/\n/g, ' ')  // Replace actual newlines
-        .replace(/\s+/g, ' ') // Collapse multiple spaces
-        .replace(/([a-zA-Z0-9?]+)\s*\*\s*([a-zA-Z0-9?]+)/g, '$1 x $2')
-        .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
+    // Collapse multiple spaces (outside LaTeX - simple approach)
+    result = result.replace(/  +/g, ' ');
 
     return result.trim();
 };

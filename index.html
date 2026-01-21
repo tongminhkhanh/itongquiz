@@ -1,58 +1,68 @@
 <!DOCTYPE html>
 <html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trường Tiểu học Ít Ong</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css">
-    <style>
-      body {
-        font-family: 'Inter', 'Nunito', sans-serif;
-        background-color: #f0f9ff;
-        scroll-behavior: smooth;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trường Tiểu học Ít Ong</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body {
+      font-family: 'Inter', 'Nunito', sans-serif;
+      background-color: #f0f9ff;
+      scroll-behavior: smooth;
+    }
+
+    /* Smooth transitions for all interactive elements */
+    button,
+    a,
+    input,
+    select,
+    textarea {
+      transition: all 0.2s ease;
+    }
+
+    /* Focus visible for accessibility */
+    :focus-visible {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+    }
+  </style>
+  <!-- MathJax for rendering LaTeX math formulas -->
+  <script>
+    window.MathJax = {
+      tex: {
+        // Hỗ trợ cả 2 chuẩn phổ biến nhất mà AI hay dùng
+        inlineMath: [
+          ['$', '$'],        // Chuẩn GPT/LLM thường dùng
+          ['\\(', '\\)']     // Chuẩn LaTeX gốc
+        ],
+        displayMath: [
+          ['$$', '$$'],      // Chuẩn GPT/LLM thường dùng
+          ['\\[', '\\]']     // Chuẩn LaTeX gốc
+        ],
+        processEscapes: true // Cho phép dùng \$ để hiển thị dấu $ văn bản
+      },
+      options: {
+        // Bỏ qua các thẻ HTML không cần render
+        ignoreHtmlClass: 'tex2jax_ignore',
+        processHtmlClass: 'tex2jax_process'
+      },
+      startup: {
+        // Không tự động render toàn bộ trang khi load
+        typeset: false
       }
-      
-      /* Smooth transitions for all interactive elements */
-      button, a, input, select, textarea {
-        transition: all 0.2s ease;
-      }
-      
-      /* Focus visible for accessibility */
-      :focus-visible {
-        outline: 2px solid #3b82f6;
-        outline-offset: 2px;
-      }
-    </style>
-    <!-- MathJax Configuration for LaTeX rendering -->
-    <script>
-      window.MathJax = {
-        tex: {
-          inlineMath: [['$', '$'], ['\\(', '\\)']],
-          displayMath: [['$$', '$$'], ['\\[', '\\]']],
-          processEscapes: true,
-          processEnvironments: true
-        },
-        options: {
-          skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
-          ignoreHtmlClass: 'no-mathjax'
-        },
-        svg: {
-          fontCache: 'global'
-        },
-        startup: {
-          ready: () => {
-            console.log('MathJax is ready!');
-            MathJax.startup.defaultReady();
-          }
-        }
-      };
-    </script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-    <!-- TikZJax for rendering TikZ graphics -->
-    <link rel="stylesheet" type="text/css" href="https://tikzjax.com/v1/fonts.css">
-    <script src="https://tikzjax.com/v1/tikzjax.js"></script>
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+  <!-- TikZJax for rendering TikZ graphics -->
+  <link rel="stylesheet" type="text/css" href="https://tikzjax.com/v1/fonts.css">
+  <script src="https://tikzjax.com/v1/tikzjax.js"></script>
   <script type="importmap">
 {
   "imports": {
@@ -66,8 +76,10 @@
 }
 </script>
 </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>

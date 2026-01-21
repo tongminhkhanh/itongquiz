@@ -217,33 +217,38 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
        - Phép chia: Viết có khoảng cách (ví dụ: 10 / 2, 15 / 3).
        - Phép nhân: Viết có khoảng cách (ví dụ: 5 * 3).
     
-    📐 QUY TẮC LATEX CHO CÔNG THỨC TOÁN HỌC (QUAN TRỌNG):
-    Khi câu hỏi có công thức toán học phức tạp, PHẢI dùng cú pháp LaTeX:
-    - Phân số: $\\frac{a}{b}$ (ví dụ: $\\frac{1}{2}$, $\\frac{3}{4}$)
-    - Lũy thừa: $x^n$ (ví dụ: $2^3$, $x^2$, $10^5$)
-    - Chỉ số dưới: $x_n$ (ví dụ: $a_1$, $x_n$)
-    - Căn bậc hai: $\\sqrt{x}$ (ví dụ: $\\sqrt{4}$, $\\sqrt{16}$)
-    - Căn bậc n: $\\sqrt[n]{x}$ (ví dụ: $\\sqrt[3]{8}$)
+    📐 QUY TẮC LATEX CHO CÔNG THỨC TOÁN HỌC (BẮT BUỘC TUÂN THỦ):
+    
+    ❌ SAI vs ✅ ĐÚNG:
+    | Yếu tố | SAI ❌ | ĐÚNG ✅ |
+    |--------|--------|---------|
+    | Phân số | \\frac{a}{b}$$ hoặc \\frac{a}{b} | $\\frac{a}{b}$ |
+    | Dòng công thức | \\$...\\$$ | $...$ (inline) hoặc $$...$$ (block) |
+    | Mũi tên | → | $\\rightarrow$ |
+    | Inline math | \\frac{1}{2} (không có $) | $\\frac{1}{2}$ (có $ bọc) |
+    
+    ✅ VÍ DỤ ĐÚNG:
+    - Inline: $\\frac{3}{7} + \\frac{2}{7} = \\frac{5}{7}$
+    - Display (riêng dòng): $$\\frac{3}{7} + \\frac{2}{7} = \\frac{5}{7}$$
+    
+    📝 CÁC KÝ HIỆU LATEX PHỔ BIẾN:
+    - Phân số: $\\frac{a}{b}$ → $\\frac{1}{2}$, $\\frac{3}{4}$
+    - Lũy thừa: $x^n$ → $2^3$, $x^2$
+    - Căn bậc hai: $\\sqrt{x}$ → $\\sqrt{4}$
     - Pi: $\\pi$
     - Nhân: $\\times$ hoặc $\\cdot$
     - Chia: $\\div$
-    - Lớn hơn hoặc bằng: $\\geq$
-    - Nhỏ hơn hoặc bằng: $\\leq$
+    - Lớn hơn/bằng: $\\geq$, nhỏ hơn/bằng: $\\leq$
     - Không bằng: $\\neq$
-    - Tổng: $\\sum_{i=1}^{n}$
-    - Tích phân: $\\int_{a}^{b}$
-    - Góc: $\\angle ABC$
-    - Độ: $90^\\circ$
+    - Góc: $\\angle ABC$, Độ: $90^\\circ$
     - Tam giác: $\\triangle ABC$
-    - Song song: $\\parallel$
-    - Vuông góc: $\\perp$
+    - Song song: $\\parallel$, Vuông góc: $\\perp$
     
-    ⚠️ LƯU Ý LATEX - QUAN TRỌNG:
-    - LUÔN dùng inline math $...$ để công thức CÙNG DÒNG với câu hỏi
-    - KHÔNG dùng display math $$...$$ (sẽ làm công thức xuống dòng riêng)
-    - VÍ DỤ ĐÚNG: "Rút gọn kết quả của $\\\\frac{2}{6} + \\\\frac{1}{3}$?"
-    - VÍ DỤ SAI: "Rút gọn kết quả của $$\\\\frac{2}{6} + \\\\frac{1}{3}$$?"
-    - LUÔN escape dấu backslash trong JSON: dùng \\\\\\\\ thay vì \\\\
+    ⚠️ LƯU Ý QUAN TRỌNG:
+    - LUÔN bọc công thức trong $...$ hoặc $$...$$
+    - Ưu tiên inline $...$ để công thức cùng dòng với câu hỏi
+    - Trong JSON: dùng \\\\ thay cho \\ (escape backslash)
+    - VÍ DỤ trong JSON: "Tính $\\\\frac{1}{2} + \\\\frac{1}{4}$?"
     
     🎨 HÌNH MINH HỌA - SVG GEOMETRY (Cho câu hỏi hình học):
     Khi câu hỏi CẦN HÌNH VẼ (tam giác, hình vuông, đường tròn), thêm trường "geometry":
@@ -312,6 +317,109 @@ const parseAndRepairJSON = (text: string): any => {
   }
 };
 
+// Fix LaTeX formatting issues from AI
+const fixLatexInText = (text: string): string => {
+  if (!text || typeof text !== 'string') return text;
+
+  let result = text;
+
+  // 1. Fix escaped dollar signs: $\$ -> $, \$$ -> $
+  result = result.replace(/\$\\\$/g, '$');
+  result = result.replace(/\\\$\$/g, '$');
+  result = result.replace(/([^\\])\\\$/g, '$1$');
+  result = result.replace(/^\\\$/, '$');
+
+  // 2. Fix trailing double dollar: }$$ -> }$
+  result = result.replace(/\}\$\$/g, '}$');
+
+  // 3. Fix consecutive dollar signs: $$$ -> $
+  result = result.replace(/\${3,}/g, '$');
+
+  // 4. Convert display math $$ to inline math $
+  result = result.replace(/\$\$([^$]+)\$\$/g, '$$$1$$');
+
+  // 5. Remove newlines that break formulas
+  result = result.replace(/\n/g, ' ');
+  result = result.replace(/\\n/g, ' ');
+
+  // 6. Collapse multiple spaces
+  result = result.replace(/\s+/g, ' ');
+
+  // 7. Fix common broken patterns like "$\frac" without proper closing
+  // Pattern: $\frac{a}{b} (missing closing $) followed by text
+  // Look for $\frac{...}{...} not followed by $ and add $
+  result = result.replace(/(\$\\frac\{[^}]+\}\{[^}]+\})(?!\$)(\s*[^$\d{])/g, '$1$$$2');
+
+  // 8. Fix pattern where + or - is between two $expressions$
+  // e.g., "$\frac{1}{5}$ + $\frac{2}{5}$" is OK, but sometimes AI writes poorly
+
+  // 9. Ensure all \frac are properly wrapped in $...$
+  // Find \frac not inside $...$ and wrap it
+  result = result.replace(/(?<!\$)\\frac\{([^}]+)\}\{([^}]+)\}(?!\$)/g, '$\\frac{$1}{$2}$');
+
+  return result.trim();
+};
+
+// Fix LaTeX in all text fields of a question
+const fixQuestionLatex = (q: any): any => {
+  const fixedQ = { ...q };
+
+  // Fix main question text
+  if (fixedQ.question) {
+    fixedQ.question = fixLatexInText(fixedQ.question);
+  }
+  if (fixedQ.mainQuestion) {
+    fixedQ.mainQuestion = fixLatexInText(fixedQ.mainQuestion);
+  }
+
+  // Fix options array
+  if (fixedQ.options && Array.isArray(fixedQ.options)) {
+    fixedQ.options = fixedQ.options.map((opt: string) => fixLatexInText(opt));
+  }
+
+  // Fix correctAnswer
+  if (fixedQ.correctAnswer && typeof fixedQ.correctAnswer === 'string') {
+    fixedQ.correctAnswer = fixLatexInText(fixedQ.correctAnswer);
+  }
+
+  // Fix correctAnswers array
+  if (fixedQ.correctAnswers && Array.isArray(fixedQ.correctAnswers)) {
+    fixedQ.correctAnswers = fixedQ.correctAnswers.map((ans: string) => fixLatexInText(ans));
+  }
+
+  // Fix explanation
+  if (fixedQ.explanation) {
+    fixedQ.explanation = fixLatexInText(fixedQ.explanation);
+  }
+
+  // Fix items for TRUE_FALSE, ORDERING, etc.
+  if (fixedQ.items && Array.isArray(fixedQ.items)) {
+    fixedQ.items = fixedQ.items.map((item: any) => {
+      if (typeof item === 'string') {
+        return fixLatexInText(item);
+      }
+      if (item.statement) {
+        item.statement = fixLatexInText(item.statement);
+      }
+      if (item.content) {
+        item.content = fixLatexInText(item.content);
+      }
+      return item;
+    });
+  }
+
+  // Fix pairs for MATCHING
+  if (fixedQ.pairs && Array.isArray(fixedQ.pairs)) {
+    fixedQ.pairs = fixedQ.pairs.map((pair: any) => ({
+      ...pair,
+      left: fixLatexInText(pair.left),
+      right: fixLatexInText(pair.right)
+    }));
+  }
+
+  return fixedQ;
+};
+
 // Validate and fix quiz data, especially CATEGORIZATION questions
 const validateAndFixQuiz = (quiz: any): any => {
   console.log('[validateAndFixQuiz] Called with quiz:', quiz?.title || 'No title');
@@ -323,20 +431,23 @@ const validateAndFixQuiz = (quiz: any): any => {
   console.log('[validateAndFixQuiz] Processing', quiz.questions.length, 'questions');
 
   quiz.questions = quiz.questions.map((q: any, index: number) => {
-    // Fix CATEGORIZATION questions
-    if (q.type === 'CATEGORIZATION') {
-      console.log(`[CATEGORIZATION] Câu ${index + 1}: Found CATEGORIZATION question`);
-      console.log(`[CATEGORIZATION] Câu ${index + 1}: Raw question data:`, JSON.stringify(q, null, 2));
+    // First, fix LaTeX in all text fields
+    let fixedQ = fixQuestionLatex(q);
 
-      const categories = q.categories || [];
-      const items = q.items || [];
+    // Fix CATEGORIZATION questions
+    if (fixedQ.type === 'CATEGORIZATION') {
+      console.log(`[CATEGORIZATION] Câu ${index + 1}: Found CATEGORIZATION question`);
+      console.log(`[CATEGORIZATION] Câu ${index + 1}: Raw question data:`, JSON.stringify(fixedQ, null, 2));
+
+      const categories = fixedQ.categories || [];
+      const items = fixedQ.items || [];
 
       console.log(`[CATEGORIZATION] Câu ${index + 1}: categories count = ${categories.length}, items count = ${items.length}`);
 
       // Log warning if items is empty
       if (items.length === 0) {
         console.error(`[CATEGORIZATION] ❌ Câu ${index + 1}: items array is EMPTY! AI did not create items.`);
-        console.error(`[CATEGORIZATION] Question text: "${q.question}"`);
+        console.error(`[CATEGORIZATION] Question text: "${fixedQ.question}"`);
       } else {
         // Log each item
         items.forEach((item: any, i: number) => {
@@ -358,9 +469,9 @@ const validateAndFixQuiz = (quiz: any): any => {
         if (!cat.name) cat.name = `Nhóm ${i + 1}`;
       });
 
-      return { ...q, categories, items };
+      return { ...fixedQ, categories, items };
     }
-    return q;
+    return fixedQ;
   });
 
   return quiz;
