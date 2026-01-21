@@ -118,9 +118,13 @@ Generate a dataset of sentences broken down into "drag-and-drop cards".
 
 ### FORMATTING RULES (CRITICAL)
 1.  **The "Card" Concept:** The sentence must be split into chunks (cards).
-2.  **Punctuation Handling:** Punctuation marks (period '.', question mark '?') MUST remain attached to the final word on the last card.
-    * *Right:* ["I", "am", "from", "Vietnam."]
-    * *Wrong:* ["I", "am", "from", "Vietnam", "."] (Do not separate the dot).
+2.  **Punctuation Handling (VERY IMPORTANT):** 
+    - Punctuation marks (period '.', question mark '?', comma ',', exclamation '!') MUST remain attached to the word that precedes them in the ORIGINAL correct sentence.
+    - The final punctuation (. or ? or !) must be on the LAST WORD of the CORRECT sentence order, NOT on any other word.
+    - ⚠️ CRITICAL: If correct sentence is "I go to school every day." then items must be: ["I", "go", "to", "school", "every", "day."] - Note "day." has the period, NOT "school."
+    * ✅ *Right:* Sentence "I am from Vietnam." → ["I", "am", "from", "Vietnam."]
+    * ❌ *Wrong:* ["I", "am.", "from", "Vietnam"] (Period on wrong word)
+    * ❌ *Wrong:* ["I", "am", "from", "Vietnam", "."] (Separate period)
 3.  **Capitalization:** The first word of the sentence must be capitalized. Proper nouns must be capitalized.
 4.  **Shuffling:** The output cards must be RANDOMIZED (shuffled) so they do not form the correct sentence initially.
 
@@ -134,10 +138,16 @@ Provide the output strictly as a JSON Object with this structure:
   "explanation": "Full correct sentence for reference."
 }
 
-EXAMPLE:
+EXAMPLE 1:
 Full sentence: "Open your book, please."
 → items (shuffled): ["please.", "book,", "Open", "your"]
 → correctOrder: [2, 3, 1, 0]  (Open=2, your=3, book,=1, please.=0)
+
+EXAMPLE 2:
+Full sentence: "I go to school every day."
+→ items (shuffled): ["school", "every", "day.", "I", "to", "go"]
+→ correctOrder: [3, 5, 4, 0, 1, 2]  (I=3, go=5, to=4, school=0, every=1, day.=2)
+Note: "day." has period because it's the LAST word!
 
 📌 DẠNG 5: READING COMPREHENSION (Đọc hiểu) - type: "TRUE_FALSE"
 Structure:

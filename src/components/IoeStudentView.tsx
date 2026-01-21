@@ -299,10 +299,10 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                     key={q.id}
                                     onClick={() => setCurrentIndex(idx)}
                                     className={`w-9 h-9 flex items-center justify-center rounded-xl font-bold text-sm transition-all ${isCurrent
-                                            ? 'bg-sky-400 text-white border-4 border-white shadow-lg scale-110 -rotate-3'
-                                            : isAnswered
-                                                ? 'bg-emerald-400 text-white border-2 border-white'
-                                                : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-emerald-50'
+                                        ? 'bg-sky-400 text-white border-4 border-white shadow-lg scale-110 -rotate-3'
+                                        : isAnswered
+                                            ? 'bg-emerald-400 text-white border-2 border-white'
+                                            : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-emerald-50'
                                         }`}
                                 >
                                     {idx + 1}
@@ -334,13 +334,15 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
                         {currentQuestion && (
                             <div className="w-full max-w-4xl">
-                                {/* Question Text */}
-                                <div className="text-center mb-10">
-                                    <h2
-                                        className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-700 leading-relaxed"
-                                        dangerouslySetInnerHTML={{ __html: formatHtmlText((currentQuestion as any).question || (currentQuestion as any).mainQuestion || '') }}
-                                    />
-                                </div>
+                                {/* Question Text - Skip for SHORT_ANSWER since it's rendered inline */}
+                                {currentQuestion.type !== QuestionType.SHORT_ANSWER && (
+                                    <div className="text-center mb-10">
+                                        <h2
+                                            className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-700 leading-relaxed"
+                                            dangerouslySetInnerHTML={{ __html: formatHtmlText((currentQuestion as any).question || (currentQuestion as any).mainQuestion || '') }}
+                                        />
+                                    </div>
+                                )}
 
                                 {/* MCQ Options */}
                                 {(currentQuestion.type === QuestionType.MCQ || currentQuestion.type === QuestionType.IMAGE_QUESTION) && (
@@ -361,8 +363,8 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                         }
                                                     }}
                                                     className={`flex items-center p-5 md:p-6 rounded-2xl text-left shadow-sm transition-all active:scale-95 border-4 ${isSelected
-                                                            ? `${color.bg} border-${color.text.replace('text-', '')} ring-4 ring-${color.text.replace('text-', '')}/30`
-                                                            : `${color.bg} border-white ${color.hoverBorder} hover:shadow-lg`
+                                                        ? `${color.bg} border-${color.text.replace('text-', '')} ring-4 ring-${color.text.replace('text-', '')}/30`
+                                                        : `${color.bg} border-white ${color.hoverBorder} hover:shadow-lg`
                                                         }`}
                                                 >
                                                     <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl font-black mr-4 md:mr-5 shadow-inner transition-colors ${isSelected ? `${color.icon} text-white` : `bg-white ${color.text}`
@@ -379,16 +381,60 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                     </div>
                                 )}
 
-                                {/* SHORT ANSWER */}
+                                {/* SHORT ANSWER - Inline Input */}
                                 {currentQuestion.type === QuestionType.SHORT_ANSWER && (
                                     <div className="text-center">
-                                        <input
-                                            type="text"
-                                            value={answers[currentQuestion.id] || ''}
-                                            onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                                            placeholder="Nhập câu trả lời..."
-                                            className="w-full max-w-md mx-auto p-4 text-center text-2xl font-bold bg-amber-50 border-4 border-amber-200 rounded-2xl text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-amber-300/50 focus:border-amber-400"
-                                        />
+                                        <div className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-700 leading-relaxed inline-flex flex-wrap items-center justify-center gap-2">
+                                            {(() => {
+                                                const questionText = (currentQuestion as any).question || '';
+                                                // Check if question has underscore/placeholder pattern
+                                                const hasPlaceholder = /_+|\[\.{2,}\]|\[…\]/.test(questionText);
+
+                                                if (hasPlaceholder) {
+                                                    // Split by underscore patterns: _, __, ___, ____, or [...] 
+                                                    const parts = questionText.split(/(_+|\[\.{2,}\]|\[…\])/);
+
+                                                    return parts.map((part: string, idx: number) => {
+                                                        // Check if this part is a blank placeholder
+                                                        if (/^_+$/.test(part) || /^\[\.{2,}\]$/.test(part) || /^\[…\]$/.test(part)) {
+                                                            return (
+                                                                <input
+                                                                    key={idx}
+                                                                    type="text"
+                                                                    value={answers[currentQuestion.id] || ''}
+                                                                    onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                                                                    placeholder="..."
+                                                                    autoFocus
+                                                                    className="inline-block w-40 md:w-52 px-4 py-2 text-center text-2xl md:text-3xl font-bold bg-amber-50 border-3 border-amber-300 rounded-xl text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-amber-300/50 focus:border-amber-400 mx-1"
+                                                                />
+                                                            );
+                                                        }
+                                                        // Regular text
+                                                        return (
+                                                            <span
+                                                                key={idx}
+                                                                dangerouslySetInnerHTML={{ __html: formatHtmlText(part) }}
+                                                            />
+                                                        );
+                                                    });
+                                                } else {
+                                                    // No placeholder - show question + input below
+                                                    return (
+                                                        <>
+                                                            <span dangerouslySetInnerHTML={{ __html: formatHtmlText(questionText) }} />
+                                                            <input
+                                                                type="text"
+                                                                value={answers[currentQuestion.id] || ''}
+                                                                onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                                                                placeholder="Type your answer..."
+                                                                autoFocus
+                                                                className="inline-block w-48 md:w-64 px-4 py-2 text-center text-2xl md:text-3xl font-bold bg-amber-50 border-3 border-amber-300 rounded-xl text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-amber-300/50 focus:border-amber-400 ml-2"
+                                                            />
+                                                        </>
+                                                    );
+                                                }
+                                            })()}
+                                        </div>
                                     </div>
                                 )}
 
@@ -407,8 +453,8 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                         <button
                                                             onClick={() => handleAnswerChange(currentQuestion.id, { ...answers[currentQuestion.id], [itemKey]: true })}
                                                             className={`px-5 py-2 rounded-xl font-bold transition-all active:scale-95 ${val === true
-                                                                    ? 'bg-emerald-500 text-white shadow-lg'
-                                                                    : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-emerald-50'
+                                                                ? 'bg-emerald-500 text-white shadow-lg'
+                                                                : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-emerald-50'
                                                                 }`}
                                                         >
                                                             TRUE
@@ -416,8 +462,8 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                         <button
                                                             onClick={() => handleAnswerChange(currentQuestion.id, { ...answers[currentQuestion.id], [itemKey]: false })}
                                                             className={`px-5 py-2 rounded-xl font-bold transition-all active:scale-95 ${val === false
-                                                                    ? 'bg-red-500 text-white shadow-lg'
-                                                                    : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-red-50'
+                                                                ? 'bg-red-500 text-white shadow-lg'
+                                                                : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-red-50'
                                                                 }`}
                                                         >
                                                             FALSE
@@ -431,9 +477,9 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
                                 {/* ORDERING */}
                                 {currentQuestion.type === QuestionType.ORDERING && (
-                                    <div className="space-y-6">
+                                    <div className="space-y-8">
                                         {/* Answer Slots */}
-                                        <div className="flex justify-center gap-3 flex-wrap mb-8">
+                                        <div className="flex justify-center gap-4 flex-wrap mb-10">
                                             {((currentQuestion as any).items || []).map((_: string, idx: number) => {
                                                 const selectedItems = (answers[currentQuestion.id] as number[]) || [];
                                                 const itemAtSlot = selectedItems[idx];
@@ -448,12 +494,12 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                                 handleAnswerChange(currentQuestion.id, newAns);
                                                             }
                                                         }}
-                                                        className="w-24 h-16 rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 flex items-center justify-center cursor-pointer hover:bg-amber-100 transition-colors"
+                                                        className="w-32 md:w-36 h-20 md:h-24 rounded-2xl border-3 border-dashed border-amber-400 bg-amber-50 flex items-center justify-center cursor-pointer hover:bg-amber-100 hover:border-amber-500 transition-all shadow-sm"
                                                     >
                                                         {word ? (
-                                                            <span className="text-slate-700 font-medium text-center px-2">{word}</span>
+                                                            <span className="text-slate-700 font-semibold text-lg md:text-xl text-center px-3">{word}</span>
                                                         ) : (
-                                                            <span className="text-amber-400 text-3xl font-bold">?</span>
+                                                            <span className="text-amber-400 text-4xl md:text-5xl font-bold">?</span>
                                                         )}
                                                     </div>
                                                 );
@@ -461,7 +507,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                         </div>
 
                                         {/* Word Cards */}
-                                        <div className="flex justify-center gap-3 flex-wrap">
+                                        <div className="flex justify-center gap-4 flex-wrap">
                                             {((currentQuestion as any).items || []).map((item: string, idx: number) => {
                                                 const selectedItems = (answers[currentQuestion.id] as number[]) || [];
                                                 const isUsed = selectedItems.includes(idx);
@@ -471,9 +517,9 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                         key={`card-${idx}`}
                                                         onClick={() => !isUsed && handleOrderingCardClick(idx)}
                                                         disabled={isUsed}
-                                                        className={`px-5 py-3 rounded-xl border-3 font-medium transition-all ${isUsed
-                                                                ? 'bg-slate-100 border-slate-200 text-slate-300 opacity-50'
-                                                                : 'bg-white border-amber-300 text-slate-700 hover:scale-105 hover:shadow-lg cursor-pointer active:scale-95'
+                                                        className={`px-8 py-5 rounded-2xl border-3 font-semibold text-lg md:text-xl transition-all shadow-md ${isUsed
+                                                            ? 'bg-slate-100 border-slate-200 text-slate-300 opacity-50'
+                                                            : 'bg-white border-amber-300 text-slate-700 hover:scale-105 hover:shadow-xl hover:border-amber-500 cursor-pointer active:scale-95'
                                                             }`}
                                                     >
                                                         {item}
