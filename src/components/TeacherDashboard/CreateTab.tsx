@@ -94,6 +94,47 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
         localStorage.setItem('ai_provider', aiProvider);
     }, [aiProvider]);
 
+    // Sync form fields with generatedQuiz when they change
+    useEffect(() => {
+        if (generatedQuiz) {
+            const updates: Partial<Quiz> = {};
+
+            // Sync timeLimit
+            if (typeof manualTimeLimit === 'number' && manualTimeLimit !== generatedQuiz.timeLimit) {
+                updates.timeLimit = manualTimeLimit;
+            }
+
+            // Sync classLevel
+            if (classLevel !== generatedQuiz.classLevel) {
+                updates.classLevel = classLevel;
+            }
+
+            // Sync category
+            if (category !== generatedQuiz.category) {
+                updates.category = category;
+            }
+
+            // Sync access code settings
+            if (requireCode !== generatedQuiz.requireCode) {
+                updates.requireCode = requireCode;
+            }
+            if (accessCode !== generatedQuiz.accessCode) {
+                updates.accessCode = accessCode.toUpperCase() || undefined;
+            }
+
+            // Sync quiz title
+            if (quizTitle && quizTitle !== generatedQuiz.title) {
+                updates.title = quizTitle;
+            }
+
+            // Apply updates if any
+            if (Object.keys(updates).length > 0) {
+                setGeneratedQuiz({ ...generatedQuiz, ...updates });
+            }
+        }
+    }, [manualTimeLimit, classLevel, category, requireCode, accessCode, quizTitle]);
+
+
     // Generate random access code
     const generateRandomCode = () => {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -260,8 +301,19 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                 <input
                                     type="number"
                                     min={1}
+                                    max={180}
                                     value={manualTimeLimit}
-                                    onChange={e => setManualTimeLimit(Number(e.target.value) || '')}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        if (val === '') {
+                                            setManualTimeLimit('');
+                                        } else {
+                                            const num = parseInt(val, 10);
+                                            if (!isNaN(num) && num >= 0 && num <= 180) {
+                                                setManualTimeLimit(num);
+                                            }
+                                        }
+                                    }}
                                     placeholder="Tự động"
                                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
                                 />

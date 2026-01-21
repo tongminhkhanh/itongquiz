@@ -26,6 +26,28 @@ const renderHtml = (text: string) => {
     return <>{formatted}</>;
 };
 
+/**
+ * MathSpan: Component to render math content without React DOM reconciliation conflicts.
+ * This component:
+ * 1. Renders an empty span initially
+ * 2. Sets innerHTML manually via useLayoutEffect (before paint)
+ * 3. Triggers MathJax rendering
+ * 4. React has no children to reconcile, so MathJax changes don't cause conflicts
+ */
+const MathSpan: React.FC<{ content: string; className?: string }> = React.memo(({ content, className }) => {
+    const ref = useRef<HTMLSpanElement>(null);
+
+    // Use useLayoutEffect to ensure content is set BEFORE browser paint
+    React.useLayoutEffect(() => {
+        if (ref.current) {
+            ref.current.innerHTML = formatMathText(content);
+            // Trigger MathJax after setting innerHTML
+            renderMathJax(ref.current);
+        }
+    }, [content]);
+
+    return <span ref={ref} className={className} />;
+});
 
 
 // Color palette for matching pairs
@@ -52,10 +74,10 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
     // Trigger MathJax rendering when question content changes
     useEffect(() => {
         if (containerRef.current) {
-            // Small delay to ensure DOM is updated
+            // Delay to ensure DOM is updated AND MathJax is fully loaded
             const timeoutId = setTimeout(() => {
                 renderMathJax(containerRef.current);
-            }, 50);
+            }, 200);  // Increased from 50ms for slower connections
             return () => clearTimeout(timeoutId);
         }
     }, [q, answers[q.id]]); // Re-render when question or answer changes
@@ -74,7 +96,8 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                     )}
                 </div>
 
-                {q.image && (
+                {/* Image in header - exclude IMAGE_QUESTION since it has its own section */}
+                {q.image && q.type !== QuestionType.IMAGE_QUESTION && (
                     <div className="mt-3">
                         <img
                             src={q.image}
@@ -253,7 +276,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                 onClick={() => onMatchingClick(q.id, pair.left, 'left')}
                                             >
                                                 {color && <span className="mr-2">●</span>}
-                                                {formatMathText(pair.left)}
+                                                <MathSpan content={pair.left} />
                                             </div>
                                         );
                                     })}
@@ -278,7 +301,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                     onClick={() => onMatchingClick(q.id, rightItem as string, 'right')}
                                                 >
                                                     {color && <span className="mr-2">●</span>}
-                                                    {formatMathText(rightItem as string)}
+                                                    <MathSpan content={rightItem as string} />
                                                     {pairedLefts.length > 1 && (
                                                         <span className="ml-2 text-xs bg-white/50 px-1.5 py-0.5 rounded-full border border-black/10">
                                                             x{pairedLefts.length}
@@ -299,7 +322,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             const color = pairColors[colorIdx];
                                             return (
                                                 <span key={left} className={`text-xs px-2 py-1 rounded ${color.bg} ${color.text} ${color.border} border`}>
-                                                    {formatMathText(left)} ↔ {formatMathText(currentAnswers[left])}
+                                                    <MathSpan content={`${left} ↔ ${currentAnswers[left]}`} />
                                                 </span>
                                             );
                                         })}

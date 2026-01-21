@@ -47,6 +47,11 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
     const [editCategories, setEditCategories] = useState<{ id: string; name: string }[]>([]);
     const [editCategorizationItems, setEditCategorizationItems] = useState<{ id: string; content: string; categoryId: string }[]>([]);
 
+    // Add Question modal state
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [newQuestionType, setNewQuestionType] = useState<QuestionType>(QuestionType.MCQ);
+
+
     // Ref for MathJax rendering
     const previewContainerRef = useRef<HTMLDivElement>(null);
 
@@ -263,6 +268,177 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
         setEditCorrectWordIndexes([]);
         setEditCategories([]);
         setEditCategorizationItems([]);
+    };
+
+    // Open Add Question modal with defaults for selected type
+    const handleOpenAddModal = (type: QuestionType) => {
+        setNewQuestionType(type);
+        setEditQuestionText('');
+        setEditCorrectAnswer('');
+
+        // Set defaults based on type
+        switch (type) {
+            case QuestionType.MCQ:
+            case QuestionType.MULTIPLE_SELECT:
+            case QuestionType.IMAGE_QUESTION:
+                setEditOptions(['', '', '', '']);
+                setEditCorrectAnswers([]);
+                break;
+            case QuestionType.TRUE_FALSE:
+                setEditItems([
+                    { id: '1', statement: '', isCorrect: true },
+                    { id: '2', statement: '', isCorrect: false },
+                ]);
+                break;
+            case QuestionType.MATCHING:
+                setEditPairs([
+                    { left: '', right: '' },
+                    { left: '', right: '' },
+                ]);
+                break;
+            case QuestionType.SHORT_ANSWER:
+                // Just question and correct answer
+                break;
+            case QuestionType.DROPDOWN:
+                setEditDropdownText('');
+                setEditDropdownBlanks([{ id: '1', options: ['', '', ''], correctAnswer: '' }]);
+                break;
+            case QuestionType.WORD_SCRAMBLE:
+                setEditLetters([]);
+                setEditCorrectWord('');
+                break;
+            case QuestionType.CATEGORIZATION:
+                setEditCategories([
+                    { id: '1', name: '' },
+                    { id: '2', name: '' },
+                ]);
+                setEditCategorizationItems([
+                    { id: '1', content: '', categoryId: '1' },
+                    { id: '2', content: '', categoryId: '2' },
+                ]);
+                break;
+            case QuestionType.UNDERLINE:
+                setEditSentence('');
+                setEditWords([]);
+                setEditCorrectWordIndexes([]);
+                break;
+            default:
+                break;
+        }
+
+        setShowAddModal(true);
+    };
+
+    // Add new question to quiz
+    const handleAddQuestion = () => {
+        if (!quiz || !onUpdateQuestions) return;
+
+        const newId = `q-manual-${Date.now()}`;
+        let newQuestion: Question;
+
+        switch (newQuestionType) {
+            case QuestionType.MCQ:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.MCQ,
+                    question: editQuestionText,
+                    options: editOptions.filter(o => o.trim()),
+                    correctAnswer: editCorrectAnswer,
+                } as any;
+                break;
+            case QuestionType.MULTIPLE_SELECT:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.MULTIPLE_SELECT,
+                    question: editQuestionText,
+                    options: editOptions.filter(o => o.trim()),
+                    correctAnswers: editCorrectAnswers,
+                } as any;
+                break;
+            case QuestionType.TRUE_FALSE:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.TRUE_FALSE,
+                    mainQuestion: editQuestionText,
+                    items: editItems.filter(item => item.statement.trim()),
+                } as any;
+                break;
+            case QuestionType.SHORT_ANSWER:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.SHORT_ANSWER,
+                    question: editQuestionText,
+                    correctAnswer: editCorrectAnswer,
+                } as any;
+                break;
+            case QuestionType.MATCHING:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.MATCHING,
+                    mainQuestion: editQuestionText,
+                    pairs: editPairs.filter(p => p.left.trim() && p.right.trim()),
+                } as any;
+                break;
+            case QuestionType.IMAGE_QUESTION:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.IMAGE_QUESTION,
+                    question: editQuestionText,
+                    image: editImageUrl,
+                    options: editOptions.filter(o => o.trim()),
+                    correctAnswer: editCorrectAnswer,
+                } as any;
+                break;
+            case QuestionType.DROPDOWN:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.DROPDOWN,
+                    question: editQuestionText,
+                    text: editDropdownText,
+                    blanks: editDropdownBlanks.filter(b => b.correctAnswer.trim()),
+                } as any;
+                break;
+            case QuestionType.WORD_SCRAMBLE:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.WORD_SCRAMBLE,
+                    question: editQuestionText,
+                    letters: editLetters,
+                    correctWord: editCorrectWord,
+                } as any;
+                break;
+            case QuestionType.CATEGORIZATION:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.CATEGORIZATION,
+                    question: editQuestionText,
+                    categories: editCategories.filter(c => c.name.trim()),
+                    items: editCategorizationItems.filter(i => i.content.trim()),
+                } as any;
+                break;
+            case QuestionType.UNDERLINE:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.UNDERLINE,
+                    question: editQuestionText,
+                    sentence: editSentence,
+                    words: editWords,
+                    correctWordIndexes: editCorrectWordIndexes,
+                } as any;
+                break;
+            default:
+                newQuestion = {
+                    id: newId,
+                    type: newQuestionType,
+                    question: editQuestionText,
+                    correctAnswer: editCorrectAnswer,
+                } as any;
+        }
+
+        const updated = [...quiz.questions, newQuestion];
+        onUpdateQuestions(updated);
+        setShowAddModal(false);
+        handleCloseEditModal(); // Reset all edit states
     };
 
     // Get question type label
@@ -628,6 +804,35 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                     </div>
                                 </div>
                             ))}
+
+                            {/* Add Question Button */}
+                            {onUpdateQuestions && (
+                                <div className="mt-4 border-t pt-4">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-sm font-medium text-gray-600">➕ Thêm câu hỏi:</span>
+                                        {[
+                                            { type: QuestionType.MCQ, label: 'Trắc nghiệm', emoji: '🔵' },
+                                            { type: QuestionType.TRUE_FALSE, label: 'Đúng/Sai', emoji: '✅' },
+                                            { type: QuestionType.SHORT_ANSWER, label: 'Điền đáp án', emoji: '✏️' },
+                                            { type: QuestionType.MATCHING, label: 'Nối cột', emoji: '🔗' },
+                                            { type: QuestionType.MULTIPLE_SELECT, label: 'Chọn nhiều', emoji: '☑️' },
+                                            { type: QuestionType.IMAGE_QUESTION, label: 'Có hình', emoji: '🖼️' },
+                                            { type: QuestionType.DROPDOWN, label: 'Dropdown', emoji: '📝' },
+                                            { type: QuestionType.WORD_SCRAMBLE, label: 'Ghép chữ', emoji: '🔤' },
+                                            { type: QuestionType.CATEGORIZATION, label: 'Phân loại', emoji: '📦' },
+                                            { type: QuestionType.UNDERLINE, label: 'Gạch chân', emoji: '📋' },
+                                        ].map(item => (
+                                            <button
+                                                key={item.type}
+                                                onClick={() => handleOpenAddModal(item.type)}
+                                                className="px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
+                                            >
+                                                {item.emoji} {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ) : (
@@ -1343,6 +1548,493 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                     className="flex-1"
                                 >
                                     💾 Lưu thay đổi
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Question Modal */}
+            {showAddModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-bold text-gray-800">➕ Thêm câu hỏi {getTypeLabel(newQuestionType)}</h2>
+                            <button
+                                onClick={() => { setShowAddModal(false); handleCloseEditModal(); }}
+                                className="p-2 hover:bg-gray-100 rounded-full"
+                            >
+                                <X className="w-5 h-5 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Question Text */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Nội dung câu hỏi
+                                </label>
+                                <textarea
+                                    value={editQuestionText}
+                                    onChange={(e) => setEditQuestionText(e.target.value)}
+                                    rows={3}
+                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Nhập câu hỏi..."
+                                />
+                            </div>
+
+                            {/* Options for MCQ/MULTIPLE_SELECT */}
+                            {(newQuestionType === QuestionType.MCQ || newQuestionType === QuestionType.MULTIPLE_SELECT) && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Các đáp án
+                                    </label>
+                                    <div className="space-y-2">
+                                        {editOptions.map((opt, i) => (
+                                            <div key={i} className="flex items-center gap-2">
+                                                <span className="w-6 text-center font-bold text-gray-500">
+                                                    {String.fromCharCode(65 + i)}.
+                                                </span>
+                                                <input
+                                                    type="text"
+                                                    value={opt}
+                                                    onChange={(e) => {
+                                                        const newOptions = [...editOptions];
+                                                        newOptions[i] = e.target.value;
+                                                        setEditOptions(newOptions);
+                                                    }}
+                                                    className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                    placeholder={`Đáp án ${String.fromCharCode(65 + i)}`}
+                                                />
+                                                {newQuestionType === QuestionType.MULTIPLE_SELECT && (
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={editCorrectAnswers.includes(String.fromCharCode(65 + i))}
+                                                        onChange={(e) => {
+                                                            const letter = String.fromCharCode(65 + i);
+                                                            if (e.target.checked) {
+                                                                setEditCorrectAnswers([...editCorrectAnswers, letter].sort());
+                                                            } else {
+                                                                setEditCorrectAnswers(editCorrectAnswers.filter(a => a !== letter));
+                                                            }
+                                                        }}
+                                                        className="w-5 h-5 text-green-600"
+                                                        title="Đáp án đúng"
+                                                    />
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Correct Answer for MCQ/SHORT_ANSWER */}
+                            {(newQuestionType === QuestionType.MCQ || newQuestionType === QuestionType.SHORT_ANSWER) && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Đáp án đúng
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editCorrectAnswer}
+                                        onChange={(e) => setEditCorrectAnswer(newQuestionType === QuestionType.MCQ ? e.target.value.toUpperCase() : e.target.value)}
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        placeholder={newQuestionType === QuestionType.MCQ ? "A, B, C hoặc D" : "Nhập đáp án"}
+                                    />
+                                </div>
+                            )}
+
+                            {/* TRUE_FALSE Items */}
+                            {newQuestionType === QuestionType.TRUE_FALSE && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Các mệnh đề
+                                    </label>
+                                    <div className="space-y-2">
+                                        {editItems.map((item, i) => (
+                                            <div key={i} className="flex items-center gap-2">
+                                                <span className="w-6 text-center text-gray-500">{String.fromCharCode(97 + i)}.</span>
+                                                <input
+                                                    type="text"
+                                                    value={item.statement}
+                                                    onChange={(e) => {
+                                                        const newItems = [...editItems];
+                                                        newItems[i] = { ...newItems[i], statement: e.target.value };
+                                                        setEditItems(newItems);
+                                                    }}
+                                                    className="flex-1 px-3 py-2 border rounded-lg"
+                                                    placeholder="Nhập mệnh đề..."
+                                                />
+                                                <select
+                                                    value={item.isCorrect ? 'true' : 'false'}
+                                                    onChange={(e) => {
+                                                        const newItems = [...editItems];
+                                                        newItems[i] = { ...newItems[i], isCorrect: e.target.value === 'true' };
+                                                        setEditItems(newItems);
+                                                    }}
+                                                    className="px-2 py-2 border rounded-lg"
+                                                >
+                                                    <option value="true">Đúng</option>
+                                                    <option value="false">Sai</option>
+                                                </select>
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => setEditItems([...editItems, { id: `${editItems.length + 1}`, statement: '', isCorrect: true }])}
+                                            className="text-sm text-blue-600 hover:underline"
+                                        >
+                                            + Thêm mệnh đề
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* MATCHING Pairs */}
+                            {newQuestionType === QuestionType.MATCHING && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Các cặp nối
+                                    </label>
+                                    <div className="space-y-2">
+                                        {editPairs.map((pair, i) => (
+                                            <div key={i} className="flex items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={pair.left}
+                                                    onChange={(e) => {
+                                                        const newPairs = [...editPairs];
+                                                        newPairs[i] = { ...newPairs[i], left: e.target.value };
+                                                        setEditPairs(newPairs);
+                                                    }}
+                                                    className="flex-1 px-3 py-2 border rounded-lg"
+                                                    placeholder="Cột A"
+                                                />
+                                                <span className="text-gray-400">→</span>
+                                                <input
+                                                    type="text"
+                                                    value={pair.right}
+                                                    onChange={(e) => {
+                                                        const newPairs = [...editPairs];
+                                                        newPairs[i] = { ...newPairs[i], right: e.target.value };
+                                                        setEditPairs(newPairs);
+                                                    }}
+                                                    className="flex-1 px-3 py-2 border rounded-lg"
+                                                    placeholder="Cột B"
+                                                />
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => setEditPairs([...editPairs, { left: '', right: '' }])}
+                                            className="text-sm text-blue-600 hover:underline"
+                                        >
+                                            + Thêm cặp nối
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* IMAGE_QUESTION */}
+                            {newQuestionType === QuestionType.IMAGE_QUESTION && (
+                                <div className="space-y-4">
+                                    {/* Image URL */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            URL hình ảnh
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editImageUrl}
+                                            onChange={(e) => setEditImageUrl(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            placeholder="https://example.com/image.png hoặc data:image/..."
+                                        />
+                                        {editImageUrl && (
+                                            <div className="mt-2">
+                                                <img src={editImageUrl} alt="Preview" className="max-h-32 rounded-lg border"
+                                                    onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Options */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Các đáp án
+                                        </label>
+                                        <div className="space-y-2">
+                                            {editOptions.map((opt, i) => (
+                                                <div key={i} className="flex items-center gap-2">
+                                                    <span className="w-6 text-center font-bold text-gray-500">
+                                                        {String.fromCharCode(65 + i)}.
+                                                    </span>
+                                                    <input
+                                                        type="text"
+                                                        value={opt}
+                                                        onChange={(e) => {
+                                                            const newOptions = [...editOptions];
+                                                            newOptions[i] = e.target.value;
+                                                            setEditOptions(newOptions);
+                                                        }}
+                                                        className="flex-1 px-3 py-2 border rounded-lg"
+                                                        placeholder={`Đáp án ${String.fromCharCode(65 + i)}`}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Correct Answer */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Đáp án đúng
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editCorrectAnswer}
+                                            onChange={(e) => setEditCorrectAnswer(e.target.value.toUpperCase())}
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                                            placeholder="A, B, C hoặc D"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* DROPDOWN */}
+                            {newQuestionType === QuestionType.DROPDOWN && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Câu văn (dùng [blank] để đánh dấu chỗ trống)
+                                        </label>
+                                        <textarea
+                                            value={editDropdownText}
+                                            onChange={(e) => setEditDropdownText(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg"
+                                            placeholder="Ví dụ: Con [blank] là động vật có vú."
+                                            rows={2}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Các ô dropdown
+                                        </label>
+                                        {editDropdownBlanks.map((blank, i) => (
+                                            <div key={i} className="mb-3 p-3 bg-gray-50 rounded-lg">
+                                                <p className="text-xs text-gray-500 mb-2">Ô {i + 1}</p>
+                                                <input
+                                                    type="text"
+                                                    value={blank.options.join(', ')}
+                                                    onChange={(e) => {
+                                                        const newBlanks = [...editDropdownBlanks];
+                                                        newBlanks[i] = { ...blank, options: e.target.value.split(',').map(s => s.trim()) };
+                                                        setEditDropdownBlanks(newBlanks);
+                                                    }}
+                                                    className="w-full px-3 py-2 border rounded-lg mb-2"
+                                                    placeholder="Các lựa chọn (cách nhau bởi dấu phẩy)"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={blank.correctAnswer}
+                                                    onChange={(e) => {
+                                                        const newBlanks = [...editDropdownBlanks];
+                                                        newBlanks[i] = { ...blank, correctAnswer: e.target.value };
+                                                        setEditDropdownBlanks(newBlanks);
+                                                    }}
+                                                    className="w-full px-3 py-2 border rounded-lg"
+                                                    placeholder="Đáp án đúng"
+                                                />
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => setEditDropdownBlanks([...editDropdownBlanks, { id: `${editDropdownBlanks.length + 1}`, options: [], correctAnswer: '' }])}
+                                            className="text-sm text-blue-600 hover:underline"
+                                        >
+                                            + Thêm ô dropdown
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* WORD_SCRAMBLE */}
+                            {newQuestionType === QuestionType.WORD_SCRAMBLE && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Từ đúng
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editCorrectWord}
+                                            onChange={(e) => {
+                                                const word = e.target.value.toUpperCase();
+                                                setEditCorrectWord(word);
+                                                // Auto-generate shuffled letters
+                                                const letters = word.split('').sort(() => Math.random() - 0.5);
+                                                setEditLetters(letters);
+                                            }}
+                                            className="w-full px-3 py-2 border rounded-lg"
+                                            placeholder="Nhập từ cần ghép (VD: TRƯỜNG)"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Các chữ cái (xáo trộn)
+                                        </label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {editLetters.map((letter, i) => (
+                                                <span key={i} className="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-700 rounded font-bold">
+                                                    {letter}
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <button
+                                            onClick={() => setEditLetters([...editLetters].sort(() => Math.random() - 0.5))}
+                                            className="text-sm text-blue-600 hover:underline mt-2"
+                                        >
+                                            🔀 Xáo trộn lại
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* CATEGORIZATION */}
+                            {newQuestionType === QuestionType.CATEGORIZATION && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Các nhóm/danh mục
+                                        </label>
+                                        {editCategories.map((cat, i) => (
+                                            <div key={i} className="flex items-center gap-2 mb-2">
+                                                <span className="text-gray-500">{i + 1}.</span>
+                                                <input
+                                                    type="text"
+                                                    value={cat.name}
+                                                    onChange={(e) => {
+                                                        const newCats = [...editCategories];
+                                                        newCats[i] = { ...cat, name: e.target.value };
+                                                        setEditCategories(newCats);
+                                                    }}
+                                                    className="flex-1 px-3 py-2 border rounded-lg"
+                                                    placeholder={`Nhóm ${i + 1}`}
+                                                />
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => setEditCategories([...editCategories, { id: `${Date.now()}`, name: '' }])}
+                                            className="text-sm text-blue-600 hover:underline"
+                                        >
+                                            + Thêm nhóm
+                                        </button>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Các mục cần phân loại
+                                        </label>
+                                        {editCategorizationItems.map((item, i) => (
+                                            <div key={i} className="flex items-center gap-2 mb-2">
+                                                <input
+                                                    type="text"
+                                                    value={item.content}
+                                                    onChange={(e) => {
+                                                        const newItems = [...editCategorizationItems];
+                                                        newItems[i] = { ...item, content: e.target.value };
+                                                        setEditCategorizationItems(newItems);
+                                                    }}
+                                                    className="flex-1 px-3 py-2 border rounded-lg"
+                                                    placeholder="Nội dung mục"
+                                                />
+                                                <select
+                                                    value={item.categoryId}
+                                                    onChange={(e) => {
+                                                        const newItems = [...editCategorizationItems];
+                                                        newItems[i] = { ...item, categoryId: e.target.value };
+                                                        setEditCategorizationItems(newItems);
+                                                    }}
+                                                    className="px-2 py-2 border rounded-lg"
+                                                >
+                                                    {editCategories.map(cat => (
+                                                        <option key={cat.id} value={cat.id}>{cat.name || `Nhóm ${editCategories.indexOf(cat) + 1}`}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => setEditCategorizationItems([...editCategorizationItems, { id: `${Date.now()}`, content: '', categoryId: editCategories[0]?.id || '' }])}
+                                            className="text-sm text-blue-600 hover:underline"
+                                        >
+                                            + Thêm mục
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* UNDERLINE */}
+                            {newQuestionType === QuestionType.UNDERLINE && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Câu văn (các từ sẽ được tách tự động)
+                                        </label>
+                                        <textarea
+                                            value={editSentence}
+                                            onChange={(e) => {
+                                                const sentence = e.target.value;
+                                                setEditSentence(sentence);
+                                                setEditWords(sentence.split(/\s+/).filter(w => w.trim()));
+                                                setEditCorrectWordIndexes([]);
+                                            }}
+                                            className="w-full px-3 py-2 border rounded-lg"
+                                            placeholder="Nhập câu văn..."
+                                            rows={2}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Click vào từ cần gạch chân (đáp án đúng)
+                                        </label>
+                                        <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg">
+                                            {editWords.map((word, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        if (editCorrectWordIndexes.includes(i)) {
+                                                            setEditCorrectWordIndexes(editCorrectWordIndexes.filter(idx => idx !== i));
+                                                        } else {
+                                                            setEditCorrectWordIndexes([...editCorrectWordIndexes, i]);
+                                                        }
+                                                    }}
+                                                    className={`px-2 py-1 rounded text-sm transition-colors ${editCorrectWordIndexes.includes(i)
+                                                            ? 'bg-green-500 text-white underline'
+                                                            : 'bg-gray-200 hover:bg-gray-300'
+                                                        }`}
+                                                >
+                                                    {word}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Actions */}
+                            <div className="flex gap-3 pt-4">
+                                <Button
+                                    onClick={() => { setShowAddModal(false); handleCloseEditModal(); }}
+                                    variant="secondary"
+                                    className="flex-1"
+                                >
+                                    Hủy
+                                </Button>
+                                <Button
+                                    onClick={handleAddQuestion}
+                                    variant="primary"
+                                    className="flex-1"
+                                    disabled={!editQuestionText.trim()}
+                                >
+                                    ➕ Thêm câu hỏi
                                 </Button>
                             </div>
                         </div>

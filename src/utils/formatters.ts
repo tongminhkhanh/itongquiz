@@ -60,10 +60,11 @@ export const sanitizeLatex = (text: string): string => {
     result = rebuiltParts.join('');
 
     // Step 4: Clean up artifacts
-    // Remove empty $$ pairs
-    result = result.replace(/\$\$/g, '');
+    // Remove empty $$ (created when two $ are adjacent with nothing between)
+    // But preserve valid display math $$...$$
+    result = result.replace(/\$\s*\$/g, '');  // Only remove $$ with optional whitespace between
 
-    // Clean up spaces
+    // Clean up multiple spaces
     result = result.replace(/\s+/g, ' ');
 
     return result.trim();
