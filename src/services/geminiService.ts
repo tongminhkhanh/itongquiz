@@ -217,38 +217,48 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
        - Phép chia: Viết có khoảng cách (ví dụ: 10 / 2, 15 / 3).
        - Phép nhân: Viết có khoảng cách (ví dụ: 5 * 3).
     
-    📐 QUY TẮC LATEX CHO CÔNG THỨC TOÁN HỌC (BẮT BUỘC TUÂN THỦ):
+    📐 QUY TẮC LATEX - BẮT BUỘC 100% TUÂN THỦ:
     
-    ❌ SAI vs ✅ ĐÚNG:
-    | Yếu tố | SAI ❌ | ĐÚNG ✅ |
-    |--------|--------|---------|
-    | Phân số | \\frac{a}{b}$$ hoặc \\frac{a}{b} | $\\frac{a}{b}$ |
-    | Dòng công thức | \\$...\\$$ | $...$ (inline) hoặc $$...$$ (block) |
-    | Mũi tên | → | $\\rightarrow$ |
-    | Inline math | \\frac{1}{2} (không có $) | $\\frac{1}{2}$ (có $ bọc) |
+    ⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔
+    🚫 LUẬT TUYỆT ĐỐI: CHỮ TIẾNG VIỆT KHÔNG BAO GIỜ NẰM TRONG $...$ 🚫
+    ⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔
     
-    ✅ VÍ DỤ ĐÚNG:
-    - Inline: $\\frac{3}{7} + \\frac{2}{7} = \\frac{5}{7}$
-    - Display (riêng dòng): $$\\frac{3}{7} + \\frac{2}{7} = \\frac{5}{7}$$
+    🔴 ĐỊNH NGHĨA "CHỮ TIẾNG VIỆT" CẦN ĐỂ NGOÀI $...$:
+    - Tất cả từ: Tính, Phép, có, là, bao nhiêu, kết quả, lít, kg, cm, m, giờ, phút, bằng,...
+    - Tất cả chữ cái: a-z, A-Z, à-ỹ (có dấu)
+    - Tất cả dấu câu cuối: ? ! : ;
+    - Nhãn đáp án: A. B. C. D.
     
-    📝 CÁC KÝ HIỆU LATEX PHỔ BIẾN:
-    - Phân số: $\\frac{a}{b}$ → $\\frac{1}{2}$, $\\frac{3}{4}$
-    - Lũy thừa: $x^n$ → $2^3$, $x^2$
-    - Căn bậc hai: $\\sqrt{x}$ → $\\sqrt{4}$
-    - Pi: $\\pi$
-    - Nhân: $\\times$ hoặc $\\cdot$
-    - Chia: $\\div$
-    - Lớn hơn/bằng: $\\geq$, nhỏ hơn/bằng: $\\leq$
-    - Không bằng: $\\neq$
-    - Góc: $\\angle ABC$, Độ: $90^\\circ$
-    - Tam giác: $\\triangle ABC$
-    - Song song: $\\parallel$, Vuông góc: $\\perp$
+    ✅ BÊN TRONG $...$ CHỈ ĐƯỢC CHỨA:
+    - Số: 0-9
+    - Phép toán: + - \\times \\div = \\frac{}{} \\sqrt{} ^ _
+    - Ký hiệu: \\pi \\angle \\triangle
+    - Dấu ngoặc toán: ( ) { } [ ]
     
-    ⚠️ LƯU Ý QUAN TRỌNG:
-    - LUÔN bọc công thức trong $...$ hoặc $$...$$
-    - Ưu tiên inline $...$ để công thức cùng dòng với câu hỏi
-    - Trong JSON: dùng \\\\ thay cho \\ (escape backslash)
-    - VÍ DỤ trong JSON: "Tính $\\\\frac{1}{2} + \\\\frac{1}{4}$?"
+    📋 VÍ DỤ JSON OUTPUT CHUẨN (COPY THEO MẪU NÀY):
+    
+    ✅ ĐÚNG: {"question": "Phép tính $\\\\frac{2}{8} + \\\\frac{4}{8}$ có kết quả là:", "options": ["A. $\\\\frac{6}{8}$", "B. $\\\\frac{3}{4}$", "C. $\\\\frac{1}{2}$", "D. $\\\\frac{6}{16}$"]}
+    ❌ SAI: {"question": "$Phéptính\\\\frac{2}{8} + \\\\frac{4}{8}cókếtquảlà:$", ...}
+    
+    ✅ ĐÚNG: {"question": "Tính $\\\\frac{3}{6} + \\\\frac{1}{6}$. Kết quả rút gọn là:", ...}
+    ❌ SAI: {"question": "$Tính\\\\frac{3}{6} + \\\\frac{1}{6}.Kếtquảrútgọnlà:$", ...}
+    
+    ✅ ĐÚNG: {"question": "Tổng của $\\\\frac{1}{5}$ và $\\\\frac{2}{5}$ bằng bao nhiêu?", ...}
+    ❌ SAI: {"question": "$Tổngcủa\\\\frac{1}{5}và\\\\frac{2}{5}bằngbaonhiêu?$", ...}
+    
+    📝 CÁCH VIẾT ĐÚNG CHO TỪNG TRƯỜNG HỢP:
+    
+    | Nội dung cần viết | CÁCH VIẾT ĐÚNG |
+    |-------------------|----------------|
+    | Phép tính 2/8 + 4/8 có kết quả là | "Phép tính $\\\\frac{2}{8} + \\\\frac{4}{8}$ có kết quả là:" |
+    | Tính 3/6 + 1/6 kết quả rút gọn là | "Tính $\\\\frac{3}{6} + \\\\frac{1}{6}$. Kết quả rút gọn là:" |
+    | Đáp án A là 6/8 | "A. $\\\\frac{6}{8}$" |
+    | Đáp án B là 3/4 | "B. $\\\\frac{3}{4}$" |
+    | Nam có 3/4 lít nước | "Nam có $\\\\frac{3}{4}$ lít nước" |
+    
+    🚨 KIỂM TRA TRƯỚC KHI OUTPUT:
+    - Mỗi $...$ có chứa chữ tiếng Việt không? → NẾU CÓ: SỬA NGAY!
+    - Mỗi $...$ có chứa dấu ? ! : không? → NẾU CÓ: ĐƯA RA NGOÀI!
     
     🎨 HÌNH MINH HỌA - SVG GEOMETRY (Cho câu hỏi hình học):
     Khi câu hỏi CẦN HÌNH VẼ (tam giác, hình vuông, đường tròn), thêm trường "geometry":
@@ -317,11 +327,90 @@ const parseAndRepairJSON = (text: string): any => {
   }
 };
 
-// Fix LaTeX formatting issues from AI
+// Fix LaTeX formatting issues from AI - especially Vietnamese text inside $...$
 const fixLatexInText = (text: string): string => {
   if (!text || typeof text !== 'string') return text;
 
   let result = text;
+
+  // 🚨 CRITICAL FIX: Extract Vietnamese text from inside $...$
+  // Pattern: Find $...$ that contains Vietnamese letters and extract them
+  // Vietnamese characters: àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ
+  const vietnamesePattern = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐa-zA-Z]/;
+
+  // Process each $...$ block
+  result = result.replace(/\$([^$]+)\$/g, (match, inner) => {
+    // Check if inner content has Vietnamese text
+    if (vietnamesePattern.test(inner)) {
+      // Extract math parts (\frac, numbers, operators) and text parts
+      // Pattern to find math expressions
+      const mathPattern = /(\\frac\{[^}]*\}\{[^}]*\}|\\sqrt\{[^}]*\}|\\[a-z]+|[0-9]+|[+\-×÷=<>^_{}()\[\]])/gi;
+
+      let parts: string[] = [];
+      let lastIndex = 0;
+      let mathMatch;
+
+      // Reset regex
+      const regex = new RegExp(mathPattern.source, 'gi');
+
+      while ((mathMatch = regex.exec(inner)) !== null) {
+        // Text before math
+        if (mathMatch.index > lastIndex) {
+          const textPart = inner.substring(lastIndex, mathMatch.index).trim();
+          if (textPart) parts.push(textPart);
+        }
+        // Math part - wrap in $
+        parts.push('$' + mathMatch[0] + '$');
+        lastIndex = regex.lastIndex;
+      }
+
+      // Remaining text after last math
+      if (lastIndex < inner.length) {
+        const textPart = inner.substring(lastIndex).trim();
+        if (textPart) parts.push(textPart);
+      }
+
+      // If we successfully split, return joined parts
+      if (parts.length > 1) {
+        // Merge consecutive $ signs: $...$$ $...$ -> $...$ $...$
+        let merged = parts.join(' ').replace(/\$\s*\$/g, ' ');
+        // Clean up double spaces
+        merged = merged.replace(/\s+/g, ' ').trim();
+        return merged;
+      }
+
+      // Fallback: Simple approach - move Vietnamese text outside
+      // Pattern: Vietnamese text at start or end
+      let cleaned = inner;
+      let prefix = '';
+      let suffix = '';
+
+      // Extract Vietnamese prefix (e.g., "Tính:", "Phép tính")
+      const prefixMatch = cleaned.match(/^([a-zA-ZàáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐ\s:.,]+)/);
+      if (prefixMatch) {
+        prefix = prefixMatch[1].trim() + ' ';
+        cleaned = cleaned.substring(prefixMatch[0].length);
+      }
+
+      // Extract Vietnamese suffix (e.g., "là bao nhiêu?", "lít", "kg")
+      const suffixMatch = cleaned.match(/([a-zA-ZàáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐ\s:.,?!]+)$/);
+      if (suffixMatch) {
+        suffix = ' ' + suffixMatch[1].trim();
+        cleaned = cleaned.substring(0, cleaned.length - suffixMatch[0].length);
+      }
+
+      // If we extracted anything, rebuild
+      if (prefix || suffix) {
+        cleaned = cleaned.trim();
+        if (cleaned) {
+          return prefix + '$' + cleaned + '$' + suffix;
+        }
+      }
+    }
+
+    // No Vietnamese or couldn't fix - return original
+    return match;
+  });
 
   // 1. Fix escaped dollar signs: $\$ -> $, \$$ -> $
   result = result.replace(/\$\\\$/g, '$');
@@ -346,15 +435,9 @@ const fixLatexInText = (text: string): string => {
   result = result.replace(/\s+/g, ' ');
 
   // 7. Fix common broken patterns like "$\frac" without proper closing
-  // Pattern: $\frac{a}{b} (missing closing $) followed by text
-  // Look for $\frac{...}{...} not followed by $ and add $
   result = result.replace(/(\$\\frac\{[^}]+\}\{[^}]+\})(?!\$)(\s*[^$\d{])/g, '$1$$$2');
 
-  // 8. Fix pattern where + or - is between two $expressions$
-  // e.g., "$\frac{1}{5}$ + $\frac{2}{5}$" is OK, but sometimes AI writes poorly
-
-  // 9. Ensure all \frac are properly wrapped in $...$
-  // Find \frac not inside $...$ and wrap it
+  // 8. Ensure all \frac are properly wrapped in $...$
   result = result.replace(/(?<!\$)\\frac\{([^}]+)\}\{([^}]+)\}(?!\$)/g, '$\\frac{$1}{$2}$');
 
   return result.trim();

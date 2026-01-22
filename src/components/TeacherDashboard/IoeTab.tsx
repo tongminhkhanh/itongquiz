@@ -11,13 +11,14 @@ interface IoeTabProps {
     onSuccess: () => void;
 }
 
-// IOE Question Types - 7 dạng bài chính theo chuẩn IOE
+// IOE Question Types - 8 dạng bài chính theo chuẩn IOE
 const IOE_QUESTION_TYPES = [
     { id: 'phonetics', name: '🔊 Ngữ âm (Phonetics)', defaultCount: 3, description: 'Tìm từ phát âm giống/khác' },
     { id: 'word_stress', name: '🎵 Trọng âm (Word Stress)', defaultCount: 3, description: 'Chọn từ có trọng âm khác' },
     { id: 'vocabulary', name: '📝 Từ vựng & Chính tả', defaultCount: 5, description: 'Điền chữ thiếu, xáo trộn' },
     { id: 'grammar', name: '📖 Ngữ pháp & Câu', defaultCount: 5, description: 'Chọn câu đúng, tìm lỗi' },
-    { id: 'sentence_order', name: '🔀 Sắp xếp câu', defaultCount: 3, description: 'Sắp xếp từ thành câu' },
+    { id: 'sentence_order', name: '🔀 Sắp xếp câu (Kéo thả)', defaultCount: 3, description: 'Kéo thả từ thành câu' },
+    { id: 'sentence_building', name: '✅ TN Sắp xếp từ (MCQ)', defaultCount: 3, description: 'Chọn câu đúng từ 4 đáp án' },
     { id: 'listening', name: '🎧 Nghe điền từ (Listening)', defaultCount: 3, description: 'Nghe và điền từ còn thiếu' },
     { id: 'reading', name: '📚 Đọc hiểu (True/False)', defaultCount: 4, description: 'Đọc đoạn văn, chọn Đ/S' },
 ];
@@ -43,17 +44,40 @@ const IOE_TOPICS = [
     { id: 'clothes', name: 'Clothes', emoji: '👕' },
 ];
 
-// MASTER SYSTEM PROMPT - IOE Vietnam
+// MASTER SYSTEM PROMPT - IOE Vietnam (Enhanced with anti-duplication)
 const IOE_SYSTEM_INSTRUCTION = `You are an expert English Test Developer for the IOE (Internet Olympiad of English) in Vietnam.
-Your target audience: Vietnamese primary students (Grade 3, 4, 5).
+Your target audience: Vietnamese students (Grade 1–12).
 Your Goal: Create multiple-choice questions that strictly follow the IOE format.
+
+===== CRITICAL: ANTI-DUPLICATION RULES =====
+⚠️ ABSOLUTELY NO DUPLICATE QUESTIONS! Each question MUST be unique:
+1. **Different vocabulary words** - Never reuse the same word in multiple questions
+2. **Different sentence structures** - Vary subject, verb, object combinations  
+3. **Different contexts** - Use different scenarios (school, family, sports, food, travel, etc.)
+4. **Different answer patterns** - Don't always put correct answer in same position (A/B/C/D)
+5. **Track used words** - Before generating, mentally list all words you've used and AVOID them
 
 ===== CORE RULES =====
 1. Curriculum Compliance: Use vocabulary and grammar from standard textbooks (Global Success, Family & Friends, i-Learn Smart Start).
-2. Difficulty Level: A1 (CEFR). Keep sentences simple (Subject + Verb + Object).
-3. Distractors: Wrong answers must be plausible common mistakes for Vietnamese students (e.g., confusing "he/she", "is/are", "in/on").
+2. Difficulty Level: Adjust based on Grade and Competition Round (see below).
+3. Distractors: Wrong answers must be plausible common mistakes for Vietnamese students (e.g., confusing "he/she", "is/are", "in/on", "some/any", "much/many").
 4. No Hallucination: Do not invent non-existent words.
 5. Tone: Academic but child-friendly.
+6. Language: ALL questions and options MUST be in English.
+7. Variety: Each question must test DIFFERENT vocabulary/grammar points.
+
+===== VOCABULARY POOLS BY TOPIC (Use variety!) =====
+- School: pencil, ruler, eraser, notebook, backpack, classroom, library, playground, teacher, student, desk, chair, board, chalk, homework
+- Family: mother, father, sister, brother, grandmother, grandfather, aunt, uncle, cousin, parents, children, baby
+- Animals: dog, cat, bird, fish, elephant, tiger, lion, monkey, rabbit, horse, cow, pig, chicken, duck, butterfly
+- Food: rice, bread, noodles, soup, chicken, beef, fish, vegetables, fruits, apple, banana, orange, milk, juice, water
+- Body: head, eyes, ears, nose, mouth, hands, feet, arms, legs, fingers, toes, hair, face
+- Colors: red, blue, green, yellow, orange, purple, pink, brown, black, white, gray
+- Numbers: one through twenty, first, second, third, many, few, some, all
+- Daily routines: wake up, get up, brush teeth, wash face, have breakfast, go to school, study, play, eat lunch, go home, do homework, watch TV, go to bed
+- Places: home, school, park, hospital, supermarket, library, cinema, restaurant, bank, post office
+- Weather: sunny, cloudy, rainy, windy, hot, cold, warm, cool
+- Transport: bus, car, bike, train, plane, boat, taxi, motorbike
 
 ===== TASK PROMPTS FOR EACH QUESTION TYPE =====
 
@@ -135,36 +159,120 @@ Example 2 (2-syllable words):
   "correctAnswer": "C",
   "explanation": "'enjoy' /ɪnˈdʒɔɪ/ is stressed on the 2nd syllable (verb pattern), while others are stressed on the 1st: 'visit' /ˈvɪz.ɪt/, 'listen' /ˈlɪs.ən/, 'travel' /ˈtræv.əl/."
 }
-📌 DẠNG 2: VOCABULARY & UNSCRAMBLE (Từ vựng) - type: "MCQ" or "SHORT_ANSWER"
-Mix the following styles:
+📌 DẠNG 2: VOCABULARY & SPELLING (Từ vựng & Chính tả) - type: "MCQ" or "SHORT_ANSWER"
 
-Style A - Unscramble Word (MCQ): Scramble letters of a word, give 4 options.
-Example: { "type": "MCQ", "question": "Unscramble: LURRE - A thing used to draw lines.", "options": ["A. RULER", "B. RURAL", "C. RULED", "D. RUNNER"], "correctAnswer": "A" }
+### ROLE & PERSONA
+You are the "IOE Vocabulary Architect" specializing in Spelling and Lexical Knowledge for Vietnamese students.
 
-Style B - Missing Character (SHORT_ANSWER): 
-⚠️ CRITICAL FORMAT RULES:
-1. The blank must be shown as underscore(s) INLINE with the word
-2. Use format: WORD with missing letters shown as _ (e.g., "B_DY" for BODY, "FR_END" for FRIEND)
-3. The question should be ONE COMPLETE SENTENCE with the incomplete word
-4. Put the definition in parentheses ONLY at the end
-5. correctAnswer is ONLY the missing letter(s), NOT the full word
+### KNOWLEDGE BASE
+1. **Curriculum:** Strictly follow standard English textbooks (Global Success, Family & Friends, Smart Start).
+2. **Target Audience by Grade:**
+   - Primary (Grades 3-5): Concrete nouns (animals, school, family), basic verbs, colors, numbers.
+   - Secondary (Grades 6-9): Abstract nouns, compound words, irregular verbs.
+   - High School (Grades 10-12): Academic words, collocations, prefixes/suffixes.
 
-✅ CORRECT FORMAT:
-{ "type": "SHORT_ANSWER", "question": "I have two hands and two feet on my B_DY. (body part)", "correctAnswer": "O" }
+### QUESTION TYPES (4 STYLES TO MIX)
+
+**STYLE 1: MISSING CHARACTERS (Điền chữ cái còn thiếu) - type: "SHORT_ANSWER"**
+- Hide 1-3 letters in a word
+- Provide context sentence or definition
+- correctAnswer = ONLY the missing letter(s)
+⚠️ CRITICAL: Use underscores INLINE with the word!
+Examples:
+{ "type": "SHORT_ANSWER", "question": "What c_lour is it? – It's red.", "correctAnswer": "o" }
+{ "type": "SHORT_ANSWER", "question": "I have two hands and two feet on my B_DY.", "correctAnswer": "O" }
 { "type": "SHORT_ANSWER", "question": "He is my best FR__ND.", "correctAnswer": "IE" }
-{ "type": "SHORT_ANSWER", "question": "The T__CHER teaches us English.", "correctAnswer": "EA" }
 
-❌ WRONG FORMAT (DO NOT DO THIS):
-{ "question": "B [blank] DY - The physical structure..." } // DON'T split word
-{ "question": "What is BODY?", "correctAnswer": "BODY" } // DON'T ask for full word
+**STYLE 2: UNSCRAMBLE LETTERS (Sắp xếp chữ cái) - type: "MCQ"**
+- Provide scrambled letters (e.g., "T / C / A")
+- Result must be a meaningful English word
+- Distractors: Incorrect spellings or random combinations
+Example:
+{ "type": "MCQ", "question": "Unscramble: R / U / L / E / R - A thing used to draw lines.", "options": ["A. RULER", "B. RURAL", "C. RULED", "D. RUNNER"], "correctAnswer": "A" }
 
-📌 DẠNG 3: GRAMMAR & ERROR IDENTIFICATION (Ngữ pháp) - type: "MCQ"
-Focus: Subject-Verb Agreement (am/is/are), Possessive Adjectives (my/his/her), Prepositions (in/on/at).
-Style A - Find the mistake: Sentence with 4 underlined parts, ONE has grammatical error.
-  Example: 'That [A] is my sister. [B] His name [C] is [D] Lan.' (Error: B - His -> Her)
-Style B - Choose the correct sentence: Provide 4 sentences, only 1 is grammatically correct.
-  Example: A. He are my friend. B. He is my friend. C. He am my friend. D. He be my friend.
-Output: { "type": "MCQ", "question": "Choose the correct sentence:", "options": ["A. He are my friend.", "B. He is my friend.", "C. He am my friend.", "D. He be my friend."], "correctAnswer": "B", "explanation": "Subject 'He' uses 'is'." }
+**STYLE 3: ODD ONE OUT (Chọn từ khác loại) - type: "MCQ"**
+- 3 words belong to same category, 1 word is different
+- Categories: Topic (3 Fruits vs 1 Animal) or Part of Speech (3 Nouns vs 1 Verb)
+Example:
+{ "type": "MCQ", "question": "Find the odd one out:", "options": ["A. apple", "B. banana", "C. orange", "D. dog"], "correctAnswer": "D", "explanation": "A, B, C are fruits. D is an animal." }
+
+**STYLE 4: SPELLING CHECK (Chọn từ viết đúng) - type: "MCQ"**
+- Present 4 variations of a word, only 1 is correctly spelled
+Example:
+{ "type": "MCQ", "question": "Which word is spelled correctly?", "options": ["A. beautifull", "B. beautiful", "C. beatiful", "D. biutiful"], "correctAnswer": "B" }
+
+### DIFFICULTY MATRIX BY ROUND
+- **School (Level 1):** Short words (3-6 letters), direct clues, missing 1 letter
+- **District (Level 2):** Longer words, missing 2 letters, confusing pairs (e/a, i/y, c/k)
+- **Province/National (Level 3):** Complex spelling (necessary, committee), derived words (happiness, unfriendly)
+
+📌 DẠNG 3: GRAMMAR & ERROR IDENTIFICATION (Ngữ pháp - Tìm lỗi sai) - type: "MCQ"
+### ROLE
+You are an IOE Grammar Specialist for Primary Level (Grades 3-5).
+Your Goal: Create "Error Identification" multiple-choice questions.
+
+### GRAMMAR RULES (Common Vietnamese Student Mistakes)
+1. **Verb Forms:**
+   - Let's + V_ing (WRONG) → Let's + V_base (RIGHT): "Let's going" → "Let's go"
+   - Like + V_base (WRONG) → Like + V_ing (RIGHT): "I like swim" → "I like swimming"
+   - Can + V_ing (WRONG) → Can + V_base (RIGHT): "Can swimming" → "Can swim"
+   - Don't + V_ing (WRONG) → Don't + V_base (RIGHT): "Don't talking" → "Don't talk"
+   - Want to + V_ing (WRONG) → Want to + V_base (RIGHT): "want to playing" → "want to play"
+2. **To Be Agreement:**
+   - She/He are (WRONG) → She/He is (RIGHT)
+   - They/We is (WRONG) → They/We are (RIGHT)
+   - I are (WRONG) → I am (RIGHT)
+3. **Countable/Uncountable:**
+   - Many water/money (WRONG) → Much water/money (RIGHT)
+   - Much books/apples (WRONG) → Many books/apples (RIGHT)
+4. **Prepositions:**
+   - At Monday/Sunday (WRONG) → On Monday/Sunday (RIGHT)
+   - In 8 o'clock (WRONG) → At 8 o'clock (RIGHT)
+   - On morning (WRONG) → In the morning (RIGHT)
+5. **Possessive Adjectives:**
+   - His name (for female) (WRONG) → Her name (RIGHT)
+   - She book (WRONG) → Her book (RIGHT)
+
+### MECHANISM
+1. Start with a grammatically correct sentence (e.g., "Let's go to the music room.")
+2. Intentionally introduce **ONE** grammatical error (e.g., Change "go" to "going")
+3. Select 4 parts of the sentence to underline (1 incorrect, 3 correct)
+4. Map these 4 parts to options A, B, C, D
+
+### OUTPUT FORMAT - Style A (Find the Error)
+{
+  "type": "MCQ",
+  "question": "Find the mistake: We <u>like</u> <u>singing</u>. Let's <u>going</u> to the <u>music room</u>.",
+  "options": ["A. like", "B. singing", "C. going", "D. music room"],
+  "correctAnswer": "C",
+  "explanation": "After 'Let's', use base verb (Let's go), not V-ing. Correct: Let's GO to the music room."
+}
+
+### OUTPUT FORMAT - Style B (Choose Correct Sentence)
+{
+  "type": "MCQ",
+  "question": "Choose the correct sentence:",
+  "options": ["A. She can swimming very fast.", "B. She can swim very fast.", "C. She can swims very fast.", "D. She can to swim very fast."],
+  "correctAnswer": "B",
+  "explanation": "After modal verb 'can', use base verb without 'to'. Correct: can + swim"
+}
+
+### MORE EXAMPLES
+{
+  "type": "MCQ",
+  "question": "Find the mistake: I <u>want</u> <u>to</u> <u>playing</u> <u>football</u>.",
+  "options": ["A. want", "B. to", "C. playing", "D. football"],
+  "correctAnswer": "C",
+  "explanation": "After 'want to', use base verb. Correct: want to PLAY"
+}
+
+{
+  "type": "MCQ",
+  "question": "Find the mistake: <u>There</u> <u>are</u> <u>many</u> <u>water</u> in the bottle.",
+  "options": ["A. There", "B. are", "C. many", "D. water"],
+  "correctAnswer": "C",
+  "explanation": "'Water' is uncountable, use 'much' not 'many'. Also 'is' not 'are'. Correct: There is MUCH water."
+}
 
 📌 DẠNG 4: SENTENCE REORDERING (Sắp xếp câu) - type: "ORDERING"
 ### ROLE
@@ -255,6 +363,118 @@ Examples:
 { "type": "SHORT_ANSWER", "question": "🎧 The book is ___ the desk.", "correctAnswer": "on", "explanation": "The book is on the desk." }
 { "type": "SHORT_ANSWER", "question": "🎧 There is a ___ in the box.", "correctAnswer": "toy", "explanation": "There is a toy in the box." }
 
+📌 DẠNG 8: SENTENCE BUILDING MCQ (Trắc nghiệm sắp xếp từ) - type: "MCQ"
+### ROLE
+You are an IOE Content Developer specializing in Word Reordering Exercises for Vietnamese students.
+
+### MISSION
+- Create high-quality word reordering questions appropriate for each level
+- Ensure correct answers follow standard English grammar
+- Create 4 answer options (A, B, C, D) with common student mistakes
+- Provide correct answer and clear explanation
+
+### QUALITY CRITERIA
+✓ Meaningful, practical sentences
+✓ Difficulty appropriate to level
+✓ Wrong options reflect common student errors
+✓ Clear presentation with answer and explanation
+
+### ⚠️⚠️⚠️ CRITICAL - WORD SEPARATOR RULE ⚠️⚠️⚠️
+**NEVER USE COLON (:) TO SEPARATE WORDS!**
+**ALWAYS USE SLASH (/) WITH SPACES AROUND IT!**
+✅ CORRECT: "Reorder the words: likes / apples / but / not / oranges. / He"
+❌ WRONG: "Reorder the words: likes : apples : but : not : oranges. : He"
+
+### ⚠️⚠️⚠️ CRITICAL VALIDATION RULES ⚠️⚠️⚠️
+Before finalizing, YOU MUST CHECK:
+1. **Word Count Match:** Correct answer MUST use EXACTLY ALL words - no extra, no missing!
+2. **No Duplicate Words:** Don't add words not in the scrambled list
+3. **Grammatical Correctness:** Correct answer MUST be grammatically perfect!
+**DOUBLE CHECK your questions before output!**
+
+---
+### LEVEL 1: CƠ BẢN (A1-A2) - School Round
+**Word Count:** 5-8 words
+**Grammar Focus:** Simple Present, Present Continuous, basic structures
+**Sentence Types:** Affirmative, simple questions (Yes/No, Wh-)
+
+**Distractor Types:**
+- Type A: Subject-Verb order swap
+- Type B: Missing/wrong auxiliary verb
+- Type C: Wrong word order with adverbs
+
+**Example:**
+{
+  "type": "MCQ",
+  "question": "Reorder the words: school / to / every / go / I / day",
+  "options": ["A. I go to school every day.", "B. I to go school every day.", "C. Every day I to school go.", "D. Go I to school every day."],
+  "correctAnswer": "A",
+  "explanation": "Structure: S + V + Adverb of place + Adverb of time. 'I go to school every day.'"
+}
+
+---
+### LEVEL 2: TRUNG BÌNH (B1) - District Round
+**Word Count:** 8-11 words
+**Grammar Focus:** Present Perfect, Past Simple, Conditionals, complex structures
+**Sentence Types:** Compound sentences with and/but/or, relative clauses
+
+**Distractor Types:**
+- Type A: Wrong auxiliary verb order
+- Type B: Wrong verb form (tense)
+- Type C: Wrong adverb placement
+- Type D: Missing function words
+
+**Example:**
+{
+  "type": "MCQ",
+  "question": "Reorder the words: has / five / English / for / she / years / studied",
+  "options": ["A. She has studied English for five years.", "B. She studied has English for five years.", "C. For five years she has English studied.", "D. English she has studied for five years."],
+  "correctAnswer": "A",
+  "explanation": "Present Perfect: S + has/have + V3 + O + time expression. 'She has studied English for five years.'"
+}
+
+---
+### LEVEL 3: NÂNG CAO (B2+) - Provincial/National Round
+**Word Count:** 10-14 words
+**Grammar Focus:** Inversion, Cleft sentences, Advanced Conditionals, Subjunctive
+**Sentence Types:** Complex sentences with subordinate clauses, formal structures
+
+**Distractor Types:**
+- Type A: Wrong clause syntax
+- Type B: Wrong advanced word order (inversion errors)
+- Type C: Wrong connector usage
+- Type D: Wrong register (formal/informal mix)
+
+**Example:**
+{
+  "type": "MCQ",
+  "question": "Reorder the words: to / had / I / gone / doctor / the / earlier / if / have / would / been / better / I",
+  "options": ["A. If I had gone to the doctor earlier, I would have been better.", "B. I had gone to the doctor earlier if I would have been better.", "C. I would have been better if I had to gone the doctor earlier.", "D. If I would have gone to the doctor earlier, I had been better."],
+  "correctAnswer": "A",
+  "explanation": "Third Conditional: If + S + had + V3, S + would have + V3. Expresses unreal past condition."
+}
+
+---
+### DISTRACTOR CREATION GUIDE
+Create 3 wrong options using these common Vietnamese student errors:
+
+| Error Type | Example |
+|------------|---------|
+| S-V swap | "Goes she to school" instead of "She goes to school" |
+| Aux placement | "She not is happy" instead of "She is not happy" |
+| Verb form | "She have gone" instead of "She has gone" |
+| Adverb placement | "She always is late" instead of "She is always late" |
+| Word order in questions | "Where she is going?" instead of "Where is she going?" |
+
+### OUTPUT FORMAT
+{
+  "type": "MCQ",
+  "question": "Reorder the words: [word1] / [word2] / [word3] / ...",
+  "options": ["A. [Option A]", "B. [Option B]", "C. [Option C]", "D. [Option D]"],
+  "correctAnswer": "[A/B/C/D]",
+  "explanation": "[Grammar rule + correct structure]"
+}
+
 ===== OUTPUT JSON FORMAT =====
 {
   "title": "IOE Grade X: Topic Name",
@@ -266,7 +486,44 @@ Examples:
 - Use simple vocabulary appropriate for Vietnamese primary students
 - Difficulty increases gradually: easy first, harder at end
 - Include correct answer and brief explanation for each question
-- Ensure strictly correct JSON syntax`;
+- Ensure strictly correct JSON syntax
+
+===== ĐIỀU CHỈNH ĐỘ KHÓ THEO VÒNG THI IOE =====
+
+🏫 VÒNG TRƯỜNG (School Round):
+- Từ vựng: 90% trong SGK của khối lớp, 10% mở rộng nhưng rất quen thuộc
+- Ngữ pháp: Thì hiện tại đơn/tiếp diễn (tiểu học), thêm thì cơ bản với THCS/THPT
+- Câu hỏi dựa trên mẫu câu và cấu trúc cơ bản
+- Hạn chế bẫy, không dùng cấu trúc quá phức tạp
+
+🏢 VÒNG HUYỆN/QUẬN (District Round):
+- Tăng mức mở rộng từ vựng (20–25%)
+- Xuất hiện các cặp từ dễ nhầm: some/any, much/many, few/a few, borrow/lend, bring/take
+- Ngữ pháp: thêm thì quá khứ, tương lai đơn, so sánh hơn/so sánh nhất, trạng từ tần suất
+- Câu dài hơn và có bối cảnh 1-2 câu
+- Distractor (đáp án nhiễu) gần nghĩa, có bẫy vừa phải
+
+🏛️ VÒNG TỈNH/THÀNH PHỐ (Provincial Round):
+- Từ vựng: thêm collocations (cụm từ cố định), phrasal verbs cơ bản
+- Từ nối: because, although, however, therefore, so
+- Ngữ pháp: câu phức có 1 mệnh đề phụ, mệnh đề quan hệ đơn giản
+- Có câu đọc hiểu (reading) và cloze test (điền từ vào đoạn văn)
+- Yêu cầu hiểu mạch văn chứ không chỉ dịch từng từ
+- Distractor phải tạo phân hóa, yêu cầu hiểu sâu ngữ nghĩa và ngữ pháp
+
+🏆 VÒNG QUỐC GIA (National Round):
+- Bao phủ đầy đủ từ vựng, ngữ pháp trong chương trình khối lớp
+- Thêm 10–20% từ mở rộng nâng cao nhưng vẫn phù hợp lứa tuổi
+- Dùng câu phức, mệnh đề quan hệ, câu điều kiện, câu bị động, câu tường thuật
+- Cấu trúc đặc trưng: "It is + adj + for sb to do sth", "so…that", "too…to…", "enough to…"
+- Có đoạn đọc hiểu dài hơn, câu hỏi suy luận, từ vựng theo ngữ cảnh
+- Câu hỏi tham chiếu (it/they/this/that)
+- Distractor tinh vi, phân biệt được học sinh khá và học sinh giỏi
+
+===== TRÌNH ĐỘ CEFR THEO KHỐI LỚP =====
+- Lớp 3-5 Tiểu học: A1 đến A2
+- Lớp 6-9 THCS: A2 đến B1
+- Lớp 10-12 THPT: B1 đến B2`;
 
 const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
     // Form state
@@ -274,7 +531,7 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
     const [classLevel, setClassLevel] = useState('3');
     const [topic, setTopic] = useState('');
     const [selectedTopics, setSelectedTopics] = useState<string[]>(['school']); // Multi-select topics
-    const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+    const [competitionRound, setCompetitionRound] = useState<'school' | 'district' | 'provincial' | 'national'>('school');
     const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
     // Question types count
@@ -299,6 +556,62 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
     const [savedQuizLink, setSavedQuizLink] = useState('');
     const [linkCopied, setLinkCopied] = useState(false);
 
+    // Auto-adjust question counts based on competition round (all 50 questions, different ratios)
+    useEffect(() => {
+        const roundPresets: Record<string, Record<string, number>> = {
+            // Vòng Trường: 50 câu - 70% cơ bản (vocab, grammar), ít reading/listening
+            school: {
+                phonetics: 5,
+                word_stress: 5,
+                vocabulary: 10,
+                grammar: 10,
+                sentence_order: 4,
+                sentence_building: 4,
+                listening: 6,
+                reading: 6,
+            },
+            // Vòng Huyện: 50 câu - cân bằng hơn, tăng listening/reading
+            district: {
+                phonetics: 5,
+                word_stress: 5,
+                vocabulary: 8,
+                grammar: 8,
+                sentence_order: 4,
+                sentence_building: 4,
+                listening: 8,
+                reading: 8,
+            },
+            // Vòng Tỉnh: 50 câu - tăng reading, phonetics/stress nâng cao
+            provincial: {
+                phonetics: 6,
+                word_stress: 6,
+                vocabulary: 7,
+                grammar: 7,
+                sentence_order: 3,
+                sentence_building: 5,
+                listening: 7,
+                reading: 9,
+            },
+            // Vòng Quốc gia: 50 câu - tập trung reading, ngữ pháp nâng cao
+            national: {
+                phonetics: 6,
+                word_stress: 6,
+                vocabulary: 6,
+                grammar: 6,
+                sentence_order: 3,
+                sentence_building: 5,
+                listening: 6,
+                reading: 12,
+            },
+        };
+
+        const preset = roundPresets[competitionRound];
+        if (preset) {
+            setQuestionCounts(preset);
+            setSelectedTemplate(null); // Reset template when changing round
+        }
+    }, [competitionRound]);
+
     // Time limit based on total questions
     const totalQuestions = Object.values(questionCounts).reduce((a, b) => a + b, 0);
     const estimatedTime = Math.max(5, Math.ceil(totalQuestions * 0.5)); // ~30 giây/câu
@@ -319,9 +632,48 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
         }
     };
 
+    // ===== QUESTION HISTORY SYSTEM (Anti-duplication across quizzes) =====
+    const HISTORY_KEY = 'ioe_question_history';
+    const MAX_HISTORY_SIZE = 200; // Keep last 200 questions
+
+    // Get question history from localStorage
+    const getQuestionHistory = (): string[] => {
+        try {
+            const history = localStorage.getItem(HISTORY_KEY);
+            return history ? JSON.parse(history) : [];
+        } catch {
+            return [];
+        }
+    };
+
+    // Save questions to history (keep last MAX_HISTORY_SIZE)
+    const saveToHistory = (questions: any[]) => {
+        try {
+            const history = getQuestionHistory();
+            const newQuestions = questions.map(q =>
+                q.question?.substring(0, 100) || q.mainQuestion?.substring(0, 100) || ''
+            ).filter(Boolean);
+
+            const updatedHistory = [...newQuestions, ...history].slice(0, MAX_HISTORY_SIZE);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
+        } catch (e) {
+            console.warn('[IOE] Failed to save question history:', e);
+        }
+    };
+
+    // Clear history (for reset)
+    const clearHistory = () => {
+        localStorage.removeItem(HISTORY_KEY);
+    };
+
     // Generate IOE prompt with System Instruction
     const generateIoePrompt = (): string => {
-        const difficultyText = difficulty === 'easy' ? 'Easy (A1 basic)' : difficulty === 'medium' ? 'Medium (A1)' : 'Hard (A1+)';
+        const roundText = {
+            school: '🏫 Vòng Trường (School Round) - A1 basic, 90% SGK',
+            district: '🏢 Vòng Huyện/Quận (District Round) - A1, mở rộng 20-25%',
+            provincial: '🏛️ Vòng Tỉnh/TP (Provincial Round) - A1+/A2, collocations & reading',
+            national: '🏆 Vòng Quốc gia (National Round) - A2/B1, nâng cao'
+        }[competitionRound];
 
         // Get topic names from selected IDs
         const topicNames = selectedTopics
@@ -329,14 +681,20 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
             .filter(Boolean)
             .join(', ');
 
-        let prompt = `${IOE_SYSTEM_INSTRUCTION}
+        // Get question history for anti-duplication
+        const history = getQuestionHistory();
+        const historyText = history.length > 0
+            ? `\n\n===== ⚠️ PREVIOUSLY USED QUESTIONS (DO NOT REPEAT!) =====\nThe following ${history.length} questions have been used before. You MUST NOT create similar questions (max 5% overlap allowed):\n${history.slice(0, 50).map((q, i) => `${i + 1}. "${q}"`).join('\n')}\n\n🚫 AVOID: Same sentence patterns, same vocabulary words, same scenarios as above!`
+            : '';
+
+        let prompt = `${IOE_SYSTEM_INSTRUCTION}${historyText}
 
 ---
 
 🎯 SPECIFIC REQUEST FOR THIS QUIZ:
 Grade Level: ${classLevel}
 Topics: ${topicNames || topic || 'General English vocabulary and grammar'}
-Difficulty: ${difficultyText}
+Competition Round: ${roundText}
 ${topic ? `Custom Topic: ${topic}` : ''}
 
 📊 QUESTION DISTRIBUTION:
@@ -355,10 +713,11 @@ TOTAL: ${totalQuestions} questions
 ⚠️ FINAL CHECKLIST:
 1. ALL questions MUST be in ENGLISH
 2. Use vocabulary from topics: ${topicNames}
-3. Grade ${classLevel} Vietnamese students (A1 CEFR level)
+3. Grade ${classLevel} Vietnamese students
 4. Correct JSON syntax with all required fields
 5. Include IPA for phonetics questions
-6. Difficulty increases gradually: easy first, harder at end`;
+6. Difficulty increases gradually: easy first, harder at end
+7. ⚠️ NO DUPLICATE with previous questions listed above!`;
 
         return prompt;
     };
@@ -392,6 +751,7 @@ TOTAL: ${totalQuestions} questions
             }
             if (questionCounts['grammar'] > 0) enabledTypes.push(QuestionType.MCQ);
             if (questionCounts['sentence_order'] > 0) enabledTypes.push(QuestionType.ORDERING);
+            if (questionCounts['sentence_building'] > 0) enabledTypes.push(QuestionType.MCQ); // Sentence Building MCQ
             if (questionCounts['listening'] > 0) enabledTypes.push(QuestionType.SHORT_ANSWER);
             if (questionCounts['reading'] > 0) enabledTypes.push(QuestionType.TRUE_FALSE);
 
@@ -405,9 +765,9 @@ TOTAL: ${totalQuestions} questions
                     questionCount: totalQuestions,
                     questionTypes: enabledTypes.length > 0 ? enabledTypes : [QuestionType.MCQ],
                     difficultyLevels: {
-                        level1: difficulty === 'easy' ? totalQuestions : Math.floor(totalQuestions * 0.3),
-                        level2: difficulty === 'medium' ? totalQuestions : Math.floor(totalQuestions * 0.4),
-                        level3: difficulty === 'hard' ? totalQuestions : Math.floor(totalQuestions * 0.3),
+                        level1: competitionRound === 'school' ? totalQuestions : Math.floor(totalQuestions * 0.2),
+                        level2: competitionRound === 'district' ? totalQuestions : Math.floor(totalQuestions * 0.3),
+                        level3: (competitionRound === 'provincial' || competitionRound === 'national') ? totalQuestions : Math.floor(totalQuestions * 0.5),
                     },
                     customPrompt,
                 },
@@ -420,13 +780,32 @@ TOTAL: ${totalQuestions} questions
                 title: result.title || `IOE Lớp ${classLevel}: ${topic || 'English Practice'}`,
                 classLevel,
                 timeLimit: estimatedTime,
-                questions: (result.questions || []).map((q: any, idx: number) => ({
-                    ...q,
-                    id: q.id || `ioe-q-${Date.now()}-${idx}`,
-                })),
+                questions: (result.questions || []).map((q: any, idx: number) => {
+                    // Post-process: Fix colon separator to slash in Reorder questions
+                    let question = q.question || '';
+                    if (question.toLowerCase().includes('reorder')) {
+                        // First, extract the prefix "Reorder the words:" or "Reorder:"
+                        const prefixMatch = question.match(/^(Reorder(?:\s+the\s+words)?)\s*[:\/]\s*/i);
+                        if (prefixMatch) {
+                            const prefix = prefixMatch[1];
+                            const wordsPartRaw = question.substring(prefixMatch[0].length);
+                            // Replace all " : " with " / " in the words part
+                            const wordsPart = wordsPartRaw.replace(/\s*:\s*/g, ' / ');
+                            question = `${prefix}: ${wordsPart}`;
+                        }
+                    }
+                    return {
+                        ...q,
+                        question,
+                        id: q.id || `ioe-q-${Date.now()}-${idx}`,
+                    };
+                }),
                 createdAt: new Date().toISOString(),
                 category: 'ioe',
             };
+
+            // Save questions to history for anti-duplication in future quizzes
+            saveToHistory(quiz.questions);
 
             setGeneratedQuiz(quiz);
         } catch (err: any) {
@@ -509,15 +888,16 @@ TOTAL: ${totalQuestions} questions
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Độ khó</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">🏆 Vòng thi</label>
                                 <select
-                                    value={difficulty}
-                                    onChange={e => setDifficulty(e.target.value as any)}
+                                    value={competitionRound}
+                                    onChange={e => setCompetitionRound(e.target.value as any)}
                                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                 >
-                                    <option value="easy">Dễ</option>
-                                    <option value="medium">Trung bình</option>
-                                    <option value="hard">Khó</option>
+                                    <option value="school">🏫 Vòng Trường</option>
+                                    <option value="district">🏢 Vòng Huyện/Quận</option>
+                                    <option value="provincial">🏛️ Vòng Tỉnh/TP</option>
+                                    <option value="national">🏆 Vòng Quốc gia</option>
                                 </select>
                             </div>
                         </div>
