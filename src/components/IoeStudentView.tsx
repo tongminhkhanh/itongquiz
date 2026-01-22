@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Quiz, QuestionType, StudentResult, Question } from '../types';
 import {
     AccessCodeForm,
@@ -40,6 +40,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     const [startTime, setStartTime] = useState<number>(0);
     const [result, setResult] = useState<StudentResult | null>(null);
     const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
+    const questionNavRef = useRef<HTMLDivElement>(null);
 
     // Fisher-Yates shuffle
     const shuffleArray = <T,>(array: T[]): T[] => {
@@ -60,6 +61,16 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
             handleSubmit();
         }
     }, [step, timeLeft]);
+
+    // Auto-scroll to current question
+    useEffect(() => {
+        if (questionNavRef.current && step === 'quiz') {
+            const currentBtn = questionNavRef.current.children[currentIndex] as HTMLElement;
+            if (currentBtn) {
+                currentBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+        }
+    }, [currentIndex, step]);
 
     // Prevent navigation
     useEffect(() => {
@@ -176,6 +187,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     const handleOrderingCardClick = (itemIndex: number) => {
         if (!currentQuestion) return;
         const currentAns = (answers[currentQuestion.id] as number[]) || [];
+        const totalItems = ((currentQuestion as any).items || []).length;
 
         if (currentAns.includes(itemIndex)) {
             const newAns = currentAns.filter(i => i !== itemIndex);
@@ -183,6 +195,11 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         } else {
             const newAns = [...currentAns, itemIndex];
             handleAnswerChange(currentQuestion.id, newAns);
+
+            // Auto-advance when all items are placed
+            if (newAns.length === totalItems && currentIndex < shuffledQuestions.length - 1) {
+                setTimeout(() => setCurrentIndex(prev => prev + 1), 500);
+            }
         }
     };
 
@@ -279,18 +296,32 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
             {/* Question Navigation */}
             <nav className="relative z-10 py-4 px-4">
-                <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-2">
-                    {/* Prev Button */}
+                <div className="max-w-full mx-auto flex items-center justify-center gap-2">
+                    {/* Prev Button - Jump to nearest unanswered */}
                     <button
-                        onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+                        onClick={() => {
+                            // Find nearest unanswered question going backwards
+                            for (let i = currentIndex - 1; i >= 0; i--) {
+                                if (!isQuestionAnswered(shuffledQuestions[i])) {
+                                    setCurrentIndex(i);
+                                    return;
+                                }
+                            }
+                            // If no unanswered found, just go back 1
+                            setCurrentIndex(Math.max(0, currentIndex - 1));
+                        }}
                         disabled={currentIndex === 0}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-slate-400 border-2 border-slate-200 hover:border-sky-400 hover:text-sky-400 transition-colors disabled:opacity-30"
+                        className="w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-2xl bg-white text-slate-400 border-2 border-slate-200 hover:border-sky-400 hover:text-sky-400 hover:bg-sky-50 transition-all disabled:opacity-30 text-2xl font-bold shadow-sm"
                     >
                         ◀
                     </button>
 
                     {/* Question Numbers */}
-                    <div className="flex flex-wrap justify-center gap-1.5 px-3 py-2 bg-white/50 rounded-3xl backdrop-blur-sm">
+                    <div
+                        ref={questionNavRef}
+                        className="flex justify-start gap-2 px-4 py-3 bg-white/50 rounded-3xl backdrop-blur-sm overflow-x-auto whitespace-nowrap max-w-[calc(100vw-180px)] scrollbar-hide"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
                         {shuffledQuestions.map((q, idx) => {
                             const isAnswered = isQuestionAnswered(q);
                             const isCurrent = idx === currentIndex;
@@ -299,7 +330,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                 <button
                                     key={q.id}
                                     onClick={() => setCurrentIndex(idx)}
-                                    className={`w-9 h-9 flex items-center justify-center rounded-xl font-bold text-sm transition-all ${isCurrent
+                                    className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl font-bold text-xl transition-all ${isCurrent
                                         ? 'bg-sky-400 text-white border-4 border-white shadow-lg scale-110 -rotate-3'
                                         : isAnswered
                                             ? 'bg-emerald-400 text-white border-2 border-white'
@@ -316,7 +347,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                     <button
                         onClick={() => setCurrentIndex(Math.min(shuffledQuestions.length - 1, currentIndex + 1))}
                         disabled={currentIndex === shuffledQuestions.length - 1}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-slate-400 border-2 border-slate-200 hover:border-sky-400 hover:text-sky-400 transition-colors disabled:opacity-30"
+                        className="w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-2xl bg-white text-slate-400 border-2 border-slate-200 hover:border-sky-400 hover:text-sky-400 hover:bg-sky-50 transition-all disabled:opacity-30 text-2xl font-bold shadow-sm"
                     >
                         ▶
                     </button>
