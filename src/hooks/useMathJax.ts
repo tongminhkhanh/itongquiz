@@ -70,13 +70,22 @@ export const useMathJax = <T extends HTMLElement = HTMLDivElement>(
  * await renderMathJax(document.getElementById('answer-container'));
  */
 export const renderMathJax = async (element?: HTMLElement | null): Promise<void> => {
+    // Wait for MathJax to be available (poll up to 5 seconds)
+    let attempts = 0;
+    const maxAttempts = 50; // 50 * 100ms = 5 seconds
+
+    while (!window.MathJax && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+
     if (!window.MathJax) {
-        console.warn('[MathJax] Not loaded yet');
+        console.warn('[MathJax] Not loaded after waiting 5 seconds');
         return;
     }
 
     try {
-        // Wait for MathJax to be ready
+        // Wait for MathJax startup to complete
         if (window.MathJax.startup?.promise) {
             await window.MathJax.startup.promise;
         }

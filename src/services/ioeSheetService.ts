@@ -46,10 +46,66 @@ const callIoeGasApi = async (action: string, payload: any = {}): Promise<any> =>
     }
 };
 
+// ============ CACHING LAYER ============
+const CACHE_KEY_QUIZZES = 'ioe_quizzes_cache';
+const CACHE_KEY_TIMESTAMP = 'ioe_quizzes_cache_time';
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
+
+// Get cached data if valid
+const getCachedQuizzes = (): Quiz[] | null => {
+    try {
+        const cached = localStorage.getItem(CACHE_KEY_QUIZZES);
+        const timestamp = localStorage.getItem(CACHE_KEY_TIMESTAMP);
+
+        if (cached && timestamp) {
+            const age = Date.now() - parseInt(timestamp);
+            if (age < CACHE_TTL_MS) {
+                console.log(`[IOE Cache] Using cached data (${Math.round(age / 1000)}s old)`);
+                return JSON.parse(cached);
+            }
+            console.log('[IOE Cache] Cache expired');
+        }
+    } catch (e) {
+        console.warn('[IOE Cache] Error reading cache:', e);
+    }
+    return null;
+};
+
+// Save data to cache
+const setCachedQuizzes = (quizzes: Quiz[]) => {
+    try {
+        localStorage.setItem(CACHE_KEY_QUIZZES, JSON.stringify(quizzes));
+        localStorage.setItem(CACHE_KEY_TIMESTAMP, Date.now().toString());
+        console.log(`[IOE Cache] Saved ${quizzes.length} quizzes to cache`);
+    } catch (e) {
+        console.warn('[IOE Cache] Error saving cache:', e);
+    }
+};
+
+// Clear cache (called after save/update/delete)
+export const clearIoeCache = () => {
+    localStorage.removeItem(CACHE_KEY_QUIZZES);
+    localStorage.removeItem(CACHE_KEY_TIMESTAMP);
+    console.log('[IOE Cache] Cache cleared');
+};
+
 // ============ FETCH FUNCTIONS ============
 
-export const fetchIoeQuizzes = async (): Promise<Quiz[]> => {
-    console.log('[IOE] Fetching quizzes...');
+/**
+ * Fetch IOE quizzes with caching strategy:
+ * 1. Return cached data immediately if available (for fast UI)
+ * 2. Option to force refresh from server
+ */
+export const fetchIoeQuizzes = async (forceRefresh = false): Promise<Quiz[]> => {
+    console.log('[IOE] Fetching quizzes...', forceRefresh ? '(force refresh)' : '');
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+        const cached = getCachedQuizzes();
+        if (cached) {
+            return cached;
+        }
+    }
 
     try {
         const quizData = await callIoeGasApi('get_quizzes');
@@ -57,6 +113,12 @@ export const fetchIoeQuizzes = async (): Promise<Quiz[]> => {
 
         if (!quizData || !questionData) {
             console.error('[IOE] Failed to fetch quiz or question data');
+            // Return stale cache if network fails
+            const staleCache = localStorage.getItem(CACHE_KEY_QUIZZES);
+            if (staleCache) {
+                console.log('[IOE Cache] Returning stale cache due to network error');
+                return JSON.parse(staleCache);
+            }
             return [];
         }
 
@@ -72,6 +134,7 @@ export const fetchIoeQuizzes = async (): Promise<Quiz[]> => {
                 title: row.title,
                 classLevel: String(row.classLevel), // Ensure string for filtering
                 category: row.category || 'ioe',
+                examCode: row.examCode || undefined,
                 timeLimit: parseInt(row.timeLimit) || 15,
                 createdAt: row.createdAt,
                 accessCode: row.accessCode || undefined,
@@ -80,10 +143,19 @@ export const fetchIoeQuizzes = async (): Promise<Quiz[]> => {
             };
         });
 
+        // Save to cache
+        setCachedQuizzes(quizzes);
+
         console.log(`[IOE] Fetched ${quizzes.length} quizzes:`, quizzes.map(q => ({ id: q.id, title: q.title, classLevel: q.classLevel })));
         return quizzes;
     } catch (error) {
         console.error('[IOE] Error fetching quizzes:', error);
+        // Return stale cache if available
+        const staleCache = localStorage.getItem(CACHE_KEY_QUIZZES);
+        if (staleCache) {
+            console.log('[IOE Cache] Returning stale cache due to error');
+            return JSON.parse(staleCache);
+        }
         return [];
     }
 };
@@ -151,6 +223,7 @@ export const saveIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
             title: quiz.title,
             classLevel: quiz.classLevel,
             category: quiz.category || 'ioe',
+            examCode: quiz.examCode || '',
             timeLimit: quiz.timeLimit,
             createdAt: quiz.createdAt,
             accessCode: quiz.accessCode || '',
@@ -160,6 +233,7 @@ export const saveIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
 
         if (result && result.status === 'success') {
             console.log('[IOE] Quiz saved successfully');
+            clearIoeCache(); // Invalidate cache after save
             return true;
         }
         console.error('[IOE] Failed to save quiz:', result);
@@ -179,6 +253,7 @@ export const updateIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
             title: quiz.title,
             classLevel: quiz.classLevel,
             category: quiz.category || 'ioe',
+            examCode: quiz.examCode || '',
             timeLimit: quiz.timeLimit,
             createdAt: quiz.createdAt,
             accessCode: quiz.accessCode || '',
@@ -188,6 +263,7 @@ export const updateIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
 
         if (result && result.status === 'success') {
             console.log('[IOE] Quiz updated successfully');
+            clearIoeCache(); // Invalidate cache after update
             return true;
         }
         return false;
@@ -202,7 +278,11 @@ export const deleteIoeQuiz = async (quizId: string): Promise<boolean> => {
 
     try {
         const result = await callIoeGasApi('delete_quiz', { quizId });
-        return result && result.status === 'success';
+        if (result && result.status === 'success') {
+            clearIoeCache(); // Invalidate cache after delete
+            return true;
+        }
+        return false;
     } catch (error) {
         console.error('[IOE] Error deleting quiz:', error);
         return false;

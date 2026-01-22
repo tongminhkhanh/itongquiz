@@ -266,9 +266,16 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                         <span className="text-white text-3xl">🌍</span>
                     </div>
                     <div>
-                        <h1 className="text-lg md:text-xl font-bold text-slate-700 tracking-tight">
-                            {quiz.title}
-                        </h1>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h1 className="text-lg md:text-xl font-bold text-slate-700 tracking-tight">
+                                {quiz.title}
+                            </h1>
+                            {quiz.examCode && (
+                                <span className="px-2 py-0.5 bg-amber-400 text-white text-xs font-bold rounded-full shadow-sm">
+                                    {quiz.examCode}
+                                </span>
+                            )}
+                        </div>
                         <div className="flex items-center text-slate-500 text-sm font-medium">
                             <span className="mr-1">👤</span>
                             {studentName} <span className="mx-2 text-slate-300">|</span> {studentClass}
@@ -361,8 +368,6 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                         {/* Decorative Tape */}
                         <div className="absolute top-0 left-16 w-24 h-8 bg-amber-400/40 rounded-b-xl border-x-4 border-b-4 border-white"></div>
 
-                        {/* Sparkle Icon */}
-                        <span className="absolute top-8 left-8 text-3xl text-sky-400">✨</span>
 
                         {currentQuestion && (
                             <div className="w-full max-w-4xl">
@@ -614,7 +619,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                                 handleAnswerChange(currentQuestion.id, newAns);
                                                             }
                                                         }}
-                                                        className="w-32 md:w-36 h-20 md:h-24 rounded-2xl border-3 border-dashed border-amber-400 bg-amber-50 flex items-center justify-center cursor-pointer hover:bg-amber-100 hover:border-amber-500 transition-all shadow-sm"
+                                                        className="w-32 md:w-36 h-20 md:h-24 rounded-2xl border-2 border-amber-400 bg-amber-50 flex items-center justify-center cursor-pointer hover:bg-amber-100 hover:border-amber-500 transition-all shadow-md hover:shadow-lg"
                                                     >
                                                         {word ? (
                                                             <span className="text-slate-700 font-semibold text-lg md:text-xl text-center px-3">{word}</span>

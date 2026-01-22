@@ -74,11 +74,26 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
     // Trigger MathJax rendering when question content changes
     useEffect(() => {
         if (containerRef.current) {
-            // Delay to ensure DOM is updated AND MathJax is fully loaded
+            // Initial render attempt
             const timeoutId = setTimeout(() => {
                 renderMathJax(containerRef.current);
-            }, 200);  // Increased from 50ms for slower connections
-            return () => clearTimeout(timeoutId);
+            }, 100);
+
+            // Retry after longer delay for slow MathJax loading
+            const retryId = setTimeout(() => {
+                renderMathJax(containerRef.current);
+            }, 500);
+
+            // Final retry for very slow connections
+            const finalRetryId = setTimeout(() => {
+                renderMathJax(containerRef.current);
+            }, 1500);
+
+            return () => {
+                clearTimeout(timeoutId);
+                clearTimeout(retryId);
+                clearTimeout(finalRetryId);
+            };
         }
     }, [q, answers[q.id]]); // Re-render when question or answer changes
 
@@ -90,9 +105,9 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Câu hỏi {index + 1}</h3>
                 <div className="text-gray-700 font-medium">
                     {q.type === QuestionType.TRUE_FALSE || q.type === QuestionType.MATCHING ? (
-                        <p style={{ whiteSpace: 'pre-wrap' }}>{renderHtml(q.mainQuestion || "")}</p>
+                        <MathSpan content={q.mainQuestion || ""} className="whitespace-pre-wrap" />
                     ) : (
-                        <p style={{ whiteSpace: 'pre-wrap' }}>{renderHtml((q as any).question || "")}</p>
+                        <MathSpan content={(q as any).question || ""} className="whitespace-pre-wrap" />
                     )}
                 </div>
 

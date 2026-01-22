@@ -209,6 +209,7 @@ export interface Quiz {
     topic?: string; // Subject/Topic name
     classLevel: string; // 1, 2, 3, 4, 5
     category?: string; // 'vioedu' | 'trang-nguyen' | 'on-tap'
+    examCode?: string; // Mã đề thi, VD: "Mã 01", "Vòng 1"
     timeLimit: number; // in minutes
     questions: Question[];
     createdAt: string;

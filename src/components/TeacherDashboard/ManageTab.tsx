@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Quiz } from '../../types';
 import { Card, Button } from '../common';
 import { useQuizManager } from '../../hooks';
-import { Search, Key, Edit, Trash2 } from 'lucide-react';
+import { Search, Key, Edit, Trash2, RefreshCw } from 'lucide-react';
+import { useQuizStore } from '../../../stores/quizStore';
 
 interface ManageTabProps {
     quizzes: Quiz[];
@@ -17,6 +18,18 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
         quizzes,
         onDelete: onDelete,
     });
+
+    const quizStore = useQuizStore();
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await quizStore.loadQuizzes();
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
 
     return (
         <div className="space-y-4">
@@ -43,6 +56,17 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
                         <option key={level} value={level}>Lớp {level}</option>
                     ))}
                 </select>
+
+                <Button
+                    onClick={handleRefresh}
+                    variant="ghost"
+                    size="sm"
+                    disabled={isRefreshing}
+                    className="text-blue-600 hover:bg-blue-50"
+                    icon={<RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />}
+                >
+                    {isRefreshing ? 'Đang tải...' : 'Làm mới'}
+                </Button>
             </div>
 
             {/* Quiz List */}
