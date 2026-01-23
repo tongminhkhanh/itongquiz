@@ -542,6 +542,24 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                 }
                                             })()}
                                         </div>
+
+                                        {/* Submit Answer Button */}
+                                        {answers[currentQuestion.id] && (
+                                            <div className="w-full flex justify-center mt-10">
+                                                <button
+                                                    onClick={() => {
+                                                        // Auto advance to next question
+                                                        if (currentIndex < shuffledQuestions.length - 1) {
+                                                            setCurrentIndex(prev => prev + 1);
+                                                        }
+                                                    }}
+                                                    className="px-10 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-xl rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95 flex items-center gap-3"
+                                                >
+                                                    <span>Trả lời</span>
+                                                    <span className="text-2xl">✓</span>
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
