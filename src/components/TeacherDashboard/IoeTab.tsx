@@ -93,6 +93,18 @@ You must strictly use the International Phonetic Alphabet (IPA) to validate ever
 1.  **Distractors must be tricky:** They should look similar in spelling but sound different (e.g., "sit" /ɪ/ vs "site" /aɪ/).
 2.  **No Ambiguity:** The correct answer must be indisputably correct based on standard Oxford/Cambridge pronunciation.
 
+### ⚠️⚠️⚠️ CRITICAL: UNDERLINE RULE (BẮT BUỘC) ⚠️⚠️⚠️
+You MUST use HTML <u> tag to underline the part being compared in EACH OPTION!
+This is MANDATORY for phonetics questions - students need to see which letters are being compared.
+
+❌ WRONG (no underline): ["A. cat", "B. bag", "C. hand", "D. name"]
+✅ CORRECT (with underline): ["A. c<u>a</u>t", "B. b<u>a</u>g", "C. h<u>a</u>nd", "D. n<u>a</u>me"]
+
+More examples:
+- Comparing 'i' sound: "A. s<u>i</u>t", "B. f<u>i</u>ne", "C. l<u>i</u>sten", "D. n<u>i</u>ce"
+- Comparing 'th' sound: "A. <u>th</u>ink", "B. <u>th</u>is", "C. <u>th</u>ey", "D. <u>th</u>ree"
+- Comparing 'ea' sound: "A. br<u>ea</u>d", "B. h<u>ea</u>d", "C. m<u>ea</u>t", "D. d<u>ea</u>d"
+
 ### QUESTION TYPES
 1.  **Type A (Matching):** "Which word has the underlined part pronounced like the letter X in word Y?" (e.g., like "i" in "sit").
     - Target Sounds: Short 'i' /ɪ/ vs Long 'i' /aɪ/; Short 'a' /æ/ vs Long 'a' /eɪ/; 'th' /ð/ vs /θ/.
@@ -101,8 +113,8 @@ You must strictly use the International Phonetic Alphabet (IPA) to validate ever
 ### OUTPUT FORMAT
 {
   "type": "MCQ",
-  "question": "Which word has the underlined part pronounced like the letter 'i' in 'sit'?",
-  "options": ["A. fine", "B. five", "C. listen", "D. nice"],
+  "question": "Which word has the underlined part pronounced like the letter 'i' in 's<u>i</u>t'?",
+  "options": ["A. f<u>i</u>ne", "B. f<u>i</u>ve", "C. l<u>i</u>sten", "D. n<u>i</u>ce"],
   "correctAnswer": "C",
   "explanation": "'listen' contains /ɪ/, others contain /aɪ/ (/faɪn/, /faɪv/, /naɪs/)."
 }
@@ -111,7 +123,7 @@ Example Type B:
 {
   "type": "MCQ", 
   "question": "Find the word that has the underlined part pronounced differently.",
-  "options": ["A. open", "B. nose", "C. do", "D. cold"],
+  "options": ["A. <u>o</u>pen", "B. n<u>o</u>se", "C. d<u>o</u>", "D. c<u>o</u>ld"],
   "correctAnswer": "C",
   "explanation": "'do' is pronounced /uː/, others are /əʊ/ (/ˈəʊ.pən/, /nəʊz/, /kəʊld/)."
 }
