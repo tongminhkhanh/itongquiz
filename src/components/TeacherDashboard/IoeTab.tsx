@@ -587,6 +587,7 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
     const [selectedTopics, setSelectedTopics] = useState<string[]>(['school']); // Multi-select topics
     const [competitionRound, setCompetitionRound] = useState<'school' | 'district' | 'provincial' | 'national'>('school');
     const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+    const [customTimeLimit, setCustomTimeLimit] = useState<number | null>(null); // Custom time limit in minutes
 
     // Question types count
     const [questionCounts, setQuestionCounts] = useState<Record<string, number>>(() => {
@@ -666,9 +667,10 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
         }
     }, [competitionRound]);
 
-    // Time limit based on total questions
+    // Time limit based on total questions or custom setting
     const totalQuestions = Object.values(questionCounts).reduce((a, b) => a + b, 0);
-    const estimatedTime = Math.max(5, Math.ceil(totalQuestions * 0.5)); // ~30 giây/câu
+    const autoTime = Math.max(5, Math.ceil(totalQuestions * 0.5)); // ~30 giây/câu
+    const timeLimit = customTimeLimit !== null ? customTimeLimit : autoTime;
 
     // Apply template
     const applyTemplate = (templateId: string) => {
@@ -833,7 +835,7 @@ TOTAL: ${totalQuestions} questions
                 id: `ioe-${Date.now()}`,
                 title: result.title || `IOE Lớp ${classLevel}: ${topic || 'English Practice'}`,
                 classLevel,
-                timeLimit: estimatedTime,
+                timeLimit: timeLimit,
                 questions: (result.questions || []).map((q: any, idx: number) => {
                     // Post-process: Fix colon separator to slash in Reorder questions
                     let question = q.question || '';
@@ -1000,7 +1002,42 @@ TOTAL: ${totalQuestions} questions
                             />
                         </div>
 
-                        {/* Templates */}
+                        {/* Time Limit Setting */}
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">
+                                ⏱️ Thời gian làm bài (phút)
+                            </label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={120}
+                                    value={customTimeLimit !== null ? customTimeLimit : autoTime}
+                                    onChange={e => {
+                                        const val = parseInt(e.target.value);
+                                        if (!isNaN(val) && val >= 1 && val <= 120) {
+                                            setCustomTimeLimit(val);
+                                        }
+                                    }}
+                                    className="w-24 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-center font-bold"
+                                />
+                                <span className="text-gray-500 text-sm">phút</span>
+                                {customTimeLimit !== null && (
+                                    <button
+                                        onClick={() => setCustomTimeLimit(null)}
+                                        className="text-sm text-blue-600 hover:underline"
+                                    >
+                                        🔄 Tự động ({autoTime} phút)
+                                    </button>
+                                )}
+                                {customTimeLimit === null && (
+                                    <span className="text-xs text-gray-400 italic">
+                                        (Tự động: ~30 giây/câu)
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-2">📋 Mẫu đề nhanh</label>
                             <div className="grid grid-cols-3 gap-2">
@@ -1077,7 +1114,7 @@ TOTAL: ${totalQuestions} questions
                         {/* Total */}
                         <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
                             <div className="font-bold text-blue-800">Tổng số câu hỏi</div>
-                            <div className="text-xl font-bold text-blue-600">{totalQuestions} câu • ~{estimatedTime} phút</div>
+                            <div className="text-xl font-bold text-blue-600">{totalQuestions} câu • {timeLimit} phút</div>
                         </div>
                     </div>
                 </Card>
