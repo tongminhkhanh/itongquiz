@@ -10,3 +10,12 @@ export type { UseResultsReturn, UseResultsProps } from './useResults';
 
 export { useQuizManager } from './useQuizManager';
 export type { UseQuizManagerReturn, UseQuizManagerProps } from './useQuizManager';
+
+// 🚀 Antigravity Rules: Custom hooks for IOE Quiz
+export {
+    useQuizTimer,
+    useQuizAnswers,
+    useQuizScoring,
+    shuffleArray,
+    formatTime
+} from './useIoeQuiz';

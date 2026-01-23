@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Quiz, QuestionType, StudentResult, Question } from '../types';
 import {
     AccessCodeForm,
@@ -7,11 +7,51 @@ import {
 } from './student';
 import { formatMathText, formatHtmlText } from '../utils/formatters';
 
+// 🚀 Agent Skill: Hoist RegExp patterns to module level to avoid re-creation on each render
+const REORDER_QUESTION_REGEX = /^(Reorder(?:\s+the\s+words)?)\s*[:/]\s*/i;
+// Match colons OR slashes with ANY surrounding whitespace - for normalization
+const SEPARATOR_REGEX = /\s*[:/]\s*/g;
+// Clean up multiple spaces
+const MULTIPLE_SPACES_REGEX = /\s+/g;
+const PLACEHOLDER_REGEX = /_+|\[\.{2,}\]|\[…\]/;
+const SPLIT_PLACEHOLDER_REGEX = /(_+|\[\.{2,}\]|\[…\])/;
+const UNDERSCORE_REGEX = /^_+$/;
+const BRACKET_DOTS_REGEX = /^\[\.{2,}\]$/;
+const BRACKET_ELLIPSIS_REGEX = /^\[…\]$/;
+const UNDERSCORE_FILL_REGEX = /_+/;
+const LISTENING_EMOJI_REGEX = /🎧\s*/g;
+const LISTEN_FILL_PREFIX_REGEX = /Listen and fill:\s*/gi;
+
+// Helper to fix "Reorder the words" questions
+// Normalizes ALL separators (colons and slashes) to format: "word1 /word2 /word3"
+const fixReorderQuestion = (text: string): string => {
+    if (!text) return text;
+    // Check if it's a "Reorder" question
+    const reorderMatch = text.match(REORDER_QUESTION_REGEX);
+    if (reorderMatch) {
+        const prefix = reorderMatch[1];
+        let wordsPartRaw = text.substring(reorderMatch[0].length);
+
+        // Replace ALL colons AND slashes with " /" (space before, no space after)
+        let wordsPart = wordsPartRaw.replace(SEPARATOR_REGEX, ' /');
+
+        // Normalize multiple spaces to single space
+        wordsPart = wordsPart.replace(MULTIPLE_SPACES_REGEX, ' ');
+
+        // Trim and ensure clean formatting
+        wordsPart = wordsPart.trim();
+
+        return `${prefix}: ${wordsPart}`;
+    }
+    return text;
+};
+
 interface Props {
     quiz: Quiz;
     onExit: () => void;
     onSaveResult: (result: StudentResult) => void;
 }
+
 
 // Option colors for MCQ
 const OPTION_COLORS = [
@@ -101,9 +141,10 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         setStep('quiz');
     };
 
-    const handleAnswerChange = (questionId: string, value: any) => {
+    // 🚀 Agent Skill: useCallback for stable callback refs
+    const handleAnswerChange = useCallback((questionId: string, value: any) => {
         setAnswers(prev => ({ ...prev, [questionId]: value }));
-    };
+    }, []);
 
     // Calculate score
     const calculateScore = useCallback(() => {
@@ -167,7 +208,13 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
-    const currentQuestion = shuffledQuestions[currentIndex];
+
+    // 🚀 Agent Skill: useMemo for derived state
+    const currentQuestion = useMemo(() =>
+        shuffledQuestions[currentIndex],
+        [shuffledQuestions, currentIndex]
+    );
+
 
     const isQuestionAnswered = (q: Question) => {
         if (q.type === QuestionType.TRUE_FALSE) {
@@ -376,7 +423,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                     <div className="text-center mb-10">
                                         <h2
                                             className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-700 leading-relaxed"
-                                            dangerouslySetInnerHTML={{ __html: formatHtmlText((currentQuestion as any).question || (currentQuestion as any).mainQuestion || '') }}
+                                            dangerouslySetInnerHTML={{ __html: formatHtmlText(fixReorderQuestion((currentQuestion as any).question || (currentQuestion as any).mainQuestion || '')) }}
                                         />
                                     </div>
                                 )}
@@ -442,9 +489,9 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                         // Fallback: construct from question + correctAnswer
                                                         if (!textToSpeak && questionText && correctAnswer) {
                                                             // Remove emoji and clean question
-                                                            let cleanQ = questionText.replace(/🎧\s*/g, '').replace(/Listen and fill:\s*/gi, '').trim();
+                                                            let cleanQ = questionText.replace(LISTENING_EMOJI_REGEX, '').replace(LISTEN_FILL_PREFIX_REGEX, '').trim();
                                                             // Replace ___ with correctAnswer
-                                                            textToSpeak = cleanQ.replace(/_+/, correctAnswer);
+                                                            textToSpeak = cleanQ.replace(UNDERSCORE_FILL_REGEX, correctAnswer);
                                                         }
 
                                                         console.log('[TTS] Speaking:', textToSpeak); // Debug log
@@ -493,17 +540,17 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                             {(() => {
                                                 const questionText = (currentQuestion as any).question || '';
                                                 // Remove 🎧 emoji for display
-                                                const cleanQuestion = questionText.replace(/🎧\s*/g, '').replace(/Listen and fill:\s*/gi, '');
+                                                const cleanQuestion = questionText.replace(LISTENING_EMOJI_REGEX, '').replace(LISTEN_FILL_PREFIX_REGEX, '');
                                                 // Check if question has underscore/placeholder pattern
-                                                const hasPlaceholder = /_+|\[\.{2,}\]|\[…\]/.test(cleanQuestion);
+                                                const hasPlaceholder = PLACEHOLDER_REGEX.test(cleanQuestion);
 
                                                 if (hasPlaceholder) {
                                                     // Split by underscore patterns: _, __, ___, ____, or [...] 
-                                                    const parts = cleanQuestion.split(/(_+|\[\.{2,}\]|\[…\])/);
+                                                    const parts = cleanQuestion.split(SPLIT_PLACEHOLDER_REGEX);
 
                                                     return parts.map((part: string, idx: number) => {
                                                         // Check if this part is a blank placeholder
-                                                        if (/^_+$/.test(part) || /^\[\.{2,}\]$/.test(part) || /^\[…\]$/.test(part)) {
+                                                        if (UNDERSCORE_REGEX.test(part) || BRACKET_DOTS_REGEX.test(part) || BRACKET_ELLIPSIS_REGEX.test(part)) {
                                                             return (
                                                                 <input
                                                                     key={idx}

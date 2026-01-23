@@ -7,6 +7,30 @@ import { IOE_GOOGLE_SCRIPT_URL } from '../config/constants';
 // Security: API token for IOE GAS authentication
 const IOE_API_SECRET_TOKEN = import.meta.env.VITE_IOE_API_SECRET_TOKEN || 'ioe-4e23be7934269856066e6a3c2062e33ae4cdcc98';
 
+// Helper to fix "Reorder the words" questions
+// Normalizes ALL separators (colons and slashes) to format: "word1 /word2 /word3"
+const fixReorderQuestion = (text: string): string => {
+    if (!text) return text;
+    // Check if it's a "Reorder" question
+    const reorderMatch = text.match(/^(Reorder(?:\s+the\s+words)?)\s*[:/]\s*/i);
+    if (reorderMatch) {
+        const prefix = reorderMatch[1];
+        let wordsPartRaw = text.substring(reorderMatch[0].length);
+
+        // Replace ALL colons AND slashes with " /" (space before, no space after)
+        let wordsPart = wordsPartRaw.replace(/\s*[:/]\s*/g, ' /');
+
+        // Normalize multiple spaces to single space
+        wordsPart = wordsPart.replace(/\s+/g, ' ');
+
+        // Trim and ensure clean formatting
+        wordsPart = wordsPart.trim();
+
+        return `${prefix}: ${wordsPart}`;
+    }
+    return text;
+};
+
 // Helper to call IOE GAS API
 const callIoeGasApi = async (action: string, payload: any = {}): Promise<any> => {
     if (!IOE_GOOGLE_SCRIPT_URL) {
@@ -71,6 +95,23 @@ const getCachedQuizzes = (): Quiz[] | null => {
     return null;
 };
 
+// 🚀 Agent Skill: Stale-While-Revalidate pattern
+// Get stale cache for immediate return, regardless of TTL
+const getStaleCachedQuizzes = (): Quiz[] | null => {
+    try {
+        const cached = localStorage.getItem(CACHE_KEY_QUIZZES);
+        if (cached) {
+            const timestamp = localStorage.getItem(CACHE_KEY_TIMESTAMP);
+            const age = timestamp ? Date.now() - parseInt(timestamp) : Infinity;
+            console.log(`[IOE Cache] Returning stale cache (${Math.round(age / 1000)}s old)`);
+            return JSON.parse(cached);
+        }
+    } catch (e) {
+        console.warn('[IOE Cache] Error reading stale cache:', e);
+    }
+    return null;
+};
+
 // Save data to cache
 const setCachedQuizzes = (quizzes: Quiz[]) => {
     try {
@@ -91,12 +132,63 @@ export const clearIoeCache = () => {
 
 // ============ FETCH FUNCTIONS ============
 
+// 🚀 Agent Skill: Background revalidation helper
+// Fetches fresh data in background and updates cache without blocking UI
+const revalidateInBackground = async (onRefresh?: (quizzes: Quiz[]) => void): Promise<void> => {
+    console.log('[IOE SWR] Starting background revalidation...');
+    try {
+        const [quizData, questionData] = await Promise.all([
+            callIoeGasApi('get_quizzes'),
+            callIoeGasApi('get_questions')
+        ]);
+
+        if (quizData && questionData) {
+            const quizzes = parseQuizzesFromData(quizData, questionData);
+            setCachedQuizzes(quizzes);
+            console.log('[IOE SWR] Background refresh completed, updated cache');
+            if (onRefresh) {
+                onRefresh(quizzes);
+            }
+        }
+    } catch (error) {
+        console.warn('[IOE SWR] Background revalidation failed:', error);
+    }
+};
+
+// Helper to parse quizzes from API data
+const parseQuizzesFromData = (quizData: any[], questionData: any[]): Quiz[] => {
+    return quizData.map((row: any) => {
+        const quizId = row.id;
+        const quizQuestions = questionData
+            .filter((q: any) => q.quizId === quizId)
+            .map((q: any) => parseIoeQuestion(q));
+
+        return {
+            id: quizId,
+            title: row.title,
+            classLevel: String(row.classLevel), // Ensure string for filtering
+            category: row.category || 'ioe',
+            examCode: row.examCode || undefined,
+            timeLimit: parseInt(row.timeLimit) || 15,
+            createdAt: row.createdAt,
+            accessCode: row.accessCode || undefined,
+            requireCode: row.requireCode === 'TRUE',
+            questions: quizQuestions,
+        };
+    });
+};
+
 /**
- * Fetch IOE quizzes with caching strategy:
- * 1. Return cached data immediately if available (for fast UI)
- * 2. Option to force refresh from server
+ * 🚀 Agent Skill: Stale-While-Revalidate
+ * Fetch IOE quizzes with SWR caching strategy:
+ * 1. Return cached data immediately if available (for instant UI)
+ * 2. If cache is stale, trigger background refresh and still return stale data
+ * 3. Optional onRefresh callback to update UI when fresh data arrives
  */
-export const fetchIoeQuizzes = async (forceRefresh = false): Promise<Quiz[]> => {
+export const fetchIoeQuizzes = async (
+    forceRefresh = false,
+    onRefresh?: (quizzes: Quiz[]) => void
+): Promise<Quiz[]> => {
     console.log('[IOE] Fetching quizzes...', forceRefresh ? '(force refresh)' : '');
 
     // Check cache first (unless force refresh)
@@ -105,43 +197,37 @@ export const fetchIoeQuizzes = async (forceRefresh = false): Promise<Quiz[]> => 
         if (cached) {
             return cached;
         }
+
+        // SWR: If cache expired, return stale immediately and refresh in background
+        const stale = getStaleCachedQuizzes();
+        if (stale) {
+            // Trigger background refresh (fire and forget)
+            revalidateInBackground(onRefresh);
+            return stale;
+        }
     }
 
     try {
-        const quizData = await callIoeGasApi('get_quizzes');
-        const questionData = await callIoeGasApi('get_questions');
+        // 🚀 Agent Skill: Promise.all() for Independent Operations
+        // Fetch quizzes and questions in parallel instead of sequential
+        const [quizData, questionData] = await Promise.all([
+            callIoeGasApi('get_quizzes'),
+            callIoeGasApi('get_questions')
+        ]);
 
         if (!quizData || !questionData) {
             console.error('[IOE] Failed to fetch quiz or question data');
             // Return stale cache if network fails
-            const staleCache = localStorage.getItem(CACHE_KEY_QUIZZES);
+            const staleCache = getStaleCachedQuizzes();
             if (staleCache) {
                 console.log('[IOE Cache] Returning stale cache due to network error');
-                return JSON.parse(staleCache);
+                return staleCache;
             }
             return [];
         }
 
         // Parse quizzes and attach questions
-        const quizzes: Quiz[] = quizData.map((row: any) => {
-            const quizId = row.id;
-            const quizQuestions = questionData
-                .filter((q: any) => q.quizId === quizId)
-                .map((q: any) => parseIoeQuestion(q));
-
-            return {
-                id: quizId,
-                title: row.title,
-                classLevel: String(row.classLevel), // Ensure string for filtering
-                category: row.category || 'ioe',
-                examCode: row.examCode || undefined,
-                timeLimit: parseInt(row.timeLimit) || 15,
-                createdAt: row.createdAt,
-                accessCode: row.accessCode || undefined,
-                requireCode: row.requireCode === 'TRUE',
-                questions: quizQuestions,
-            };
-        });
+        const quizzes = parseQuizzesFromData(quizData, questionData);
 
         // Save to cache
         setCachedQuizzes(quizzes);
@@ -151,10 +237,10 @@ export const fetchIoeQuizzes = async (forceRefresh = false): Promise<Quiz[]> => 
     } catch (error) {
         console.error('[IOE] Error fetching quizzes:', error);
         // Return stale cache if available
-        const staleCache = localStorage.getItem(CACHE_KEY_QUIZZES);
+        const staleCache = getStaleCachedQuizzes();
         if (staleCache) {
             console.log('[IOE Cache] Returning stale cache due to error');
-            return JSON.parse(staleCache);
+            return staleCache;
         }
         return [];
     }
@@ -172,23 +258,23 @@ const parseIoeQuestion = (row: any): Question => {
     switch (type) {
         case QuestionType.MCQ:
         case QuestionType.IMAGE_QUESTION:
-            question.question = row.question;
+            question.question = fixReorderQuestion(row.question);
             question.options = row.options ? row.options.split('|') : [];
             question.correctAnswer = row.correctAnswer;
             break;
 
         case QuestionType.TRUE_FALSE:
-            question.mainQuestion = row.question;
+            question.mainQuestion = fixReorderQuestion(row.question);
             question.items = row.items ? JSON.parse(row.items) : [];
             break;
 
         case QuestionType.SHORT_ANSWER:
-            question.question = row.question;
+            question.question = fixReorderQuestion(row.question);
             question.correctAnswer = row.correctAnswer;
             break;
 
         case QuestionType.ORDERING:
-            question.question = row.question;
+            question.question = fixReorderQuestion(row.question);
             question.items = row.items ? JSON.parse(row.items) : [];
             // correctOrder stored in correctAnswer column
             let correctOrder = row.correctAnswer ? JSON.parse(row.correctAnswer) : [];
@@ -200,13 +286,13 @@ const parseIoeQuestion = (row: any): Question => {
             break;
 
         case QuestionType.MULTIPLE_SELECT:
-            question.question = row.question;
+            question.question = fixReorderQuestion(row.question);
             question.options = row.options ? row.options.split('|') : [];
             question.correctAnswers = row.correctAnswer ? JSON.parse(row.correctAnswer) : [];
             break;
 
         default:
-            question.question = row.question;
+            question.question = fixReorderQuestion(row.question);
     }
 
     return question as Question;

@@ -859,10 +859,10 @@ const generateWithOpenAI = async (
   baseUrl: string = 'https://api.openai.com/v1'
 ): Promise<any> => {
   const API_URL = `${baseUrl}/chat/completions`;
-  // If using LLM-Mux, default to a model that is likely to exist for Google login
-  // The user can override this via env var if they want, but for now let's pick a safe default
-  const isLlmMux = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
-  const MODEL_NAME = isLlmMux ? 'gemini-2.5-flash' : 'gpt-4o';
+  // If using LLM-Mux or AIClient, default to Gemini model
+  // Check for localhost, 127.0.0.1, or thitong.site (AIClient deployed)
+  const isLlmMux = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('thitong.site');
+  const MODEL_NAME = isLlmMux ? 'gemini-3-pro-preview' : 'gpt-4o';
 
   const messages: any[] = [
     {
