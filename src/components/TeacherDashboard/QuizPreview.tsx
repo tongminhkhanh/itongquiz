@@ -923,7 +923,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                     <input
                                         type="text"
                                         value={editCorrectAnswer}
-                                        onChange={(e) => setEditCorrectAnswer(e.target.value.toUpperCase())}
+                                        onChange={(e) => setEditCorrectAnswer(e.target.value)}
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                         placeholder={editingQuestion.type === QuestionType.MCQ ? "A, B, C hoặc D" : "Nhập đáp án"}
                                     />
@@ -2007,8 +2007,8 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                                         }
                                                     }}
                                                     className={`px-2 py-1 rounded text-sm transition-colors ${editCorrectWordIndexes.includes(i)
-                                                            ? 'bg-green-500 text-white underline'
-                                                            : 'bg-gray-200 hover:bg-gray-300'
+                                                        ? 'bg-green-500 text-white underline'
+                                                        : 'bg-gray-200 hover:bg-gray-300'
                                                         }`}
                                                 >
                                                     {word}
