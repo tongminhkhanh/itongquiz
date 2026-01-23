@@ -8,6 +8,21 @@ import { renderMathJax } from '../../hooks/useMathJax';
 import TikZPreview from '../common/TikZPreview';
 import { generateQuizDocx } from '../../utils/docxGenerator';
 
+// Helper to fix "Reorder the words" questions - replace : with / for word separators
+const fixReorderQuestion = (text: string): string => {
+    if (!text) return text;
+    // Check if it's a "Reorder" question
+    const reorderMatch = text.match(/^(Reorder(?:\s+the\s+words)?)\s*[:/]\s*/i);
+    if (reorderMatch) {
+        const prefix = reorderMatch[1];
+        const wordsPartRaw = text.substring(reorderMatch[0].length);
+        // Replace all " : " with " / " in the words part
+        const wordsPart = wordsPartRaw.replace(/\s*:\s*/g, ' / ');
+        return `${prefix}: ${wordsPart}`;
+    }
+    return text;
+};
+
 interface QuizPreviewProps {
     quiz: Quiz | null;
     onSave: () => void;
@@ -502,7 +517,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                             </span>
                                             <div className="flex-1">
                                                 <p className="text-gray-800 font-medium">
-                                                    <span>{formatMathText((q as any).question || (q as any).mainQuestion || '')}</span>
+                                                    <span>{formatMathText(fixReorderQuestion((q as any).question || (q as any).mainQuestion || ''))}</span>
                                                 </p>
                                             </div>
                                         </div>
