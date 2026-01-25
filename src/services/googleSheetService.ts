@@ -91,9 +91,11 @@ export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Pro
         }
 
         const teachers = data.map((row: any) => ({
-            username: String(row.username).trim(),
-            password: String(row.password).trim(),
-            fullName: row.fullName,
+            // Hỗ trợ cả 2 format: 'id' hoặc 'username' làm username đăng nhập
+            username: String(row.username || row.id || '').trim(),
+            password: String(row.password || '').trim(),
+            // Hỗ trợ cả 2 format: 'fullName' hoặc 'name' làm tên hiển thị
+            fullName: row.fullName || row.name || '',
             role: row.role || 'teacher',
             class: row.class ? String(row.class).trim() : undefined
         }));

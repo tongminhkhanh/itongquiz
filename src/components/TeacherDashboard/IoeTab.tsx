@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Quiz, QuestionType } from '../../types';
 import { Card, Button } from '../common';
-import { Globe, Sparkles, Zap, BookOpen, Trophy, Copy, Check, Link2, X } from 'lucide-react';
+import { Globe, Sparkles, Zap, BookOpen, Trophy, Copy, Check, Link2, X, Search } from 'lucide-react';
 import { generateQuiz, AIProvider } from '../../services/geminiService';
 import { saveIoeQuiz } from '../../services/ioeSheetService';
+import { searchIoeQuestions } from '../../services/ioeSearchService';
 import QuizPreview from './QuizPreview';
 
 interface IoeTabProps {
@@ -654,6 +655,7 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedQuiz, setGeneratedQuiz] = useState<Quiz | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [searchStatus, setSearchStatus] = useState<string | null>(null); // Two-step status
 
     // AI Provider - lưu vào localStorage
     const [aiProvider] = useState<AIProvider>(() =>
@@ -841,7 +843,8 @@ TOTAL: ${totalQuestions} questions
     };
 
     // Handle generate
-    const handleGenerate = async () => {
+    // Handle generate với option sử dụng Perplexity search hay không
+    const handleGenerate = async (usePerplexitySearch: boolean = true) => {
         if (totalQuestions === 0) {
             setError('Vui lòng chọn ít nhất 1 dạng câu hỏi');
             return;
@@ -855,9 +858,50 @@ TOTAL: ${totalQuestions} questions
 
         setError(null);
         setIsGenerating(true);
+        setSearchStatus(null);
 
         try {
-            const customPrompt = generateIoePrompt();
+            let searchContext = '';
+
+            // ===== BƯỚC 1: TÌM KIẾM ĐỀ IOE (chỉ nếu usePerplexitySearch = true) =====
+            if (usePerplexitySearch) {
+                setSearchStatus('🔍 Đang tìm kiếm đề IOE trên mạng (Perplexity)...');
+                console.log('[IOE Two-Step] Bước 1: Tìm kiếm đề IOE...');
+
+                const searchResult = await searchIoeQuestions(classLevel, competitionRound);
+
+                if (searchResult.success && searchResult.content) {
+                    searchContext = `
+
+===== 📚 KẾT QUẢ TÌM KIẾM ĐỀ IOE THỰC TẾ =====
+Dưới đây là các dạng câu hỏi và ví dụ từ đề thi IOE thật tìm được trên mạng:
+
+${searchResult.content}
+
+===== HẾT KẾT QUẢ TÌM KIẾM =====
+
+⚠️ QUAN TRỌNG: Hãy tham khảo các ví dụ thực tế ở trên để:
+1. Sinh câu hỏi theo đúng FORMAT của đề IOE thật
+2. Đảm bảo độ khó phù hợp với vòng thi
+3. Sử dụng các mẫu câu và cách hỏi tương tự
+`;
+                    console.log('[IOE Two-Step] Tìm kiếm thành công, độ dài:', searchResult.content.length);
+                } else {
+                    console.warn('[IOE Two-Step] Không tìm được kết quả, tiếp tục sinh đề bình thường');
+                    searchContext = '\n\n(Không có kết quả tìm kiếm - sinh đề dựa trên kiến thức có sẵn)\n';
+                }
+            } else {
+                setSearchStatus('✨ Đang sinh đề bằng AI (nhanh)...');
+                console.log('[IOE Quick] Sinh đề trực tiếp không qua Perplexity search');
+                searchContext = '\n\n(Chế độ nhanh - sinh đề dựa trên kiến thức có sẵn)\n';
+            }
+
+            // ===== BƯỚC 2: SINH CÂU HỎI =====
+            setSearchStatus('✨ Đang sinh câu hỏi từ kết quả tìm kiếm...');
+            console.log('[IOE Two-Step] Bước 2: Sinh câu hỏi...');
+
+            const basePrompt = generateIoePrompt();
+            const customPrompt = basePrompt + searchContext;
 
             // Map IOE question types to app question types
             const enabledTypes: QuestionType[] = [];
@@ -928,9 +972,21 @@ TOTAL: ${totalQuestions} questions
             setGeneratedQuiz(quiz);
         } catch (err: any) {
             console.error('IOE Quiz generation error:', err);
-            setError(err.message || 'Đã xảy ra lỗi khi tạo đề IOE');
+
+            // Xử lý timeout error với gợi ý cụ thể
+            const errorMsg = err?.message || '';
+            if (errorMsg.toLowerCase().includes('timeout') ||
+                errorMsg.toLowerCase().includes('abort') ||
+                errorMsg.includes('quá thời gian')) {
+                setError(`⏱️ Quá thời gian chờ! Gợi ý:\n• Giảm số câu hỏi (hiện tại: ${totalQuestions}, thử 20-30 câu)\n• Thử lại sau vài phút\n• Kiểm tra kết nối mạng`);
+            } else if (errorMsg.includes('API key')) {
+                setError('🔑 Lỗi API key. Vui lòng kiểm tra cấu hình.');
+            } else {
+                setError(errorMsg || 'Đã xảy ra lỗi khi tạo đề IOE. Vui lòng thử lại.');
+            }
         } finally {
             setIsGenerating(false);
+            setSearchStatus(null);
         }
     };
 
@@ -973,11 +1029,18 @@ TOTAL: ${totalQuestions} questions
     };
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Left Column - Form */}
-            <div className="space-y-4">
-                {/* Header Card */}
-                <Card title="🌍 Tạo Đề IOE (Internet Olympiad in English)">
+            <div className="space-y-5">
+                {/* Header Card - IOE Theme */}
+                <div className="ioe-card">
+                    <div className="ioe-card-header">
+                        <div className="ioe-card-icon">🌍</div>
+                        <div>
+                            <h3 className="ioe-card-title">Tạo Đề IOE</h3>
+                            <p className="text-sm text-gray-500">Internet Olympiad in English</p>
+                        </div>
+                    </div>
                     <div className="space-y-4">
                         {/* Quiz Title */}
                         <div>
@@ -989,7 +1052,7 @@ TOTAL: ${totalQuestions} questions
                                 value={quizTitle}
                                 onChange={e => setQuizTitle(e.target.value)}
                                 placeholder="VD: Đề luyện thi IOE Lớp 3 - Vòng 1"
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-medium"
+                                className="ioe-input"
                             />
                         </div>
 
@@ -1000,7 +1063,7 @@ TOTAL: ${totalQuestions} questions
                                 <select
                                     value={classLevel}
                                     onChange={e => setClassLevel(e.target.value)}
-                                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    className="ioe-input ioe-select"
                                 >
                                     {[1, 2, 3, 4, 5].map(l => <option key={l} value={l}>Lớp {l}</option>)}
                                 </select>
@@ -1010,7 +1073,7 @@ TOTAL: ${totalQuestions} questions
                                 <select
                                     value={competitionRound}
                                     onChange={e => setCompetitionRound(e.target.value as any)}
-                                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    className="ioe-input ioe-select"
                                 >
                                     <option value="school">🏫 Vòng Trường</option>
                                     <option value="district">🏢 Vòng Huyện/Quận</option>
@@ -1038,9 +1101,9 @@ TOTAL: ${totalQuestions} questions
                                                     setSelectedTopics(prev => [...prev, t.id]);
                                                 }
                                             }}
-                                            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${isSelected
-                                                ? 'bg-blue-500 text-white shadow-md'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            className={`ioe-chip ${isSelected
+                                                ? 'ioe-chip-selected'
+                                                : 'ioe-chip-default'
                                                 }`}
                                         >
                                             {t.emoji} {t.name}
@@ -1060,7 +1123,7 @@ TOTAL: ${totalQuestions} questions
                                 value={topic}
                                 onChange={e => setTopic(e.target.value)}
                                 placeholder="VD: Christmas, Halloween, Sports Day..."
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                className="ioe-input"
                             />
                         </div>
 
@@ -1101,24 +1164,28 @@ TOTAL: ${totalQuestions} questions
                         </div>
 
                     </div>
-                </Card>
+                </div>
 
-                {/* Question Types */}
-                <Card title="📊 Dạng câu hỏi IOE">
+                {/* Question Types - IOE Theme */}
+                <div className="ioe-card">
+                    <div className="ioe-card-header">
+                        <div className="ioe-card-icon">📊</div>
+                        <h3 className="ioe-card-title">Dạng câu hỏi IOE</h3>
+                    </div>
                     <div className="space-y-3">
                         {IOE_QUESTION_TYPES.map(qt => (
-                            <div key={qt.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div>
-                                    <div className="font-medium text-gray-800">{qt.name}</div>
-                                    <div className="text-xs text-gray-500">{qt.description}</div>
+                            <div key={qt.id} className="ioe-question-row">
+                                <div className="ioe-question-info">
+                                    <span className="ioe-question-name">{qt.name}</span>
+                                    <span className="ioe-question-desc">{qt.description}</span>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="ioe-question-controls">
                                     <button
                                         onClick={() => setQuestionCounts(prev => ({
                                             ...prev,
                                             [qt.id]: Math.max(0, prev[qt.id] - 1)
                                         }))}
-                                        className="w-8 h-8 rounded-full bg-white border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                        className="ioe-question-btn"
                                     >
                                         −
                                     </button>
@@ -1135,14 +1202,14 @@ TOTAL: ${totalQuestions} questions
                                                 setQuestionCounts(prev => ({ ...prev, [qt.id]: 0 }));
                                             }
                                         }}
-                                        className="w-12 text-center font-bold text-blue-600 border border-gray-300 rounded-lg py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        className="ioe-question-input"
                                     />
                                     <button
                                         onClick={() => setQuestionCounts(prev => ({
                                             ...prev,
                                             [qt.id]: Math.min(50, prev[qt.id] + 1)
                                         }))}
-                                        className="w-8 h-8 rounded-full bg-white border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                        className="ioe-question-btn"
                                     >
                                         +
                                     </button>
@@ -1150,33 +1217,67 @@ TOTAL: ${totalQuestions} questions
                             </div>
                         ))}
 
-                        {/* Total */}
-                        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                            <div className="font-bold text-blue-800">Tổng số câu hỏi</div>
-                            <div className="text-xl font-bold text-blue-600">{totalQuestions} câu • {timeLimit} phút</div>
+                        {/* Total Summary */}
+                        <div className="ioe-total-bar">
+                            <div className="ioe-total-label">
+                                📝 Tổng số câu hỏi
+                            </div>
+                            <div className="ioe-total-value">
+                                <span>{totalQuestions} câu</span>
+                                <span className="ioe-total-badge">⏱️ {timeLimit} phút</span>
+                            </div>
                         </div>
                     </div>
-                </Card>
+                </div>
 
                 {/* Error */}
                 {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                        {error}
+                    <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg shadow-sm animate-slide-down">
+                        <div className="flex items-start gap-3">
+                            <span className="text-red-500 text-xl">⚠️</span>
+                            <div className="flex-1 whitespace-pre-line text-sm">{error}</div>
+                        </div>
                     </div>
                 )}
 
-                {/* Generate Button */}
-                <Button
-                    onClick={handleGenerate}
-                    loading={isGenerating}
-                    disabled={totalQuestions === 0}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                    size="lg"
-                    variant="primary"
-                    icon={<Globe className="w-5 h-5" />}
-                >
-                    {isGenerating ? 'Đang tạo đề IOE...' : `🌍 Tạo đề IOE (${totalQuestions} câu)`}
-                </Button>
+                {/* Generate Buttons - 2 options */}
+                <div className="space-y-3">
+                    {/* Button 1: Perplexity + Search (chất lượng cao) */}
+                    <Button
+                        onClick={() => handleGenerate(true)}
+                        loading={isGenerating && searchStatus?.includes('Perplexity')}
+                        disabled={totalQuestions === 0 || isGenerating}
+                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                        size="lg"
+                        variant="primary"
+                        icon={<Search className="w-5 h-5" />}
+                    >
+                        {isGenerating && searchStatus?.includes('Perplexity')
+                            ? searchStatus
+                            : `🔍 Tạo đề (Perplexity + Search) - ${totalQuestions} câu`}
+                    </Button>
+                    <p className="text-xs text-gray-500 text-center -mt-1">
+                        Tìm kiếm đề IOE thật trên mạng trước khi sinh • Chất lượng cao hơn • Chậm hơn
+                    </p>
+
+                    {/* Button 2: AI nhanh (không search) */}
+                    <Button
+                        onClick={() => handleGenerate(false)}
+                        loading={isGenerating && !searchStatus?.includes('Perplexity')}
+                        disabled={totalQuestions === 0 || isGenerating}
+                        className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                        size="lg"
+                        variant="primary"
+                        icon={<Zap className="w-5 h-5" />}
+                    >
+                        {isGenerating && !searchStatus?.includes('Perplexity')
+                            ? searchStatus || 'Đang tạo đề...'
+                            : `⚡ Tạo đề nhanh (AI) - ${totalQuestions} câu`}
+                    </Button>
+                    <p className="text-xs text-gray-500 text-center -mt-1">
+                        Sinh trực tiếp bằng AI • Nhanh hơn • Không cần Perplexity API
+                    </p>
+                </div>
             </div>
 
             {/* Right Column - Preview */}

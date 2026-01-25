@@ -930,7 +930,7 @@ Tài liệu đính kèm:`
   console.log(`[AIClient] Sending request to ${API_URL} with model ${MODEL_NAME}`);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 phút timeout cho 50 câu
 
   try {
     const response = await fetch(API_URL, {

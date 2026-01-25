@@ -46,22 +46,31 @@ const TeacherDashboard: React.FC = () => {
     ];
 
     // Filter tabs based on role and allowed users
+    // - Giáo viên bộ môn: Kết quả, Quản lý đề, Tạo đề mới (đề ôn tập)
+    // - Admin: Tất cả + IOE tabs
     const tabs = allTabs.filter(tab => {
-        // Results tab is always visible (limited by role inside)
+        // Results tab - luôn hiển thị cho tất cả
         if (tab.id === 'results') return true;
 
-        // If not admin, only see Results
-        if (!authStore.isAdmin) return false;
-
-        // IOE Tabs Restriction (applies to all IOE-related tabs)
-        if (tab.id === 'ioe' || tab.id === 'ioe-manage' || tab.id === 'ioe-results') {
-            const currentUsername = authStore.username || '';
-            const isAllowed = IOE_ALLOWED_USERS.includes(currentUsername);
-            return isAllowed;
+        // Manage và Create - cho phép cả Teacher và Admin
+        if (tab.id === 'manage' || tab.id === 'create') {
+            return true; // Tất cả GV đều có thể quản lý và tạo đề ôn tập
         }
 
-        // Other tabs (manage, create) visible to admins
-        return true;
+        // IOE Tabs - CHỈ Admin được phép
+        if (tab.id === 'ioe' || tab.id === 'ioe-manage' || tab.id === 'ioe-results') {
+            // Phải là Admin
+            if (!authStore.isAdmin) return false;
+
+            // Kiểm tra thêm danh sách allowed users (nếu có cấu hình)
+            const currentUsername = authStore.username || '';
+            if (IOE_ALLOWED_USERS.length > 0) {
+                return IOE_ALLOWED_USERS.includes(currentUsername);
+            }
+            return true; // Admin mà không có danh sách hạn chế thì cho phép
+        }
+
+        return false;
     });
 
     // Handle update access code

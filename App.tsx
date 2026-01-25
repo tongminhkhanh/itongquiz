@@ -120,7 +120,10 @@ const App: React.FC = () => {
             const teacher = teachers.find(t => t.username === usernameInput && t.password === passwordInput);
 
             if (teacher) {
-                authStore.loginSuccess(teacher.username, teacher.fullName, teacher.role === 'admin', teacher.class); // Pass actual username
+                // Xác định admin: role='admin' HOẶC username/id chứa 'admin'
+                const isTeacherAdmin = teacher.role === 'admin' ||
+                    teacher.username.toLowerCase().includes('admin');
+                authStore.loginSuccess(teacher.username, teacher.fullName, isTeacherAdmin, teacher.class);
                 setWelcomeName(teacher.fullName);
                 quizStore.setView('home'); // Close login modal
                 setShowWelcome(true);

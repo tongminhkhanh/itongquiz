@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /.env
+Disallow: /node_modules/
+
+# Sitemap
+Sitemap: https://thitong.site/sitemap.xml

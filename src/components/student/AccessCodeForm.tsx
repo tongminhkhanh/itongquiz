@@ -28,53 +28,71 @@ const AccessCodeForm: React.FC<AccessCodeFormProps> = ({
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-200 p-4">
-            <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border-t-4 border-orange-500">
-                <div className="text-center mb-6">
-                    <div className="text-6xl mb-4">🔐</div>
-                    <h2 className="text-2xl font-bold text-gray-800">{quizTitle}</h2>
-                    <p className="text-gray-500 mt-2">Bài kiểm tra này yêu cầu mã truy cập</p>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-pink-50 to-orange-100 p-4 relative overflow-hidden">
+            {/* Background Decorations */}
+            <span className="student-bg-decoration top-10 left-10 student-animate-wiggle">🔐</span>
+            <span className="student-bg-decoration bottom-20 right-10 student-animate-bounce">🎯</span>
+            <span className="student-bg-decoration top-1/4 right-16">🔑</span>
+            <span className="student-bg-decoration bottom-1/3 left-16">✨</span>
+
+            <div className="max-w-md w-full student-card student-animate-pop relative z-10">
+                {/* Hero Header - Purple Theme */}
+                <div className="student-hero rounded-t-[1.5rem]" style={{ background: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)' }}>
+                    <div className="student-hero-icon student-animate-wiggle">🔐</div>
+                    <h2 className="student-hero-title">{quizTitle}</h2>
+                    <p className="student-hero-subtitle">Bài kiểm tra này yêu cầu mã truy cập</p>
                 </div>
 
-                <div className="space-y-4">
+                {/* Form Body */}
+                <div className="p-6 space-y-5">
+                    {/* Code Input */}
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Nhập mã làm bài</label>
+                        <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3">
+                            <span>🎫</span> Nhập mã làm bài
+                        </label>
                         <input
                             type="text"
                             value={enteredCode}
                             onChange={e => onCodeChange(e.target.value.toUpperCase())}
                             onKeyDown={handleKeyDown}
-                            placeholder="Nhập mã 6 ký tự..."
+                            placeholder="ABC123"
                             maxLength={6}
-                            className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-center font-mono text-2xl tracking-widest uppercase"
+                            className="student-code-input"
                             autoFocus
                         />
                         {codeError && (
-                            <p className="mt-2 text-red-500 text-sm text-center font-medium">
-                                ❌ {codeError}
-                            </p>
+                            <div className="mt-3 flex items-center justify-center gap-2 text-red-500 font-semibold animate-shake">
+                                <span>❌</span>
+                                <span>{codeError}</span>
+                            </div>
                         )}
                     </div>
 
+                    {/* Verify Button */}
                     <button
                         onClick={onVerify}
                         disabled={enteredCode.length < 1}
-                        className="w-full bg-orange-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-orange-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        className="w-full student-btn student-btn-primary text-lg"
+                        style={{ background: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)', boxShadow: '0 4px 0 #6d28d9, 0 6px 20px rgba(139, 92, 246, 0.4)' }}
                     >
-                        Xác nhận mã
+                        <span>✓</span>
+                        <span>Xác nhận mã</span>
                     </button>
 
+                    {/* Back Button */}
                     <button
                         onClick={onExit}
-                        className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                        className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
                     >
-                        ← Quay lại trang chủ
+                        <span>←</span> Quay lại trang chủ
                     </button>
-                </div>
 
-                <p className="text-xs text-gray-400 text-center mt-4">
-                    Mã làm bài được giáo viên cung cấp trước khi kiểm tra
-                </p>
+                    {/* Help Text */}
+                    <p className="text-xs text-gray-400 text-center pt-2 flex items-center justify-center gap-1">
+                        <span>💡</span>
+                        Mã làm bài được cô/thầy giáo cung cấp trước khi kiểm tra
+                    </p>
+                </div>
             </div>
         </div>
     );
