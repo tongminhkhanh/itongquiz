@@ -35,7 +35,7 @@ function handleRequest(e) {
             case 'get_quizzes':
                 return getSheetData(sheet, 'Quizzes');
             case 'get_questions':
-                return getSheetData(sheet, 'Questions');
+                return getSheetData(sheet, 'IoeQuestions');
             case 'get_results':
                 return getSheetData(sheet, 'Results');
             case 'submit_result':
@@ -135,9 +135,9 @@ function saveQuiz(sheet, data) {
         data.requireCode ? "TRUE" : "FALSE"
     ]);
 
-    // 2. Save Questions to 'Questions' sheet
-    const questionSheet = sheet.getSheetByName("Questions");
-    if (!questionSheet) throw new Error("Sheet 'Questions' not found");
+    // 2. Save Questions to 'IoeQuestions' sheet
+    const questionSheet = sheet.getSheetByName("IoeQuestions");
+    if (!questionSheet) throw new Error("Sheet 'IoeQuestions' not found");
 
     const questions = data.questions || [];
     const questionRows = questions.map(q => {
@@ -197,7 +197,7 @@ function saveQuiz(sheet, data) {
 
 function deleteQuiz(sheet, quizId) {
     const quizSheet = sheet.getSheetByName("Quizzes");
-    const questionSheet = sheet.getSheetByName("Questions");
+    const questionSheet = sheet.getSheetByName("IoeQuestions");
 
     // Delete from Quizzes sheet
     const quizData = quizSheet.getDataRange().getValues();
