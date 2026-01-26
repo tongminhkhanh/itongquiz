@@ -657,7 +657,7 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
     const [error, setError] = useState<string | null>(null);
     const [searchStatus, setSearchStatus] = useState<string | null>(null); // Two-step status
 
-    // AI Provider - lưu vào localStorage
+    // AI Provider - lưu vào localStorage (default llm-mux để dùng AI Client Pro)
     const [aiProvider] = useState<AIProvider>(() =>
         (localStorage.getItem('ai_provider') as AIProvider) || 'llm-mux'
     );
@@ -841,6 +841,7 @@ TOTAL: ${totalQuestions} questions
 
         return prompt;
     };
+
 
     // Handle generate
     // Handle generate với option sử dụng Perplexity search hay không
@@ -1041,6 +1042,7 @@ ${searchResult.content}
                             <p className="text-sm text-gray-500">Internet Olympiad in English</p>
                         </div>
                     </div>
+
                     <div className="space-y-4">
                         {/* Quiz Title */}
                         <div>
@@ -1240,7 +1242,7 @@ ${searchResult.content}
                     </div>
                 )}
 
-                {/* Generate Buttons - 2 options */}
+                {/* Generate Buttons */}
                 <div className="space-y-3">
                     {/* Button 1: Perplexity + Search (chất lượng cao) */}
                     <Button

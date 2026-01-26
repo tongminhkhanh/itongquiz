@@ -107,12 +107,27 @@ export class OpenAIProvider implements IAIProvider {
             response_format: { type: "json_object" }
         };
 
+        // Determine auth header based on baseUrl
+        // Gemini Antigravity and some servers use X-API-Key, others use Bearer
+        const isExternalMux = this.baseUrl.includes('103.47.224.66') ||
+            this.baseUrl.includes('gemini-antigravity') ||
+            this.baseUrl.includes('thitong.site');
+
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+        };
+
+        if (isExternalMux) {
+            // External servers like Gemini Antigravity use X-API-Key
+            headers['X-API-Key'] = this.apiKey;
+        } else {
+            // Standard OpenAI format
+            headers['Authorization'] = `Bearer ${this.apiKey}`;
+        }
+
         const response = await fetch(API_URL, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json'
-            },
+            headers,
             body: JSON.stringify(requestBody)
         });
 

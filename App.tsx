@@ -54,15 +54,16 @@ const App: React.FC = () => {
         }
     }, []);
 
-    // Load IOE quizzes when IOE tab is active
+    // Load IOE quizzes when IOE tab is active - ALWAYS force refresh to get latest data
     useEffect(() => {
         const loadIoeData = async () => {
             if (activeTab === 'ioe' && !ioeLoading) {
                 setIoeLoading(true);
                 try {
-                    const quizzes = await fetchIoeQuizzes();
+                    // Force refresh to ensure deleted quizzes are not shown from cache
+                    const quizzes = await fetchIoeQuizzes(true);
                     setIoeQuizzes(quizzes);
-                    console.log('[IOE] Loaded', quizzes.length, 'quizzes');
+                    console.log('[IOE] Loaded', quizzes.length, 'quizzes (force refreshed)');
                 } catch (err) {
                     console.error('[IOE] Load error:', err);
                 } finally {
@@ -194,12 +195,11 @@ const App: React.FC = () => {
 
     // Home Screen
     return (
-        <div
-            className="min-h-screen flex flex-col items-center justify-center p-4 md:p-6 relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
-            style={{ backgroundImage: "url('/background.jpg')" }}
-        >
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-6 relative overflow-hidden garden-bg">
+            {/* Floating Particles */}
+            <div className="garden-particles"></div>
             {/* Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-50/70 via-white/50 to-green-50/70 backdrop-blur-[1px] z-0"></div>
+            <div className="absolute inset-0 bg-white/30 backdrop-blur-[1px] z-0"></div>
 
             {/* Welcome Modal */}
             {showWelcome && (
@@ -314,60 +314,48 @@ const App: React.FC = () => {
                 <div className="flex flex-col lg:flex-row gap-6">
 
                     {/* Left Panel - Quiz Selection */}
-                    <div className="flex-1 bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
-                        {/* Header */}
-                        <div className="bg-gradient-to-r from-emerald-500 to-green-500 p-6 text-white">
+                    <div className="flex-1 glass rounded-3xl shadow-2xl overflow-hidden animate-fade-in">
+                        {/* Mission Control Header */}
+                        <div className="mission-header p-6 text-white">
                             <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center p-1">
+                                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center p-1 hover-scale">
                                     <img src="/school-logo.png" alt="Logo" className="w-14 h-14 object-contain" />
                                 </div>
                                 <div>
-                                    <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">CỔNG THÔNG TIN HỌC TẬP</span>
-                                    <h1 className="text-lg md:text-xl font-bold mt-1">Hệ thống ôn tập và kiểm tra trực tuyến</h1>
+                                    <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full font-semibold tracking-wide">🚀 CỔNG THÔNG TIN HỌC TẬP</span>
+                                    <h1 className="text-lg md:text-xl font-extrabold mt-1.5">Khu vườn kiến thức diệu kỳ</h1>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Tabs */}
+                        {/* Pill Tabs */}
                         <div className="px-6 pt-4">
-                            <div className="flex gap-2 overflow-x-auto pb-2">
+                            <div className="pill-tabs">
                                 <button
                                     onClick={() => { setActiveTab('class'); quizStore.setClassLevel(null); }}
-                                    className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${activeTab === 'class'
-                                        ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
+                                    className={`pill-tab ${activeTab === 'class' ? 'pill-tab-active' : ''}`}
                                 >
                                     📚 Lớp học
                                 </button>
                                 <button
                                     onClick={() => { setActiveTab('trang-nguyen'); quizStore.setClassLevel(null); }}
-                                    className={`px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${activeTab === 'trang-nguyen'
-                                        ? 'bg-gradient-to-r from-red-400 to-pink-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
+                                    className={`pill-tab ${activeTab === 'trang-nguyen' ? 'pill-tab-active !text-pink-600' : ''}`}
                                 >
-                                    <img src="/trang-nguyen-logo.png" alt="Trạng Nguyên" className="h-6 w-auto object-contain" />
+                                    <img src="/trang-nguyen-logo.png" alt="Trạng Nguyên" className="h-5 w-auto object-contain" />
                                     Trạng Nguyên
                                 </button>
                                 <button
                                     onClick={() => { setActiveTab('ioe'); quizStore.setClassLevel(null); }}
-                                    className={`px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${activeTab === 'ioe'
-                                        ? 'bg-gradient-to-r from-sky-400 to-blue-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
+                                    className={`pill-tab ${activeTab === 'ioe' ? 'pill-tab-active !text-sky-600' : ''}`}
                                 >
-                                    <img src="/ioe-logo.png" alt="IOE" className="h-6 w-6 object-contain" />
+                                    <img src="/ioe-logo.png" alt="IOE" className="h-5 w-5 object-contain" />
                                     IOE
                                 </button>
                                 <button
                                     onClick={() => { setActiveTab('vioedu'); quizStore.setClassLevel(null); }}
-                                    className={`px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${activeTab === 'vioedu'
-                                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
+                                    className={`pill-tab ${activeTab === 'vioedu' ? 'pill-tab-active' : ''}`}
                                 >
-                                    <img src="/vioedu-logo-new.png" alt="VioEdu" className="h-6 w-6 object-contain" />
+                                    <img src="/vioedu-logo-new.png" alt="VioEdu" className="h-5 w-5 object-contain" />
                                     VioEdu
                                 </button>
                             </div>
@@ -379,46 +367,39 @@ const App: React.FC = () => {
                                 <>
                                     {/* Class Level Header */}
                                     <div className="mb-4 mt-4">
-                                        <p className="text-gray-800 font-bold text-lg">Chọn khối lớp</p>
+                                        <p className="text-gray-800 font-extrabold text-lg">🎯 Chọn cấp độ</p>
+                                        <p className="text-gray-500 text-sm">Bấm vào lớp để xem các bài ôn tập</p>
                                     </div>
 
-                                    {/* Class Level Buttons */}
-                                    <div className="flex justify-between gap-2 py-4">
-                                        {['1', '2', '3', '4', '5'].map((level) => {
+                                    {/* Level Badges */}
+                                    <div className="flex justify-between gap-3 py-4">
+                                        {['1', '2', '3', '4', '5'].map((level, index) => {
                                             let quizCount = 0;
                                             if (activeTab === 'class') {
                                                 quizCount = quizStore.quizzes.filter(q => q.classLevel === level).length;
                                             } else if (activeTab === 'trang-nguyen') {
                                                 quizCount = quizStore.quizzes.filter(q => q.classLevel === level && q.category === 'trang-nguyen').length;
                                             } else if (activeTab === 'ioe') {
-                                                // Use IOE separate system quizzes
                                                 quizCount = ioeQuizzes.filter(q => q.classLevel === level).length;
                                             } else if (activeTab === 'vioedu') {
                                                 quizCount = quizStore.quizzes.filter(q => q.classLevel === level && q.category === 'vioedu').length;
                                             }
 
-                                            const colorClass = level === '1' ? 'bg-emerald-500' :
-                                                level === '2' ? 'bg-orange-500' :
-                                                    level === '3' ? 'bg-teal-500' :
-                                                        level === '4' ? 'bg-sky-500' : 'bg-green-600';
-
                                             return (
                                                 <button
                                                     key={level}
                                                     onClick={() => quizStore.setClassLevel(level)}
-                                                    className="group flex flex-col items-center transition-all hover:-translate-y-1"
+                                                    className={`flex flex-col items-center animate-slide-up stagger-${index + 1}`}
                                                 >
                                                     <div className="relative">
-                                                        <div className={`w-14 h-14 md:w-16 md:h-16 rounded-xl ${colorClass} flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all`}>
-                                                            <span className="text-white text-2xl font-bold">{level}</span>
+                                                        <div className={`level-badge level-${level}`}>
+                                                            {level}
                                                         </div>
                                                         {quizCount > 0 && (
-                                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                                                                {quizCount}
-                                                            </span>
+                                                            <span className="badge-count">{quizCount}</span>
                                                         )}
                                                     </div>
-                                                    <span className="text-gray-600 text-sm mt-2 font-medium">Lớp {level}</span>
+                                                    <span className="text-gray-600 text-sm mt-2 font-semibold">Lớp {level}</span>
                                                 </button>
                                             );
                                         })}
@@ -474,29 +455,30 @@ const App: React.FC = () => {
                                             </div>
                                             <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
                                                 {filteredQuizzes.length === 0 ? (
-                                                    <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                                                        <div className="text-5xl mb-3 text-gray-300">∅</div>
-                                                        <p className="text-gray-400">Chưa có bài kiểm tra nào.</p>
+                                                    <div className="empty-garden">
+                                                        <div className="empty-garden-icon">🦉</div>
+                                                        <p className="text-gray-500 font-medium">Cú mèo đang ngủ...</p>
+                                                        <p className="text-gray-400 text-sm">Chưa có bài ôn tập nào ở đây.</p>
                                                     </div>
                                                 ) : (
                                                     filteredQuizzes.map((q, index) => (
                                                         <button
                                                             key={q.id}
                                                             onClick={() => { quizStore.selectQuiz(q); quizStore.setView('student'); }}
-                                                            className="w-full text-left p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-all border border-green-100 hover:border-green-300 group shadow-sm hover:shadow-md"
+                                                            className={`w-full text-left quest-card animate-slide-up stagger-${Math.min(index + 1, 5)}`}
                                                         >
                                                             <div className="flex justify-between items-center">
-                                                                <span className="font-bold text-green-800 flex items-center gap-2">
+                                                                <span className="font-bold text-emerald-800 flex items-center gap-2">
                                                                     {q.requireCode && <Lock className="w-4 h-4 text-amber-500" />}
                                                                     {q.title}
                                                                 </span>
-                                                                <span className="bg-gradient-to-r from-green-500 to-emerald-500 px-3 py-1 rounded-full text-xs font-bold text-white">
+                                                                <span className="bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-sm">
                                                                     Bắt đầu →
                                                                 </span>
                                                             </div>
                                                             <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                                                <span>{q.questions.length} câu hỏi</span>
-                                                                <span>{q.timeLimit} phút</span>
+                                                                <span>📝 {q.questions.length} câu</span>
+                                                                <span>⏱️ {q.timeLimit} phút</span>
                                                             </div>
                                                         </button>
                                                     ))
@@ -509,58 +491,57 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Right Panel - Teacher Area */}
-                    <div className="w-full lg:w-80 space-y-4">
-                        {/* Teacher Header */}
-                        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 p-5">
+                    {/* Right Panel - Teacher Desk */}
+                    <div className="w-full lg:w-80 space-y-4 animate-slide-up">
+                        {/* Teacher Desk Card */}
+                        <div className="teacher-desk p-5">
                             <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-amber-500 rounded-xl flex items-center justify-center">
-                                    <KeyRound className="w-5 h-5 text-white" />
+                                <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
+                                    <KeyRound className="w-6 h-6 text-white" />
                                 </div>
-                                <h3 className="font-bold text-gray-800">Dành cho Giáo viên</h3>
+                                <div>
+                                    <h3 className="font-extrabold text-gray-800">Góc Giáo viên</h3>
+                                    <p className="text-xs text-amber-700">Quản lý & Theo dõi</p>
+                                </div>
                             </div>
 
                             {/* Dashboard Preview */}
-                            <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">DASHBOARD</p>
-                                <h4 className="font-bold text-gray-800 mb-1">Bảng điều khiển</h4>
-                                <p className="text-xs text-gray-500">Quản lý lớp học, theo dõi tiến độ học sinh và xem báo cáo chi tiết.</p>
+                            <div className="bg-white/70 rounded-xl p-4 mb-4 border border-amber-200">
+                                <p className="text-xs text-amber-600 uppercase tracking-wider mb-1 font-bold">📊 DASHBOARD</p>
+                                <p className="text-sm text-gray-600">Theo dõi tiến độ học sinh, xem báo cáo chi tiết và quản lý lớp học.</p>
                             </div>
 
                             <button
                                 onClick={() => quizStore.setView('teacher_login')}
-                                className="w-full py-3 bg-gradient-to-r from-orange-400 to-amber-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2 hover:shadow-lg transition-all"
+                                className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-lg hover:-translate-y-0.5 transition-all press-effect"
                             >
-                                → Đăng nhập hệ thống
+                                <KeyRound className="w-5 h-5" />
+                                Đăng nhập hệ thống
                             </button>
                         </div>
 
                         {/* Quick Actions */}
-                        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 p-4 space-y-3">
-                            <button className="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all text-left">
-                                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                    <span className="text-green-600 text-lg">📝</span>
+                        <div className="glass rounded-2xl p-4 space-y-2">
+                            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-2">⚡ Thao tác nhanh</p>
+                            <button className="action-bubble w-full text-left">
+                                <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                                    <span className="text-xl">📝</span>
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-gray-800 text-sm">Tạo đề thi</p>
-                                    <p className="text-xs text-gray-500">Scan, thêm & Upload</p>
+                                    <p className="font-bold text-gray-800 text-sm">Tạo đề thi mới</p>
+                                    <p className="text-xs text-gray-500">Scan, AI hoặc nhập thủ công</p>
                                 </div>
                             </button>
-                            <button className="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all text-left">
-                                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                                    <span className="text-amber-600 text-lg">📊</span>
+                            <button className="action-bubble w-full text-left">
+                                <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center">
+                                    <span className="text-xl">📊</span>
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-gray-800 text-sm">Quản lý tài nguyên</p>
-                                    <p className="text-xs text-gray-500">Ngân hàng câu hỏi</p>
+                                    <p className="font-bold text-gray-800 text-sm">Xem kết quả</p>
+                                    <p className="text-xs text-gray-500">Thống kê & Báo cáo</p>
                                 </div>
                             </button>
                         </div>
-
-                        {/* Help Text */}
-                        <p className="text-xs text-gray-400 text-center px-4">
-                            Bấm vào quản lý để nhập liệu đề hoặc cho các bài giảng viên.
-                        </p>
                     </div>
                 </div>
 

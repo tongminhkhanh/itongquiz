@@ -76,11 +76,11 @@ const PdfTab: React.FC<PdfTabProps> = ({ onSaveQuiz, onSuccess }) => {
 
     // AI Provider states
     const [aiProvider, setAiProvider] = useState<AIProvider>(() =>
-        (localStorage.getItem('ai_provider') as AIProvider) || 'llm-mux'
+        (localStorage.getItem('ai_provider') as AIProvider) || 'gemini'
     );
     // Separate AI provider for quiz generation (step 2)
     const [genAiProvider, setGenAiProvider] = useState<AIProvider>(() =>
-        (localStorage.getItem('gen_ai_provider') as AIProvider) || 'llm-mux'
+        (localStorage.getItem('gen_ai_provider') as AIProvider) || 'gemini'
     );
 
     // Save state

@@ -28,7 +28,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     const [customPrompt, setCustomPrompt] = useState('');
     const [quizMode, setQuizMode] = useState<'exam' | 'practice'>('practice');
     const [aiProvider, setAiProvider] = useState<AIProvider>(() =>
-        (localStorage.getItem('ai_provider') as AIProvider) || 'llm-mux'
+        (localStorage.getItem('ai_provider') as AIProvider) || 'gemini'
     );
     const [selectedTypes, setSelectedTypes] = useState<Record<string, boolean>>({
         [QuestionType.MCQ]: true,

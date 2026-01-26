@@ -1163,3 +1163,270 @@
 .press-effect:active {
   transform: scale(0.98);
 }
+
+/* =========================
+   MAGICAL LEARNING GARDEN THEME
+   ========================= */
+
+/* Animated Background */
+.garden-bg {
+  background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 25%, #fef3c7 50%, #fce7f3 75%, #ede9fe 100%);
+  background-size: 400% 400%;
+  animation: gardenGradient 20s ease infinite;
+}
+
+@keyframes gardenGradient {
+  0%, 100% { background-position: 0% 50%; }
+  25% { background-position: 50% 0%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 100%; }
+}
+
+/* Floating Particles */
+.garden-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.garden-particles::before,
+.garden-particles::after {
+  content: '🌸';
+  position: absolute;
+  font-size: 1.5rem;
+  opacity: 0.3;
+  animation: floatParticle 15s ease-in-out infinite;
+}
+
+.garden-particles::before {
+  left: 10%;
+  top: 20%;
+  animation-delay: 0s;
+}
+
+.garden-particles::after {
+  content: '🍀';
+  right: 15%;
+  top: 60%;
+  animation-delay: -7s;
+}
+
+@keyframes floatParticle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-30px) rotate(180deg); }
+}
+
+/* Level Badges */
+.level-badge {
+  position: relative;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.level-badge:hover {
+  transform: translateY(-8px) scale(1.1);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.level-badge:active {
+  transform: translateY(-4px) scale(1.05);
+}
+
+.level-badge::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 1.2rem;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.level-badge:hover::after {
+  opacity: 1;
+}
+
+/* Level Badge Colors */
+.level-1 { background: linear-gradient(135deg, #10b981, #059669); }
+.level-2 { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.level-3 { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+.level-4 { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+.level-5 { background: linear-gradient(135deg, #22c55e, #16a34a); }
+
+/* Quiz Quest Card */
+.quest-card {
+  position: relative;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 2px solid #a7f3d0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.quest-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #10b981, #0ea5e9, #8b5cf6);
+}
+
+.quest-card:hover {
+  transform: translateY(-4px);
+  border-color: #34d399;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
+}
+
+/* Mission Control Header */
+.mission-header {
+  background: linear-gradient(135deg, #059669 0%, #10b981 50%, #14b8a6 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.mission-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 60%;
+  height: 200%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Pill Tabs */
+.pill-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  background: #f1f5f9;
+  border-radius: 1rem;
+  overflow-x: auto;
+}
+
+.pill-tab {
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pill-tab:hover:not(.pill-tab-active) {
+  background: rgba(255, 255, 255, 0.7);
+  color: #334155;
+}
+
+.pill-tab-active {
+  background: white;
+  color: #059669;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: scale(1.02);
+}
+
+/* Teacher Desk Card */
+.teacher-desk {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 2px solid #fcd34d;
+  border-radius: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.teacher-desk::before {
+  content: '🍎';
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-size: 1.5rem;
+  opacity: 0.3;
+}
+
+/* Action Bubble */
+.action-bubble {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border-radius: 1rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-bubble:hover {
+  background: #f8fafc;
+  border-color: #fcd34d;
+  transform: translateX(4px);
+}
+
+/* Bounce Badge Count */
+.badge-count {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.375rem;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+
+/* Staggered Animation */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+
+/* Empty State */
+.empty-garden {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 1.5rem;
+  border: 2px dashed #cbd5e1;
+}
+
+.empty-garden-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}

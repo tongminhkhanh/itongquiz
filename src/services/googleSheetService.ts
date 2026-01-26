@@ -5,6 +5,10 @@ import { GOOGLE_SCRIPT_URL } from '../config/constants';
 // Security: API token for GAS authentication
 const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
 
+if (!API_SECRET_TOKEN) {
+    console.warn("Security Warning: VITE_API_SECRET_TOKEN is missing. API calls may fail.");
+}
+
 // Helper to call GAS API
 const callGasApi = async (action: string, payload: any = {}): Promise<any> => {
     if (!GOOGLE_SCRIPT_URL) {
@@ -43,9 +47,6 @@ const callGasApi = async (action: string, payload: any = {}): Promise<any> => {
 export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Promise<Teacher[]> => {
     // DEBUG: Bypass cache temporarily to diagnose issue
     console.log('[fetchTeachersFromSheets] Calling API...');
-    // SECURITY: Don't log sensitive URLs and tokens
-    // console.log('[fetchTeachersFromSheets] GOOGLE_SCRIPT_URL:', GOOGLE_SCRIPT_URL);
-    // console.log('[fetchTeachersFromSheets] API_SECRET_TOKEN exists:', !!API_SECRET_TOKEN);
 
     try {
         const response = await fetch(GOOGLE_SCRIPT_URL, {
@@ -62,8 +63,6 @@ export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Pro
 
         console.log('[fetchTeachersFromSheets] Response status:', response.status);
         const rawText = await response.text();
-        // SECURITY: Don't log raw response as it contains passwords
-        // console.log('[fetchTeachersFromSheets] Raw response:', rawText);
 
         // Try to parse as JSON
         let data;
@@ -71,42 +70,39 @@ export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Pro
             data = JSON.parse(rawText);
         } catch (e) {
             console.error('[fetchTeachersFromSheets] JSON parse error:', e);
-            alert('DEBUG: API trả về dữ liệu không hợp lệ (không phải JSON):\n' + rawText.substring(0, 500));
+            console.error('[fetchTeachersFromSheets] Raw response snippet:', rawText.substring(0, 100) + '...');
+            alert('Lỗi: Server trả về dữ liệu không hợp lệ. Vui lòng thử lại sau.');
             return [];
         }
 
-        // SECURITY: Don't log parsed data as it contains passwords
-        // console.log('[fetchTeachersFromSheets] Parsed data:', data);
-
         if (data.status === 'error') {
             console.error('[fetchTeachersFromSheets] API returned error:', data.message);
-            alert('DEBUG: API trả về lỗi:\n' + data.message);
+            alert('Lỗi: ' + (data.message || 'Không thể lấy danh sách giáo viên.'));
             return [];
         }
 
         if (!Array.isArray(data)) {
             console.error('[fetchTeachersFromSheets] Data is not an array:', typeof data);
-            alert('DEBUG: Dữ liệu không phải mảng. Loại: ' + typeof data + '\nNội dung: ' + JSON.stringify(data).substring(0, 500));
+            alert('Lỗi: Dữ liệu giáo viên không đúng định dạng.');
             return [];
         }
 
         const teachers = data.map((row: any) => ({
             // Hỗ trợ cả 2 format: 'id' hoặc 'username' làm username đăng nhập
             username: String(row.username || row.id || '').trim(),
-            password: String(row.password || '').trim(),
+            password: String(row.password || '').trim(), // Note: Password hashing should be done on server side ideally
             // Hỗ trợ cả 2 format: 'fullName' hoặc 'name' làm tên hiển thị
             fullName: row.fullName || row.name || '',
             role: row.role || 'teacher',
             class: row.class ? String(row.class).trim() : undefined
         }));
 
-        // SECURITY: Don't log teacher data as it contains passwords
         console.log('[fetchTeachersFromSheets] Mapped teachers count:', teachers.length);
         return teachers;
 
     } catch (error) {
         console.error('[fetchTeachersFromSheets] Fetch error:', error);
-        alert('DEBUG: Lỗi kết nối API:\n' + String(error));
+        alert('Lỗi kết nối đến máy chủ. Vui lòng kiểm tra mạng.');
         return [];
     }
 };

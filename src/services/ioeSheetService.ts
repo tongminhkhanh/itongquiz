@@ -5,7 +5,12 @@ import { Quiz, Question, QuestionType, StudentResult } from '../types';
 import { IOE_GOOGLE_SCRIPT_URL } from '../config/constants';
 
 // Security: API token for IOE GAS authentication
-const IOE_API_SECRET_TOKEN = import.meta.env.VITE_IOE_API_SECRET_TOKEN || 'ioe-4e23be7934269856066e6a3c2062e33ae4cdcc98';
+// Security: API token for IOE GAS authentication
+const IOE_API_SECRET_TOKEN = import.meta.env.VITE_IOE_API_SECRET_TOKEN;
+
+if (!IOE_API_SECRET_TOKEN) {
+    console.error("Critical Security Warning: VITE_IOE_API_SECRET_TOKEN is missing!");
+}
 
 // Helper to fix "Reorder the words" questions
 // Normalizes ALL separators (colons and slashes) to format: "word1 /word2 /word3"
