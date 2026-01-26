@@ -18,16 +18,9 @@ const GameCanvas: React.FC = () => {
     // Initialize Game
     useEffect(() => {
         if (state === 'PLAYING') {
-            // Try to use quiz questions first, fallback to game question bank
-            const validQuizzes = quizzes.filter(q => q.questions && q.questions.length > 0);
-            const selectedQuiz = validQuizzes.length > 0
-                ? validQuizzes[Math.floor(Math.random() * validQuizzes.length)]
-                : null;
-
-            // Use quiz questions or get 50 random questions from bank
-            const questions = selectedQuiz
-                ? selectedQuiz.questions
-                : getRandomQuestions(50);
+            // ALWAYS get 50 random questions from the math question bank
+            // This ensures we only use the simple addition/subtraction questions
+            const questions = getRandomQuestions(50);
 
             setGameQuestions(questions);
             setCurrentQuestionIndex(0);
