@@ -14,6 +14,7 @@ const IoeStudentView = React.lazy(() => import('./src/components/IoeStudentView'
 import { CategorySelector } from './src/components/CategorySelector';
 import { QuizListByCategory } from './src/components/QuizListByCategory';
 const TeacherDashboard = React.lazy(() => import('./src/components/TeacherDashboard'));
+import { ChatBot } from './src/components/ChatBot';
 
 const App: React.FC = () => {
     // --- STORES ---
@@ -550,6 +551,7 @@ const App: React.FC = () => {
                     © 2025 Trường Tiểu học Ít Ong. Developed by Tòng Minh Khánh.
                 </p>
             </div>
+            <ChatBot />
             <Analytics />
         </div >
     );
