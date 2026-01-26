@@ -898,7 +898,10 @@ ${searchResult.content}
             }
 
             // ===== BƯỚC 2: SINH CÂU HỎI =====
-            setSearchStatus('✨ Đang sinh câu hỏi từ kết quả tìm kiếm...');
+            // ===== BƯỚC 2: SINH CÂU HỎI =====
+            setSearchStatus(usePerplexitySearch
+                ? '✨ Đang sinh câu hỏi từ kết quả tìm kiếm...'
+                : '✨ Đang sinh câu hỏi từ kho kiến thức AI...');
             console.log('[IOE Two-Step] Bước 2: Sinh câu hỏi...');
 
             const basePrompt = generateIoePrompt();

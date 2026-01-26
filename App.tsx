@@ -13,9 +13,11 @@ const StudentView = React.lazy(() => import('./src/components/StudentView'));
 const IoeStudentView = React.lazy(() => import('./src/components/IoeStudentView'));
 import { CategorySelector } from './src/components/CategorySelector';
 import { QuizListByCategory } from './src/components/QuizListByCategory';
+const GameCanvas = React.lazy(() => import('./src/components/Game/GameCanvas'));
+const ChatBot = React.lazy(() => import('./src/components/ChatBot/ChatBot'));
 const TeacherDashboard = React.lazy(() => import('./src/components/TeacherDashboard'));
-import { ChatBot } from './src/components/ChatBot';
 
+// ... existing code ...
 const App: React.FC = () => {
     // --- STORES ---
     const authStore = useAuthStore();
@@ -27,7 +29,7 @@ const App: React.FC = () => {
     const [passwordInput, setPasswordInput] = useState('');
     const [showWelcome, setShowWelcome] = useState(false);
     const [welcomeName, setWelcomeName] = useState('');
-    const [activeTab, setActiveTab] = useState<'class' | 'trang-nguyen' | 'vioedu' | 'ioe'>('class');
+    const [activeTab, setActiveTab] = useState<'class' | 'trang-nguyen' | 'vioedu' | 'ioe' | 'game'>('class');
 
     // IOE Separate System State
     const [ioeQuizzes, setIoeQuizzes] = useState<Quiz[]>([]);
@@ -211,12 +213,12 @@ const App: React.FC = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                             </svg>
                         </div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Xin chào!</h2>
+                        <h2 className="text-2xl font-bold text-slate-800 mb-2">Xin chào!</h2>
                         <p className="text-2xl font-bold text-emerald-600 mb-4">{welcomeName}</p>
-                        <p className="text-gray-600 mb-6">Chúc thầy cô một ngày mới vui vẻ và yêu đời!</p>
+                        <p className="text-slate-600 mb-6">Chúc thầy cô một ngày mới vui vẻ và yêu đời!</p>
                         <button
                             onClick={() => { setShowWelcome(false); quizStore.setView('teacher_dash'); }}
-                            className="w-full py-3 btn-primary rounded-xl font-semibold flex items-center justify-center gap-2"
+                            className="w-full py-3 btn-primary rounded-xl font-semibold flex items-center justify-center gap-2 transform active:scale-95 transition-all"
                         >
                             Vào Trang Quản Lý
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -235,8 +237,8 @@ const App: React.FC = () => {
                             <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 shadow-lg">
                                 <Lock className="w-10 h-10 text-white" />
                             </div>
-                            <h3 className="text-2xl font-bold text-gray-800">Đăng nhập Giáo viên</h3>
-                            <p className="text-gray-500 text-sm mt-1">Nhập thông tin để truy cập</p>
+                            <h3 className="text-2xl font-bold text-slate-800">Đăng nhập Giáo viên</h3>
+                            <p className="text-slate-500 text-sm mt-1">Nhập thông tin để truy cập</p>
                         </div>
                         <div className="space-y-4">
                             <div className="relative">
@@ -281,14 +283,14 @@ const App: React.FC = () => {
                         <div className="flex gap-3 mt-6">
                             <button
                                 onClick={() => quizStore.setView('home')}
-                                className="flex-1 py-3 text-gray-600 font-semibold hover:bg-gray-100 rounded-xl transition-all border-2 border-gray-200 hover:border-gray-300"
+                                className="flex-1 py-3 text-slate-600 font-semibold hover:bg-slate-100 rounded-xl transition-all border-2 border-slate-200 hover:border-slate-300 active:scale-95"
                                 disabled={authStore.isLoggingIn}
                             >
                                 Hủy
                             </button>
                             <button
                                 onClick={handleTeacherLogin}
-                                className="flex-1 py-3 btn-primary rounded-xl font-semibold flex items-center justify-center gap-2"
+                                className="flex-1 py-3 btn-primary rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all"
                                 disabled={authStore.isLoggingIn}
                             >
                                 {authStore.isLoggingIn ? (
@@ -359,17 +361,28 @@ const App: React.FC = () => {
                                     <img src="/vioedu-logo-new.png" alt="VioEdu" className="h-5 w-5 object-contain" />
                                     VioEdu
                                 </button>
+                                <button
+                                    onClick={() => { setActiveTab('game'); quizStore.setClassLevel(null); }}
+                                    className={`pill-tab ${activeTab === 'game' ? 'pill-tab-active !text-amber-600' : ''}`}
+                                >
+                                    🎮 Giải trí
+                                </button>
                             </div>
                         </div>
 
                         {/* Content */}
                         <div className="px-6 pb-6">
-                            {!quizStore.selectedClassLevel ? (
+                            {/* Show game directly when game tab is active */}
+                            {activeTab === 'game' ? (
+                                <React.Suspense fallback={<div className="p-8 text-center">Đang tải game...</div>}>
+                                    <GameCanvas />
+                                </React.Suspense>
+                            ) : !quizStore.selectedClassLevel ? (
                                 <>
                                     {/* Class Level Header */}
                                     <div className="mb-4 mt-4">
-                                        <p className="text-gray-800 font-extrabold text-lg">🎯 Chọn cấp độ</p>
-                                        <p className="text-gray-500 text-sm">Bấm vào lớp để xem các bài ôn tập</p>
+                                        <p className="text-slate-800 font-extrabold text-lg">🎯 Chọn cấp độ</p>
+                                        <p className="text-slate-500 text-sm">Bấm vào lớp để xem các bài ôn tập</p>
                                     </div>
 
                                     {/* Level Badges */}
@@ -400,7 +413,7 @@ const App: React.FC = () => {
                                                             <span className="badge-count">{quizCount}</span>
                                                         )}
                                                     </div>
-                                                    <span className="text-gray-600 text-sm mt-2 font-semibold">Lớp {level}</span>
+                                                    <span className="text-slate-600 text-sm mt-2 font-semibold group-hover:text-blue-600 transition-colors">Lớp {level}</span>
                                                 </button>
                                             );
                                         })}
@@ -438,18 +451,19 @@ const App: React.FC = () => {
 
                                     const categoryName = activeTab === 'class' ? 'Tất cả bài kiểm tra'
                                         : activeTab === 'trang-nguyen' ? 'Trạng Nguyên Tiếng Việt'
-                                            : activeTab === 'ioe' ? 'IOE - Olympic Tiếng Anh' : 'VioEdu';
+                                            : activeTab === 'ioe' ? 'IOE - Olympic Tiếng Anh'
+                                                : 'VioEdu';
 
                                     return (
                                         <>
                                             <div className="flex items-center justify-between mb-4 mt-4">
                                                 <div>
-                                                    <h3 className="text-lg font-bold text-gray-800">{categoryName}</h3>
-                                                    <p className="text-xs text-gray-500">Lớp {quizStore.selectedClassLevel}</p>
+                                                    <h3 className="text-lg font-bold text-slate-800">{categoryName}</h3>
+                                                    <p className="text-xs text-slate-500">Lớp {quizStore.selectedClassLevel}</p>
                                                 </div>
                                                 <button
                                                     onClick={() => quizStore.setClassLevel(null)}
-                                                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600 transition-all"
+                                                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium text-slate-600 transition-all active:scale-95"
                                                 >
                                                     ← Quay lại
                                                 </button>
