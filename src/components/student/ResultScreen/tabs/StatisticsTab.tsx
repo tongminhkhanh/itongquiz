@@ -76,6 +76,46 @@ const StatisticsTab: React.FC<Props> = ({ quiz, result, answers }) => {
                 return word.toLowerCase().replace(/\s+/g, '') === (question.correctWord || '').toLowerCase().replace(/\s+/g, '');
             case QuestionType.RIDDLE:
                 return String(answer).toLowerCase().trim() === String(question.correctAnswer).toLowerCase().trim();
+            case QuestionType.DRAG_DROP:
+                const ddText = (question as any).text || "";
+                const ddParts = ddText.split(/(\[.*?\])/g);
+                let ddBlankIndex = 0;
+                let isDDCorrect = true;
+                ddParts.forEach((part: string, partIdx: number) => {
+                    if (part.startsWith('[') && part.endsWith(']')) {
+                        const correctWord = (question as any).blanks?.[ddBlankIndex];
+                        const studentWord = answer?.[partIdx];
+                        if (studentWord !== correctWord) isDDCorrect = false;
+                        ddBlankIndex++;
+                    }
+                });
+                return isDDCorrect;
+            case QuestionType.DROPDOWN:
+                const dropdownBlanks = (question as any).blanks || [];
+                return dropdownBlanks.every((b: any) => answer?.[b.id] === b.correctAnswer);
+            case QuestionType.ORDERING:
+                const studentOrder = (answer as number[]) || [];
+                const correctOrder = (question as any).correctOrder || [];
+                if (studentOrder.length !== correctOrder.length) return false;
+                return studentOrder.every((val, idx) => val === correctOrder[idx]);
+            case QuestionType.CATEGORIZATION:
+                const catItems = (question as any).items || [];
+                return catItems.every((item: any) => {
+                    const studentCatId = answer?.[item.id];
+                    const correctCatId = item.categoryId;
+                    if (correctCatId) {
+                        return studentCatId === correctCatId;
+                    } else {
+                        return !studentCatId;
+                    }
+                });
+            case QuestionType.UNDERLINE:
+                const studentIdxs = (answer as number[]) || [];
+                const correctIdxs = (question as any).correctWordIndexes || [];
+                if (studentIdxs.length !== correctIdxs.length) return false;
+                const sSorted = [...studentIdxs].sort((a, b) => a - b);
+                const cSorted = [...correctIdxs].sort((a, b) => a - b);
+                return sSorted.every((val, idx) => val === cSorted[idx]);
             default:
                 return false;
         }

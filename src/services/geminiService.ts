@@ -657,9 +657,9 @@ BƯỚC 1: ĐỌC VÀ TRÍCH XUẤT CÂU HỎI
 📝 QUY TẮC ĐỊNH DẠNG VĂN BẢN:
 ⚠️ QUAN TRỌNG - GIỮ NGUYÊN ĐỊNH DẠNG:
 - Nếu có từ GẠCH CHÂN trong câu hỏi → dùng thẻ <u>từ gạch chân</u>
-- Nếu có từ IN ĐẬM → dùng thẻ <b>từ in đậm</b>
-- Nếu có từ IN NGHIÊNG → dùng thẻ <i>từ in nghiêng</i>
-- VÍ DỤ: "Từ <u>gạch chân</u> thuộc loại từ nào?"
+- Nếu có từ QUAN TRỌNG, TỪ KHOÁ (VD: "Không đúng", "Sai", "Đồng nghĩa") → dùng thẻ <b>từ in đậm</b>
+- Nếu có TÊN RIÊNG, TRÍCH DẪN, TỪ ĐƯỢC NHẮC ĐẾN → dùng thẻ <q>từ trích dẫn</q> (sẽ hiển thị ngoặc kép cong)
+- VÍ DỤ: "Tìm từ <b>trái nghĩa</b> với từ <q>thông minh</q>"
 
 📖 QUY TẮC VỚI ĐOẠN VĂN/THƠ/BÀI ĐỌC:
 ⚠️ RẤT QUAN TRỌNG - NẾU CÂU HỎI CÓ ĐOẠN THƠ, ĐOẠN VĂN, BÀI VĂN ĐI KÈM:

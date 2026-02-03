@@ -147,6 +147,28 @@ export const fetchResultsFromSheets = async (sheetId: string, resultsGid: string
     );
 };
 
+// Helper to escape values for Google Sheets (prevent auto-formatting like 1/10 -> Date)
+const escapeSheetValue = (val: any): string => {
+    if (val === undefined || val === null) return '';
+    const strVal = String(val);
+    // If it looks like a fraction or math expression that Sheets might reinterpret
+    // check for pattern: number/number
+    if (/^\d+\s*\/\s*\d+/.test(strVal)) {
+        return `'${strVal}`;
+    }
+    return strVal;
+};
+
+// Helper to unescape values from Google Sheets
+const unescapeSheetValue = (val: any): string => {
+    if (val === undefined || val === null) return '';
+    const strVal = String(val);
+    if (strVal.startsWith("'")) {
+        return strVal.substring(1);
+    }
+    return strVal;
+};
+
 export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, questionGid: string): Promise<Quiz[]> => {
     const cacheKey = CacheKeys.quizzes(sheetId);
 
@@ -183,49 +205,54 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
 
                 let question: Question | null = null;
 
+                // Helper to safely split and unescape pipes if needed (though pipes usually safe)
+                // But definitely unescape each option
+                const processOptions = (optStr: string) =>
+                    optStr ? optStr.split('|').map(o => unescapeSheetValue(o.trim())) : [];
+
                 if (row.type === QuestionType.MCQ) {
                     question = {
                         id: row.id,
                         type: QuestionType.MCQ,
-                        question: row.question,
-                        options: row.options ? row.options.split('|').map((o: string) => o.trim()) : [],
-                        correctAnswer: row.correctAnswer
+                        question: unescapeSheetValue(row.question),
+                        options: processOptions(row.options),
+                        correctAnswer: unescapeSheetValue(row.correctAnswer)
                     } as MCQQuestion;
                 } else if (row.type === QuestionType.TRUE_FALSE) {
                     question = {
                         id: row.id,
                         type: QuestionType.TRUE_FALSE,
-                        mainQuestion: row.question, // Using 'question' column for mainQuestion
-                        items: row.items ? JSON.parse(row.items) : []
+                        mainQuestion: unescapeSheetValue(row.question), // Using 'question' column for mainQuestion
+                        items: row.items ? JSON.parse(row.items) : [] // Items are JSON, usually safe unless generated
                     } as TrueFalseQuestion;
                 } else if (row.type === QuestionType.SHORT_ANSWER) {
                     question = {
                         id: row.id,
                         type: QuestionType.SHORT_ANSWER,
-                        question: row.question,
-                        correctAnswer: row.correctAnswer
+                        question: unescapeSheetValue(row.question),
+                        correctAnswer: unescapeSheetValue(row.correctAnswer)
                     } as ShortAnswerQuestion;
                 } else if (row.type === QuestionType.MATCHING) {
                     question = {
                         id: row.id,
                         type: QuestionType.MATCHING,
-                        mainQuestion: row.question,
+                        mainQuestion: unescapeSheetValue(row.question),
                         pairs: row.items ? JSON.parse(row.items) : []
                     } as any;
                 } else if (row.type === QuestionType.MULTIPLE_SELECT) {
                     question = {
                         id: row.id,
                         type: QuestionType.MULTIPLE_SELECT,
-                        question: row.question,
-                        options: row.options ? row.options.split('|').map((o: string) => o.trim()) : [],
+                        question: unescapeSheetValue(row.question),
+                        options: processOptions(row.options),
                         correctAnswers: row.correctAnswer ? JSON.parse(row.correctAnswer) : []
                     } as any;
                 } else if (row.type === QuestionType.DRAG_DROP) {
                     question = {
                         id: row.id,
                         type: QuestionType.DRAG_DROP,
-                        question: row.question || "Điền từ thích hợp vào chỗ trống:",
-                        text: row.text || "",
+                        question: unescapeSheetValue(row.question || "Điền từ thích hợp vào chỗ trống:"),
+                        text: unescapeSheetValue(row.text || ""),
                         blanks: row.blanks ? JSON.parse(row.blanks) : [],
                         distractors: row.distractors ? JSON.parse(row.distractors) : []
                     } as any;
@@ -233,7 +260,7 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                     question = {
                         id: row.id,
                         type: QuestionType.ORDERING,
-                        question: row.question,
+                        question: unescapeSheetValue(row.question),
                         items: row.items ? JSON.parse(row.items) : [],
                         correctOrder: row.correctOrder ? JSON.parse(row.correctOrder) : []
                     } as any;
@@ -241,25 +268,25 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                     question = {
                         id: row.id,
                         type: QuestionType.IMAGE_QUESTION,
-                        question: row.question,
+                        question: unescapeSheetValue(row.question),
                         image: row.image || "",
-                        options: row.options ? row.options.split('|').map((o: string) => o.trim()) : [],
-                        correctAnswer: row.correctAnswer
+                        options: processOptions(row.options),
+                        correctAnswer: unescapeSheetValue(row.correctAnswer)
                     } as any;
                 } else if (row.type === QuestionType.DROPDOWN) {
                     question = {
                         id: row.id,
                         type: QuestionType.DROPDOWN,
-                        question: row.question,
-                        text: row.text || "",
+                        question: unescapeSheetValue(row.question),
+                        text: unescapeSheetValue(row.text || ""),
                         blanks: row.blanks ? JSON.parse(row.blanks) : []
                     } as any;
                 } else if (row.type === QuestionType.UNDERLINE) {
                     question = {
                         id: row.id,
                         type: QuestionType.UNDERLINE,
-                        question: row.question,
-                        sentence: row.sentence || "",
+                        question: unescapeSheetValue(row.question),
+                        sentence: unescapeSheetValue(row.sentence || ""),
                         words: row.words ? JSON.parse(row.words) : [],
                         correctWordIndexes: row.correctWordIndexes ? JSON.parse(row.correctWordIndexes) : []
                     } as any;
@@ -296,8 +323,37 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
     );
 };
 
+// PREPARE QUIZ FOR SAVING
+const prepareQuizForSave = (quiz: Quiz) => {
+    // Clone logic handled by serializer in GAS usually, but we need to modify values
+    // actually, we are sending the whole object to GAS.
+    // We should iterate and escape fields in the questions.
+    const escapedQuestions = quiz.questions.map(q => {
+        const eq = { ...q } as any;
+
+        // Escape common text fields
+        if (eq.question) eq.question = escapeSheetValue(eq.question);
+        if (eq.correctAnswer) eq.correctAnswer = escapeSheetValue(eq.correctAnswer);
+        if (eq.text) eq.text = escapeSheetValue(eq.text);
+        if (eq.sentence) eq.sentence = escapeSheetValue(eq.sentence);
+
+        // Escape options array
+        if (eq.options && Array.isArray(eq.options)) {
+            eq.options = eq.options.map(escapeSheetValue);
+        }
+
+        return eq;
+    });
+
+    return {
+        ...quiz,
+        questions: escapedQuestions
+    };
+};
+
 export const saveQuizToSheet = async (quiz: Quiz, scriptUrl: string): Promise<boolean> => {
-    const result = await callGasApi('create_quiz', quiz);
+    const escapedQuiz = prepareQuizForSave(quiz);
+    const result = await callGasApi('create_quiz', escapedQuiz);
     if (result && result.status === 'success') {
         cacheService.invalidatePrefix('quizzes:');
         return true;
@@ -329,7 +385,8 @@ export const deleteQuizFromSheet = async (quizId: string, scriptUrl: string): Pr
 };
 
 export const updateQuizInSheet = async (quiz: Quiz, scriptUrl: string): Promise<boolean> => {
-    const result = await callGasApi('update_quiz', quiz);
+    const escapedQuiz = prepareQuizForSave(quiz);
+    const result = await callGasApi('update_quiz', escapedQuiz);
     if (result && result.status === 'success') {
         cacheService.invalidatePrefix('quizzes:');
         return true;

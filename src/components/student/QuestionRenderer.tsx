@@ -435,12 +435,15 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             <span
                                                 key={idx}
                                                 onClick={() => filledWord && handleBlankClick(idx)}
-                                                className={`inline-block min-w-[80px] h-10 mx-1 px-3 py-1 align-middle text-center rounded-lg border-2 border-dashed transition-all cursor-pointer select-none flex items-center justify-center ${filledWord
-                                                    ? 'bg-indigo-100 border-indigo-500 text-indigo-700 font-bold border-solid'
-                                                    : 'bg-gray-50 border-gray-300 text-gray-400 hover:border-indigo-300'
+                                                className={`inline-block min-w-[120px] h-10 mx-2 px-3 align-middle text-center rounded border-2 transition-all cursor-pointer select-none relative
+                                                    ${filledWord
+                                                        ? 'bg-white border-green-600 text-green-700 font-bold'
+                                                        : 'bg-white border-green-600'
                                                     }`}
                                             >
-                                                {filledWord || (idx + 1)}
+                                                <div className="flex items-center justify-center h-full w-full">
+                                                    {filledWord}
+                                                </div>
                                             </span>
                                         );
                                     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, Question, QuestionType } from '../../types';
 import { Card, Button, Modal } from '../common';
-import { Save, PlusCircle, Edit3, Trash2, X, FileDown } from 'lucide-react';
+import { Save, PlusCircle, Edit3, Trash2, X, FileDown, Bold, Italic } from 'lucide-react';
 import { formatMathText } from '../../utils/formatters';
 import GeometryPreview from './GeometryPreview';
 import { renderMathJax } from '../../hooks/useMathJax';
@@ -21,6 +21,49 @@ const fixReorderQuestion = (text: string): string => {
         return `${prefix}: ${wordsPart}`;
     }
     return text;
+};
+
+// Helper to insert tags at cursor position
+const insertTags = (text: string, tag: 'b' | 'i', start: number, end: number) => {
+    const openTag = `<${tag}>`;
+    const closeTag = `</${tag}>`;
+    
+    // If no selection, just append at end (or at cursor location implies splitting)
+    // If start === end, insert empty tags at cursor
+    const before = text.substring(0, start);
+    const selection = text.substring(start, end);
+    const after = text.substring(end);
+    
+    // If selection already wrapped, unwrap it (simple check)
+    // This is basic. For robustness, checking exact surrounding tags is better but complex.
+    // For now, simple insertion.
+    
+    return `${before}${openTag}${selection}${closeTag}${after}`;
+};
+
+interface FormattingToolbarProps {
+    onApply: (tag: 'b' | 'i') => void;
+}
+
+const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ onApply }) => {
+    return (
+        <div className="flex items-center gap-1 mb-1 p-1 bg-gray-100 rounded border border-gray-200 w-fit">
+            <button
+                onClick={(e) => { e.preventDefault(); onApply('b'); }}
+                className="p-1 hover:bg-gray-200 rounded font-bold w-6 h-6 flex items-center justify-center text-gray-700"
+                title="In đậm (Bold)"
+            >
+                <span className="font-serif">B</span>
+            </button>
+            <button
+                onClick={(e) => { e.preventDefault(); onApply('i'); }}
+                className="p-1 hover:bg-gray-200 rounded italic w-6 h-6 flex items-center justify-center text-gray-700"
+                title="In nghiêng (Italic)"
+            >
+                <span className="font-serif">I</span>
+            </button>
+        </div>
+    );
 };
 
 interface QuizPreviewProps {
@@ -65,6 +108,30 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
     // Add Question modal state
     const [showAddModal, setShowAddModal] = useState(false);
     const [newQuestionType, setNewQuestionType] = useState<QuestionType>(QuestionType.MCQ);
+
+    // Refs for textareas to handle formatting insertion
+    const editQuestionTextRef = useRef<HTMLTextAreaElement>(null);
+    
+    // Handle formatting apply
+    const applyFormat = (tag: 'b' | 'i', target: 'question') => {
+        if (target === 'question') {
+            const textarea = editQuestionTextRef.current;
+            if (textarea) {
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const newText = insertTags(editQuestionText, tag, start, end);
+                setEditQuestionText(newText);
+                
+                // Restore selection (offset by tag length)
+                setTimeout(() => {
+                    const newCursorPos = end + 2 + tag.length + 3 + tag.length + 1; // <b>...</b>
+                    // Actually cursor should be after inserted tag or selecting content?
+                    // Let's just focus back.
+                    textarea.focus();
+                }, 0);
+            }
+        }
+    };
 
 
     // Ref for MathJax rendering
@@ -878,11 +945,13 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Nội dung câu hỏi
                                 </label>
+                                <FormattingToolbar onApply={(tag) => applyFormat(tag, 'question')} />
                                 <textarea
+                                    ref={editQuestionTextRef}
                                     value={editQuestionText}
                                     onChange={(e) => setEditQuestionText(e.target.value)}
                                     rows={3}
-                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-medium"
                                 />
                                 {/* LaTeX Preview */}
                                 {editQuestionText && editQuestionText.includes('$') && (

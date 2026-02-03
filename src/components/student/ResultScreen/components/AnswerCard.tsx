@@ -4,17 +4,7 @@ import { Check, X, Minus, ChevronRight, HelpCircle } from 'lucide-react';
 import { formatMathText } from '../../../../utils/formatters';
 import { renderMathJax } from '../../../../hooks/useMathJax';
 
-// MathSpan component for rendering math content
-const MathSpan: React.FC<{ content: string; className?: string }> = React.memo(({ content, className }) => {
-    const ref = useRef<HTMLSpanElement>(null);
-    useLayoutEffect(() => {
-        if (ref.current) {
-            ref.current.innerHTML = formatMathText(content);
-            renderMathJax(ref.current);
-        }
-    }, [content]);
-    return <span ref={ref} className={className} />;
-});
+import { MathSpan } from '../../../common';
 
 export type AnswerStatus = 'correct' | 'wrong' | 'skipped';
 

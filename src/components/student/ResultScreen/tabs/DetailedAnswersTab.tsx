@@ -5,18 +5,7 @@ import { renderMathJax } from '../../../../hooks/useMathJax';
 import QuestionFilter, { FilterType } from '../components/QuestionFilter';
 import AnswerCard, { AnswerStatus } from '../components/AnswerCard';
 import { ChevronLeft, ChevronRight, Check, X, HelpCircle, Lightbulb } from 'lucide-react';
-
-// MathSpan component for rendering math content
-const MathSpan: React.FC<{ content: string; className?: string }> = React.memo(({ content, className }) => {
-    const ref = useRef<HTMLSpanElement>(null);
-    useLayoutEffect(() => {
-        if (ref.current) {
-            ref.current.innerHTML = formatMathText(content);
-            renderMathJax(ref.current);
-        }
-    }, [content]);
-    return <span ref={ref} className={className} />;
-});
+import { MathSpan } from '../../../common';
 
 interface Props {
     quiz: Quiz;
@@ -60,6 +49,50 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                 return studentWord.toLowerCase().replace(/\s+/g, '') === (question.correctWord || '').toLowerCase().replace(/\s+/g, '') ? 'correct' : 'wrong';
             case QuestionType.RIDDLE:
                 return String(answer).toLowerCase().trim() === String(question.correctAnswer).toLowerCase().trim() ? 'correct' : 'wrong';
+            case QuestionType.DRAG_DROP:
+                const ddText = (question as any).text || "";
+                const ddParts = ddText.split(/(\[.*?\])/g);
+                let ddBlankIndex = 0;
+                let isDDCorrect = true;
+                ddParts.forEach((part: string, partIdx: number) => {
+                    if (part.startsWith('[') && part.endsWith(']')) {
+                        const correctWord = (question as any).blanks?.[ddBlankIndex];
+                        const studentWord = answer?.[partIdx];
+                        if (studentWord !== correctWord) isDDCorrect = false;
+                        ddBlankIndex++;
+                    }
+                });
+                return isDDCorrect ? 'correct' : 'wrong';
+            case QuestionType.DROPDOWN:
+                const dropdownBlanks = (question as any).blanks || [];
+                const isDropdownCorrect = dropdownBlanks.every((b: any) => answer?.[b.id] === b.correctAnswer);
+                return isDropdownCorrect ? 'correct' : 'wrong';
+            case QuestionType.ORDERING:
+                const studentOrder = (answer as number[]) || [];
+                const correctOrder = (question as any).correctOrder || [];
+                if (studentOrder.length !== correctOrder.length) return 'wrong';
+                const isOrderCorrect = studentOrder.every((val, idx) => val === correctOrder[idx]);
+                return isOrderCorrect ? 'correct' : 'wrong';
+            case QuestionType.CATEGORIZATION:
+                const catItems = (question as any).items || [];
+                const isCatCorrect = catItems.every((item: any) => {
+                    const studentCatId = answer?.[item.id];
+                    const correctCatId = item.categoryId;
+                    if (correctCatId) {
+                        return studentCatId === correctCatId;
+                    } else {
+                        return !studentCatId;
+                    }
+                });
+                return isCatCorrect ? 'correct' : 'wrong';
+            case QuestionType.UNDERLINE:
+                const studentIdxs = (answer as number[]) || [];
+                const correctIdxs = (question as any).correctWordIndexes || [];
+                if (studentIdxs.length !== correctIdxs.length) return 'wrong';
+                const sSorted = [...studentIdxs].sort((a, b) => a - b);
+                const cSorted = [...correctIdxs].sort((a, b) => a - b);
+                const isUnderlineCorrect = sSorted.every((val, idx) => val === cSorted[idx]);
+                return isUnderlineCorrect ? 'correct' : 'wrong';
             default:
                 return 'wrong';
         }

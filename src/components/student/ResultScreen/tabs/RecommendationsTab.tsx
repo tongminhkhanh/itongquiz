@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Quiz, StudentResult } from '../../../../types';
 import { getAIRecommendations, extractWrongAnswers, AIRecommendation } from '../../../../services/aiTutorService';
 import { Lightbulb, BookOpen, Target, Heart, Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
+import { MathSpan } from '../../../common';
 
 interface Props {
     quiz: Quiz;
@@ -201,7 +202,7 @@ const RecommendationsTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                         {wa.questionNumber}
                                     </span>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-gray-700 text-sm truncate">{wa.questionText}</p>
+                                        <MathSpan content={wa.questionText} className="text-gray-700 text-sm truncate block" />
                                         <p className="text-xs text-gray-400">{wa.questionType}</p>
                                     </div>
                                 </div>

@@ -400,3 +400,24 @@
 .stat-card-warning:hover {
     background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
 }
+
+/* =========================
+   CURLY QUOTES (Trích dẫn)
+   ========================= */
+q {
+    quotes: '"' '"' ''' ''';
+    font-style: italic;
+    color: inherit;
+}
+
+q::before {
+    content: open-quote;
+    font-size: 1.1em;
+    color: #6b7280;
+}
+
+q::after {
+    content: close-quote;
+    font-size: 1.1em;
+    color: #6b7280;
+}
