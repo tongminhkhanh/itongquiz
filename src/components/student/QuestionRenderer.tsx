@@ -154,7 +154,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                         }`}>
                                         {label}
                                     </span>
-                                    <span>{formatMathText(opt)}</span>
+                                    <MathSpan content={opt} className="flex-1" />
                                 </button>
                             )
                         })}
@@ -195,7 +195,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                 />
                                             );
                                         }
-                                        return <span key={idx}>{formatMathText(part)}</span>;
+                                        return <MathSpan key={idx} content={part} />;
                                     })}
                                 </div>
 
@@ -240,8 +240,9 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                             const val = answers[q.id]?.[itemKey];
                             return (
                                 <div key={itemKey} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                    <span className="text-gray-700 mr-4 flex-1 text-sm">
-                                        {String.fromCharCode(97 + i)}. {formatMathText(item.statement)}
+                                    <span className="text-gray-700 mr-4 flex-1 text-sm flex gap-2">
+                                        <span className="font-semibold">{String.fromCharCode(97 + i)}.</span>
+                                        <MathSpan content={item.statement} className="flex-1" />
                                     </span>
                                     <div className="flex gap-2 flex-shrink-0">
                                         <button
@@ -382,7 +383,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                     <div className={`w-5 h-5 rounded border mr-3 flex items-center justify-center ${isSelected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-300'}`}>
                                         {isSelected && <CheckCircle className="w-3 h-3" />}
                                     </div>
-                                    {formatMathText(opt)}
+                                    <MathSpan content={opt} className="flex-1" />
                                 </button>
                             )
                         })}
@@ -443,7 +444,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             </span>
                                         );
                                     }
-                                    return <span key={idx}>{formatMathText(part)}</span>;
+                                    return <MathSpan key={idx} content={part} />;
                                 })}
                             </div>
 
@@ -574,7 +575,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             }`}>
                                             {label}
                                         </span>
-                                        <span>{formatMathText(opt)}</span>
+                                        <MathSpan content={opt} className="flex-1" />
                                     </button>
                                 );
                             })}
@@ -617,7 +618,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             );
                                         }
                                     }
-                                    return <span key={idx}>{formatMathText(part)}</span>;
+                                    return <MathSpan key={idx} content={part} />;
                                 })}
                             </div>
                             <div className="flex justify-between items-center">
@@ -671,7 +672,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                         }`}
                                                     style={isSelected ? { textDecoration: 'underline', textDecorationThickness: '3px' } : {}}
                                                 >
-                                                    {formatMathText(word)}
+                                                    <MathSpan content={word} />
                                                 </button>
                                                 {idx < words.length - 1 && ' '}
                                             </span>
@@ -789,7 +790,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                         : 'bg-white border border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
                                                         }`}
                                                 >
-                                                    {item.content}
+                                                    <MathSpan content={item.content} />
                                                 </button>
                                             );
                                         })
@@ -837,7 +838,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                             className={`px-3 py-1.5 rounded-lg text-xs font-medium ${color.bg} ${color.text} ${color.border} border transition-all hover:opacity-80`}
                                                             title="Chạm để bỏ ra"
                                                         >
-                                                            {item.content}
+                                                            <MathSpan content={item.content} />
                                                             <span className="ml-1 opacity-60">×</span>
                                                         </button>
                                                     ))
