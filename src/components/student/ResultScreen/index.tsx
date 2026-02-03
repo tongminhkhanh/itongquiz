@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Quiz, StudentResult, Question } from '../../../types';
 import { renderMathJax } from '../../../hooks/useMathJax';
+import { exportResultToPDF, shareResult } from '../../../services/pdfExportService';
 
 // Components
 import ResultHeader from './ResultHeader';
@@ -17,11 +18,13 @@ interface Props {
     result: StudentResult;
     answers: Record<string, any>;
     onExit: () => void;
+    studentName?: string;
+    studentClass?: string;
 }
 
 export type TabType = 'overview' | 'details' | 'statistics' | 'recommendations';
 
-const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
+const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentName, studentClass }) => {
     const [activeTab, setActiveTab] = useState<TabType>('overview');
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -34,6 +37,28 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
             return () => clearTimeout(timeoutId);
         }
     }, [quiz, answers, activeTab]);
+
+    // Handle PDF export
+    const handleExportPDF = useCallback(async () => {
+        await exportResultToPDF({
+            quiz,
+            result,
+            answers,
+            studentName,
+            studentClass
+        });
+    }, [quiz, result, answers, studentName, studentClass]);
+
+    // Handle share
+    const handleShare = useCallback(async () => {
+        return await shareResult({
+            quizTitle: quiz.title,
+            score: result.score,
+            correctCount: result.correctCount,
+            totalQuestions: result.totalQuestions,
+            studentName
+        });
+    }, [quiz.title, result, studentName]);
 
     // Calculate stats for tabs
     const wrongQuestions = quiz.questions.filter((q) => {
@@ -93,6 +118,8 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
                 result={result}
                 quizTitle={quiz.title}
                 onExit={onExit}
+                onExportPDF={handleExportPDF}
+                onShare={handleShare}
             />
 
             {/* Tab Navigation */}
@@ -113,3 +140,4 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
 };
 
 export default ResultScreen;
+

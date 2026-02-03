@@ -221,7 +221,14 @@ const IoeManageTab: React.FC<IoeManageTabProps> = ({ onEdit }) => {
                                         {quiz.accessCode && ` • Mã vào: ${quiz.accessCode}`}
                                     </p>
                                     <p className="text-xs text-gray-400 mt-1">
-                                        Tạo: {new Date(quiz.createdAt).toLocaleDateString('vi-VN')}
+                                        Tạo: {new Date(quiz.createdAt).toLocaleString('vi-VN', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                        {quiz.createdBy && <span className="ml-2">• Bởi: <span className="text-blue-600 font-medium">{quiz.createdBy}</span></span>}
                                     </p>
                                 </div>
 

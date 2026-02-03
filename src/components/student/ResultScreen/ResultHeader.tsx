@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StudentResult } from '../../../types';
-import { Home, Share2, Download } from 'lucide-react';
+import { Home, Share2, Download, Loader2, Check } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import ScoreBadge from './components/ScoreBadge';
 
@@ -8,10 +8,41 @@ interface Props {
     result: StudentResult;
     quizTitle: string;
     onExit: () => void;
+    onExportPDF?: () => Promise<void>;
+    onShare?: () => Promise<{ success: boolean; method: 'share' | 'clipboard' }>;
 }
 
-const ResultHeader: React.FC<Props> = ({ result, quizTitle, onExit }) => {
+const ResultHeader: React.FC<Props> = ({ result, quizTitle, onExit, onExportPDF, onShare }) => {
     const hasTriggeredConfetti = useRef(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const [isSharing, setIsSharing] = useState(false);
+    const [shareSuccess, setShareSuccess] = useState<'share' | 'clipboard' | null>(null);
+
+    // Handle PDF export
+    const handleExportPDF = async () => {
+        if (!onExportPDF || isExporting) return;
+        setIsExporting(true);
+        try {
+            await onExportPDF();
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    // Handle share
+    const handleShare = async () => {
+        if (!onShare || isSharing) return;
+        setIsSharing(true);
+        try {
+            const result = await onShare();
+            if (result.success) {
+                setShareSuccess(result.method);
+                setTimeout(() => setShareSuccess(null), 3000);
+            }
+        } finally {
+            setIsSharing(false);
+        }
+    };
 
     // Trigger confetti for high scores
     useEffect(() => {
@@ -79,11 +110,36 @@ const ResultHeader: React.FC<Props> = ({ result, quizTitle, onExit }) => {
                     </button>
 
                     <div className="flex gap-2">
-                        <button className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-all backdrop-blur-sm">
-                            <Share2 className="w-4 h-4" />
+                        <button
+                            onClick={handleShare}
+                            disabled={isSharing}
+                            className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-all backdrop-blur-sm disabled:opacity-50 relative"
+                            title="Chia sẻ kết quả"
+                        >
+                            {isSharing ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : shareSuccess ? (
+                                <Check className="w-4 h-4 text-green-300" />
+                            ) : (
+                                <Share2 className="w-4 h-4" />
+                            )}
                         </button>
-                        <button className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-all backdrop-blur-sm">
-                            <Download className="w-4 h-4" />
+                        {shareSuccess && (
+                            <div className="absolute top-12 right-0 bg-white text-gray-800 text-xs px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
+                                {shareSuccess === 'clipboard' ? '✓ Đã sao chép vào clipboard!' : '✓ Đã chia sẻ!'}
+                            </div>
+                        )}
+                        <button
+                            onClick={handleExportPDF}
+                            disabled={isExporting}
+                            className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-all backdrop-blur-sm disabled:opacity-50"
+                            title="Tải PDF"
+                        >
+                            {isExporting ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Download className="w-4 h-4" />
+                            )}
                         </button>
                     </div>
                 </div>

@@ -194,8 +194,8 @@ export const useQuizStore = create<QuizState>()(
             name: 'itongquiz-store',
             storage: createJSONStorage(() => localStorage),
             // Only persist selected fields to avoid stale data
+            // NOTE: Do NOT persist selectedClassLevel - it should reset when returning home
             partialize: (state) => ({
-                selectedClassLevel: state.selectedClassLevel,
                 // Persist quizzes to ensure complex question types (UNDERLINE, etc.) are preserved
                 // Google Sheets doesn't properly store all fields for new question types
                 quizzes: state.quizzes,

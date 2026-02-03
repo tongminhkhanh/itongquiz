@@ -145,12 +145,17 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                 updates.title = quizTitle;
             }
 
+            // Auto-add createdBy if missing (for old quizzes)
+            if (!generatedQuiz.createdBy && authStore.teacherName) {
+                updates.createdBy = authStore.teacherName;
+            }
+
             // Apply updates if any
             if (Object.keys(updates).length > 0) {
                 setGeneratedQuiz({ ...generatedQuiz, ...updates });
             }
         }
-    }, [manualTimeLimit, classLevel, category, requireCode, accessCode, quizTitle]);
+    }, [manualTimeLimit, classLevel, category, requireCode, accessCode, quizTitle, authStore.teacherName]);
 
 
     // Generate random access code

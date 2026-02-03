@@ -109,24 +109,12 @@ const App: React.FC = () => {
 
         authStore.loginStart();
         try {
-            // Fallback login for development
-            if (usernameInput === 'admin' && passwordInput === 'admin') {
-                authStore.loginSuccess('admin', 'Admin', true, null); // Pass username 'admin'
-                setWelcomeName('Admin');
-                quizStore.setView('home'); // Close login modal
-                setShowWelcome(true);
-                setUsernameInput('');
-                setPasswordInput('');
-                return;
-            }
-
             const teachers = await fetchTeachersFromSheets(GOOGLE_SHEET_ID, TEACHER_GID);
             const teacher = teachers.find(t => t.username === usernameInput && t.password === passwordInput);
 
             if (teacher) {
-                // Xác định admin: role='admin' HOẶC username/id chứa 'admin'
-                const isTeacherAdmin = teacher.role === 'admin' ||
-                    teacher.username.toLowerCase().includes('admin');
+                // Xác định admin: chỉ dựa vào cột role='admin' trong Google Sheet
+                const isTeacherAdmin = teacher.role === 'admin';
 
                 authStore.loginSuccess(teacher.username, teacher.fullName, isTeacherAdmin, teacher.class);
                 setWelcomeName(teacher.fullName);
@@ -326,8 +314,8 @@ const App: React.FC = () => {
                                     <img src="/school-logo.png" alt="Logo" className="w-14 h-14 object-contain" />
                                 </div>
                                 <div>
-                                    <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full font-semibold tracking-wide">🚀 CỔNG THÔNG TIN HỌC TẬP</span>
-                                    <h1 className="text-lg md:text-xl font-extrabold mt-1.5">Khu vườn kiến thức diệu kỳ</h1>
+                                    <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full font-semibold tracking-wide">CỔNG THÔNG TIN HỌC TẬP</span>
+                                    <h1 className="text-lg md:text-xl font-extrabold mt-1.5">Hệ thống ôn tập và kiểm tra kiến thức</h1>
                                 </div>
                             </div>
                         </div>
@@ -449,6 +437,9 @@ const App: React.FC = () => {
                                             return matchClass && q.category === categoryFilter;
                                         });
                                     }
+
+                                    // Sort by createdAt desc (newest first)
+                                    filteredQuizzes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
                                     const categoryName = activeTab === 'class' ? 'Tất cả bài kiểm tra'
                                         : activeTab === 'trang-nguyen' ? 'Trạng Nguyên Tiếng Việt'

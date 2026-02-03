@@ -2,7 +2,7 @@ import React, { useState, Suspense } from 'react';
 import { Quiz } from '../../types';
 import { Tabs, TabItem, Button, ErrorBoundary } from '../common';
 import { LogOut, FileText, List, Settings, Bot, Key, X, Save, Loader2, Globe } from 'lucide-react';
-import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID, QUIZ_CATEGORIES, IOE_ALLOWED_USERS } from '../../config/constants';
+import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID, QUIZ_CATEGORIES } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
 
@@ -57,17 +57,9 @@ const TeacherDashboard: React.FC = () => {
             return true; // Tất cả GV đều có thể quản lý và tạo đề ôn tập
         }
 
-        // IOE Tabs - CHỈ Admin được phép
+        // IOE Tabs - CHỈ Admin được phép (tất cả admin đều có quyền)
         if (tab.id === 'ioe' || tab.id === 'ioe-manage' || tab.id === 'ioe-results') {
-            // Phải là Admin
-            if (!authStore.isAdmin) return false;
-
-            // Kiểm tra thêm danh sách allowed users (nếu có cấu hình)
-            const currentUsername = authStore.username || '';
-            if (IOE_ALLOWED_USERS.length > 0) {
-                return IOE_ALLOWED_USERS.includes(currentUsername);
-            }
-            return true; // Admin mà không có danh sách hạn chế thì cho phép
+            return authStore.isAdmin;
         }
 
         return false;
