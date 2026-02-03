@@ -6,6 +6,7 @@ import { generateQuiz, AIProvider } from '../../services/geminiService';
 import { saveIoeQuiz } from '../../services/ioeSheetService';
 import { searchIoeQuestions } from '../../services/ioeSearchService';
 import QuizPreview from './QuizPreview';
+import { useAuthStore } from '../../../stores/authStore';
 
 interface IoeTabProps {
     onSaveQuiz: (quiz: Quiz) => Promise<void>;
@@ -635,9 +636,16 @@ Before finalizing, YOU MUST CHECK:
 - Lớp 10-12 THPT: B1 đến B2`;
 
 const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
+    // Auth store - to get teacher name and class
+    const authStore = useAuthStore();
+
+    // Check if teacher is locked to a specific class (non-admin with assigned class)
+    const isClassLocked = !authStore.isAdmin && !!authStore.teacherClass;
+    const lockedClass = authStore.teacherClass || '3';
+
     // Form state
-    const [quizTitle, setQuizTitle] = useState('Đề luyện thi IOE Lớp 3');
-    const [classLevel, setClassLevel] = useState('3');
+    const [quizTitle, setQuizTitle] = useState(`Đề luyện thi IOE Lớp ${isClassLocked ? lockedClass : '3'}`);
+    const [classLevel, setClassLevel] = useState(isClassLocked ? lockedClass : '3');
     const [topic, setTopic] = useState('');
     const [selectedTopics, setSelectedTopics] = useState<string[]>(['school']); // Multi-select topics
     const [competitionRound, setCompetitionRound] = useState<'school' | 'district' | 'provincial' | 'national'>('school');
@@ -967,6 +975,7 @@ ${searchResult.content}
                     };
                 }),
                 createdAt: new Date().toISOString(),
+                createdBy: authStore.teacherName || undefined,
                 category: 'ioe',
             };
 
@@ -1064,14 +1073,20 @@ ${searchResult.content}
                         {/* Class & Topic */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Khối Lớp</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">
+                                    Khối Lớp {isClassLocked && <span className="text-blue-500 text-xs">(Đã khóa)</span>}
+                                </label>
                                 <select
                                     value={classLevel}
                                     onChange={e => setClassLevel(e.target.value)}
-                                    className="ioe-input ioe-select"
+                                    disabled={isClassLocked}
+                                    className={`ioe-input ioe-select ${isClassLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 >
                                     {[1, 2, 3, 4, 5].map(l => <option key={l} value={l}>Lớp {l}</option>)}
                                 </select>
+                                {isClassLocked && (
+                                    <p className="text-xs text-gray-500 mt-1">Bạn chỉ có thể tạo đề IOE cho lớp {lockedClass}</p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-1">🏆 Vòng thi</label>

@@ -213,6 +213,7 @@ export interface Quiz {
     timeLimit: number; // in minutes
     questions: Question[];
     createdAt: string;
+    createdBy?: string; // Tên giáo viên tạo đề
     accessCode?: string; // 6-character code for quiz access
     requireCode?: boolean; // Whether to require code to start quiz
 }

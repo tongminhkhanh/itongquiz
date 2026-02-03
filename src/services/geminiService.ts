@@ -1,5 +1,6 @@
 import { SYSTEM_INSTRUCTION } from "../config/constants";
 import { QuestionType } from "../types";
+import { generateImage, checkImageServiceAvailability } from "./imageGenerationService";
 
 export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux' | 'native-ocr';
 
@@ -38,28 +39,24 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     ⚠️ QUAN TRỌNG VỀ NỘI DUNG:
     1. Nếu hình ảnh chỉ có 1 đối tượng (VD: 1 con mèo): Câu hỏi phải là "Con vật trong hình là gì?", "Con vật này có đặc điểm gì?", "Con vật này có ích lợi gì?". TUYỆT ĐỐI KHÔNG hỏi kiểu "Con vật nào trong hình..." nếu chỉ có 1 con.
     2. Nếu muốn hỏi "Chọn con vật...", hình ảnh phải chứa nhiều con vật được đánh số hoặc gán nhãn A, B, C, D.
-    3. Vì bạn đang dùng hình ảnh từ thư viện (thường là ảnh đơn), hãy ưu tiên dạng câu hỏi NHẬN DIỆN hoặc SUY LUẬN từ đối tượng duy nhất trong hình.
     
     ⚠️ QUAN TRỌNG VỀ KỸ THUẬT (TỰ ĐỘNG TẠO ẢNH):
-    Trường "image" là BẮT BUỘC. Format: {"type": "IMAGE_QUESTION", "question": "...", "image": "URL_HOẶC_ID_HÌNH", "options": ["A...", "B...", "C...", "D..."], "correctAnswer": "A"}. 
+    Trường "image" là BẮT BUỘC. Format: {"type": "IMAGE_QUESTION", "question": "...", "image": "...", "options": ["A...", "B...", "C...", "D..."], "correctAnswer": "A"}. 
     
-    ${options?.imageLibrary?.length ? '✅ CÓ THƯ VIỆN ẢNH: Hãy dùng ID hình ảnh từ thư viện đã upload.' : '⚠️ KHÔNG CÓ HÌNH UPLOAD - HÃY TỰ TẠO ẢNH NHƯ SAU:'}
+    ${options?.imageLibrary?.length ? '✅ CÓ THƯ VIỆN ẢNH: Hãy dùng ID hình ảnh từ thư viện đã upload.' : '⚠️ KHÔNG CÓ HÌNH UPLOAD - HÃY TẢ MÔ TẢ ĐỂ AI VẼ:'}
     
     1. 📐 NẾU LÀ HÌNH HỌC (Tam giác, Vuông, Tròn, Góc...): 
        - KHÔNG dùng trường "image".
        - HÃY DÙNG trường "geometry".
-       - CÁCH 1 (Cơ bản): Dùng mẫu SVG GEOMETRY JSON (Xem bên dưới). Hỗ trợ: triangle, square, rectangle, circle, line, angle.
-       - Ví dụ Angle: {"type": "IMAGE_QUESTION", "question": "Góc này là góc gì?", "geometry": {"type": "angle", "angle": {"vertex": {"x": 50, "y": 150, "label": "O"}, "start": {"x": 150, "y": 150, "label": "x"}, "end": {"x": 50, "y": 50, "label": "y"}, "showArc": true}}, ...}
-       - CÁCH 2 (Nâng cao - TikZ): Dùng mã TikZ (LaTeX). Bắt đầu bằng "\\begin{tikzpicture}" và kết thúc bằng "\\end{tikzpicture}".
-       - Ví dụ TikZ: {"type": "IMAGE_QUESTION", "question": "...", "geometry": "\\begin{tikzpicture} \\draw (0,0) -- (4,0) -- (2,3.46) -- cycle; \\end{tikzpicture}", ...}
-       - ⚠️ LƯU Ý: Phải escape dấu backslash trong JSON (dùng \\\\ thay vì \\).
+       - Cú pháp như cũ (như đã hướng dẫn ở trên).
     
     2. 🖼️ NẾU KHÔNG PHẢI HÌNH HỌC (Con vật, đồ vật...):
-       - BẮT BUỘC dùng trường "image" với URL placeholder.
-       - Cú pháp: "https://placehold.co/600x400?text=Ten+Hinh+Anh"
-       - Ví dụ: Muốn ảnh con mèo -> "https://placehold.co/600x400?text=Con+Meo"
-       - Ví dụ: Muốn ảnh quả táo -> "https://placehold.co/600x400?text=Qua+Tao"
-       - TUYỆT ĐỐI KHÔNG để trống hoặc dùng URL bịa đặt.
+       - BẮT BUỘC dùng trường "image" với nội dung mô tả chi tiết bằng tiếng Anh (hoặc Việt) để AI vẽ.
+       - Cú pháp: "IMAGE_PROMPT: <Mô tả chi tiết hình ảnh>"
+       - Ví dụ: "IMAGE_PROMPT: cartoon style, a cute cat sitting on a mat, white background"
+       - Ví dụ: "IMAGE_PROMPT: realistic apple fruit, red color, isolated on white"
+       - AI sẽ tự động đọc prompt này và vẽ hình cho bạn.
+       - TUYỆT ĐỐI KHÔNG để trống.
     })`,
     'DROPDOWN': 'DROPDOWN (Câu hỏi điền vào chỗ trống bằng DROPDOWN. Format: {"type": "DROPDOWN", "question": "Chọn từ đúng điền vào chỗ trống", "text": "Thủ đô Việt Nam là [1]. Dân số khoảng [2] triệu người.", "blanks": [{"id": "blank-1", "options": ["Hà Nội", "TP.HCM", "Đà Nẵng"], "correctAnswer": "Hà Nội"}, {"id": "blank-2", "options": ["90", "100", "80"], "correctAnswer": "100"}]}. Trong text dùng [1], [2]... để đánh dấu vị trí dropdown. Mảng blanks chứa các dropdown tương ứng với options và correctAnswer)',
     'UNDERLINE': 'UNDERLINE (Câu hỏi gạch chân từ/cụm từ trong câu. Học sinh click vào từ để gạch chân. Format: {"type": "UNDERLINE", "question": "Gạch chân động từ trong câu sau", "sentence": "Mặt trời ngả nắng đằng tây", "words": ["Mặt trời", "ngả", "nắng", "đằng tây"], "correctWordIndexes": [1]}. Lưu ý: words là mảng các từ/cụm từ tách ra từ sentence. correctWordIndexes là mảng index các từ cần gạch chân (0-indexed). VD: Với câu trên, "ngả" ở index 1 là động từ cần gạch chân.)',
@@ -1047,6 +1044,57 @@ export const generateQuiz = async (
   if (result?.questions?.length > requestedCount) {
     console.warn(`[generateQuiz] ⚠️ AI returned ${result.questions.length} questions but only ${requestedCount} requested. Slicing to ${requestedCount}...`);
     result.questions = result.questions.slice(0, requestedCount);
+  }
+
+  // =========================================================
+  // 🎨 POST-PROCESSING: AI IMAGE GENERATION (IMAGE-NANO-SKILL)
+  // =========================================================
+  if (result?.questions) {
+    // Check if we have any image prompts
+    const imageQuestions = result.questions.filter((q: any) =>
+      q.type === 'IMAGE_QUESTION' &&
+      q.image &&
+      q.image.startsWith('IMAGE_PROMPT:')
+    );
+
+    if (imageQuestions.length > 0) {
+      console.log(`[generateQuiz] Found ${imageQuestions.length} questions needing AI Image Generation...`);
+
+      // Check service first
+      const isServiceAvailable = await checkImageServiceAvailability();
+
+      if (isServiceAvailable) {
+        // Process sequentially to be safe (or parallel with Promise.all if supported)
+        for (let i = 0; i < result.questions.length; i++) {
+          const q = result.questions[i];
+          if (q.type === 'IMAGE_QUESTION' && q.image && q.image.startsWith('IMAGE_PROMPT:')) {
+            const prompt = q.image.replace('IMAGE_PROMPT:', '').trim();
+            console.log(`[generateQuiz] Generating image for Q${i + 1}: ${prompt}`);
+
+            // Generate!
+            const imgResult = await generateImage(prompt);
+
+            if (imgResult.success && imgResult.data) {
+              console.log(`[generateQuiz] ✅ Generated image for Q${i + 1}`);
+              q.image = imgResult.data; // Replace prompt with Base64 image
+            } else {
+              console.error(`[generateQuiz] ❌ Failed to generate image for Q${i + 1}:`, imgResult.error);
+              // Fallback to placeholder if failed
+              q.image = `https://placehold.co/600x400?text=${encodeURIComponent(prompt.substring(0, 20))}`;
+            }
+          }
+        }
+      } else {
+        console.warn("[generateQuiz] ⚠️ CLIProxy not available. Skipping image generation.");
+        // Fallback or leave as prompt? Let's fallback to placeholder.
+        result.questions.forEach((q: any) => {
+          if (q.type === 'IMAGE_QUESTION' && q.image && q.image.startsWith('IMAGE_PROMPT:')) {
+            const prompt = q.image.replace('IMAGE_PROMPT:', '').trim();
+            q.image = `https://placehold.co/600x400?text=${encodeURIComponent(prompt.substring(0, 20))}`;
+          }
+        });
+      }
+    }
   }
 
   return result;

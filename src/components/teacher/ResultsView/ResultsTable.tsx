@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { StudentResult, Quiz } from '../../../types';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, Eye } from 'lucide-react';
 
 export interface ResultsTableProps {
     results: StudentResult[];
@@ -14,6 +14,7 @@ export interface ResultsTableProps {
     sortField: 'score' | 'submittedAt';
     sortOrder: 'asc' | 'desc';
     onSortChange: (field: 'score' | 'submittedAt') => void;
+    onRowClick?: (result: StudentResult) => void;
 }
 
 export const ResultsTable: React.FC<ResultsTableProps> = ({
@@ -22,6 +23,7 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
     sortField,
     sortOrder,
     onSortChange,
+    onRowClick,
 }) => {
     // Get quiz title by ID, prioritize quizTitle from result if available
     const getQuizTitle = (result: StudentResult) => {
@@ -96,11 +98,20 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                         <th className="px-4 py-3 text-right">
                             <SortButton field="submittedAt" label="Thời gian" />
                         </th>
+                        {onRowClick && (
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">
+                                Chi tiết
+                            </th>
+                        )}
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                     {results.map((result) => (
-                        <tr key={result.id} className="hover:bg-gray-50 transition-colors">
+                        <tr
+                            key={result.id}
+                            className={`hover:bg-gray-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
+                            onClick={() => onRowClick?.(result)}
+                        >
                             <td className="px-4 py-3">
                                 <span className="font-medium text-gray-800">{result.studentName}</span>
                             </td>
@@ -125,6 +136,20 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                                     {formatDate(result.submittedAt)}
                                 </span>
                             </td>
+                            {onRowClick && (
+                                <td className="px-4 py-3 text-center">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onRowClick(result);
+                                        }}
+                                        className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
+                                        title="Xem chi tiết"
+                                    >
+                                        <Eye className="w-4 h-4" />
+                                    </button>
+                                </td>
+                            )}
                         </tr>
                     ))}
                 </tbody>

@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Quiz } from '../../types';
 import { Card, Button } from '../common';
 import { useQuizManager } from '../../hooks';
-import { Search, Key, Edit, Trash2, RefreshCw } from 'lucide-react';
+import { Search, Key, Edit, Trash2, RefreshCw, Lock } from 'lucide-react';
 import { useQuizStore } from '../../../stores/quizStore';
+import { useAuthStore } from '../../../stores/authStore';
 
 interface ManageTabProps {
     quizzes: Quiz[];
@@ -13,6 +14,20 @@ interface ManageTabProps {
 }
 
 const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onManageCode }) => {
+    // Auth store - to check class permissions
+    const authStore = useAuthStore();
+
+    // Check if teacher is locked to a specific class
+    const isClassLocked = !authStore.isAdmin && !!authStore.teacherClass;
+    const teacherClass = authStore.teacherClass;
+
+    // Helper function to check if user can manage this quiz
+    const canManageQuiz = (quiz: Quiz): boolean => {
+        if (authStore.isAdmin) return true; // Admin can manage all
+        if (!teacherClass) return true; // No class restriction
+        return quiz.classLevel === teacherClass; // Only manage own class
+    };
+
     // Use custom hooks for quiz management
     const quizManagerHook = useQuizManager({
         quizzes,
@@ -90,36 +105,46 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
                                     Tạo: {new Date(quiz.createdAt).toLocaleDateString('vi-VN')}
+                                    {quiz.createdBy && <span className="ml-2">• Bởi: <span className="text-blue-600 font-medium">{quiz.createdBy}</span></span>}
                                 </p>
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <Button
-                                    onClick={() => onManageCode(quiz.id, quiz.accessCode || '')}
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-purple-600 hover:bg-purple-50"
-                                    icon={<Key className="w-4 h-4" />}
-                                >
-                                    Mã
-                                </Button>
-                                <Button
-                                    onClick={() => onEdit(quiz)}
-                                    variant="ghost"
-                                    size="sm"
-                                    icon={<Edit className="w-4 h-4" />}
-                                >
-                                    Sửa
-                                </Button>
-                                <Button
-                                    onClick={() => quizManagerHook.handleDelete(quiz.id)}
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-red-600 hover:bg-red-50"
-                                    icon={<Trash2 className="w-4 h-4" />}
-                                >
-                                    Xóa
-                                </Button>
+                                {canManageQuiz(quiz) ? (
+                                    <>
+                                        <Button
+                                            onClick={() => onManageCode(quiz.id, quiz.accessCode || '')}
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-purple-600 hover:bg-purple-50"
+                                            icon={<Key className="w-4 h-4" />}
+                                        >
+                                            Mã
+                                        </Button>
+                                        <Button
+                                            onClick={() => onEdit(quiz)}
+                                            variant="ghost"
+                                            size="sm"
+                                            icon={<Edit className="w-4 h-4" />}
+                                        >
+                                            Sửa
+                                        </Button>
+                                        <Button
+                                            onClick={() => quizManagerHook.handleDelete(quiz.id)}
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-red-600 hover:bg-red-50"
+                                            icon={<Trash2 className="w-4 h-4" />}
+                                        >
+                                            Xóa
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <span className="flex items-center gap-1 text-xs text-gray-400 px-2 py-1 bg-gray-100 rounded-lg">
+                                        <Lock className="w-3 h-3" />
+                                        Lớp {quiz.classLevel}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </Card>

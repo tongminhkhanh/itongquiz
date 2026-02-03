@@ -2,6 +2,7 @@
  * AI Provider Selector Component
  * 
  * Select which AI provider to use for quiz generation.
+ * Perplexity is only shown for admin users.
  */
 
 import React from 'react';
@@ -9,19 +10,31 @@ import { AIProvider } from '../../../services/geminiService';
 import { Bot } from 'lucide-react';
 
 const AI_PROVIDERS = [
-    { id: 'perplexity', name: 'Perplexity', description: 'Sonar model' },
-    { id: 'llm-mux', name: 'AI Client Pro', description: 'Multi-Model (Gemini/Claude/OpenAI)' },
+    { id: 'perplexity', name: 'Perplexity', description: 'Sonar model', adminOnly: true },
+    { id: 'llm-mux', name: 'AI Client Pro', description: 'Multi-Model (Gemini/Claude/OpenAI)', adminOnly: false },
 ];
 
 interface AIProviderSelectorProps {
     value: AIProvider;
     onChange: (provider: AIProvider) => void;
+    isAdmin?: boolean; // Only show Perplexity for admin
 }
 
 export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
     value,
     onChange,
+    isAdmin = false,
 }) => {
+    // Filter providers based on admin status
+    const availableProviders = AI_PROVIDERS.filter(p => !p.adminOnly || isAdmin);
+
+    // If current value is not available, switch to first available
+    React.useEffect(() => {
+        if (!availableProviders.find(p => p.id === value)) {
+            onChange(availableProviders[0]?.id as AIProvider || 'llm-mux');
+        }
+    }, [isAdmin, value, onChange, availableProviders]);
+
     return (
         <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
             <label className="block text-sm font-bold text-orange-800 mb-3 flex items-center">
@@ -29,7 +42,7 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
                 Chọn AI Provider:
             </label>
             <div className="flex flex-wrap gap-2">
-                {AI_PROVIDERS.map((provider) => (
+                {availableProviders.map((provider) => (
                     <button
                         key={provider.id}
                         type="button"
@@ -44,7 +57,7 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
                 ))}
             </div>
             <p className="text-xs text-gray-500 mt-2">
-                {AI_PROVIDERS.find((p) => p.id === value)?.description}
+                {availableProviders.find((p) => p.id === value)?.description}
             </p>
         </div>
     );

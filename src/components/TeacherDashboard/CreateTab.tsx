@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, QuestionType, ImageLibraryItem } from '../../types';
 import { Card, Button } from '../common';
-import { FileText, Sparkles, Upload, X, FileCheck, Copy, Check, Link2 } from 'lucide-react';
+import { FileText, Sparkles, Upload, X, FileCheck, Copy, Check, Link2, BookOpen, Search, Zap } from 'lucide-react';
 import { AIProvider, generateQuiz, QuizGenerationOptions } from '../../services/geminiService';
+import { generateTrangNguyenQuiz, TRANG_NGUYEN_TOPICS } from '../../services/trangNguyenGeminiService';
+import { searchTrangNguyenQuestions, enrichPromptWithSearchResults } from '../../services/trangNguyenSearchService';
 import { QuestionTypeSelector, DifficultyLevelSelector, ImageLibrary, AIProviderSelector } from '../teacher/QuizCreator';
 import QuizPreview from './QuizPreview';
 import { QUIZ_CATEGORIES } from '../../config/constants';
+import { useAuthStore } from '../../../stores/authStore';
 
 interface CreateTabProps {
     editingQuiz: Quiz | null;
@@ -15,11 +18,18 @@ interface CreateTabProps {
 }
 
 const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSuccess }) => {
+    // Auth store - to get teacher name and class
+    const authStore = useAuthStore();
+
+    // Check if teacher is locked to a specific class (non-admin with assigned class)
+    const isClassLocked = !authStore.isAdmin && !!authStore.teacherClass;
+    const lockedClass = authStore.teacherClass || '3';
+
     // Form state
     const [topic, setTopic] = useState('');
     const [quizTitle, setQuizTitle] = useState('');
-    const [classLevel, setClassLevel] = useState('3');
-    const [category, setCategory] = useState('vioedu'); // Danh mục quiz
+    const [classLevel, setClassLevel] = useState(isClassLocked ? lockedClass : '3');
+    const [category, setCategory] = useState('on-tap'); // Mặc định: Ôn tập theo chủ đề
     const [content, setContent] = useState('');
     const [manualTimeLimit, setManualTimeLimit] = useState<number | ''>('');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -41,6 +51,9 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
         level2: 5,
         level3: 2,
     });
+
+    // Trạng Nguyên specific state
+    const [tnSearchMode, setTnSearchMode] = useState<'search' | 'quick'>('search');
 
     // Access Code state
     const [requireCode, setRequireCode] = useState(false);
@@ -78,7 +91,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             // Reset form for new quiz
             setTopic('');
             setQuizTitle('');
-            setClassLevel('3');
+            setClassLevel(isClassLocked ? lockedClass : '3'); // Use locked class if applicable
             setContent('');
             setManualTimeLimit('');
             setGeneratedQuiz(null);
@@ -86,9 +99,9 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             setAccessCode('');
             setCustomPrompt('');
             setUploadedFile(null);
-            setCategory('vioedu');
+            setCategory('on-tap'); // Mặc định: Ôn tập theo chủ đề
         }
-    }, [editingQuiz]);
+    }, [editingQuiz, isClassLocked, lockedClass]);
 
     // Save persistence
     useEffect(() => {
@@ -188,8 +201,53 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
 
         try {
             const isPdfMode = (quizMode as any) === 'pdf';
+            const isTrangNguyen = category === 'trang-nguyen';
             const titlePrefix = isPdfMode ? 'Đề từ PDF' : (quizMode === 'exam' ? 'Kiểm tra' : 'Ôn tập');
 
+            // ===== TRẠNG NGUYÊN MODE =====
+            if (isTrangNguyen) {
+                console.log('[CreateTab] Trạng Nguyên mode - using specialized service');
+                console.log('[CreateTab] Search mode:', tnSearchMode);
+
+                // Map selected types to Trạng Nguyên format
+                const tnTypes: string[] = [];
+                if (selectedTypes[QuestionType.MCQ]) tnTypes.push('single_choice');
+                if (selectedTypes[QuestionType.MULTIPLE_SELECT]) tnTypes.push('multiple_select');
+                if (selectedTypes[QuestionType.SHORT_ANSWER]) tnTypes.push('fill_blank');
+                if (selectedTypes[QuestionType.MATCHING]) tnTypes.push('matching');
+                if (selectedTypes[QuestionType.CATEGORIZATION]) tnTypes.push('grouping');
+                if (selectedTypes[QuestionType.ORDERING]) tnTypes.push('rearrange');
+                if (selectedTypes[QuestionType.TRUE_FALSE]) tnTypes.push('reading');
+
+                const result = await generateTrangNguyenQuiz({
+                    topic: topic,
+                    classLevel: classLevel,
+                    questionTypes: tnTypes.length > 0 ? tnTypes : ['single_choice', 'fill_blank'],
+                    questionCount: questionCount,
+                    difficulty: 'mixed',
+                    customPrompt: customPrompt.trim() || undefined,
+                    enableSearch: tnSearchMode === 'search' // Pass search mode
+                });
+
+                const quiz: Quiz = {
+                    id: editingQuiz?.id || `tn-quiz-${Date.now()}`,
+                    title: quizTitle || result.title,
+                    classLevel,
+                    timeLimit: typeof manualTimeLimit === 'number' ? manualTimeLimit : result.timeLimit,
+                    questions: result.questions,
+                    createdAt: editingQuiz ? editingQuiz.createdAt : new Date().toISOString(),
+                    createdBy: editingQuiz?.createdBy || authStore.teacherName || undefined,
+                    accessCode: requireCode ? accessCode.toUpperCase() : undefined,
+                    requireCode: requireCode,
+                    category: 'trang-nguyen',
+                };
+
+                setGeneratedQuiz(quiz);
+                setIsGenerating(false);
+                return;
+            }
+
+            // ===== STANDARD MODE =====
             // Special prompt for PDF mode
             let finalCustomPrompt = customPrompt.trim() || undefined;
             if (isPdfMode) {
@@ -239,6 +297,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     id: q.id || `q-${Date.now()}-${idx}`,
                 })),
                 createdAt: editingQuiz ? editingQuiz.createdAt : new Date().toISOString(),
+                createdBy: editingQuiz?.createdBy || authStore.teacherName || undefined,
                 accessCode: requireCode ? accessCode.toUpperCase() : undefined,
                 requireCode: requireCode,
                 category: category, // Lưu danh mục
@@ -308,14 +367,20 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                         {/* Basic Info */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Khối Lớp</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">
+                                    Khối Lớp {isClassLocked && <span className="text-orange-500 text-xs">(Đã khóa)</span>}
+                                </label>
                                 <select
                                     value={classLevel}
                                     onChange={e => setClassLevel(e.target.value)}
-                                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                                    disabled={isClassLocked}
+                                    className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${isClassLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 >
                                     {[1, 2, 3, 4, 5].map(l => <option key={l} value={l}>Lớp {l}</option>)}
                                 </select>
+                                {isClassLocked && (
+                                    <p className="text-xs text-gray-500 mt-1">Bạn chỉ có thể tạo đề cho lớp {lockedClass}</p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-1">Thời gian (phút)</label>
@@ -537,18 +602,21 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     onChange={setDifficultyLevels}
                 />
 
-                {/* AI Provider */}
+                {/* AI Provider - Perplexity only for admin */}
                 <AIProviderSelector
                     value={aiProvider}
                     onChange={setAiProvider}
+                    isAdmin={authStore.isAdmin}
                 />
 
-                {/* Image Library */}
-                <ImageLibrary
-                    images={imageLibrary}
-                    onChange={setImageLibrary}
-                    topic={topic}
-                />
+                {/* Image Library - only for admin */}
+                {authStore.isAdmin && (
+                    <ImageLibrary
+                        images={imageLibrary}
+                        onChange={setImageLibrary}
+                        topic={topic}
+                    />
+                )}
 
                 {/* Error */}
                 {error && (
@@ -559,48 +627,98 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
 
                 {/* Generate Buttons */}
                 <div className="space-y-3">
-                    {/* PDF-based generation button - Featured prominently when file is uploaded */}
-                    {uploadedFile && (
-                        <Button
-                            onClick={() => { setQuizMode('pdf' as any); handleGenerate(); }}
-                            loading={isGenerating && (quizMode as any) === 'pdf'}
-                            disabled={!uploadedFile || questionCount === 0}
-                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                            size="lg"
-                            variant="primary"
-                            icon={<FileText className="w-5 h-5" />}
-                        >
-                            {isGenerating && (quizMode as any) === 'pdf' ? 'Đang đọc PDF...' : `📄 TẠO ĐỀ TỪ FILE: ${uploadedFile.name.substring(0, 20)}...`}
-                        </Button>
+                    {/* TRẠNG NGUYÊN SPECIFIC BUTTONS */}
+                    {category === 'trang-nguyen' && (
+                        <div className="space-y-3">
+                            {/* Search + Generate Button */}
+                            <button
+                                onClick={() => { setTnSearchMode('search'); setQuizMode('practice'); handleGenerate(); }}
+                                disabled={!topic.trim() || questionCount === 0 || isGenerating}
+                                className={`w-full py-4 px-6 rounded-xl font-bold text-white text-lg flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${isGenerating && tnSearchMode === 'search'
+                                    ? 'bg-gradient-to-r from-purple-400 to-pink-400 animate-pulse'
+                                    : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
+                                    }`}
+                            >
+                                <Search className="w-5 h-5" />
+                                <span>🔍</span>
+                                {isGenerating && tnSearchMode === 'search'
+                                    ? 'Đang tìm kiếm đề thật...'
+                                    : `Tạo đề (Perplexity + Search) - ${questionCount} câu`
+                                }
+                            </button>
+                            <p className="text-xs text-gray-500 text-center">
+                                Tìm kiếm đề Trạng Nguyên thật trên mạng trước khi sinh • Chất lượng cao hơn • Chậm hơn
+                            </p>
+
+                            {/* Quick AI Generate Button */}
+                            <button
+                                onClick={() => { setTnSearchMode('quick'); setQuizMode('practice'); handleGenerate(); }}
+                                disabled={!topic.trim() || questionCount === 0 || isGenerating}
+                                className={`w-full py-4 px-6 rounded-xl font-bold text-white text-lg flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${isGenerating && tnSearchMode === 'quick'
+                                    ? 'bg-gradient-to-r from-blue-400 to-cyan-400 animate-pulse'
+                                    : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
+                                    }`}
+                            >
+                                <Zap className="w-5 h-5" />
+                                <span>⚡</span>
+                                {isGenerating && tnSearchMode === 'quick'
+                                    ? 'Đang sinh đề...'
+                                    : `Tạo đề nhanh (AI) - ${questionCount} câu`
+                                }
+                            </button>
+                            <p className="text-xs text-gray-500 text-center">
+                                Sinh trực tiếp bằng AI • Nhanh hơn • Không cần Perplexity API
+                            </p>
+                        </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <Button
-                            onClick={() => { setQuizMode('exam'); handleGenerate(); }}
-                            loading={isGenerating && quizMode === 'exam'}
-                            disabled={!topic.trim() || questionCount === 0 || !customPrompt.trim()}
-                            className="w-full"
-                            size="lg"
-                            variant="primary"
-                            icon={<FileText className="w-5 h-5" />}
-                        >
-                            {isGenerating && quizMode === 'exam' ? 'Đang tạo...' : '📝 Ra đề THI'}
-                        </Button>
-                        <Button
-                            onClick={() => { setQuizMode('practice'); handleGenerate(); }}
-                            loading={isGenerating && quizMode === 'practice'}
-                            disabled={!topic.trim() || questionCount === 0}
-                            className="w-full"
-                            size="lg"
-                            variant="secondary"
-                            icon={<Sparkles className="w-5 h-5" />}
-                        >
-                            {isGenerating && quizMode === 'practice' ? 'Đang tạo...' : '📚 Ra đề ÔN TẬP'}
-                        </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 text-center">
-                        💡 <strong>Đề từ PDF:</strong> AI đọc file và lấy nguyên văn câu hỏi | <strong>Đề thi:</strong> Theo yêu cầu GV | <strong>Ôn tập:</strong> AI tự tạo
-                    </p>
+                    {/* STANDARD BUTTONS (for other categories) */}
+                    {category !== 'trang-nguyen' && (
+                        <>
+                            {/* PDF-based generation button */}
+                            {uploadedFile && (
+                                <Button
+                                    onClick={() => { setQuizMode('pdf' as any); handleGenerate(); }}
+                                    loading={isGenerating && (quizMode as any) === 'pdf'}
+                                    disabled={!uploadedFile || questionCount === 0}
+                                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                                    size="lg"
+                                    variant="primary"
+                                    icon={<FileText className="w-5 h-5" />}
+                                >
+                                    {isGenerating && (quizMode as any) === 'pdf' ? 'Đang đọc PDF...' : `📄 TẠO ĐỀ TỪ FILE: ${uploadedFile.name.substring(0, 20)}...`}
+                                </Button>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <Button
+                                    onClick={() => { setQuizMode('exam'); handleGenerate(); }}
+                                    loading={isGenerating && quizMode === 'exam'}
+                                    disabled={!topic.trim() || questionCount === 0 || !customPrompt.trim()}
+                                    className="w-full"
+                                    size="lg"
+                                    variant="primary"
+                                    icon={<FileText className="w-5 h-5" />}
+                                >
+                                    {isGenerating && quizMode === 'exam' ? 'Đang tạo...' : '📝 Ra đề THI'}
+                                </Button>
+                                <Button
+                                    onClick={() => { setQuizMode('practice'); handleGenerate(); }}
+                                    loading={isGenerating && quizMode === 'practice'}
+                                    disabled={!topic.trim() || questionCount === 0}
+                                    className="w-full"
+                                    size="lg"
+                                    variant="secondary"
+                                    icon={<Sparkles className="w-5 h-5" />}
+                                >
+                                    {isGenerating && quizMode === 'practice' ? 'Đang tạo...' : '📚 Ra đề ÔN TẬP'}
+                                </Button>
+                            </div>
+                            <p className="text-xs text-gray-500 text-center">
+                                💡 <strong>Đề từ PDF:</strong> AI đọc file và lấy nguyên văn câu hỏi | <strong>Đề thi:</strong> Theo yêu cầu GV | <strong>Ôn tập:</strong> AI tự tạo
+                            </p>
+                        </>
+                    )}
                 </div>
             </div>
 

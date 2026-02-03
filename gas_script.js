@@ -2,6 +2,18 @@
 // Token được hardcode để tránh lỗi cấu hình
 const API_SECRET_TOKEN = "[REDACTED-COMPROMISED-SHARED-TOKEN]";
 
+// ============ SHEET STRUCTURE ============
+// Teachers Sheet Headers: username | password | fullName | role | class
+// - username: Tên đăng nhập (VD: "gv1", "admin")
+// - password: Mật khẩu (plain text cho app đơn giản)
+// - fullName: Họ tên đầy đủ (VD: "Nguyễn Thị Lan")
+// - role: "admin" hoặc "teacher"
+// - class: Lớp phụ trách (VD: "3", "4A", "5") - Giáo viên chỉ tạo đề cho lớp này
+//
+// Quizzes Sheet Headers: id | title | classLevel | category | timeLimit | createdAt | accessCode | requireCode | createdBy
+//
+// Questions Sheet Headers: id | quizId | type | question | options | correctAnswer | items | text | blanks | distractors
+//
 // ============ MAIN HANDLERS ============
 
 function doGet(e) {
@@ -144,7 +156,8 @@ function saveQuiz(sheet, data) {
         data.timeLimit,
         data.createdAt,
         data.accessCode || "",
-        data.requireCode ? "TRUE" : "FALSE"
+        data.requireCode ? "TRUE" : "FALSE",
+        sanitizeInput(data.createdBy || "") // Tên giáo viên tạo đề
     ]);
 
     // 2. Save Questions to 'Questions' sheet

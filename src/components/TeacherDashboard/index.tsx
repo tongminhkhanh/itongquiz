@@ -112,7 +112,9 @@ const TeacherDashboard: React.FC = () => {
                             <Bot className="w-6 h-6 text-orange-600" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold text-gray-800">Giáo viên - Trường TH Ít Ong</h1>
+                            <h1 className="text-xl font-bold text-gray-800">
+                                {authStore.teacherName || 'Giáo viên'} - Trường TH Ít Ong
+                            </h1>
                             <p className="text-sm text-gray-500">Quản lý đề kiểm tra</p>
                         </div>
                     </div>

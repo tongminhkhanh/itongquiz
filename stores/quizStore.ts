@@ -180,6 +180,9 @@ export const useQuizStore = create<QuizState>()(
                         set((state) => ({
                             results: [...state.results, result]
                         }));
+                    } else {
+                        // Throw error if save failed so caller can handle it
+                        throw new Error('Không thể lưu kết quả. Vui lòng thử lại!');
                     }
                 } catch (err) {
                     console.error('Failed to submit result:', err);

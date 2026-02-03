@@ -12,7 +12,7 @@ import {
 interface Props {
   quiz: Quiz;
   onExit: () => void;
-  onSaveResult: (result: StudentResult) => void;
+  onSaveResult: (result: StudentResult) => void | Promise<void>;
 }
 
 const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
@@ -37,6 +37,21 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
   // Shuffled questions for random order
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // UUID generator fallback (crypto.randomUUID not supported in all browsers/HTTP)
+  const generateUUID = (): string => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    // Fallback for older browsers or HTTP
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
 
   // Fisher-Yates shuffle algorithm
   const shuffleArray = <T,>(array: T[]): T[] => {
@@ -343,12 +358,18 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     return { score: parseFloat(score.toFixed(1)), correctCount, totalItems };
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // Prevent double submit
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
     const { score, correctCount, totalItems } = calculateScore();
     const timeTaken = Math.round((Date.now() - startTime) / 60000);
 
     const resultData: StudentResult = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       quizId: quiz.id,
       quizTitle: quiz.title, // ✅ Thêm quizTitle để lưu vào Google Sheets
       studentName,
@@ -361,9 +382,20 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       answers
     };
 
-    setResult(resultData);
-    onSaveResult(resultData);
-    setStep('result');
+    try {
+      // Await the save result (it might be a Promise)
+      await onSaveResult(resultData);
+      setResult(resultData);
+      setStep('result');
+    } catch (error: any) {
+      console.error('🚨 Submit failed:', error);
+      setSubmitError('Lỗi khi nộp bài! Vui lòng thử lại.');
+      // Still show result locally even if save fails
+      setResult(resultData);
+      setStep('result');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -548,9 +580,20 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
             <button
               onClick={() => setShowConfirmModal(true)}
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all flex items-center justify-center"
+              disabled={isSubmitting}
+              className={`w-full font-bold py-3 rounded-xl shadow-lg transition-all flex items-center justify-center ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700 text-white'}`}
             >
-              <CheckCircle className="w-5 h-5 mr-2" /> NỘP BÀI
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Đang nộp bài...
+                </>
+              ) : (
+                <><CheckCircle className="w-5 h-5 mr-2" /> NỘP BÀI</>
+              )}
             </button>
           </div>
         </div>
@@ -571,9 +614,10 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-10 flex justify-center md:hidden">
         <button
           onClick={() => setShowConfirmModal(true)}
-          className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-12 rounded-full shadow-lg text-lg transform transition-transform hover:scale-105"
+          disabled={isSubmitting}
+          className={`font-bold py-3 px-12 rounded-full shadow-lg text-lg transform transition-transform ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700 text-white hover:scale-105'}`}
         >
-          NỘP BÀI
+          {isSubmitting ? 'Đang nộp...' : 'NỘP BÀI'}
         </button>
       </div>
     </div>

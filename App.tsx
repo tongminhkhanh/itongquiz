@@ -127,6 +127,7 @@ const App: React.FC = () => {
                 // Xác định admin: role='admin' HOẶC username/id chứa 'admin'
                 const isTeacherAdmin = teacher.role === 'admin' ||
                     teacher.username.toLowerCase().includes('admin');
+
                 authStore.loginSuccess(teacher.username, teacher.fullName, isTeacherAdmin, teacher.class);
                 setWelcomeName(teacher.fullName);
                 quizStore.setView('home'); // Close login modal
@@ -180,13 +181,13 @@ const App: React.FC = () => {
                     {isIoeQuiz ? (
                         <IoeStudentView
                             quiz={quizStore.selectedQuiz}
-                            onExit={() => { quizStore.selectQuiz(null); quizStore.setView('home'); }}
+                            onExit={() => quizStore.goHome()}
                             onSaveResult={saveIoeResult}
                         />
                     ) : (
                         <StudentView
                             quiz={quizStore.selectedQuiz}
-                            onExit={() => { quizStore.selectQuiz(null); quizStore.setView('home'); }}
+                            onExit={() => quizStore.goHome()}
                             onSaveResult={quizStore.submitResult}
                         />
                     )}

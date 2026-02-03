@@ -9,6 +9,11 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       host: '0.0.0.0',
       proxy: {
+        '/api/cliproxy': {
+          target: process.env.VITE_CLIPROXY_API || 'https://api.thitong.site/v1',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/cliproxy/, ''),
+        },
         '/api/deepseek': {
           target: 'https://api.deepseek.com',
           changeOrigin: true,

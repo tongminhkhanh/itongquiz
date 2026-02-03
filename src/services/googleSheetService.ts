@@ -91,13 +91,12 @@ export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Pro
             // Hỗ trợ cả 2 format: 'id' hoặc 'username' làm username đăng nhập
             username: String(row.username || row.id || '').trim(),
             password: String(row.password || '').trim(), // Note: Password hashing should be done on server side ideally
-            // Hỗ trợ cả 2 format: 'fullName' hoặc 'name' làm tên hiển thị
-            fullName: row.fullName || row.name || '',
+            // Hỗ trợ nhiều format: 'fullName', 'fullname', 'name' làm tên hiển thị
+            fullName: row.fullName || row.fullname || row.name || '',
             role: row.role || 'teacher',
             class: row.class ? String(row.class).trim() : undefined
         }));
 
-        console.log('[fetchTeachersFromSheets] Mapped teachers count:', teachers.length);
         return teachers;
 
     } catch (error) {
@@ -285,6 +284,7 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                     return parsed;
                 })(),
                 createdAt: row.createdAt || new Date().toISOString(),
+                createdBy: row.createdBy || undefined, // Tên giáo viên tạo đề
                 questions: questionsByQuizId[row.id] || [],
                 accessCode: row.accessCode || "",
                 requireCode: row.requireCode === "TRUE" || row.requireCode === true
