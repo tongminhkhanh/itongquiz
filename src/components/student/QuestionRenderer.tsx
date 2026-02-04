@@ -404,11 +404,12 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
                     const qBlanks = (q as any).blanks || [];
                     const qDistractors = (q as any).distractors || [];
-                    const words = [...qBlanks, ...qDistractors];
+                    // 🔐 Filter to ensure only strings (blanks might be objects in some cases)
+                    const words = [...qBlanks, ...qDistractors].filter((w): w is string => typeof w === 'string');
                     const seed = q.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
                     const allWords = words.sort((a, b) => {
-                        const hashA = (a.charCodeAt(0) * seed) % 100;
-                        const hashB = (b.charCodeAt(0) * seed) % 100;
+                        const hashA = ((a || '').charCodeAt(0) * seed) % 100;
+                        const hashB = ((b || '').charCodeAt(0) * seed) % 100;
                         return hashA - hashB;
                     });
 

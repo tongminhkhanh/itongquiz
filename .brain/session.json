@@ -1,0 +1,74 @@
+{
+    "updated_at": "2026-02-04T08:30:00Z",
+    "working_on": {
+        "feature": "AI Explanation Rendering Fix",
+        "task": "Fix Markdown và công thức toán trong AI giải thích",
+        "status": "completed",
+        "files": [
+            "src/components/common/ExplanationContent.tsx",
+            "src/components/common/index.ts",
+            "src/components/ExplanationModal.tsx",
+            "src/services/aiTutorService.ts",
+            "styles/components.css"
+        ],
+        "notes": "Fixed: Markdown headers (###), line breaks, và công thức phân số không render đúng."
+    },
+    "recent_changes": [
+        {
+            "type": "feature",
+            "description": "Created ExplanationContent component cho AI explanation rendering với Markdown processing và LaTeX formatting",
+            "files": [
+                "src/components/common/ExplanationContent.tsx",
+                "src/components/common/index.ts"
+            ]
+        },
+        {
+            "type": "feature",
+            "description": "Added CSS styles cho explanation content với bullet points và visual hierarchy",
+            "files": [
+                "styles/components.css"
+            ]
+        },
+        {
+            "type": "fix",
+            "description": "Updated ExplanationModal to use ExplanationContent instead of MathSpan for AI explanations",
+            "files": [
+                "src/components/ExplanationModal.tsx"
+            ]
+        },
+        {
+            "type": "fix",
+            "description": "Improved AI prompt in aiTutorService to return properly formatted explanations with bullet points, no Markdown headers",
+            "files": [
+                "src/services/aiTutorService.ts"
+            ]
+        }
+    ],
+    "decisions_made": [
+        {
+            "decision": "Tạo ExplanationContent component riêng thay vì sửa MathSpan",
+            "reason": "MathSpan chỉ xử lý LaTeX, còn AI explanation cần xử lý Markdown + line breaks + LaTeX"
+        },
+        {
+            "decision": "Convert phân số a/b thành LaTeX $\\frac{a}{b}$ trong ExplanationContent",
+            "reason": "Render đẹp hơn, dễ đọc cho học sinh tiểu học"
+        },
+        {
+            "decision": "Format explanation thành bullet points với numbered items",
+            "reason": "Trình bày khoa học, dễ hiểu, dễ theo dõi từng ý"
+        }
+    ],
+    "errors_encountered": [
+        {
+            "error": "AI trả về text có Markdown headers (###) và ký tự thừa (x x)",
+            "solution": "1) Strip Markdown headers trong formatExplanationHtml 2) Clean 'x x' artifacts 3) Cập nhật prompt AI để không dùng Markdown headers",
+            "resolved": true
+        },
+        {
+            "error": "Công thức phân số 1/2, 3/5 không được render đẹp",
+            "solution": "Convert a/b thành LaTeX $\\frac{a}{b}$ trong formatExplanationHtml",
+            "resolved": true
+        }
+    ],
+    "pending_tasks": []
+}

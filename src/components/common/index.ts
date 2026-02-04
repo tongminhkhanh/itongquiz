@@ -16,3 +16,4 @@ export type { TabItem, TabsProps } from './Tabs';
 
 export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as MathSpan } from './MathSpan';
+export { default as ExplanationContent } from './ExplanationContent';

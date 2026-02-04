@@ -27,17 +27,17 @@ const fixReorderQuestion = (text: string): string => {
 const insertTags = (text: string, tag: 'b' | 'i', start: number, end: number) => {
     const openTag = `<${tag}>`;
     const closeTag = `</${tag}>`;
-    
+
     // If no selection, just append at end (or at cursor location implies splitting)
     // If start === end, insert empty tags at cursor
     const before = text.substring(0, start);
     const selection = text.substring(start, end);
     const after = text.substring(end);
-    
+
     // If selection already wrapped, unwrap it (simple check)
     // This is basic. For robustness, checking exact surrounding tags is better but complex.
     // For now, simple insertion.
-    
+
     return `${before}${openTag}${selection}${closeTag}${after}`;
 };
 
@@ -69,10 +69,11 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ onApply }) => {
 interface QuizPreviewProps {
     quiz: Quiz | null;
     onSave: () => void;
+    isSaving?: boolean;
     onUpdateQuestions?: (questions: Question[]) => void;
 }
 
-const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestions }) => {
+const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = false, onUpdateQuestions }) => {
     // Edit modal state
     const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
     const [editQuestionText, setEditQuestionText] = useState('');
@@ -111,7 +112,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
 
     // Refs for textareas to handle formatting insertion
     const editQuestionTextRef = useRef<HTMLTextAreaElement>(null);
-    
+
     // Handle formatting apply
     const applyFormat = (tag: 'b' | 'i', target: 'question') => {
         if (target === 'question') {
@@ -121,7 +122,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                 const end = textarea.selectionEnd;
                 const newText = insertTags(editQuestionText, tag, start, end);
                 setEditQuestionText(newText);
-                
+
                 // Restore selection (offset by tag length)
                 setTimeout(() => {
                     const newCursorPos = end + 2 + tag.length + 3 + tag.length + 1; // <b>...</b>
@@ -566,9 +567,10 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, onUpdateQuestio
                                 <Button
                                     onClick={onSave}
                                     variant="success"
+                                    loading={isSaving}
                                     icon={<Save className="w-4 h-4" />}
                                 >
-                                    Lưu đề
+                                    {isSaving ? 'Đang lưu...' : 'Lưu đề'}
                                 </Button>
                             </div>
                         </div>

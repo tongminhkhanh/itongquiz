@@ -140,9 +140,10 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
                                             variant="ghost"
                                             size="sm"
                                             className="text-red-600 hover:bg-red-50"
+                                            loading={quizManagerHook.deletingId === quiz.id}
                                             icon={<Trash2 className="w-4 h-4" />}
                                         >
-                                            Xóa
+                                            {quizManagerHook.deletingId === quiz.id ? 'Đang xóa...' : 'Xóa'}
                                         </Button>
                                     </>
                                 ) : (

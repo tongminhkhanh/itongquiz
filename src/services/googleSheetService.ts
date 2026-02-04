@@ -169,6 +169,57 @@ const unescapeSheetValue = (val: any): string => {
     return strVal;
 };
 
+// 🔐 ANTI-CHEAT: Strip answer fields from questions
+// This prevents students from seeing correct answers in DevTools
+const stripAnswerFields = (question: any): any => {
+    const stripped = { ...question };
+
+    // Remove direct answer fields
+    delete stripped.correctAnswer;
+    delete stripped.correctAnswers;
+    delete stripped.correctOrder;
+    delete stripped.correctWordIndexes;
+
+    // For TRUE_FALSE: remove isCorrect/isTrue from items
+    if (stripped.items && Array.isArray(stripped.items)) {
+        stripped.items = stripped.items.map((item: any) => {
+            const { isCorrect, isTrue, ...safeItem } = item;
+            return safeItem;
+        });
+    }
+
+    // For DROPDOWN: remove correctAnswer from blanks (blanks are objects with correctAnswer field)
+    // For DRAG_DROP: blanks is an array of strings (correct words) - these get mixed with distractors
+    // so they're safe to keep (students see all words shuffled together)
+    if (stripped.blanks && Array.isArray(stripped.blanks)) {
+        // Only process if blanks contain objects (DROPDOWN type)
+        if (stripped.blanks.length > 0 && typeof stripped.blanks[0] === 'object') {
+            stripped.blanks = stripped.blanks.map((blank: any) => {
+                const { correctAnswer, answer, ...safeBlank } = blank;
+                return safeBlank;
+            });
+        }
+        // DRAG_DROP blanks are strings - keep as-is (they're shuffled with distractors anyway)
+    }
+
+    // For CATEGORIZATION: remove categoryId from items
+    if (stripped.type === 'CATEGORIZATION' && stripped.items) {
+        stripped.items = stripped.items.map((item: any) => {
+            const { categoryId, ...safeItem } = item;
+            return safeItem;
+        });
+    }
+
+    return stripped;
+};
+
+// Flag to control answer stripping (set false for teacher views)
+let _stripAnswersEnabled = true;
+export const setStripAnswersEnabled = (enabled: boolean) => {
+    _stripAnswersEnabled = enabled;
+};
+export const isStripAnswersEnabled = () => _stripAnswersEnabled;
+
 export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, questionGid: string): Promise<Quiz[]> => {
     const cacheKey = CacheKeys.quizzes(sheetId);
 
@@ -293,7 +344,9 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                 }
 
                 if (question) {
-                    questionsByQuizId[qId].push(question);
+                    // 🔐 ANTI-CHEAT: Strip answers if enabled (for student views)
+                    const finalQuestion = _stripAnswersEnabled ? stripAnswerFields(question) : question;
+                    questionsByQuizId[qId].push(finalQuestion);
                 }
             });
 

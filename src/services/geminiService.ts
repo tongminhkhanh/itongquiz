@@ -135,9 +135,20 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     TỔNG CỘNG: ${levels.level1 + levels.level2 + levels.level3} câu
     
     ⚠️ LƯU Ý QUAN TRỌNG: 
-    - KHÔNG được ghi "Mức 1", "Mức 2", "Mức 3", "Nhận biết", "Thông hiểu", "Vận dụng" hay nhãn mức độ nào vào câu hỏi
+    - KHÔNG được ghi "Mức 1", "Mức 2", "Mức 3", "Nhận biết", "Thông hiểu", "Vận dụng" hay nhãn mức độ nào vào NỘI DUNG câu hỏi
     - Chỉ tạo câu hỏi bình thường, độ khó phản ánh qua nội dung câu hỏi
-    - Đảm bảo phân bổ đúng số lượng theo từng mức`;
+    - Đảm bảo phân bổ đúng số lượng theo từng mức
+    
+    🔴 BẮT BUỘC: MỖI CÂU HỎI PHẢI CÓ TRƯỜNG "difficultyLevel":
+    - Câu Mức 1: thêm "difficultyLevel": 1
+    - Câu Mức 2: thêm "difficultyLevel": 2  
+    - Câu Mức 3: thêm "difficultyLevel": 3
+    Ví dụ: {"type": "MCQ", "question": "...", "difficultyLevel": 1, ...}
+    
+    🔴 THỨ TỰ SẮP XẾP CÂU HỎI: 
+    - ${levels.level1} câu Mức 1 ĐẶT Ở ĐẦU ĐỀ (từ dễ)
+    - ${levels.level2} câu Mức 2 ĐẶT Ở GIỮA ĐỀ (trung bình)
+    - ${levels.level3} câu Mức 3 ĐẶT Ở CUỐI ĐỀ (khó nhất)`;
   }
 
   // Build image library instructions
@@ -562,6 +573,20 @@ const validateAndFixQuiz = (quiz: any, maxQuestions?: number): any => {
     return fixedQ;
   });
 
+  // 🔴 SẮP XẾP CÂU HỎI THEO MỨC ĐỘ: Mức 1 (đầu) → Mức 2 (giữa) → Mức 3 (cuối)
+  // Nếu câu hỏi có trường difficultyLevel, sắp xếp theo thứ tự tăng dần
+  if (quiz.questions.some((q: any) => q.difficultyLevel)) {
+    console.log('[validateAndFixQuiz] Sorting questions by difficultyLevel...');
+    quiz.questions.sort((a: any, b: any) => {
+      const levelA = a.difficultyLevel || 2; // Default to level 2 if not specified
+      const levelB = b.difficultyLevel || 2;
+      return levelA - levelB;
+    });
+    console.log('[validateAndFixQuiz] Questions sorted. Order:',
+      quiz.questions.map((q: any, i: number) => `Q${i + 1}: Level ${q.difficultyLevel || '?'}`).join(', ')
+    );
+  }
+
   return quiz;
 };
 
@@ -927,7 +952,7 @@ Tài liệu đính kèm:`
   console.log(`[AIClient] Sending request to ${API_URL} with model ${MODEL_NAME}`);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 phút timeout cho 50 câu
+  const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 phút timeout cho 100 câu
 
   try {
     const response = await fetch(API_URL, {

@@ -36,28 +36,40 @@ const fixReorderQuestion = (text: string): string => {
     return text;
 };
 
-// Helper to call IOE GAS API
-const callIoeGasApi = async (action: string, payload: any = {}): Promise<any> => {
+// Helper to call IOE GAS API with timeout
+const callIoeGasApi = async (action: string, payload: any = {}, timeoutMs: number = 120000): Promise<any> => {
     if (!IOE_GOOGLE_SCRIPT_URL) {
         console.error("[IOE] GOOGLE_SCRIPT_URL is not defined");
         return null;
     }
 
-    console.log(`[IOE] Calling API: ${action}`);
+    console.log(`[IOE] Calling API: ${action} (timeout: ${timeoutMs / 1000}s)`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
+        const bodyData = {
+            ...payload,
+            action,
+            token: IOE_API_SECRET_TOKEN
+        };
+
+        // Log payload size for debugging large requests
+        const payloadSize = JSON.stringify(bodyData).length;
+        console.log(`[IOE] Payload size: ${(payloadSize / 1024).toFixed(2)} KB`);
+
         const response = await fetch(IOE_GOOGLE_SCRIPT_URL, {
             method: 'POST',
             mode: 'cors',
             headers: {
                 'Content-Type': 'text/plain;charset=utf-8',
             },
-            body: JSON.stringify({
-                ...payload,
-                action,
-                token: IOE_API_SECRET_TOKEN
-            }),
+            body: JSON.stringify(bodyData),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         const data = await response.json();
 
@@ -69,8 +81,13 @@ const callIoeGasApi = async (action: string, payload: any = {}): Promise<any> =>
 
         console.log(`[IOE] API ${action} success, got:`, Array.isArray(data) ? `${data.length} items` : data);
         return data;
-    } catch (error) {
-        console.error(`[IOE] Network Error [${action}]:`, error);
+    } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            console.error(`[IOE] API ${action} timeout after ${timeoutMs / 1000}s`);
+        } else {
+            console.error(`[IOE] Network Error [${action}]:`, error);
+        }
         return null;
     }
 };
@@ -306,9 +323,10 @@ const parseIoeQuestion = (row: any): Question => {
 // ============ SAVE FUNCTIONS ============
 
 export const saveIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
-    console.log('[IOE] Saving quiz:', quiz.id);
+    console.log('[IOE] Saving quiz:', quiz.id, 'with', quiz.questions.length, 'questions');
 
     try {
+        // Use longer timeout (180s) for large quiz saves (100 questions)
         const result = await callIoeGasApi('create_quiz', {
             id: quiz.id,
             title: quiz.title,
@@ -320,18 +338,25 @@ export const saveIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
             accessCode: quiz.accessCode || '',
             requireCode: quiz.requireCode || false,
             questions: quiz.questions,
-        });
+        }, 180000); // 3 minute timeout for 100 questions
 
         if (result && result.status === 'success') {
             console.log('[IOE] Quiz saved successfully');
             clearIoeCache(); // Invalidate cache after save
             return true;
         }
+
+        // Log detailed error info
+        const errorMsg = result?.message || 'Không nhận được phản hồi từ server';
         console.error('[IOE] Failed to save quiz:', result);
-        return false;
-    } catch (error) {
+        console.error('[IOE] Error message:', errorMsg);
+
+        // Throw with specific message for UI
+        throw new Error(`Lỗi từ IOE Sheet: ${errorMsg}`);
+    } catch (error: any) {
         console.error('[IOE] Error saving quiz:', error);
-        return false;
+        // Re-throw with detailed message
+        throw new Error(error.message || 'Lỗi kết nối đến IOE Sheet');
     }
 };
 

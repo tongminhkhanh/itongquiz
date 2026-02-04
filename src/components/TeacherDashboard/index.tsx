@@ -1,10 +1,11 @@
-import React, { useState, Suspense } from 'react';
+import React, { useState, Suspense, useEffect } from 'react';
 import { Quiz } from '../../types';
 import { Tabs, TabItem, Button, ErrorBoundary } from '../common';
 import { LogOut, FileText, List, Settings, Bot, Key, X, Save, Loader2, Globe } from 'lucide-react';
 import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID, QUIZ_CATEGORIES } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
+import { setStripAnswersEnabled } from '../../services/googleSheetService';
 
 // Lazy load tab components
 const ResultsTab = React.lazy(() => import('./ResultsTab'));
@@ -19,6 +20,14 @@ const TeacherDashboard: React.FC = () => {
     // --- STORES ---
     const authStore = useAuthStore();
     const quizStore = useQuizStore();
+
+    // 🔐 ANTI-CHEAT: Disable answer stripping for teacher views
+    useEffect(() => {
+        setStripAnswersEnabled(false);
+        return () => {
+            setStripAnswersEnabled(true);
+        };
+    }, []);
 
     // Tab state
     const [activeTab, setActiveTab] = useState<string>('results');

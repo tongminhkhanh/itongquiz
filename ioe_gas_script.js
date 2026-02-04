@@ -16,7 +16,8 @@ function doPost(e) {
 
 function handleRequest(e) {
     const lock = LockService.getScriptLock();
-    lock.tryLock(10000);
+    // Increase timeout to 60 seconds for large quiz saves (100 questions)
+    lock.tryLock(60000);
 
     try {
         const params = e.parameter || {};

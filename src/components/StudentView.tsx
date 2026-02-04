@@ -8,6 +8,7 @@ import {
   ResultScreen,
   QuestionRenderer
 } from './student';
+import { validateAnswersOnServer } from '../services/quizValidationService';
 
 interface Props {
   quiz: Quiz;
@@ -39,6 +40,14 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Pagination: 10 câu/trang
+  const QUESTIONS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(shuffledQuestions.length / QUESTIONS_PER_PAGE);
+  const startIndex = (currentPage - 1) * QUESTIONS_PER_PAGE;
+  const endIndex = startIndex + QUESTIONS_PER_PAGE;
+  const questionsOnCurrentPage = shuffledQuestions.slice(startIndex, endIndex);
 
   // UUID generator fallback (crypto.randomUUID not supported in all browsers/HTTP)
   const generateUUID = (): string => {
@@ -108,7 +117,26 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
   const handleStart = () => {
     if (!studentName || !studentClass) return;
-    setShuffledQuestions(shuffleArray(quiz.questions));
+    // Shuffle trong cùng mức độ, giữ thứ tự: Mức 1 (đầu) → Mức 2 (giữa) → Mức 3 (cuối)
+    const shuffleWithinLevel = (questions: Question[]) => {
+      // Nhóm câu hỏi theo difficultyLevel
+      const level1 = questions.filter((q: any) => q.difficultyLevel === 1);
+      const level2 = questions.filter((q: any) => q.difficultyLevel === 2);
+      const level3 = questions.filter((q: any) => q.difficultyLevel === 3);
+      const noLevel = questions.filter((q: any) => !q.difficultyLevel);
+
+      // Shuffle trong từng nhóm
+      return [
+        ...shuffleArray(level1),
+        ...shuffleArray(noLevel), // Câu không có level đặt ở giữa
+        ...shuffleArray(level2),
+        ...shuffleArray(level3)  // Mức 3 ở cuối
+      ];
+    };
+
+    // Nếu có câu nào có difficultyLevel thì áp dụng shuffleWithinLevel
+    const hasLevels = quiz.questions.some((q: any) => q.difficultyLevel);
+    setShuffledQuestions(hasLevels ? shuffleWithinLevel(quiz.questions) : shuffleArray(quiz.questions));
     setStartTime(Date.now());
     setStep('quiz');
   };
@@ -365,34 +393,51 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     setIsSubmitting(true);
     setSubmitError(null);
 
-    const { score, correctCount, totalItems } = calculateScore();
     const timeTaken = Math.round((Date.now() - startTime) / 60000);
 
-    const resultData: StudentResult = {
-      id: generateUUID(),
-      quizId: quiz.id,
-      quizTitle: quiz.title, // ✅ Thêm quizTitle để lưu vào Google Sheets
-      studentName,
-      studentClass,
-      score,
-      correctCount,
-      totalQuestions: totalItems,
-      timeTaken,
-      submittedAt: new Date().toISOString(),
-      answers
-    };
-
     try {
-      // Await the save result (it might be a Promise)
+      // 🔐 ANTI-CHEAT: Validate answers on server
+      // Server will calculate score and return correct answers
+      const validationResult = await validateAnswersOnServer({
+        quizId: quiz.id,
+        answers,
+        studentName,
+        studentClass
+      });
+
+      if (!validationResult.success) {
+        throw new Error(validationResult.error || 'Server validation failed');
+      }
+
+      // Use server-calculated score
+      const score = validationResult.score;
+      const correctCount = validationResult.correctCount;
+      const totalItems = validationResult.total;
+      console.log('✅ Server validation successful:', validationResult);
+
+      const resultData: StudentResult = {
+        id: generateUUID(),
+        quizId: quiz.id,
+        quizTitle: quiz.title,
+        studentName,
+        studentClass,
+        score,
+        correctCount,
+        totalQuestions: totalItems,
+        timeTaken,
+        submittedAt: new Date().toISOString(),
+        answers
+      };
+
+      // Save result
       await onSaveResult(resultData);
       setResult(resultData);
       setStep('result');
     } catch (error: any) {
       console.error('🚨 Submit failed:', error);
-      setSubmitError('Lỗi khi nộp bài! Vui lòng thử lại.');
-      // Still show result locally even if save fails
-      setResult(resultData);
-      setStep('result');
+      setSubmitError('Lỗi khi nộp bài! Vui lòng thử lại. ' + (error.message || ''));
+      // 🔐 Cannot use local fallback - answers are stripped for security
+      // User must retry submission
     } finally {
       setIsSubmitting(false);
     }
@@ -529,16 +574,67 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       <div className="max-w-7xl mx-auto p-4 md:p-6 flex flex-col md:flex-row gap-6">
         {/* Questions */}
         <div className="flex-1 space-y-6 pb-20 md:pb-0">
-          {shuffledQuestions.map((q, index) => (
+          {questionsOnCurrentPage.map((q, index) => (
             <QuestionRenderer
               key={q.id}
               question={q}
-              index={index}
+              index={startIndex + index}
               answers={answers}
               onAnswerChange={handleAnswerChange}
               onMatchingClick={handleMatchingClick}
             />
           ))}
+
+          {/* Pagination Navigation */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 py-6 bg-white rounded-xl shadow-sm border border-gray-200">
+              <button
+                onClick={() => {
+                  setCurrentPage(prev => Math.max(1, prev - 1));
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                disabled={currentPage === 1}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${currentPage === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+              >
+                ← Trang trước
+              </button>
+
+              <div className="flex items-center gap-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => {
+                      setCurrentPage(page);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={`w-10 h-10 rounded-full font-bold transition-all ${currentPage === page
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => {
+                  setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                disabled={currentPage === totalPages}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${currentPage === totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+              >
+                Trang sau →
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -556,19 +652,36 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                 <span>Danh sách câu hỏi</span>
                 <span className="text-gray-400 font-normal">{Object.keys(answers).length}/{shuffledQuestions.length}</span>
               </p>
+              {/* Page indicator */}
+              {totalPages > 1 && (
+                <p className="text-xs text-center text-blue-600 mb-2 bg-blue-50 py-1 rounded-lg">
+                  Trang {currentPage}/{totalPages}
+                </p>
+              )}
               <div className="grid grid-cols-5 gap-2">
                 {shuffledQuestions.map((q, index) => {
                   const isAnswered = isQuestionAnswered(q);
+                  const questionPage = Math.floor(index / QUESTIONS_PER_PAGE) + 1;
+                  const isOnCurrentPage = questionPage === currentPage;
                   return (
                     <button
                       key={q.id}
                       onClick={(e) => {
                         e.preventDefault();
-                        document.getElementById(`question-${index}`)?.scrollIntoView({ behavior: 'smooth' });
+                        // Chuyển trang nếu câu hỏi ở trang khác
+                        if (!isOnCurrentPage) {
+                          setCurrentPage(questionPage);
+                        }
+                        // Scroll sau khi chuyển trang
+                        setTimeout(() => {
+                          document.getElementById(`question-${index}`)?.scrollIntoView({ behavior: 'smooth' });
+                        }, 100);
                       }}
                       className={`h-10 w-10 flex items-center justify-center rounded-full text-sm font-bold transition-all ${isAnswered
                         ? 'bg-blue-500 text-white shadow-md hover:bg-blue-600'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        : isOnCurrentPage
+                          ? 'bg-orange-100 text-orange-600 hover:bg-orange-200 ring-2 ring-orange-300'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                         }`}
                     >
                       {index + 1}

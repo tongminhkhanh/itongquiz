@@ -675,52 +675,52 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
     const [savedQuizLink, setSavedQuizLink] = useState('');
     const [linkCopied, setLinkCopied] = useState(false);
 
-    // Auto-adjust question counts based on competition round (all 50 questions, different ratios)
+    // Auto-adjust question counts based on competition round (all 100 questions, different ratios)
     useEffect(() => {
         const roundPresets: Record<string, Record<string, number>> = {
-            // Vòng Trường: 50 câu - 70% cơ bản (vocab, grammar), ít reading/listening
+            // Vòng Trường: 100 câu - 70% cơ bản (vocab, grammar), ít reading/listening
             school: {
-                phonetics: 5,
-                word_stress: 5,
-                vocabulary: 10,
-                grammar: 10,
-                sentence_order: 4,
-                sentence_building: 4,
-                listening: 6,
-                reading: 6,
-            },
-            // Vòng Huyện: 50 câu - cân bằng hơn, tăng listening/reading
-            district: {
-                phonetics: 5,
-                word_stress: 5,
-                vocabulary: 8,
-                grammar: 8,
-                sentence_order: 4,
-                sentence_building: 4,
-                listening: 8,
-                reading: 8,
-            },
-            // Vòng Tỉnh: 50 câu - tăng reading, phonetics/stress nâng cao
-            provincial: {
-                phonetics: 6,
-                word_stress: 6,
-                vocabulary: 7,
-                grammar: 7,
-                sentence_order: 3,
-                sentence_building: 5,
-                listening: 7,
-                reading: 9,
-            },
-            // Vòng Quốc gia: 50 câu - tập trung reading, ngữ pháp nâng cao
-            national: {
-                phonetics: 6,
-                word_stress: 6,
-                vocabulary: 6,
-                grammar: 6,
-                sentence_order: 3,
-                sentence_building: 5,
-                listening: 6,
+                phonetics: 10,
+                word_stress: 10,
+                vocabulary: 20,
+                grammar: 20,
+                sentence_order: 8,
+                sentence_building: 8,
+                listening: 12,
                 reading: 12,
+            },
+            // Vòng Huyện: 100 câu - cân bằng hơn, tăng listening/reading
+            district: {
+                phonetics: 10,
+                word_stress: 10,
+                vocabulary: 16,
+                grammar: 16,
+                sentence_order: 8,
+                sentence_building: 8,
+                listening: 16,
+                reading: 16,
+            },
+            // Vòng Tỉnh: 100 câu - tăng reading, phonetics/stress nâng cao
+            provincial: {
+                phonetics: 12,
+                word_stress: 12,
+                vocabulary: 14,
+                grammar: 14,
+                sentence_order: 6,
+                sentence_building: 10,
+                listening: 14,
+                reading: 18,
+            },
+            // Vòng Quốc gia: 100 câu - tập trung reading, ngữ pháp nâng cao
+            national: {
+                phonetics: 12,
+                word_stress: 12,
+                vocabulary: 12,
+                grammar: 12,
+                sentence_order: 6,
+                sentence_building: 10,
+                listening: 12,
+                reading: 24,
             },
         };
 
@@ -860,8 +860,8 @@ TOTAL: ${totalQuestions} questions
         }
 
         // Limit max questions to prevent timeout
-        if (totalQuestions > 50) {
-            setError(`⚠️ Tối đa 50 câu/lần tạo (bạn đang chọn ${totalQuestions} câu). Hãy giảm số lượng để tránh timeout.`);
+        if (totalQuestions > 100) {
+            setError(`⚠️ Tối đa 100 câu/lần tạo (bạn đang chọn ${totalQuestions} câu). Hãy giảm số lượng để tránh timeout.`);
             return;
         }
 
@@ -1212,11 +1212,11 @@ ${searchResult.content}
                                     <input
                                         type="number"
                                         min="0"
-                                        max="50"
+                                        max="100"
                                         value={questionCounts[qt.id]}
                                         onChange={(e) => {
                                             const val = parseInt(e.target.value, 10);
-                                            if (!isNaN(val) && val >= 0 && val <= 50) {
+                                            if (!isNaN(val) && val >= 0 && val <= 100) {
                                                 setQuestionCounts(prev => ({ ...prev, [qt.id]: val }));
                                             } else if (e.target.value === '') {
                                                 setQuestionCounts(prev => ({ ...prev, [qt.id]: 0 }));
@@ -1227,7 +1227,7 @@ ${searchResult.content}
                                     <button
                                         onClick={() => setQuestionCounts(prev => ({
                                             ...prev,
-                                            [qt.id]: Math.min(50, prev[qt.id] + 1)
+                                            [qt.id]: Math.min(100, prev[qt.id] + 1)
                                         }))}
                                         className="ioe-question-btn"
                                     >

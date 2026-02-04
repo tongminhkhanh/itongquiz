@@ -35,6 +35,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedQuiz, setGeneratedQuiz] = useState<Quiz | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
     const [customPrompt, setCustomPrompt] = useState('');
     const [quizMode, setQuizMode] = useState<'exam' | 'practice'>('practice');
     const [aiProvider, setAiProvider] = useState<AIProvider>(() =>
@@ -319,8 +320,9 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
 
     // Handle save quiz
     const handleSaveQuiz = async () => {
-        if (!generatedQuiz) return;
+        if (!generatedQuiz || isSaving) return;
 
+        setIsSaving(true);
         try {
             if (editingQuiz) {
                 await onUpdateQuiz(generatedQuiz);
@@ -347,6 +349,8 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
             onSuccess();
         } catch (err: any) {
             setError(err.message || 'Lỗi khi lưu bài kiểm tra');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -732,6 +736,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                 <QuizPreview
                     quiz={generatedQuiz}
                     onSave={handleSaveQuiz}
+                    isSaving={isSaving}
                     onUpdateQuestions={(questions) => {
                         if (generatedQuiz) {
                             setGeneratedQuiz({ ...generatedQuiz, questions });

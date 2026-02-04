@@ -47,9 +47,22 @@ const IoeManageTab: React.FC<IoeManageTabProps> = ({ onEdit }) => {
 
     // Filter quizzes
     const filteredQuizzes = quizzes.filter(quiz => {
-        const matchesSearch = quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (quiz.examCode || '').toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesLevel = filterLevel === 'All' || quiz.classLevel === filterLevel;
+        // Check if searching for class level (e.g., "lớp 1", "lop 1", "class 1")
+        const search = searchTerm.toLowerCase().trim();
+        const classLevelMatch = search.match(/(?:lớp|lop|class)\s*(\d+)/i);
+
+        let matchesSearch = true;
+        if (classLevelMatch) {
+            // Filter by class level extracted from search
+            const targetLevel = classLevelMatch[1];
+            matchesSearch = String(quiz.classLevel) === targetLevel;
+        } else if (searchTerm.trim()) {
+            // Normal search by title or exam code
+            matchesSearch = quiz.title.toLowerCase().includes(search) ||
+                (quiz.examCode || '').toLowerCase().includes(search);
+        }
+
+        const matchesLevel = filterLevel === 'All' || String(quiz.classLevel) === String(filterLevel);
         return matchesSearch && matchesLevel;
     });
 

@@ -1,282 +1,325 @@
 /**
- * aiTutorService.ts - Service để lấy tư vấn học tập từ AI (Gemini)
- * Phân tích kết quả bài kiểm tra và đưa ra gợi ý cá nhân hóa cho học sinh
+ * AI Tutor Service
+ * 
+ * Provides AI-powered explanations for wrong answers,
+ * suggests similar practice questions, and analyzes weaknesses.
+ * 
+ * Uses LLM-Mux (OpenAI-compatible API) for AI calls.
  */
 
-import { Quiz, StudentResult, Question, QuestionType } from '../types';
+import { Question } from '../types';
 
-export interface WrongAnswer {
-    questionNumber: number;
-    questionType: string;
-    questionText: string;
-    studentAnswer: string;
-    correctAnswer: string;
+// Get LLM-Mux configuration
+const getLLMConfig = () => {
+    const baseUrl = import.meta.env.VITE_LLM_MUX_BASE_URL || 'https://api.thitong.site/v1';
+    const apiKey = import.meta.env.VITE_LLM_MUX_API_KEY;
+
+    if (!apiKey) {
+        throw new Error('VITE_LLM_MUX_API_KEY is not configured');
+    }
+
+    return { baseUrl, apiKey };
+};
+
+// Call LLM-Mux API (OpenAI-compatible)
+async function callLLM(prompt: string): Promise<string> {
+    const { baseUrl, apiKey } = getLLMConfig();
+
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+            model: 'gemini-2.0-flash',
+            messages: [
+                {
+                    role: 'system',
+                    content: 'Bạn là một gia sư AI thân thiện cho học sinh tiểu học Việt Nam. Trả lời bằng tiếng Việt, dùng emoji để sinh động.'
+                },
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ],
+            temperature: 0.7,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`LLM API error: ${error}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
 }
 
-export interface AIRecommendation {
-    weakTopics: string[];
-    analysis: string;
-    studyTips: string[];
-    encouragement: string;
+export interface ExplanationResult {
+    explanation: string;
+    tip: string;
     isLoading?: boolean;
     error?: string;
 }
 
-const TUTOR_SYSTEM_PROMPT = `Bạn là một giáo viên tiểu học thân thiện, nhiệt tình và giàu kinh nghiệm. 
-Nhiệm vụ của bạn là phân tích kết quả bài kiểm tra của học sinh và đưa ra lời khuyên học tập.
+export interface SimilarQuestion {
+    question: string;
+    options: string[];
+    correctAnswer: string;
+    explanation: string;
+}
 
-Quy tắc:
-1. Sử dụng ngôn ngữ đơn giản, dễ hiểu, phù hợp với học sinh tiểu học
-2. Luôn động viên và khích lệ học sinh, không chê bai
-3. Đưa ra gợi ý cụ thể, có thể thực hiện được
-4. Giữ câu trả lời ngắn gọn, súc tích
-5. Sử dụng emoji để tạo sự thân thiện
+export interface WeaknessAnalysis {
+    weakTopics: string[];
+    suggestions: string[];
+    overallFeedback: string;
+}
 
-Format trả lời (bắt buộc theo đúng format JSON):
+/**
+ * Get AI explanation for why an answer is wrong
+ */
+export async function explainAnswer(
+    question: Question,
+    userAnswer: string,
+    correctAnswer: string
+): Promise<ExplanationResult> {
+    try {
+        const q = question as any;
+        const questionText = q.question || q.mainQuestion || '';
+        const optionsText = q.options ? `Các đáp án:\n${q.options.map((opt: string, i: number) => `${String.fromCharCode(65 + i)}. ${opt}`).join('\n')}` : '';
+
+        const prompt = `Học sinh đã trả lời SAI câu hỏi sau:
+
+📝 Câu hỏi: ${questionText}
+${optionsText}
+
+❌ Học sinh chọn: ${userAnswer}
+✅ Đáp án đúng: ${correctAnswer}
+
+Hãy giải thích CHI TIẾT và DỄ HIỂU cho học sinh tiểu học:
+
+QUY TẮC FORMAT (RẤT QUAN TRỌNG):
+- KHÔNG dùng Markdown headers (###, ##, #)
+- KHÔNG dùng ký tự "x x" hay escape sequences
+- Mỗi ý chính gạch đầu dòng bằng số: "1.", "2.", "3."
+- Phân số viết dạng: 1/2, 3/5, 7/10 (sẽ được render đẹp)
+- Dùng emoji để sinh động: ✅ ❌ 💡 📝 🎯
+- Xuống dòng giữa các ý để dễ đọc
+
+NỘI DUNG CẦN GIẢI THÍCH:
+1. Tại sao đáp án đúng là "${correctAnswer}"
+2. Tại sao đáp án "${userAnswer}" không đúng  
+3. Cách nhận biết đáp án đúng
+
+Trả lời JSON (explanation phải có bullet points rõ ràng):
 {
-  "weakTopics": ["Chủ đề 1", "Chủ đề 2"],
-  "analysis": "Phân tích ngắn gọn về điểm mạnh/yếu của học sinh (2-3 câu)",
-  "studyTips": ["Gợi ý 1", "Gợi ý 2", "Gợi ý 3"],
-  "encouragement": "Một lời động viên ngắn gọn, ấm áp cho học sinh"
+  "explanation": "1. Đáp án đúng là ... vì ...\\n\\n2. Đáp án ... không đúng vì ...\\n\\n3. Cách nhận biết: ...",
+  "tip": "Mẹo nhớ ngắn gọn..."
 }`;
 
-/**
- * Build prompt chứa thông tin bài làm của học sinh
- */
-function buildAnalysisPrompt(
-    quiz: Quiz,
-    result: StudentResult,
-    wrongAnswers: WrongAnswer[]
-): string {
-    const wrongList = wrongAnswers.map((w, idx) =>
-        `${idx + 1}. Câu ${w.questionNumber} (${w.questionType}): "${w.questionText.substring(0, 100)}..."
-   - Em trả lời: "${w.studentAnswer}"
-   - Đáp án đúng: "${w.correctAnswer}"`
-    ).join('\n');
+        const text = await callLLM(prompt);
 
-    return `Phân tích kết quả bài kiểm tra của học sinh:
-
-**Thông tin bài kiểm tra:**
-- Tên bài: ${quiz.title}
-- Điểm: ${result.score}/10
-- Số câu đúng: ${result.correctCount}/${result.totalQuestions}
-- Thời gian làm bài: ${result.timeTaken || 0} phút
-
-**Các câu sai (${wrongAnswers.length} câu):**
-${wrongList || 'Không có câu sai - Hoàn hảo!'}
-
-Hãy phân tích và đưa ra gợi ý học tập cho học sinh này. Trả lời bằng JSON theo format đã định.`;
-}
-
-/**
- * Gọi AI API để lấy recommendations
- * Ưu tiên: CLIProxy -> Gemini -> Default
- */
-export async function getAIRecommendations(
-    quiz: Quiz,
-    result: StudentResult,
-    wrongAnswers: WrongAnswer[]
-): Promise<AIRecommendation> {
-    const cliproxyApi = import.meta.env.VITE_CLIPROXY_API;
-    const cliproxyToken = import.meta.env.VITE_CLIPROXY_TOKEN;
-    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
-    const prompt = buildAnalysisPrompt(quiz, result, wrongAnswers);
-
-    // Priority 1: CLIProxy (OpenAI-compatible API)
-    if (cliproxyApi && cliproxyToken) {
-        try {
-            return await callCliProxy(prompt, cliproxyApi, cliproxyToken);
-        } catch (error) {
-            console.error('CLIProxy Error, falling back:', error);
-        }
-    }
-
-    // Priority 2: Direct Gemini API
-    if (geminiKey) {
-        try {
-            return await callGeminiDirect(prompt, geminiKey);
-        } catch (error) {
-            console.error('Gemini Error:', error);
-        }
-    }
-
-    // Fallback: Default recommendations
-    return getDefaultRecommendations(wrongAnswers);
-}
-
-/**
- * Gọi CLIProxy API (OpenAI-compatible format)
- */
-async function callCliProxy(
-    prompt: string,
-    baseUrl: string,
-    apiKey: string
-): Promise<AIRecommendation> {
-    const API_URL = `${baseUrl}/chat/completions`;
-
-    const requestBody = {
-        model: 'gemini-2.0-flash',
-        messages: [
-            { role: 'system', content: TUTOR_SYSTEM_PROMPT },
-            { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 1024,
-        response_format: { type: 'json_object' }
-    };
-
-    const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-        throw new Error(`CLIProxy API Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const responseText = data.choices?.[0]?.message?.content?.trim();
-
-    if (!responseText) {
-        throw new Error('Empty response from CLIProxy');
-    }
-
-    return parseAIResponse(responseText);
-}
-
-/**
- * Gọi Gemini API trực tiếp
- */
-async function callGeminiDirect(
-    prompt: string,
-    apiKey: string
-): Promise<AIRecommendation> {
-    const MODEL_NAME = 'gemini-2.0-flash';
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
-
-    const requestBody = {
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        system_instruction: { parts: [{ text: TUTOR_SYSTEM_PROMPT }] },
-        generation_config: {
-            temperature: 0.7,
-            max_output_tokens: 1024,
-            response_mime_type: 'application/json'
-        },
-    };
-
-    const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-        throw new Error(`Gemini API Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-
-    if (!responseText) {
-        throw new Error('Empty response from Gemini');
-    }
-
-    return parseAIResponse(responseText);
-}
-
-/**
- * Parse AI response JSON
- */
-function parseAIResponse(responseText: string): AIRecommendation {
-    try {
-        const parsed = JSON.parse(responseText);
-        return {
-            weakTopics: parsed.weakTopics || [],
-            analysis: parsed.analysis || 'Không có phân tích',
-            studyTips: parsed.studyTips || [],
-            encouragement: parsed.encouragement || 'Cố gắng lên em nhé! 💪'
-        };
-    } catch (parseError) {
-        console.error('Failed to parse AI response:', parseError);
-        throw new Error('Invalid JSON response');
-    }
-}
-
-
-/**
- * Generate default recommendations khi không có AI
- */
-function getDefaultRecommendations(wrongAnswers: WrongAnswer[]): AIRecommendation {
-    // Group by question type
-    const typeCount: Record<string, number> = {};
-    wrongAnswers.forEach(w => {
-        typeCount[w.questionType] = (typeCount[w.questionType] || 0) + 1;
-    });
-
-    const weakTopics = Object.entries(typeCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([type]) => {
-            const typeLabels: Record<string, string> = {
-                MCQ: 'Câu hỏi trắc nghiệm',
-                TRUE_FALSE: 'Câu hỏi đúng/sai',
-                SHORT_ANSWER: 'Câu hỏi tự luận',
-                MATCHING: 'Câu hỏi nối cặp',
-                MULTIPLE_SELECT: 'Câu hỏi chọn nhiều',
-                WORD_SCRAMBLE: 'Câu ghép từ',
-                RIDDLE: 'Câu đố'
+        // Parse JSON from response
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            return {
+                explanation: parsed.explanation || 'Không có giải thích.',
+                tip: parsed.tip || '',
             };
-            return typeLabels[type] || type;
-        });
+        }
 
-    const studyTips = [
-        '📚 Đọc lại bài học trong sách giáo khoa',
-        '✏️ Làm thêm bài tập tương tự để củng cố',
-        '🤔 Hỏi thầy cô hoặc bạn bè những phần chưa hiểu'
-    ];
+        // Fallback if JSON parsing fails
+        return {
+            explanation: text,
+            tip: '',
+        };
+    } catch (error: any) {
+        console.error('[AI Tutor] Error explaining answer:', error);
+        return {
+            explanation: '',
+            tip: '',
+            error: error.message || 'Không thể lấy giải thích từ AI.',
+        };
+    }
+}
 
-    if (wrongAnswers.length === 0) {
+/**
+ * Generate similar practice questions
+ */
+export async function suggestSimilarQuestions(
+    question: Question,
+    count: number = 2
+): Promise<SimilarQuestion[]> {
+    try {
+        const q = question as any;
+        const questionText = q.question || q.mainQuestion || '';
+        const optionsCount = q.options ? q.options.length : 0;
+
+        const prompt = `Dựa trên câu hỏi sau, hãy tạo ${count} câu hỏi TƯƠNG TỰ để học sinh luyện tập:
+
+📝 Câu hỏi gốc: ${questionText}
+${optionsCount > 0 ? `Loại: Trắc nghiệm với ${optionsCount} đáp án` : 'Loại: Tự luận ngắn'}
+
+Yêu cầu:
+- Câu hỏi cùng chủ đề, cùng dạng nhưng khác số liệu/nội dung
+- Phù hợp với học sinh tiểu học
+- Có đáp án đúng và giải thích ngắn
+
+Trả lời bằng JSON:
+{
+  "questions": [
+    {
+      "question": "Nội dung câu hỏi",
+      "options": ["A", "B", "C", "D"],
+      "correctAnswer": "A",
+      "explanation": "Giải thích ngắn"
+    }
+  ]
+}`;
+
+        const text = await callLLM(prompt);
+
+        // Parse JSON from response
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            return parsed.questions || [];
+        }
+
+        return [];
+    } catch (error: any) {
+        console.error('[AI Tutor] Error generating similar questions:', error);
+        return [];
+    }
+}
+
+/**
+ * Analyze student weaknesses based on wrong answers
+ */
+export async function analyzeWeaknesses(
+    wrongQuestions: Array<{ question: Question; userAnswer: string; correctAnswer: string }>
+): Promise<WeaknessAnalysis> {
+    if (wrongQuestions.length === 0) {
         return {
             weakTopics: [],
-            analysis: '🌟 Tuyệt vời! Em đã trả lời đúng tất cả các câu hỏi. Hãy tiếp tục phát huy nhé!',
-            studyTips: ['Thử thách bản thân với những bài khó hơn', 'Giúp đỡ bạn bè học tập'],
-            encouragement: 'Em thật giỏi! Thầy cô rất tự hào về em! 🏆'
+            suggestions: [],
+            overallFeedback: '🎉 Xuất sắc! Em đã trả lời đúng tất cả các câu hỏi!',
         };
     }
 
-    return {
-        weakTopics,
-        analysis: `Em cần ôn lại ${weakTopics.join(', ')}. Đừng lo lắng, luyện tập nhiều em sẽ tiến bộ thôi!`,
-        studyTips,
-        encouragement: 'Mỗi sai lầm là một bài học quý giá. Cố gắng lên em nhé! 💪'
-    };
+    try {
+        const questionsText = wrongQuestions.map((wq, i) => {
+            const q = wq.question as any;
+            const qText = q.question || q.mainQuestion || '';
+            return `${i + 1}. ${qText}\n   Sai: ${wq.userAnswer} | Đúng: ${wq.correctAnswer}`;
+        }).join('\n');
+
+        const prompt = `Học sinh đã trả lời SAI ${wrongQuestions.length} câu sau:
+
+${questionsText}
+
+Hãy phân tích:
+1. Những chủ đề/dạng bài nào học sinh còn yếu?
+2. Gợi ý cách cải thiện?
+3. Một lời nhận xét tổng quan (khích lệ, động viên)
+
+JSON:
+{
+  "weakTopics": ["Chủ đề 1", "Chủ đề 2"],
+  "suggestions": ["Gợi ý 1", "Gợi ý 2"],
+  "overallFeedback": "Nhận xét tổng quan..."
+}`;
+
+        const text = await callLLM(prompt);
+
+        // Parse JSON from response
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            return {
+                weakTopics: parsed.weakTopics || [],
+                suggestions: parsed.suggestions || [],
+                overallFeedback: parsed.overallFeedback || 'Cố gắng lên em nhé! 💪',
+            };
+        }
+
+        return {
+            weakTopics: [],
+            suggestions: [],
+            overallFeedback: 'Cố gắng lên em nhé! 💪',
+        };
+    } catch (error: any) {
+        console.error('[AI Tutor] Error analyzing weaknesses:', error);
+        return {
+            weakTopics: [],
+            suggestions: [],
+            overallFeedback: 'Không thể phân tích. Vui lòng thử lại sau.',
+        };
+    }
+}
+
+// ============================================
+// Additional exports for RecommendationsTab
+// ============================================
+
+export interface AIRecommendation {
+    analysis: string;
+    weakTopics: string[];
+    studyTips: string[];
+    encouragement: string;
+}
+
+export interface WrongAnswer {
+    questionNumber: number;
+    questionText: string;
+    questionType: string;
+    userAnswer: string;
+    correctAnswer: string;
 }
 
 /**
  * Extract wrong answers from quiz results
  */
-export function extractWrongAnswers(
-    quiz: Quiz,
-    answers: Record<string, any>
-): WrongAnswer[] {
+export function extractWrongAnswers(quiz: any, answers: Record<string, any>): WrongAnswer[] {
     const wrongAnswers: WrongAnswer[] = [];
 
-    quiz.questions.forEach((q, idx) => {
+    quiz.questions.forEach((q: any, idx: number) => {
         const answer = answers[q.id];
-        const isCorrect = checkCorrectness(q, answer);
+        const questionText = q.question || q.mainQuestion || '';
+        let isCorrect = false;
+        let correctAnswer = '';
+
+        // Check correctness based on question type
+        if (q.type === 'MCQ' || q.type === 'SHORT_ANSWER' || q.type === 'RIDDLE') {
+            isCorrect = String(answer).toLowerCase().trim() === String(q.correctAnswer).toLowerCase().trim();
+            correctAnswer = q.correctAnswer || '';
+        } else if (q.type === 'MULTIPLE_SELECT') {
+            const studentAns = (answer as string[]) || [];
+            const correctAns = q.correctAnswers || [];
+            isCorrect = studentAns.length === correctAns.length && studentAns.every((v: string) => correctAns.includes(v));
+            correctAnswer = (q.correctAnswers || []).join(', ');
+        } else if (q.type === 'TRUE_FALSE') {
+            const items = q.items || [];
+            isCorrect = items.every((item: any, i: number) => {
+                const itemKey = item.id || `item-${i}`;
+                return answer?.[itemKey] === item.isCorrect;
+            });
+            correctAnswer = 'Xem chi tiết';
+        } else {
+            // Default: check if answered
+            isCorrect = !!answer;
+            correctAnswer = q.correctAnswer || 'N/A';
+        }
 
         if (!isCorrect) {
             wrongAnswers.push({
                 questionNumber: idx + 1,
-                questionType: q.type,
-                questionText: getQuestionText(q),
-                studentAnswer: formatAnswer(answer, q),
-                correctAnswer: getCorrectAnswer(q)
+                questionText: questionText,
+                questionType: q.type || 'MCQ',
+                userAnswer: String(answer || 'Không trả lời'),
+                correctAnswer: correctAnswer,
             });
         }
     });
@@ -284,76 +327,74 @@ export function extractWrongAnswers(
     return wrongAnswers;
 }
 
-function getQuestionText(q: Question): string {
-    if (q.type === QuestionType.TRUE_FALSE) {
-        return (q as any).mainQuestion || '';
+/**
+ * Get AI-powered recommendations based on quiz results
+ */
+export async function getAIRecommendations(
+    quiz: any,
+    result: any,
+    wrongAnswers: WrongAnswer[]
+): Promise<AIRecommendation> {
+    if (wrongAnswers.length === 0) {
+        return {
+            analysis: 'Xuất sắc! Em đã trả lời đúng tất cả các câu hỏi!',
+            weakTopics: [],
+            studyTips: [],
+            encouragement: 'Thầy cô rất tự hào về em. Hãy tiếp tục phát huy nhé!',
+        };
     }
-    return (q as any).question || '';
-}
 
-function formatAnswer(answer: any, q: Question): string {
-    if (!answer && answer !== false && answer !== 0) return 'Không trả lời';
-    if (typeof answer === 'string') return answer;
-    if (Array.isArray(answer)) {
-        if (q.type === QuestionType.WORD_SCRAMBLE) {
-            const letters = (q as any).letters || [];
-            return (answer as number[]).map((i: number) => letters[i]).join('');
+    try {
+        const wrongQuestionsText = wrongAnswers.map((wq, i) =>
+            `${i + 1}. [${wq.questionType}] ${wq.questionText}\n   Em chọn: ${wq.userAnswer} | Đáp án: ${wq.correctAnswer}`
+        ).join('\n');
+
+        const prompt = `Bạn là một gia sư AI thân thiện cho học sinh tiểu học Việt Nam.
+
+Học sinh vừa hoàn thành bài kiểm tra "${quiz.title || 'Bài kiểm tra'}" với kết quả:
+- Số câu đúng: ${result.correctCount}/${result.totalQuestions}
+- Điểm: ${result.score}%
+
+Các câu trả lời SAI:
+${wrongQuestionsText}
+
+Hãy phân tích và đưa ra gợi ý:
+1. Nhận xét tổng quan về bài làm (2-3 câu)
+2. Các chủ đề/dạng bài em còn yếu (liệt kê ngắn gọn)
+3. 3-4 gợi ý cụ thể để cải thiện
+4. Một lời động viên, khích lệ (ấm áp, thân thiện)
+
+Trả lời bằng JSON:
+{
+  "analysis": "Nhận xét tổng quan...",
+  "weakTopics": ["Chủ đề 1", "Chủ đề 2"],
+  "studyTips": ["Gợi ý 1", "Gợi ý 2", "Gợi ý 3"],
+  "encouragement": "Lời động viên..."
+}`;
+
+        const text = await callLLM(prompt);
+
+        // Parse JSON from response
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            return {
+                analysis: parsed.analysis || 'Cần cố gắng hơn nữa em nhé!',
+                weakTopics: parsed.weakTopics || [],
+                studyTips: parsed.studyTips || [],
+                encouragement: parsed.encouragement || 'Cố gắng lên em nhé! 💪',
+            };
         }
-        return answer.join(', ');
-    }
-    if (typeof answer === 'object') {
-        return Object.entries(answer).map(([k, v]) => `${k}: ${v}`).join('; ');
-    }
-    return String(answer);
-}
 
-function getCorrectAnswer(q: Question): string {
-    switch (q.type) {
-        case QuestionType.MCQ:
-        case QuestionType.SHORT_ANSWER:
-        case QuestionType.RIDDLE:
-            return String((q as any).correctAnswer || '');
-        case QuestionType.TRUE_FALSE:
-            return (q.items || []).map((item: any) =>
-                `"${item.statement}": ${item.isCorrect ? 'Đúng' : 'Sai'}`
-            ).join('; ');
-        case QuestionType.MATCHING:
-            return (q.pairs || []).map((p: any) => `${p.left} → ${p.right}`).join('; ');
-        case QuestionType.MULTIPLE_SELECT:
-            return ((q as any).correctAnswers || []).join(', ');
-        case QuestionType.WORD_SCRAMBLE:
-            return (q as any).correctWord || '';
-        default:
-            return '';
+        return {
+            analysis: 'Cần cố gắng hơn nữa em nhé!',
+            weakTopics: [],
+            studyTips: [],
+            encouragement: 'Cố gắng lên em nhé! 💪',
+        };
+    } catch (error: any) {
+        console.error('[AI Tutor] Error getting recommendations:', error);
+        throw error;
     }
 }
 
-function checkCorrectness(q: Question, answer: any): boolean {
-    if (!answer && answer !== false && answer !== 0) return false;
-
-    switch (q.type) {
-        case QuestionType.MCQ:
-            return answer === (q as any).correctAnswer;
-        case QuestionType.SHORT_ANSWER:
-            return String(answer).toLowerCase().trim() === String((q as any).correctAnswer).toLowerCase().trim();
-        case QuestionType.TRUE_FALSE:
-            return (q.items || []).every((item: any, idx: number) => {
-                const key = item.id || `item-${idx}`;
-                return answer?.[key] === item.isCorrect;
-            });
-        case QuestionType.MATCHING:
-            return (q.pairs || []).every((p: any) => answer?.[p.left] === p.right);
-        case QuestionType.MULTIPLE_SELECT:
-            const studentAns = (answer as string[]) || [];
-            const correctAns = (q as any).correctAnswers || [];
-            return studentAns.length === correctAns.length && studentAns.every((v: string) => correctAns.includes(v));
-        case QuestionType.WORD_SCRAMBLE:
-            const letters = (q as any).letters || [];
-            const word = ((answer as number[]) || []).map((i: number) => letters[i]).join('');
-            return word.toLowerCase().replace(/\s+/g, '') === ((q as any).correctWord || '').toLowerCase().replace(/\s+/g, '');
-        case QuestionType.RIDDLE:
-            return String(answer).toLowerCase().trim() === String((q as any).correctAnswer).toLowerCase().trim();
-        default:
-            return false;
-    }
-}

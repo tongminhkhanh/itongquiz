@@ -4,7 +4,7 @@
  */
 
 const PERPLEXITY_API_URL = 'https://api.perplexity.ai/chat/completions';
-const REQUEST_TIMEOUT_MS = 120000; // 2 phút timeout
+const REQUEST_TIMEOUT_MS = 240000; // 4 phút timeout
 const MAX_RETRIES = 2; // Số lần thử lại
 
 export interface IoeSearchResult {

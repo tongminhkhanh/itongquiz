@@ -1,0 +1,79 @@
+{
+    "meta": {
+        "schema_version": "1.1.0",
+        "awf_version": "3.3.0"
+    },
+    "project": {
+        "name": "itongquiz1",
+        "type": "Web App",
+        "status": "In Development"
+    },
+    "tech_stack": {
+        "frontend": {
+            "framework": "React + Vite",
+            "styling": "TailwindCSS + CSS Modules"
+        },
+        "backend": {
+            "service": "Google Apps Script",
+            "ai": "Gemini + Perplexity (via LLM-Mux)"
+        }
+    },
+    "database_schema": {
+        "summary": "Project uses Google Sheets as database via GAS",
+        "tables": [
+            {
+                "name": "Quizzes",
+                "description": "Stores quiz metadata and questions JSON"
+            },
+            {
+                "name": "Results",
+                "description": "Stores student submission results"
+            }
+        ]
+    },
+    "features": [
+        "AI Quiz Generation (Gemini)",
+        "IOE Quiz Support (Perplexity + Search)",
+        "PDF to Quiz (OCR)",
+        "Student Exam Interface",
+        "Teacher Dashboard (Create, Manage, Review)",
+        "AI Tutor - Giải thích đáp án sai",
+        "AI Tutor - Gợi ý câu hỏi tương tự"
+    ],
+    "knowledge_items": {
+        "patterns": [
+            {
+                "name": "ExplanationContent Pattern",
+                "description": "Component riêng để render AI explanation với Markdown + LaTeX support",
+                "files": [
+                    "src/components/common/ExplanationContent.tsx"
+                ]
+            },
+            {
+                "name": "MathSpan Pattern",
+                "description": "Component để render LaTeX math formulas using MathJax",
+                "files": [
+                    "src/components/common/MathSpan.tsx"
+                ]
+            }
+        ],
+        "gotchas": [
+            {
+                "issue": "AI trả về Markdown headers (###) trong JSON response",
+                "solution": "Strip Markdown headers trong client-side formatting + Cập nhật prompt để AI không dùng"
+            },
+            {
+                "issue": "Phân số a/b không render đẹp",
+                "solution": "Convert thành LaTeX $\\frac{a}{b}$ trong formatExplanationHtml"
+            },
+            {
+                "issue": "Line breaks trong AI response bị mất",
+                "solution": "Parse \\n thành paragraphs hoặc bullet points thay vì loại bỏ"
+            }
+        ],
+        "conventions": [
+            "AI prompts phải có format instructions rõ ràng (không Markdown headers, dùng numbered lists)",
+            "Content formatting: MathSpan cho câu hỏi/options, ExplanationContent cho AI explanations"
+        ]
+    }
+}

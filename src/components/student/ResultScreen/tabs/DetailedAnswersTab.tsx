@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
-import { Quiz, QuestionType, StudentResult } from '../../../../types';
+import { Quiz, QuestionType, StudentResult, Question } from '../../../../types';
 import { formatMathText } from '../../../../utils/formatters';
 import { renderMathJax } from '../../../../hooks/useMathJax';
 import QuestionFilter, { FilterType } from '../components/QuestionFilter';
 import AnswerCard, { AnswerStatus } from '../components/AnswerCard';
-import { ChevronLeft, ChevronRight, Check, X, HelpCircle, Lightbulb } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X, HelpCircle, Lightbulb, Bot } from 'lucide-react';
 import { MathSpan } from '../../../common';
+import ExplanationModal from '../../../ExplanationModal';
 
 interface Props {
     quiz: Quiz;
@@ -17,6 +18,11 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
     const [filter, setFilter] = useState<FilterType>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
+
+    // AI Tutor modal state
+    const [aiTutorQuestion, setAiTutorQuestion] = useState<Question | null>(null);
+    const [aiTutorUserAnswer, setAiTutorUserAnswer] = useState<string>('');
+    const [aiTutorCorrectAnswer, setAiTutorCorrectAnswer] = useState<string>('');
 
     // Helper function to check if answer is correct
     const getAnswerStatus = (question: any, answer: any): AnswerStatus => {
@@ -312,6 +318,21 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                             <p className="text-blue-700">{(q as any).explanation}</p>
                         </div>
                     )}
+
+                    {/* AI Tutor button - show for wrong answers */}
+                    {status !== 'correct' && (
+                        <button
+                            onClick={() => {
+                                setAiTutorQuestion(q as Question);
+                                setAiTutorUserAnswer(String(answer || 'Không trả lời'));
+                                setAiTutorCorrectAnswer(String(q.correctAnswer || q.correctAnswers?.[0] || ''));
+                            }}
+                            className="w-full p-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl flex items-center justify-center gap-2 hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
+                        >
+                            <Bot className="w-5 h-5" />
+                            <span className="font-semibold">🤖 Hỏi Gia sư AI giải thích</span>
+                        </button>
+                    )}
                 </div>
             </div>
         );
@@ -398,6 +419,17 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                     </div>
                 )}
             </div>
+
+            {/* AI Tutor Modal */}
+            {aiTutorQuestion && (
+                <ExplanationModal
+                    isOpen={!!aiTutorQuestion}
+                    onClose={() => setAiTutorQuestion(null)}
+                    question={aiTutorQuestion}
+                    userAnswer={aiTutorUserAnswer}
+                    correctAnswer={aiTutorCorrectAnswer}
+                />
+            )}
         </div>
     );
 };

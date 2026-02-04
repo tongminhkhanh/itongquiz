@@ -26,8 +26,8 @@ function doPost(e) {
 
 function handleRequest(e) {
     const lock = LockService.getScriptLock();
-    // Đợi tối đa 10 giây để tránh xung đột ghi dữ liệu
-    lock.tryLock(10000);
+    // Tăng timeout lên 60 giây để xử lý đề 100 câu hỏi
+    lock.tryLock(60000);
 
     try {
         // 1. Lấy tham số (hỗ trợ cả GET và POST)

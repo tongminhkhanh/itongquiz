@@ -136,7 +136,26 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
     const handleStart = () => {
         if (!studentName || !studentClass) return;
-        setShuffledQuestions(shuffleArray(quiz.questions));
+        // Shuffle trong cùng mức độ, giữ thứ tự: Mức 1 (đầu) → Mức 2 (giữa) → Mức 3 (cuối)
+        const shuffleWithinLevel = (questions: Question[]) => {
+            // Nhóm câu hỏi theo difficultyLevel
+            const level1 = questions.filter((q: any) => q.difficultyLevel === 1);
+            const level2 = questions.filter((q: any) => q.difficultyLevel === 2);
+            const level3 = questions.filter((q: any) => q.difficultyLevel === 3);
+            const noLevel = questions.filter((q: any) => !q.difficultyLevel);
+
+            // Shuffle trong từng nhóm
+            return [
+                ...shuffleArray(level1),
+                ...shuffleArray(noLevel), // Câu không có level đặt ở giữa
+                ...shuffleArray(level2),
+                ...shuffleArray(level3)  // Mức 3 ở cuối
+            ];
+        };
+
+        // Nếu có câu nào có difficultyLevel thì áp dụng shuffleWithinLevel
+        const hasLevels = quiz.questions.some((q: any) => q.difficultyLevel);
+        setShuffledQuestions(hasLevels ? shuffleWithinLevel(quiz.questions) : shuffleArray(quiz.questions));
         setStartTime(Date.now());
         setStep('quiz');
     };
@@ -179,28 +198,37 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         return { score, correctCount, totalItems };
     }, [shuffledQuestions, answers]);
 
-    const handleSubmit = useCallback(() => {
-        const { score, correctCount, totalItems } = calculateScore();
+    const handleSubmit = useCallback(async () => {
         const timeTaken = Math.round((Date.now() - startTime) / 60000);
 
-        const resultData: StudentResult = {
-            id: crypto.randomUUID(),
-            quizId: quiz.id,
-            quizTitle: quiz.title,
-            studentName,
-            studentClass,
-            score,
-            correctCount,
-            totalQuestions: totalItems,
-            timeTaken,
-            submittedAt: new Date().toISOString(),
-            answers
-        };
+        try {
+            // IOE quizzes are stored in a separate sheet, so we use local calculation
+            // instead of the main quiz validation endpoint
+            const { score, correctCount, totalItems } = calculateScore();
+            console.log('✅ IOE Local calculation:', { score, correctCount, totalItems });
 
-        setResult(resultData);
-        onSaveResult(resultData);
-        setStep('result');
-    }, [calculateScore, startTime, quiz, studentName, studentClass, answers, onSaveResult]);
+            const resultData: StudentResult = {
+                id: crypto.randomUUID(),
+                quizId: quiz.id,
+                quizTitle: quiz.title,
+                studentName,
+                studentClass,
+                score,
+                correctCount,
+                totalQuestions: totalItems,
+                timeTaken,
+                submittedAt: new Date().toISOString(),
+                answers
+            };
+
+            setResult(resultData);
+            onSaveResult(resultData);
+            setStep('result');
+        } catch (error: any) {
+            console.error('🚨 Submit error:', error);
+            alert('Lỗi khi nộp bài! Vui lòng thử lại. ' + (error.message || ''));
+        }
+    }, [startTime, quiz, studentName, studentClass, answers, onSaveResult, calculateScore]);
 
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60);
