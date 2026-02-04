@@ -91,17 +91,60 @@ const sanitizeLatex = (text: string): string => {
 
     let result = text;
 
-    // Normalize double backslashes
+    // Step 1: Normalize double backslashes
     result = result.replace(/\\\\frac/g, '\\frac');
     result = result.replace(/\\\\times/g, '\\times');
     result = result.replace(/\\\\div/g, '\\div');
+    result = result.replace(/\\\\sqrt/g, '\\sqrt');
+    result = result.replace(/\\\\cdot/g, '\\cdot');
+    result = result.replace(/\\\\leq/g, '\\leq');
+    result = result.replace(/\\\\geq/g, '\\geq');
 
-    // Fix mismatched delimiters
+    // Step 2: Fix mismatched delimiters
     result = result.replace(/\$([^$]+)\$\$/g, (_, content) => `$${content}$`);
     result = result.replace(/\$\$([^$]+)\$/g, (_, content) => `$${content}$`);
 
-    // Clean empty $$
+    // Step 3: Auto-wrap unwrapped LaTeX commands
+    // Split by $ to recognize Context (Inside/Outside Math Mode)
+    const parts = result.split('$');
+    const rebuiltParts: string[] = [];
+
+    for (let i = 0; i < parts.length; i++) {
+        let segment = parts[i];
+
+        if (i % 2 === 0) {
+            // OUTSIDE Math Mode - we should detect and wrap LaTeX
+
+            // Handle \frac{a}{b}
+            // Uses simple recursion safe regex for nesting up to 1 level if needed, but simple one covers most AI outputs
+            segment = segment.replace(/\\frac\s*\{([^}]+)\}\s*\{([^}]+)\}/g, '$\\frac{$1}{$2}$');
+
+            // Handle single commands like \times, \div, \leq, \geq that might be standalone
+            // We use word boundary to avoid breaking text
+            // Note: Be careful not to wrap things already wrapped by the frac replacement above
+
+            // Clean up: simple symbol replacements
+            segment = segment.replace(/\\times/g, ' $\\times$ ');
+            segment = segment.replace(/\\div/g, ' $\\div$ ');
+            segment = segment.replace(/\\leq/g, ' $\\leq$ ');
+            segment = segment.replace(/\\geq/g, ' $\\geq$ ');
+
+            rebuiltParts.push(segment);
+        } else {
+            // INSIDE Math Mode - keep as is, wrap with $
+            rebuiltParts.push('$' + segment + '$');
+        }
+    }
+
+    result = rebuiltParts.join('');
+
+    // Step 4: Clean up double dollars created by replacements
+    // e.g., if we replaced inside something that was borderline
+    // Remove empty $$
     result = result.replace(/\$\s*\$/g, '');
+
+    // Cleanup: $\times$ sometimes adjacent to numbers, can merge?
+    // For now, simple logic is safe enough for display
 
     return result;
 };

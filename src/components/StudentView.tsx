@@ -426,7 +426,8 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         totalQuestions: totalItems,
         timeTaken,
         submittedAt: new Date().toISOString(),
-        answers
+        answers,
+        validationDetails: validationResult.details // Store server validation details
       };
 
       // Save result

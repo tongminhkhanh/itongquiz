@@ -439,10 +439,24 @@ export const deleteQuizFromSheet = async (quizId: string, scriptUrl: string): Pr
 
 export const updateQuizInSheet = async (quiz: Quiz, scriptUrl: string): Promise<boolean> => {
     const escapedQuiz = prepareQuizForSave(quiz);
+    const expectedCount = quiz.questions.length;
     const result = await callGasApi('update_quiz', escapedQuiz);
+
     if (result && result.status === 'success') {
+        // Verify question count if server returns it
+        if (result.questionCount !== undefined && result.questionCount !== expectedCount) {
+            console.error(`[updateQuizInSheet] Question count mismatch: expected ${expectedCount}, got ${result.questionCount}`);
+            alert(`Cảnh báo: Số câu hỏi lưu (${result.questionCount}) không khớp với số câu trong đề (${expectedCount}). Vui lòng kiểm tra lại.`);
+            return false;
+        }
+        console.log(`[updateQuizInSheet] Successfully updated quiz with ${result.questionCount || expectedCount} questions`);
         cacheService.invalidatePrefix('quizzes:');
         return true;
     }
+
+    // Log and show error
+    const errorMsg = result?.message || 'Unknown error';
+    console.error('[updateQuizInSheet] Update failed:', errorMsg);
+    alert(`Lỗi khi cập nhật đề: ${errorMsg}`);
     return false;
 };

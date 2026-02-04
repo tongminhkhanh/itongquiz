@@ -1,7 +1,7 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Quiz } from '../../types';
 import { Tabs, TabItem, Button, ErrorBoundary } from '../common';
-import { LogOut, FileText, List, Settings, Bot, Key, X, Save, Loader2, Globe } from 'lucide-react';
+import { LogOut, FileText, List, Settings, Bot, Key, X, Save, Loader2, Globe, Megaphone } from 'lucide-react';
 import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID, QUIZ_CATEGORIES } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
@@ -14,6 +14,7 @@ const CreateTab = React.lazy(() => import('./CreateTab'));
 const IoeTab = React.lazy(() => import('./IoeTab'));
 const IoeManageTab = React.lazy(() => import('./IoeManageTab'));
 const IoeResultsTab = React.lazy(() => import('./IoeResultsTab'));
+const AnnouncementSettings = React.lazy(() => import('./AnnouncementSettings'));
 
 
 const TeacherDashboard: React.FC = () => {
@@ -52,6 +53,7 @@ const TeacherDashboard: React.FC = () => {
         { id: 'ioe', label: 'Tạo đề IOE', icon: <Globe className="w-4 h-4" /> },
         { id: 'ioe-manage', label: 'IOE Quản lý', icon: <Globe className="w-4 h-4" /> },
         { id: 'ioe-results', label: 'IOE Kết quả', icon: <Globe className="w-4 h-4" /> },
+        { id: 'announcements', label: 'Thông báo', icon: <Megaphone className="w-4 h-4" /> },
     ];
 
     // Filter tabs based on role and allowed users
@@ -66,8 +68,8 @@ const TeacherDashboard: React.FC = () => {
             return true; // Tất cả GV đều có thể quản lý và tạo đề ôn tập
         }
 
-        // IOE Tabs - CHỈ Admin được phép (tất cả admin đều có quyền)
-        if (tab.id === 'ioe' || tab.id === 'ioe-manage' || tab.id === 'ioe-results') {
+        // IOE Tabs & Announcements - CHỈ Admin được phép (tất cả admin đều có quyền)
+        if (tab.id === 'ioe' || tab.id === 'ioe-manage' || tab.id === 'ioe-results' || tab.id === 'announcements') {
             return authStore.isAdmin;
         }
 
@@ -200,6 +202,12 @@ const TeacherDashboard: React.FC = () => {
 
                         {activeTab === 'ioe-results' && (
                             <IoeResultsTab />
+                        )}
+
+                        {activeTab === 'announcements' && (
+                            <div className="max-w-2xl mx-auto">
+                                <AnnouncementSettings />
+                            </div>
                         )}
 
 

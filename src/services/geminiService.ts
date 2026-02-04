@@ -204,10 +204,14 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     - ${typesDescription}
     
     ${options?.isPdfMode ? `
-    🔴🔴🔴 CHẾ ĐỘ TẠO ĐỀ TỪ FILE PDF - ƯU TIÊN TUYỆT ĐỐI 🔴🔴🔴
-    ⛔ KHÔNG cần tuân theo chủ đề "${topic}" - CHỈ lấy nội dung từ FILE ĐÍNH KÈM
-    ⛔ KHÔNG được tự bịa câu hỏi - CHỈ trích xuất từ file
-    ⛔ Lấy NGUYÊN VĂN câu hỏi trong file và TỰ XÁC ĐỊNH đáp án đúng
+    🔴🔴🔴 CHẾ ĐỘ TẠO ĐỀ TỪ FILE PDF 🔴🔴🔴
+    ✅ SỬ DỤNG nội dung file làm NGUỒN CHÍNH.
+    ✅ NẾU file là đề thi có sẵn: Ưu tiên TRÍCH XUẤT NGUYÊN VĂN câu hỏi từ file.
+    ✅ NẾU file là tài liệu học tập (lý thuyết, bài đọc): HÃY TỰ TẠO câu hỏi mới dựa trên nội dung đó.
+    ✅ ĐƯỢC PHÉP sử dụng kiến thức bên ngoài hoặc Search để:
+       - Giải đáp án nếu file không có.
+       - Tạo câu hỏi mới nếu file không đủ số lượng.
+       - Làm rõ các nội dung mờ, khó đọc.
     ` : `
     NỘI DUNG THAM KHẢO:
     ${content ? `"${content}"` : "Không có nội dung cụ thể. Hãy tự động sinh câu hỏi dựa trên kiến thức chuẩn của sách giáo khoa Tiểu học Việt Nam phù hợp với Chủ đề và Lớp học đã nêu trên."}
@@ -673,11 +677,11 @@ const generateWithGemini = async (
 
 🔴🔴🔴 NHIỆM VỤ BẮT BUỘC - ƯU TIÊN CAO NHẤT 🔴🔴🔴
 
-BƯỚC 1: ĐỌC VÀ TRÍCH XUẤT CÂU HỎI
+BƯỚC 1: XỬ LÝ NỘI DUNG FILE
 - ĐỌC KỸ toàn bộ nội dung trong file
-- TRÍCH XUẤT NGUYÊN VĂN tất cả câu hỏi/bài tập trong file
-- GIỮ NGUYÊN 100% nội dung đề bài, các đáp án (nếu có)
-- KHÔNG ĐƯỢC thay đổi, diễn đạt lại, hay sửa bất kỳ từ nào
+- NẾU LÀ ĐỀ THI CÓ SẴN: Trích xuất nguyên văn câu hỏi.
+- NẾU LÀ TÀI LIỆU HỌC TẬP (Truyện, văn, lý thuyết): Tự tạo câu hỏi trắc nghiệm dựa trên nội dung đó.
+- ĐƯỢC PHÉP điều chỉnh, bổ sung để câu hỏi rõ ràng, chính xác hơn.
 
 📝 QUY TẮC ĐỊNH DẠNG VĂN BẢN:
 ⚠️ QUAN TRỌNG - GIỮ NGUYÊN ĐỊNH DẠNG:
@@ -718,7 +722,8 @@ BƯỚC 3: FORMAT JSON CHUẨN
 2. Nếu có đoạn thơ/văn → PHẢI đưa vào question cùng câu hỏi
 3. Đáp án AI phải TỰ XÁC ĐỊNH nếu file không có
 4. BỎ QUA câu cần hình ảnh - GIỮ câu có đoạn văn/thơ bằng chữ
-5. Chỉ bổ sung câu hỏi mới nếu file không đủ số lượng yêu cầu
+5. NẾU file không phải đề thi (chỉ là tài liệu): HÃY SÁNG TẠO câu hỏi dựa trên nội dung file và kiến thức chuẩn.
+6. ƯU TIÊN sử dụng kiến thức trong file, nhưng CÓ THỂ dùng kiến thức bên ngoài để bổ trợ.
 
 ⏬⏬⏬ TÀI LIỆU BẮT ĐẦU - ĐỌC VÀ TRÍCH XUẤT CÂU HỎI ⏬⏬⏬`
     });

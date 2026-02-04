@@ -230,6 +230,12 @@ export interface StudentResult {
     timeTaken: number; // in minutes
     submittedAt: string;
     answers: Record<string, any>; // Store student answers
+    // Server-validated results for each question
+    validationDetails?: {
+        questionId: string;
+        isCorrect: boolean;
+        correctAnswer?: any;
+    }[];
 }
 
 export interface Teacher {

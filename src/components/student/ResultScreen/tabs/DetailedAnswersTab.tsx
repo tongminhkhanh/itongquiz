@@ -5,7 +5,7 @@ import { renderMathJax } from '../../../../hooks/useMathJax';
 import QuestionFilter, { FilterType } from '../components/QuestionFilter';
 import AnswerCard, { AnswerStatus } from '../components/AnswerCard';
 import { ChevronLeft, ChevronRight, Check, X, HelpCircle, Lightbulb, Bot } from 'lucide-react';
-import { MathSpan } from '../../../common';
+import { MathSpan, ExplanationContent } from '../../../common';
 import ExplanationModal from '../../../ExplanationModal';
 
 interface Props {
@@ -25,7 +25,18 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
     const [aiTutorCorrectAnswer, setAiTutorCorrectAnswer] = useState<string>('');
 
     // Helper function to check if answer is correct
+    // PRIORITY: Use server validationDetails if available, fallback to local calculation
     const getAnswerStatus = (question: any, answer: any): AnswerStatus => {
+        // 1. Check server validation result first (single source of truth)
+        if (result.validationDetails && result.validationDetails.length > 0) {
+            const serverResult = result.validationDetails.find(d => d.questionId === question.id);
+            if (serverResult) {
+                if (!answer && answer !== false && answer !== 0) return 'skipped';
+                return serverResult.isCorrect ? 'correct' : 'wrong';
+            }
+        }
+
+        // 2. Fallback to local calculation if no server data
         if (!answer && answer !== false && answer !== 0) return 'skipped';
 
         switch (question.type) {
@@ -308,6 +319,177 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                         </div>
                     )}
 
+                    {/* DRAG_DROP */}
+                    {q.type === QuestionType.DRAG_DROP && (
+                        <div className="space-y-3">
+                            {/* Show the full text with blanks */}
+                            {q.text && (
+                                <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
+                                    <p className="text-sm text-gray-600 mb-1">Đoạn văn:</p>
+                                    <MathSpan content={q.text} className="text-gray-800" />
+                                </div>
+                            )}
+                            <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200">
+                                <p className="text-sm text-gray-600 mb-1">Em trả lời:</p>
+                                <p className={`font-medium ${status === 'correct' ? 'text-green-700' : 'text-red-700'}`}>
+                                    {answer ? (typeof answer === 'object' ? Object.entries(answer).map(([k, v]) => `${v}`).join(', ') : answer) : '(Không trả lời)'}
+                                </p>
+                            </div>
+                            {status !== 'correct' && q.blanks && (
+                                <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                                    <p className="text-sm text-gray-600 mb-1">Đáp án đúng:</p>
+                                    <p className="font-bold text-green-700">{q.blanks.join(', ')}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* DROPDOWN */}
+                    {q.type === QuestionType.DROPDOWN && (
+                        <div className="space-y-3">
+                            {/* Show the full text with blanks */}
+                            {q.text && (
+                                <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
+                                    <p className="text-sm text-gray-600 mb-1">Đoạn văn:</p>
+                                    <MathSpan content={q.text} className="text-gray-800" />
+                                </div>
+                            )}
+                            {(q.blanks || []).map((blank: any, idx: number) => {
+                                const studentVal = answer?.[blank.id];
+                                const isCorrect = studentVal === blank.correctAnswer;
+                                return (
+                                    <div key={blank.id || idx} className={`p-3 rounded-lg border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                        <p className="text-sm text-gray-600 mb-1">Ô {idx + 1}:</p>
+                                        <p className={`font-medium ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                                            Em chọn: {studentVal || '(Chưa chọn)'}
+                                        </p>
+                                        {!isCorrect && (
+                                            <p className="text-green-600 text-sm mt-1">→ Đáp án: {blank.correctAnswer}</p>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* ORDERING */}
+                    {q.type === QuestionType.ORDERING && (
+                        <div className="space-y-2">
+                            <p className="text-sm text-gray-600 mb-2">Thứ tự em sắp xếp:</p>
+                            {(answer || []).map((item: string, idx: number) => (
+                                <div key={idx} className="p-2 rounded-lg bg-gray-100 border border-gray-200 flex items-center gap-2">
+                                    <span className="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-sm font-bold">{idx + 1}</span>
+                                    <MathSpan content={item} className="flex-1" />
+                                </div>
+                            ))}
+                            {status !== 'correct' && q.correctOrder && (
+                                <div className="mt-3 p-3 rounded-lg bg-green-50 border border-green-200">
+                                    <p className="text-sm text-green-600 mb-1">Thứ tự đúng:</p>
+                                    {q.correctOrder.map((orderIdx: number, i: number) => (
+                                        <p key={i} className="text-green-700">{i + 1}. {q.items?.[orderIdx] || ''}</p>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* CATEGORIZATION */}
+                    {q.type === QuestionType.CATEGORIZATION && (
+                        <div className="space-y-3">
+                            {(q.categories || []).map((cat: any) => (
+                                <div key={cat.id} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                                    <p className="font-medium text-gray-700 mb-2">{cat.name}</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(q.items || []).filter((item: any) => answer?.[item.id] === cat.id || item.categoryId === cat.id).map((item: any) => {
+                                            const studentChoice = answer?.[item.id];
+                                            const isCorrect = studentChoice === item.categoryId;
+                                            return (
+                                                <span key={item.id} className={`px-2 py-1 rounded text-sm ${isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {item.content} {isCorrect ? '✓' : '✗'}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* UNDERLINE */}
+                    {q.type === QuestionType.UNDERLINE && (
+                        <div className="space-y-3">
+                            <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
+                                <p className="text-sm text-gray-600 mb-1">Câu:</p>
+                                <p className="text-gray-800">{q.sentence}</p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {(q.words || []).map((word: string, idx: number) => {
+                                    const isCorrect = (q.correctWordIndexes || []).includes(idx);
+                                    const isSelected = (answer || []).includes(idx);
+                                    return (
+                                        <span
+                                            key={idx}
+                                            className={`px-2 py-1 rounded text-sm ${isCorrect ? 'bg-green-100 text-green-700 underline' : isSelected ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}
+                                        >
+                                            {word} {isCorrect && '✓'} {isSelected && !isCorrect && '✗'}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* RIDDLE */}
+                    {q.type === QuestionType.RIDDLE && (
+                        <div className="space-y-3">
+                            {q.riddleLines && (
+                                <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                                    {q.riddleLines.map((line: string, idx: number) => (
+                                        <p key={idx} className="text-indigo-800 italic">{line}</p>
+                                    ))}
+                                </div>
+                            )}
+                            <div className={`p-3 rounded-lg ${status === 'correct' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                                <p className="text-sm text-gray-600 mb-1">{q.answerLabel || 'Đáp án'}:</p>
+                                <p className={`font-bold ${status === 'correct' ? 'text-green-700' : 'text-red-700'}`}>
+                                    {answer || '(Không trả lời)'}
+                                </p>
+                            </div>
+                            {status !== 'correct' && (
+                                <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                                    <p className="text-sm text-gray-600 mb-1">Đáp án đúng:</p>
+                                    <p className="font-bold text-green-700">{q.correctAnswer}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* WORD_SCRAMBLE */}
+                    {q.type === QuestionType.WORD_SCRAMBLE && (
+                        <div className="space-y-3">
+                            <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
+                                <p className="text-sm text-gray-600 mb-1">Các chữ cái:</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {(q.letters || []).map((letter: string, idx: number) => (
+                                        <span key={idx} className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded flex items-center justify-center font-bold">{letter}</span>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className={`p-3 rounded-lg ${status === 'correct' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                                <p className="text-sm text-gray-600 mb-1">Em trả lời:</p>
+                                <p className={`font-bold ${status === 'correct' ? 'text-green-700' : 'text-red-700'}`}>
+                                    {answer || '(Không trả lời)'}
+                                </p>
+                            </div>
+                            {status !== 'correct' && (
+                                <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                                    <p className="text-sm text-gray-600 mb-1">Đáp án đúng:</p>
+                                    <p className="font-bold text-green-700">{q.correctWord}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Explanation section */}
                     {status !== 'correct' && (q as any).explanation && (
                         <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
@@ -315,7 +497,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                 <Lightbulb className="w-5 h-5 text-blue-600" />
                                 <span className="font-bold text-blue-800">Hướng dẫn giải</span>
                             </div>
-                            <p className="text-blue-700">{(q as any).explanation}</p>
+                            <ExplanationContent content={(q as any).explanation} className="text-blue-700" />
                         </div>
                     )}
 

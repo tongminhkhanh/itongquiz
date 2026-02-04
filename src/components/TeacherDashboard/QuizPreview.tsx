@@ -163,78 +163,80 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
         } else if ('mainQuestion' in question) {
             setEditQuestionText((question as any).mainQuestion);
         }
-        if ('options' in question) {
-            setEditOptions([...(question as any).options]);
+
+        // Fix: Load properties based on Question Type instead of key existence
+        if (question.type === QuestionType.MCQ ||
+            question.type === QuestionType.MULTIPLE_SELECT ||
+            question.type === QuestionType.IMAGE_QUESTION) {
+            setEditOptions((question as any).options ? [...(question as any).options] : []);
         }
-        if ('correctAnswer' in question) {
-            setEditCorrectAnswer((question as any).correctAnswer);
+
+        if (question.type === QuestionType.MCQ ||
+            question.type === QuestionType.SHORT_ANSWER ||
+            question.type === QuestionType.IMAGE_QUESTION ||
+            question.type === QuestionType.RIDDLE) {
+            setEditCorrectAnswer((question as any).correctAnswer || '');
         }
-        if ('correctAnswers' in question) {
-            setEditCorrectAnswers([...(question as any).correctAnswers]);
+
+        if (question.type === QuestionType.MULTIPLE_SELECT) {
+            setEditCorrectAnswers((question as any).correctAnswers ? [...(question as any).correctAnswers] : []);
         }
         // RIDDLE specific
-        if ('riddleLines' in question) {
-            setEditRiddleLines([...(question as any).riddleLines]);
+        // RIDDLE specific
+        if (question.type === QuestionType.RIDDLE) {
+            setEditRiddleLines((question as any).riddleLines ? [...(question as any).riddleLines] : []);
+            setEditAnswerLabel((question as any).answerLabel || '');
         }
-        if ('answerLabel' in question) {
-            setEditAnswerLabel((question as any).answerLabel);
-        }
+
         // TRUE_FALSE & ORDERING items
-        if ('items' in question) {
-            setEditItems([...(question as any).items]);
+        if (question.type === QuestionType.TRUE_FALSE || question.type === QuestionType.ORDERING) {
+            setEditItems((question as any).items ? [...(question as any).items] : []);
         }
+
         // MATCHING pairs
-        if ('pairs' in question) {
-            setEditPairs([...(question as any).pairs]);
+        if (question.type === QuestionType.MATCHING) {
+            setEditPairs((question as any).pairs ? [...(question as any).pairs] : []);
         }
+
         // WORD_SCRAMBLE
-        if ('letters' in question) {
-            setEditLetters([...(question as any).letters]);
+        if (question.type === QuestionType.WORD_SCRAMBLE) {
+            setEditLetters((question as any).letters ? [...(question as any).letters] : []);
+            setEditCorrectWord((question as any).correctWord || '');
         }
-        if ('correctWord' in question) {
-            setEditCorrectWord((question as any).correctWord);
-        }
+
         // IMAGE_QUESTION specific
-        if ('image' in question) {
+        if (question.type === QuestionType.IMAGE_QUESTION) {
             setEditImageUrl((question as any).image || '');
         }
         // DRAG_DROP specific
-        if ('text' in question && question.type === QuestionType.DRAG_DROP) {
+        if (question.type === QuestionType.DRAG_DROP) {
             setEditDragDropText((question as any).text || '');
+            setEditBlanks((question as any).blanks ? [...(question as any).blanks] : []);
+            setEditDistractors((question as any).distractors ? [...(question as any).distractors] : []);
         }
-        if ('blanks' in question && question.type === QuestionType.DRAG_DROP) {
-            setEditBlanks([...(question as any).blanks]);
-        }
-        if ('distractors' in question) {
-            setEditDistractors([...(question as any).distractors]);
-        }
+
         // ORDERING specific
-        if ('correctOrder' in question) {
-            setEditCorrectOrder([...(question as any).correctOrder]);
+        if (question.type === QuestionType.ORDERING) {
+            setEditCorrectOrder((question as any).correctOrder ? [...(question as any).correctOrder] : []);
         }
+
         // DROPDOWN specific
-        if ('text' in question && question.type === QuestionType.DROPDOWN) {
+        if (question.type === QuestionType.DROPDOWN) {
             setEditDropdownText((question as any).text || '');
+            setEditDropdownBlanks((question as any).blanks ? (question as any).blanks.map((b: any) => ({ ...b })) : []);
         }
-        if ('blanks' in question && question.type === QuestionType.DROPDOWN) {
-            setEditDropdownBlanks((question as any).blanks.map((b: any) => ({ ...b })));
-        }
+
         // UNDERLINE specific
-        if ('sentence' in question) {
+        if (question.type === QuestionType.UNDERLINE) {
             setEditSentence((question as any).sentence || '');
+            setEditWords((question as any).words ? [...(question as any).words] : []);
+            setEditCorrectWordIndexes((question as any).correctWordIndexes ? [...(question as any).correctWordIndexes] : []);
         }
-        if ('words' in question) {
-            setEditWords([...(question as any).words]);
-        }
-        if ('correctWordIndexes' in question) {
-            setEditCorrectWordIndexes([...(question as any).correctWordIndexes]);
-        }
+
         // CATEGORIZATION specific
-        if ('categories' in question) {
-            setEditCategories((question as any).categories.map((c: any) => ({ ...c })));
-        }
-        if ('items' in question && question.type === QuestionType.CATEGORIZATION) {
-            setEditCategorizationItems((question as any).items.map((i: any) => ({ ...i })));
+        if (question.type === QuestionType.CATEGORIZATION) {
+            setEditCategories((question as any).categories ? (question as any).categories.map((c: any) => ({ ...c })) : []);
+            setEditCategorizationItems((question as any).items ? (question as any).items.map((i: any) => ({ ...i })) : []);
         }
     };
 
@@ -253,69 +255,83 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                 updated.mainQuestion = editQuestionText;
             }
 
-            if ('options' in updated && editOptions.length > 0) {
+            // MCQ, MULTIPLE_SELECT, IMAGE_QUESTION options
+            if (updated.type === QuestionType.MCQ ||
+                updated.type === QuestionType.MULTIPLE_SELECT ||
+                updated.type === QuestionType.IMAGE_QUESTION) {
                 updated.options = editOptions;
             }
 
-            if ('correctAnswer' in updated) {
+            // correctAnswer for MCQ, SHORT_ANSWER, IMAGE_QUESTION, RIDDLE
+            if (updated.type === QuestionType.MCQ ||
+                updated.type === QuestionType.SHORT_ANSWER ||
+                updated.type === QuestionType.IMAGE_QUESTION ||
+                updated.type === QuestionType.RIDDLE) {
                 updated.correctAnswer = editCorrectAnswer;
             }
 
             // RIDDLE specific
-            if ('riddleLines' in updated) {
+            if (updated.type === QuestionType.RIDDLE) {
                 updated.riddleLines = editRiddleLines;
-            }
-            if ('answerLabel' in updated) {
                 updated.answerLabel = editAnswerLabel;
             }
-            // TRUE_FALSE & ORDERING items
-            if ('items' in updated) {
+
+            // TRUE_FALSE items
+            if (updated.type === QuestionType.TRUE_FALSE) {
                 updated.items = editItems;
             }
-            // MATCHING pairs
-            if ('pairs' in updated) {
-                updated.pairs = editPairs;
-            }
-            // WORD_SCRAMBLE
-            if ('letters' in updated) {
-                updated.letters = editLetters;
-            }
-            if ('correctWord' in updated) {
-                updated.correctWord = editCorrectWord;
-            }
-            // MULTIPLE_SELECT correctAnswers
-            if ('correctAnswers' in updated) {
-                updated.correctAnswers = editCorrectAnswers;
-            }
-            // IMAGE_QUESTION specific
-            if ('image' in updated && editImageUrl) {
-                updated.image = editImageUrl;
-            }
-            // DRAG_DROP specific
-            if (updated.type === QuestionType.DRAG_DROP) {
-                if (editDragDropText) updated.text = editDragDropText;
-                if (editBlanks.length > 0) updated.blanks = editBlanks;
-                if (editDistractors.length > 0) updated.distractors = editDistractors;
-            }
-            // ORDERING specific
-            if ('correctOrder' in updated && editCorrectOrder.length > 0) {
+
+            // ORDERING items and correctOrder
+            if (updated.type === QuestionType.ORDERING) {
+                updated.items = editItems;
                 updated.correctOrder = editCorrectOrder;
             }
-            // DROPDOWN specific
-            if (updated.type === QuestionType.DROPDOWN) {
-                if (editDropdownText) updated.text = editDropdownText;
-                if (editDropdownBlanks.length > 0) updated.blanks = editDropdownBlanks;
+
+            // MATCHING pairs
+            if (updated.type === QuestionType.MATCHING) {
+                updated.pairs = editPairs;
             }
-            // UNDERLINE specific
+
+            // WORD_SCRAMBLE
+            if (updated.type === QuestionType.WORD_SCRAMBLE) {
+                updated.letters = editLetters;
+                updated.correctWord = editCorrectWord;
+            }
+
+            // MULTIPLE_SELECT correctAnswers
+            if (updated.type === QuestionType.MULTIPLE_SELECT) {
+                updated.correctAnswers = editCorrectAnswers;
+            }
+
+            // IMAGE_QUESTION specific - always save image field
+            if (updated.type === QuestionType.IMAGE_QUESTION) {
+                updated.image = editImageUrl;
+            }
+
+            // DRAG_DROP specific - always save all fields
+            if (updated.type === QuestionType.DRAG_DROP) {
+                updated.text = editDragDropText;
+                updated.blanks = editBlanks;
+                updated.distractors = editDistractors;
+            }
+
+            // DROPDOWN specific - always save all fields
+            if (updated.type === QuestionType.DROPDOWN) {
+                updated.text = editDropdownText;
+                updated.blanks = editDropdownBlanks;
+            }
+
+            // UNDERLINE specific - always save all fields
             if (updated.type === QuestionType.UNDERLINE) {
-                if (editSentence) updated.sentence = editSentence;
-                if (editWords.length > 0) updated.words = editWords;
+                updated.sentence = editSentence;
+                updated.words = editWords;
                 updated.correctWordIndexes = editCorrectWordIndexes;
             }
-            // CATEGORIZATION specific
+
+            // CATEGORIZATION specific - always save all fields
             if (updated.type === QuestionType.CATEGORIZATION) {
-                if (editCategories.length > 0) updated.categories = editCategories;
-                if (editCategorizationItems.length > 0) updated.items = editCategorizationItems;
+                updated.categories = editCategories;
+                updated.items = editCategorizationItems;
             }
 
             return updated as Question;
