@@ -34,7 +34,7 @@ async function callLLM(prompt: string): Promise<string> {
             messages: [
                 {
                     role: 'system',
-                    content: 'Bạn là một chuyên gia giáo dục tiểu học Việt Nam. Nhiệm vụ của bạn là tạo các đáp án nhiễu (distractors) chất lượng cao cho câu hỏi trắc nghiệm. Trả lời bằng JSON.'
+                    content: 'Bạn là một chuyên gia giáo dục tiểu học Việt Nam. Nhiệm vụ của bạn là tạo các đáp án nhiễu (distractors) chất lượng cao cho câu hỏi trắc nghiệm. Trả lời bằng JSON array thuần túy, KHÔNG dùng markdown code block.'
                 },
                 {
                     role: 'user',
@@ -48,18 +48,27 @@ async function callLLM(prompt: string): Promise<string> {
 
     if (!response.ok) {
         const errorText = await response.text();
+        console.error('[SmartDistractor] API error:', response.status, errorText);
         throw new Error(`LLM API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
+    const content = data.choices?.[0]?.message?.content || '';
+    console.log('[SmartDistractor] Raw LLM response:', content);
+    return content;
 }
 
 // Parse JSON from LLM response (handles markdown code blocks)
 function parseJSONResponse(text: string): string[] {
-    // Remove markdown code blocks if present
+    // Remove markdown code blocks if present (handle \r\n and various formats)
     let cleaned = text.trim();
-    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    // Strip ```json ... ``` or ``` ... ``` blocks
+    const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+        cleaned = codeBlockMatch[1].trim();
+    }
+
+    console.log('[SmartDistractor] Cleaned for parsing:', cleaned.substring(0, 200));
 
     try {
         const parsed = JSON.parse(cleaned);
@@ -69,8 +78,10 @@ function parseJSONResponse(text: string): string[] {
         if (parsed.distractors && Array.isArray(parsed.distractors)) {
             return parsed.distractors.map(String).filter((s: string) => s.trim().length > 0);
         }
+        console.warn('[SmartDistractor] Parsed OK but not array/distractors:', typeof parsed);
         return [];
-    } catch {
+    } catch (e) {
+        console.warn('[SmartDistractor] JSON.parse failed:', (e as Error).message);
         // Try to extract array from text
         const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
         if (arrayMatch) {
@@ -79,8 +90,8 @@ function parseJSONResponse(text: string): string[] {
                 if (Array.isArray(arr)) {
                     return arr.map(String).filter(s => s.trim().length > 0);
                 }
-            } catch {
-                // fallthrough
+            } catch (e2) {
+                console.error('[SmartDistractor] Array extraction also failed:', (e2 as Error).message);
             }
         }
         return [];
