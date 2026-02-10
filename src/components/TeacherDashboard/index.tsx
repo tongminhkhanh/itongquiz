@@ -6,6 +6,7 @@ import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID, QUIZ_CATEGORIES } from '../.
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import { setStripAnswersEnabled } from '../../services/googleSheetService';
+import { cacheService } from '../../services/CacheService';
 
 // Lazy load tab components
 const ResultsTab = React.lazy(() => import('./ResultsTab'));
@@ -23,8 +24,15 @@ const TeacherDashboard: React.FC = () => {
     const quizStore = useQuizStore();
 
     // 🔐 ANTI-CHEAT: Disable answer stripping for teacher views
+    // Also force reload quizzes from server to get fresh data with answers
     useEffect(() => {
         setStripAnswersEnabled(false);
+
+        // Force reload quizzes from server to ensure we have answers
+        // This prevents stale data with stripped answers from being used
+        cacheService.invalidatePrefix('quizzes:');
+        quizStore.loadQuizzes();
+
         return () => {
             setStripAnswersEnabled(true);
         };

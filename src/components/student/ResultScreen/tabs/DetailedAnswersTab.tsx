@@ -15,6 +15,41 @@ interface Props {
 }
 
 const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
+    // Helper: resolve correctWordIndexes from multiple sources
+    // Priority: quiz object → quiz.correctAnswer → snapshot → validationDetails
+    const resolveCorrectWordIndexes = (question: any): number[] => {
+        // 1. Direct from quiz object (available when not stripped)
+        if (question.correctWordIndexes?.length > 0) return question.correctWordIndexes;
+        // 2. Parse from quiz.correctAnswer
+        if (question.correctAnswer) {
+            try {
+                const parsed = typeof question.correctAnswer === 'string'
+                    ? JSON.parse(question.correctAnswer) : question.correctAnswer;
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            } catch { /* ignore */ }
+        }
+        // 3. From result.answers snapshot (saved during submission)
+        const snapshot = result.answers?.[question.id]?.questionSnapshot;
+        if (snapshot?.correctWordIndexes?.length > 0) return snapshot.correctWordIndexes;
+        if (snapshot?.correctAnswer) {
+            try {
+                const parsed = typeof snapshot.correctAnswer === 'string'
+                    ? JSON.parse(snapshot.correctAnswer) : snapshot.correctAnswer;
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            } catch { /* ignore */ }
+        }
+        // 4. From server validationDetails
+        const vd = result.validationDetails?.find(d => d.questionId === question.id);
+        if (vd?.correctAnswer) {
+            try {
+                const parsed = typeof vd.correctAnswer === 'string'
+                    ? JSON.parse(vd.correctAnswer) : vd.correctAnswer;
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            } catch { /* ignore */ }
+        }
+        return [];
+    };
+
     const [filter, setFilter] = useState<FilterType>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
@@ -104,7 +139,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                 return isCatCorrect ? 'correct' : 'wrong';
             case QuestionType.UNDERLINE:
                 const studentIdxs = (answer as number[]) || [];
-                const correctIdxs = (question as any).correctWordIndexes || [];
+                const correctIdxs = resolveCorrectWordIndexes(question);
                 if (studentIdxs.length !== correctIdxs.length) return 'wrong';
                 const sSorted = [...studentIdxs].sort((a, b) => a - b);
                 const cSorted = [...correctIdxs].sort((a, b) => a - b);
@@ -416,28 +451,89 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                     )}
 
                     {/* UNDERLINE */}
-                    {q.type === QuestionType.UNDERLINE && (
-                        <div className="space-y-3">
-                            <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
-                                <p className="text-sm text-gray-600 mb-1">Câu:</p>
-                                <p className="text-gray-800">{q.sentence}</p>
+                    {q.type === QuestionType.UNDERLINE && (() => {
+                        const words: string[] = q.words || [];
+                        // Use helper to resolve correctWordIndexes from all sources
+                        // (quiz object may be stripped by anti-cheat)
+                        const correctIndexes: number[] = resolveCorrectWordIndexes(q);
+                        const selectedIndexes: number[] = answer || [];
+
+                        return (
+                            <div className="space-y-3">
+                                <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
+                                    <p className="text-sm text-gray-600 mb-1">Câu:</p>
+                                    <p className="text-gray-800">{q.sentence}</p>
+                                </div>
+
+                                {/* Word chips with clear status */}
+                                <div className="flex flex-wrap gap-2">
+                                    {words.map((word: string, idx: number) => {
+                                        const isCorrectWord = correctIndexes.includes(idx);
+                                        const isStudentSelected = selectedIndexes.includes(idx);
+
+                                        // 4 states:
+                                        // 1. Selected + Correct = green underline ✓
+                                        // 2. Selected + Wrong = red line-through ✗
+                                        // 3. Not selected + Should be correct = amber dashed underline (missed)
+                                        // 4. Not selected + Not correct = neutral gray
+
+                                        let chipClass = 'px-3 py-1.5 rounded-lg text-sm font-medium transition-all ';
+                                        let icon = '';
+
+                                        if (isStudentSelected && isCorrectWord) {
+                                            // Correct selection
+                                            chipClass += 'bg-green-100 text-green-700 underline decoration-2 decoration-green-500 border border-green-300';
+                                            icon = ' ✓';
+                                        } else if (isStudentSelected && !isCorrectWord) {
+                                            // Wrong selection
+                                            chipClass += 'bg-red-100 text-red-700 line-through decoration-2 decoration-red-400 border border-red-300';
+                                            icon = ' ✗';
+                                        } else if (!isStudentSelected && isCorrectWord) {
+                                            // Missed correct word
+                                            chipClass += 'bg-amber-50 text-amber-700 underline decoration-dashed decoration-2 decoration-amber-400 border border-amber-300';
+                                            icon = ' ⚠';
+                                        } else {
+                                            // Neutral
+                                            chipClass += 'bg-gray-50 text-gray-500 border border-gray-200';
+                                        }
+
+                                        return (
+                                            <span key={idx} className={chipClass}>
+                                                {word}{icon}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Legend */}
+                                <div className="flex flex-wrap gap-3 text-xs text-gray-500 px-1">
+                                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-200 border border-green-400"></span> Gạch đúng</span>
+                                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 border border-red-400"></span> Gạch sai</span>
+                                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-400"></span> Bỏ sót</span>
+                                </div>
+
+                                {/* Summary: student answer vs correct answer */}
+                                {status !== 'correct' && (
+                                    <div className="space-y-2">
+                                        <div className="p-3 rounded-lg bg-red-50 border border-red-200">
+                                            <p className="text-sm text-gray-600 mb-1">Em gạch chân:</p>
+                                            <p className="font-medium text-red-700">
+                                                {selectedIndexes.length > 0
+                                                    ? selectedIndexes.map(i => words[i] || '').filter(Boolean).join(', ')
+                                                    : '(Không gạch từ nào)'}
+                                            </p>
+                                        </div>
+                                        <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                                            <p className="text-sm text-gray-600 mb-1">Đáp án đúng:</p>
+                                            <p className="font-bold text-green-700">
+                                                {correctIndexes.map(i => words[i] || '').filter(Boolean).join(', ')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                                {(q.words || []).map((word: string, idx: number) => {
-                                    const isCorrect = (q.correctWordIndexes || []).includes(idx);
-                                    const isSelected = (answer || []).includes(idx);
-                                    return (
-                                        <span
-                                            key={idx}
-                                            className={`px-2 py-1 rounded text-sm ${isCorrect ? 'bg-green-100 text-green-700 underline' : isSelected ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}
-                                        >
-                                            {word} {isCorrect && '✓'} {isSelected && !isCorrect && '✗'}
-                                        </span>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     {/* RIDDLE */}
                     {q.type === QuestionType.RIDDLE && (

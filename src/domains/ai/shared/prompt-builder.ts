@@ -24,14 +24,16 @@ const TYPE_DESCRIPTIONS: Record<string, string> = {
  */
 const buildDifficultyInstructions = (levels: { level1: number; level2: number; level3: number }): string => {
     return `
-    PHAN BO CAU HOI THEO MUC DO (CHI LA HUONG DAN CHO AI, KHONG GHI VAO DE):
+    PHAN BO CAU HOI THEO MUC DO:
     - Muc 1 (Nhan biet): ${levels.level1} cau - De, quen thuoc
     - Muc 2 (Thong hieu): ${levels.level2} cau - Trung binh
     - Muc 3 (Van dung cao): ${levels.level3} cau - Kho, thuc tien
     
     TONG CONG: ${levels.level1 + levels.level2 + levels.level3} cau
     
-    LUU Y QUAN TRONG: KHONG duoc ghi "Muc 1", "Muc 2", "Muc 3", "Nhan biet", "Thong hieu", "Van dung" hay bat ky nhan muc do nao vao trong cau hoi. Chi tao cau hoi binh thuong.`;
+    ⚠️ YEU CAU BAT BUOC VE MUC DO:
+    Moi cau hoi PHAI co truong "difficulty" voi gia tri la 1, 2 hoac 3 tuong ung voi muc do.
+    Vi du: { "type": "MCQ", "question": "...", "difficulty": 2, ... }`;
 };
 
 /**

@@ -140,7 +140,29 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                 return isCatCorrect ? 'correct' : 'wrong';
             case 'UNDERLINE':
                 const studentIdxs = (answer as number[]) || [];
-                const correctIdxs = (question as any).correctWordIndexes || [];
+                // Resolve correctWordIndexes: quiz object → snapshot → validationDetails
+                let correctIdxs = (question as any).correctWordIndexes || [];
+                if (correctIdxs.length === 0) {
+                    // Try parse from quiz.correctAnswer
+                    if ((question as any).correctAnswer) {
+                        try { const p = JSON.parse((question as any).correctAnswer); if (Array.isArray(p)) correctIdxs = p; } catch { }
+                    }
+                    // Try from result snapshot
+                    if (correctIdxs.length === 0) {
+                        const snap = result.answers?.[question.id]?.questionSnapshot;
+                        if (snap?.correctWordIndexes?.length > 0) { correctIdxs = snap.correctWordIndexes; }
+                        else if (snap?.correctAnswer) {
+                            try { const p = JSON.parse(snap.correctAnswer); if (Array.isArray(p)) correctIdxs = p; } catch { }
+                        }
+                    }
+                    // Try from validationDetails
+                    if (correctIdxs.length === 0) {
+                        const vd = result.validationDetails?.find(d => d.questionId === question.id);
+                        if (vd?.correctAnswer) {
+                            try { const p = typeof vd.correctAnswer === 'string' ? JSON.parse(vd.correctAnswer) : vd.correctAnswer; if (Array.isArray(p)) correctIdxs = p; } catch { }
+                        }
+                    }
+                }
                 if (studentIdxs.length !== correctIdxs.length) return 'wrong';
                 const sSorted = [...studentIdxs].sort((a, b) => a - b);
                 const cSorted = [...correctIdxs].sort((a, b) => a - b);

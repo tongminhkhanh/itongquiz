@@ -133,17 +133,21 @@ function saveResult(sheet, data) {
     let resultSheet = sheet.getSheetByName("Results");
     if (!resultSheet) {
         resultSheet = sheet.insertSheet("Results");
-        resultSheet.appendRow(["Student Name", "Class", "Quiz Title", "Score", "correctCount", "Total Questions", "Submitted At"]);
+        // 👇 Thêm cột "answers" vào header
+        resultSheet.appendRow(["Student Name", "Class", "Quiz ID", "Quiz Title", "Score", "correctCount", "Total Questions", "Submitted At", "answers"]);
     }
 
+    // 👇 Thêm cột "answers" vào data row
     resultSheet.appendRow([
         sanitizeInput(data.studentName),
         sanitizeInput(data.className),
+        data.quizId || '',
         sanitizeInput(data.quizTitle),
         data.score,
         data.correctCount || 0,
         data.totalQuestions,
-        data.submittedAt
+        data.submittedAt,
+        JSON.stringify(data.answers || {})  // 👈 Cột mới: Lưu answers dạng JSON
     ]);
 
     return responseJSON({ status: "success" });
@@ -363,7 +367,19 @@ function validateAnswers(sheet, data) {
             if (qType === 'SHORT_ANSWER') {
                 isCorrect = String(studentAnswer).trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
             } else {
-                isCorrect = String(studentAnswer).trim().toUpperCase() === String(correctAnswer).trim().toUpperCase();
+                // MCQ và IMAGE_QUESTION:
+                // FIX: Handle correctAnswer stored as full text (e.g., "B. 90" or "D. 5*B")
+                // Extract just the letter if format is "X. text" or "X) text"
+                var normalizedCorrect = String(correctAnswer).trim().toUpperCase();
+                var normalizedStudent = String(studentAnswer).trim().toUpperCase();
+
+                // Check if correctAnswer matches pattern like "A. something" or "A) something"
+                var letterMatch = normalizedCorrect.match(/^([A-Z])[.\)]\s*/);
+                if (letterMatch) {
+                    normalizedCorrect = letterMatch[1]; // Extract just the letter
+                }
+
+                isCorrect = normalizedStudent === normalizedCorrect;
             }
         } else if (qType === 'MULTIPLE_SELECT') {
             // Compare arrays
@@ -461,15 +477,35 @@ function validateAnswers(sheet, data) {
                 isCorrect = false;
             }
         } else if (qType === 'UNDERLINE') {
-            // Compare selected word indexes
+            // UNDERLINE: correctWordIndexes stored in correctAnswer column as JSON string
+            // Student sends: [4, 5, 6, 7, 8] (array of selected word indexes)
+            // correctAnswer in sheet: "[4,5,6,7,8]" (JSON string)
             try {
-                const correctIndexes = JSON.parse(row[colIdx['correctWordIndexes']] || '[]');
-                const studentIndexes = studentAnswer || [];
-                isCorrect = correctIndexes.length === studentIndexes.length &&
-                    correctIndexes.every(function (idx) { return studentIndexes.includes(idx); });
+                var correctIndexes = JSON.parse(correctAnswer || '[]');
+                var studentIndexes = Array.isArray(studentAnswer) ? studentAnswer : [];
+                // Sort both to compare regardless of selection order
+                var sortedCorrect = correctIndexes.slice().sort(function (a, b) { return a - b; });
+                var sortedStudent = studentIndexes.slice().sort(function (a, b) { return a - b; });
+                isCorrect = sortedCorrect.length === sortedStudent.length &&
+                    sortedCorrect.every(function (idx, i) { return idx === sortedStudent[i]; });
             } catch (e) {
                 isCorrect = false;
             }
+        } else if (qType === 'WORD_SCRAMBLE') {
+            // WORD_SCRAMBLE: correctAnswer is the correct word string
+            // Student sends array of letter indexes [2, 0, 1, 3]
+            // We need items (letters array) to reconstruct student word
+            try {
+                var letters = JSON.parse(items || '[]');
+                var studentIdxArr = Array.isArray(studentAnswer) ? studentAnswer : [];
+                var studentWord = studentIdxArr.map(function (idx) { return letters[idx] || ''; }).join('');
+                isCorrect = studentWord.trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
+            } catch (e) {
+                isCorrect = false;
+            }
+        } else if (qType === 'RIDDLE') {
+            // RIDDLE: Simple string comparison (case-insensitive)
+            isCorrect = String(studentAnswer || '').trim().toLowerCase() === String(correctAnswer || '').trim().toLowerCase();
         }
 
         if (isCorrect) correctCount++;
@@ -485,34 +521,10 @@ function validateAnswers(sheet, data) {
     const total = quizQuestions.length;
     const score = total > 0 ? Math.round((correctCount / total) * 10 * 10) / 10 : 0; // Score out of 10
 
-    // 4. Save result to Results sheet
-    let resultSheet = sheet.getSheetByName("Results");
-    if (!resultSheet) {
-        resultSheet = sheet.insertSheet("Results");
-        resultSheet.appendRow(["Student Name", "Class", "Quiz ID", "Quiz Title", "Score", "correctCount", "Total Questions", "Submitted At"]);
-    }
+    // NOTE: Result is saved via submit_result action (saveResult function)
+    // Do NOT save here to avoid duplicate rows
 
-    // Get quiz title
-    const quizSheet = sheet.getSheetByName("Quizzes");
-    let quizTitle = "Unknown";
-    if (quizSheet) {
-        const quizData = quizSheet.getDataRange().getValues();
-        const quizRow = quizData.find(function (r) { return r[0] == quizId; });
-        if (quizRow) quizTitle = quizRow[1]; // title is column B
-    }
-
-    resultSheet.appendRow([
-        sanitizeInput(studentName),
-        sanitizeInput(studentClass),
-        quizId,
-        quizTitle,
-        score,
-        correctCount,
-        total,
-        new Date().toISOString()
-    ]);
-
-    // 5. Return result
+    // 4. Return result for client-side display
     return responseJSON({
         status: "success",
         score: score,

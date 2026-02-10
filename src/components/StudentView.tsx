@@ -415,18 +415,124 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       const totalItems = validationResult.total;
       console.log('✅ Server validation successful:', validationResult);
 
+      // 📸 Build answers with question snapshots for future reference
+      // This allows viewing answer details even if quiz is deleted later
+      const answersWithSnapshots: Record<string, any> = {};
+      quiz.questions.forEach(q => {
+        const studentAnswer = answers[q.id];
+        const validationDetail = validationResult.details?.find((d: any) => d.questionId === q.id);
+
+        // Determine isCorrect - use server result, but override for UNDERLINE
+        // Server has a bug: compares array with string for UNDERLINE → always false
+        let isCorrect = validationDetail?.isCorrect ?? false;
+        if (q.type === QuestionType.UNDERLINE && !isCorrect && studentAnswer) {
+          const studentIdxs = (studentAnswer as number[]) || [];
+          let correctIdxs = (q as any).correctWordIndexes || [];
+
+          // API often only returns correctAnswer as JSON string for correctWordIndexes
+          // We must parse it to perform the validation override
+          if (correctIdxs.length === 0 && (q as any).correctAnswer) {
+            try {
+              const parsed = JSON.parse((q as any).correctAnswer);
+              if (Array.isArray(parsed)) correctIdxs = parsed;
+            } catch { }
+          }
+
+          const sSorted = [...studentIdxs].sort((a, b) => a - b);
+          const cSorted = [...correctIdxs].sort((a, b) => a - b);
+          isCorrect = sSorted.length === cSorted.length &&
+            sSorted.every((val, idx) => val === cSorted[idx]);
+        }
+
+        // Build type-specific snapshot fields
+        const typeSpecificFields: Record<string, any> = {};
+        const qa = q as any;
+        switch (q.type) {
+          case QuestionType.UNDERLINE:
+            typeSpecificFields.words = qa.words;
+            typeSpecificFields.sentence = qa.sentence;
+            // Parse correctWordIndexes from correctAnswer if missing
+            let uCorrect = qa.correctWordIndexes;
+            if (!uCorrect && qa.correctAnswer) { try { uCorrect = JSON.parse(qa.correctAnswer); } catch { } }
+            typeSpecificFields.correctWordIndexes = uCorrect;
+            break;
+          case QuestionType.WORD_SCRAMBLE:
+            typeSpecificFields.letters = qa.letters;
+            // correctWord is often stored in correctAnswer
+            typeSpecificFields.correctWord = qa.correctWord || qa.correctAnswer;
+            break;
+          case QuestionType.RIDDLE:
+            typeSpecificFields.riddleLines = qa.riddleLines;
+            typeSpecificFields.answerLabel = qa.answerLabel;
+            break;
+          case QuestionType.ORDERING:
+            // correctOrder is often stored in correctAnswer as JSON
+            let oCorrect = qa.correctOrder;
+            if (!oCorrect && qa.correctAnswer) { try { oCorrect = JSON.parse(qa.correctAnswer); } catch { } }
+            typeSpecificFields.correctOrder = oCorrect;
+            break;
+          case QuestionType.CATEGORIZATION:
+            typeSpecificFields.categories = qa.categories;
+            break;
+          case QuestionType.DRAG_DROP:
+            typeSpecificFields.text = qa.text;
+            typeSpecificFields.blanks = qa.blanks;
+            typeSpecificFields.distractors = qa.distractors;
+            break;
+          case QuestionType.DROPDOWN:
+            typeSpecificFields.text = qa.text;
+            typeSpecificFields.blanks = qa.blanks;
+            break;
+          case QuestionType.MATCHING:
+            typeSpecificFields.pairs = qa.pairs;
+            break;
+          case QuestionType.TRUE_FALSE:
+            // items already included below
+            break;
+        }
+
+        answersWithSnapshots[q.id] = {
+          selectedAnswer: studentAnswer,
+          isCorrect,
+          questionSnapshot: {
+            question: qa.question || '',
+            mainQuestion: qa.mainQuestion || '',
+            type: q.type,
+            options: qa.options,
+            correctAnswer: validationDetail?.correctAnswer || qa.correctAnswer || qa.correctAnswers,
+            items: qa.items,
+            ...typeSpecificFields
+          }
+        };
+      });
+
+      // Recalculate score after client-side UNDERLINE correction
+      // Count how many UNDERLINE questions were corrected from wrong → right
+      let correctedCorrectCount = correctCount;
+      quiz.questions.forEach(q => {
+        if (q.type === QuestionType.UNDERLINE) {
+          const serverResult = validationResult.details?.find((d: any) => d.questionId === q.id);
+          const clientResult = answersWithSnapshots[q.id];
+          // If server said wrong but client override says correct → add 1
+          if (serverResult && !serverResult.isCorrect && clientResult?.isCorrect) {
+            correctedCorrectCount++;
+          }
+        }
+      });
+      const correctedScore = totalItems === 0 ? 0 : parseFloat(((correctedCorrectCount / totalItems) * 10).toFixed(1));
+
       const resultData: StudentResult = {
         id: generateUUID(),
         quizId: quiz.id,
         quizTitle: quiz.title,
         studentName,
         studentClass,
-        score,
-        correctCount,
+        score: correctedScore,
+        correctCount: correctedCorrectCount,
         totalQuestions: totalItems,
         timeTaken,
         submittedAt: new Date().toISOString(),
-        answers,
+        answers: answersWithSnapshots,  // 👈 Now includes snapshots
         validationDetails: validationResult.details // Store server validation details
       };
 

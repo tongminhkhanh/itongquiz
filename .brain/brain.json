@@ -27,7 +27,7 @@
             },
             {
                 "name": "Results",
-                "description": "Stores student submission results"
+                "description": "Stores student submission results with answers"
             }
         ]
     },
@@ -38,7 +38,9 @@
         "Student Exam Interface",
         "Teacher Dashboard (Create, Manage, Review)",
         "AI Tutor - Giải thích đáp án sai",
-        "AI Tutor - Gợi ý câu hỏi tương tự"
+        "AI Tutor - Gợi ý câu hỏi tương tự",
+        "Difficulty Levels (Mức 1/2/3) support in Questions & Word Export",
+        "Question Analysis with difficulty classification (Dễ/TB/Khó)"
     ],
     "knowledge_items": {
         "patterns": [
@@ -55,9 +57,28 @@
                 "files": [
                     "src/components/common/MathSpan.tsx"
                 ]
+            },
+            {
+                "name": "Word Export Handler",
+                "description": "Use switch case in docxGenerator to handle specific question types for .docx generation",
+                "files": [
+                    "src/utils/docxGenerator.ts"
+                ]
+            },
+            {
+                "name": "Fallback isCorrect Calculation",
+                "description": "Calculate isCorrect from correctAnswer when old results don't have isCorrect field",
+                "files": [
+                    "src/utils/statisticsUtils.ts",
+                    "src/components/teacher/ResultsView/StudentDetailModal.tsx"
+                ]
             }
         ],
         "gotchas": [
+            {
+                "issue": "React escapes HTML by default",
+                "solution": "Use dangerouslySetInnerHTML to render HTML content (e.g., question text with tags)"
+            },
             {
                 "issue": "AI trả về Markdown headers (###) trong JSON response",
                 "solution": "Strip Markdown headers trong client-side formatting + Cập nhật prompt để AI không dùng"
@@ -69,11 +90,32 @@
             {
                 "issue": "Line breaks trong AI response bị mất",
                 "solution": "Parse \\n thành paragraphs hoặc bullet points thay vì loại bỏ"
+            },
+            {
+                "issue": "Old results don't have isCorrect field",
+                "solution": "Add fallback calculateIsCorrect function that recalculates from correctAnswer"
+            },
+            {
+                "issue": "MULTIPLE_SELECT uses correctAnswers (plural), not correctAnswer",
+                "solution": "Check for both correctAnswers and correctAnswer in statisticsUtils"
+            },
+            {
+                "issue": "TRUE_FALSE items use isCorrect not isTrue",
+                "solution": "Use item.isCorrect when comparing student answers"
+            },
+            {
+                "issue": "MCQ correctAnswer may be 'B. Answer' or just 'B'",
+                "solution": "Extract first letter when comparing with student answer"
+            },
+            {
+                "issue": "UNDERLINE snapshots have correctAnswer string but missing correctWordIndexes array",
+                "solution": "Always fallback parse correctAnswer JSON string when correctWordIndexes is empty - apply in both getAnswerStatus and renderDetailedAnswer"
             }
         ],
         "conventions": [
             "AI prompts phải có format instructions rõ ràng (không Markdown headers, dùng numbered lists)",
-            "Content formatting: MathSpan cho câu hỏi/options, ExplanationContent cho AI explanations"
+            "Content formatting: MathSpan cho câu hỏi/options, ExplanationContent cho AI explanations",
+            "Question types have different correct answer fields: correctAnswer, correctAnswers, items, pairs, blanks"
         ]
     }
 }

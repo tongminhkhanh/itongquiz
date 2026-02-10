@@ -35,13 +35,16 @@ export const generateQuizDocx = async (quiz: Quiz) => {
         const q = quiz.questions[i];
         const questionNumber = i + 1;
 
-        // Question Text
+        // Question Text with optional difficulty level
         const questionText = (q as any).question || (q as any).mainQuestion || '';
+        const difficulty = (q as any).difficulty as (1 | 2 | 3 | undefined);
+        const difficultyLabel = difficulty ? ` (Mức ${difficulty})` : '';
+
         children.push(
             new Paragraph({
                 children: [
                     new TextRun({
-                        text: `Câu ${questionNumber}: `,
+                        text: `Câu ${questionNumber}${difficultyLabel}: `,
                         bold: true,
                     }),
                     new TextRun({
@@ -184,6 +187,174 @@ export const generateQuizDocx = async (quiz: Quiz) => {
                 children.push(
                     new Paragraph({
                         text: "Trả lời: .................................................................................................",
+                        spacing: { before: 100 },
+                    })
+                );
+                break;
+
+            case QuestionType.DRAG_DROP:
+                // Show blanks and word bank
+                const ddBlanks = (q as any).blanks || [];
+                const ddDistractors = (q as any).distractors || [];
+                const allWords = [...ddBlanks, ...ddDistractors].sort(() => Math.random() - 0.5);
+
+                // Word bank
+                children.push(
+                    new Paragraph({
+                        children: [
+                            new TextRun({ text: "Từ cho sẵn: ", bold: true }),
+                            new TextRun({ text: allWords.join(" / ") }),
+                        ],
+                        spacing: { before: 100 },
+                    })
+                );
+
+                // Text with blanks (replace blanks with underlines)
+                const ddText = (q as any).text || '';
+                const displayText = ddText.replace(/\[([^\]]+)\]/g, '____');
+                children.push(
+                    new Paragraph({
+                        text: displayText,
+                        spacing: { before: 100 },
+                    })
+                );
+                break;
+
+            case QuestionType.DROPDOWN:
+                // Show text with blanks
+                const dropText = (q as any).text || '';
+                const dropBlanks = (q as any).blanks || [];
+
+                // Replace [1], [2] with blank lines
+                const dropDisplay = dropText.replace(/\[\d+\]/g, '____');
+                children.push(
+                    new Paragraph({
+                        text: dropDisplay,
+                        spacing: { before: 100 },
+                    })
+                );
+
+                // Show options for each blank
+                dropBlanks.forEach((blank: any, idx: number) => {
+                    children.push(
+                        new Paragraph({
+                            children: [
+                                new TextRun({ text: `[${idx + 1}]: `, bold: true }),
+                                new TextRun({ text: (blank.options || []).join(" / ") }),
+                            ],
+                            spacing: { before: 50 },
+                        })
+                    );
+                });
+                break;
+
+            case QuestionType.ORDERING:
+                // Show items to order
+                const orderItems = (q as any).items || [];
+                orderItems.forEach((item: string, idx: number) => {
+                    children.push(
+                        new Paragraph({
+                            children: [
+                                new TextRun({ text: `(${idx + 1}) `, bold: true }),
+                                new TextRun({ text: item }),
+                            ],
+                            spacing: { before: 50 },
+                        })
+                    );
+                });
+
+                children.push(
+                    new Paragraph({
+                        text: "Thứ tự đúng: .................................",
+                        spacing: { before: 100 },
+                    })
+                );
+                break;
+
+            case QuestionType.UNDERLINE:
+                // Show sentence with words
+                const sentence = (q as any).sentence || '';
+                children.push(
+                    new Paragraph({
+                        text: sentence,
+                        spacing: { before: 100 },
+                    })
+                );
+                break;
+
+            case QuestionType.CATEGORIZATION:
+                // Show categories and items
+                const categories = (q as any).categories || [];
+                const catItems = (q as any).items || [];
+
+                // List categories
+                children.push(
+                    new Paragraph({
+                        children: [
+                            new TextRun({ text: "Các nhóm: ", bold: true }),
+                            new TextRun({ text: categories.map((c: any) => c.name).join(" | ") }),
+                        ],
+                        spacing: { before: 100 },
+                    })
+                );
+
+                // List items to categorize
+                children.push(
+                    new Paragraph({
+                        children: [
+                            new TextRun({ text: "Các mục cần phân loại: ", bold: true }),
+                        ],
+                        spacing: { before: 100 },
+                    })
+                );
+
+                catItems.forEach((item: any, idx: number) => {
+                    children.push(
+                        new Paragraph({
+                            text: `${idx + 1}. ${item.content}`,
+                            spacing: { before: 50 },
+                        })
+                    );
+                });
+                break;
+
+            case QuestionType.WORD_SCRAMBLE:
+                // Show scrambled letters
+                const letters = (q as any).letters || [];
+                children.push(
+                    new Paragraph({
+                        children: [
+                            new TextRun({ text: "Các chữ: ", bold: true }),
+                            new TextRun({ text: letters.join(" - ") }),
+                        ],
+                        spacing: { before: 100 },
+                    })
+                );
+
+                children.push(
+                    new Paragraph({
+                        text: "Từ đúng: .................................",
+                        spacing: { before: 100 },
+                    })
+                );
+                break;
+
+            case QuestionType.RIDDLE:
+                // Show riddle lines
+                const riddleLines = (q as any).riddleLines || [];
+                riddleLines.forEach((line: string) => {
+                    children.push(
+                        new Paragraph({
+                            text: line,
+                            spacing: { before: 50 },
+                        })
+                    );
+                });
+
+                const answerLabel = (q as any).answerLabel || 'Trả lời';
+                children.push(
+                    new Paragraph({
+                        text: `${answerLabel}: ................................`,
                         spacing: { before: 100 },
                     })
                 );

@@ -106,10 +106,20 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
             return 'Unknown question';
         };
 
-        return analyzeQuestionDifficulty(
-            filteredResults,
-            selectedQuizQuestions.map(q => ({ id: q.id, question: getQuestionText(q) }))
-        );
+        // Map questions with all necessary fields for fallback calculation
+        const questionsWithData = selectedQuizQuestions.map(q => ({
+            id: q.id,
+            question: getQuestionText(q),
+            type: q.type,
+            correctAnswer: 'correctAnswer' in q ? q.correctAnswer : undefined,
+            correctAnswers: 'correctAnswers' in q ? (q as any).correctAnswers : undefined,
+            items: 'items' in q ? (q as any).items : undefined,
+            blanks: 'blanks' in q ? (q as any).blanks : undefined,
+            pairs: 'pairs' in q ? (q as any).pairs : undefined,
+            options: 'options' in q ? (q as any).options : undefined,
+        }));
+
+        return analyzeQuestionDifficulty(filteredResults, questionsWithData);
     }, [filteredResults, selectedQuizQuestions]);
 
     // Get unique quizzes from results

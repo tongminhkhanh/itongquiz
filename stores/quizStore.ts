@@ -199,6 +199,8 @@ export const useQuizStore = create<QuizState>()(
                 // Persist quizzes to ensure complex question types (UNDERLINE, etc.) are preserved
                 // Google Sheets doesn't properly store all fields for new question types
                 quizzes: state.quizzes,
+                // Persist view state so teacher dashboard stays after F5 refresh
+                view: state.view,
             }),
         }
     )

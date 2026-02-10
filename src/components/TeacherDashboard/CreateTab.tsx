@@ -618,14 +618,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     isAdmin={authStore.isAdmin}
                 />
 
-                {/* Image Library - only for admin */}
-                {authStore.isAdmin && (
-                    <ImageLibrary
-                        images={imageLibrary}
-                        onChange={setImageLibrary}
-                        topic={topic}
-                    />
-                )}
+                {/* Image Library section has been removed as per user request */}
 
                 {/* Error */}
                 {error && (

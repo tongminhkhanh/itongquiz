@@ -1,74 +1,110 @@
 {
-    "updated_at": "2026-02-04T08:30:00Z",
+    "updated_at": "2026-02-10T04:36:00Z",
     "working_on": {
-        "feature": "AI Explanation Rendering Fix",
-        "task": "Fix Markdown và công thức toán trong AI giải thích",
+        "feature": "UNDERLINE Question Type Bug Fixes",
+        "task": "Fix getAnswerStatus fallback for correctWordIndexes",
         "status": "completed",
         "files": [
-            "src/components/common/ExplanationContent.tsx",
-            "src/components/common/index.ts",
-            "src/components/ExplanationModal.tsx",
-            "src/services/aiTutorService.ts",
-            "styles/components.css"
+            "src/components/student/ResultScreen/tabs/DetailedAnswersTab.tsx"
         ],
-        "notes": "Fixed: Markdown headers (###), line breaks, và công thức phân số không render đúng."
+        "notes": "Added fallback parse correctAnswer string to correctWordIndexes array in getAnswerStatus. Rendering detail already had this fallback."
     },
     "recent_changes": [
         {
-            "type": "feature",
-            "description": "Created ExplanationContent component cho AI explanation rendering với Markdown processing và LaTeX formatting",
-            "files": [
-                "src/components/common/ExplanationContent.tsx",
-                "src/components/common/index.ts"
-            ]
-        },
-        {
-            "type": "feature",
-            "description": "Added CSS styles cho explanation content với bullet points và visual hierarchy",
-            "files": [
-                "styles/components.css"
-            ]
-        },
-        {
+            "timestamp": "2026-02-10",
             "type": "fix",
-            "description": "Updated ExplanationModal to use ExplanationContent instead of MathSpan for AI explanations",
+            "description": "Fixed UNDERLINE getAnswerStatus always returning wrong - added fallback parse correctAnswer string to correctWordIndexes",
             "files": [
-                "src/components/ExplanationModal.tsx"
+                "src/components/student/ResultScreen/tabs/DetailedAnswersTab.tsx"
             ]
         },
         {
+            "timestamp": "2026-02-09",
             "type": "fix",
-            "description": "Improved AI prompt in aiTutorService to return properly formatted explanations with bullet points, no Markdown headers",
+            "description": "Fixed QuestionAnalysis TỶ LỆ ĐÚNG = 0% - added correctAnswers field for MULTIPLE_SELECT",
             "files": [
-                "src/services/aiTutorService.ts"
+                "src/utils/statisticsUtils.ts",
+                "src/components/TeacherDashboard/ResultsTab.tsx"
+            ]
+        },
+        {
+            "timestamp": "2026-02-06",
+            "type": "fix",
+            "description": "Fixed LaTeX not rendering in QuestionAnalysisTable - replaced dangerouslySetInnerHTML with MathSpan",
+            "files": [
+                "src/components/teacher/ResultsView/QuestionAnalysisTable.tsx"
+            ]
+        },
+        {
+            "timestamp": "2026-02-06",
+            "type": "fix",
+            "description": "Fixed StudentDetailModal showing all questions as wrong - added fallback isCorrect calculation",
+            "files": [
+                "src/components/teacher/ResultsView/StudentDetailModal.tsx"
+            ]
+        },
+        {
+            "timestamp": "2026-02-06",
+            "type": "fix",
+            "description": "Fixed TRUE_FALSE validation - changed isTrue to isCorrect property",
+            "files": [
+                "src/components/teacher/ResultsView/StudentDetailModal.tsx"
+            ]
+        },
+        {
+            "timestamp": "2026-02-06",
+            "type": "fix",
+            "description": "Fixed MCQ validation - handle correctAnswer format 'B. Answer' vs 'B'",
+            "files": [
+                "gas_script.js"
             ]
         }
     ],
     "decisions_made": [
         {
-            "decision": "Tạo ExplanationContent component riêng thay vì sửa MathSpan",
-            "reason": "MathSpan chỉ xử lý LaTeX, còn AI explanation cần xử lý Markdown + line breaks + LaTeX"
+            "decision": "Add correctAnswer fallback in getAnswerStatus for UNDERLINE",
+            "reason": "Snapshots store correctAnswer as JSON string but not correctWordIndexes array - need to parse at display time"
         },
         {
-            "decision": "Convert phân số a/b thành LaTeX $\\frac{a}{b}$ trong ExplanationContent",
-            "reason": "Render đẹp hơn, dễ đọc cho học sinh tiểu học"
+            "decision": "Use fallback calculation for old results without isCorrect field",
+            "reason": "Old submitted results don't have isCorrect, need to recalculate from correctAnswer"
         },
         {
-            "decision": "Format explanation thành bullet points với numbered items",
-            "reason": "Trình bày khoa học, dễ hiểu, dễ theo dõi từng ý"
+            "decision": "Use MathSpan component instead of dangerouslySetInnerHTML for LaTeX",
+            "reason": "MathSpan handles MathJax rendering properly with useLayoutEffect"
+        },
+        {
+            "decision": "Support correctAnswers (plural) for MULTIPLE_SELECT in statistics",
+            "reason": "MULTIPLE_SELECT uses correctAnswers array, not correctAnswer string"
         }
     ],
     "errors_encountered": [
         {
-            "error": "AI trả về text có Markdown headers (###) và ký tự thừa (x x)",
-            "solution": "1) Strip Markdown headers trong formatExplanationHtml 2) Clean 'x x' artifacts 3) Cập nhật prompt AI để không dùng Markdown headers",
+            "error": "UNDERLINE questions always show wrong in ResultScreen card list",
+            "solution": "getAnswerStatus used correctWordIndexes (empty in snapshots) without fallback to correctAnswer string",
             "resolved": true
         },
         {
-            "error": "Công thức phân số 1/2, 3/5 không được render đẹp",
-            "solution": "Convert a/b thành LaTeX $\\frac{a}{b}$ trong formatExplanationHtml",
+            "error": "QuestionAnalysis TỶ LỆ ĐÚNG always 0%",
+            "solution": "Added fallback calculation in statisticsUtils.ts + pass correctAnswers field",
+            "resolved": true
+        },
+        {
+            "error": "StudentDetailModal shows all questions wrong",
+            "solution": "Added calculateIsCorrect fallback function for all question types",
+            "resolved": true
+        },
+        {
+            "error": "LaTeX displays as raw $32$ in QuestionAnalysisTable",
+            "solution": "Use MathSpan component instead of dangerouslySetInnerHTML",
             "resolved": true
         }
     ],
-    "pending_tasks": []
+    "pending_tasks": [
+        {
+            "task": "Add difficulty dropdown in QuizPreview edit modal",
+            "priority": "low",
+            "notes": "State logic done, only UI dropdown missing"
+        }
+    ]
 }

@@ -104,9 +104,6 @@ export const calculateResultsStatistics = (results: StudentResult[]): ResultsSta
     };
 };
 
-/**
- * Analyze question difficulty based on student answers
- */
 export interface QuestionAnalysis {
     questionId: string;
     questionText: string;
@@ -117,11 +114,117 @@ export interface QuestionAnalysis {
     difficulty: 'easy' | 'medium' | 'hard';
 }
 
+// Question with additional fields for fallback calculation
+export interface QuestionWithCorrect {
+    id: string;
+    question: string;
+    type?: string;
+    correctAnswer?: any;
+    correctAnswers?: string[];  // For MULTIPLE_SELECT questions
+    items?: any[];
+    blanks?: any[];
+    pairs?: any[];
+    options?: any[];
+}
+
+/**
+ * Fallback function to calculate isCorrect from answer and question data
+ */
+const calculateIsCorrectFallback = (
+    answer: any,
+    question: QuestionWithCorrect
+): boolean | undefined => {
+    if (answer === undefined || answer === null) return undefined;
+
+    const { correctAnswer, type, items, blanks, pairs } = question;
+
+    // If answer is new format with isCorrect, use it directly
+    if (typeof answer === 'object' && typeof answer.isCorrect === 'boolean') {
+        return answer.isCorrect;
+    }
+
+    // Old format: answer is just the value (e.g., "A", "100", etc.)
+    const selectedAnswer = typeof answer === 'object' ? answer.selectedAnswer : answer;
+
+    // MCQ / IMAGE_QUESTION: Compare letters
+    if (type === 'MCQ' || type === 'IMAGE_QUESTION') {
+        if (correctAnswer === undefined || correctAnswer === null) return undefined;
+        const studentVal = String(selectedAnswer).trim().toUpperCase();
+        let correctVal = String(correctAnswer).trim().toUpperCase();
+        // Handle "B. Answer text" format -> "B"
+        const letterMatch = correctVal.match(/^([A-Z])[.)\s]/);
+        if (letterMatch) correctVal = letterMatch[1];
+        return studentVal === correctVal;
+    }
+
+    // SHORT_ANSWER: Case-insensitive
+    if (type === 'SHORT_ANSWER') {
+        if (correctAnswer === undefined || correctAnswer === null) return undefined;
+        return String(selectedAnswer).trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
+    }
+
+    // MULTIPLE_SELECT: Array comparison (use correctAnswers first, fallback to correctAnswer)
+    if (type === 'MULTIPLE_SELECT') {
+        const correctData = question.correctAnswers || correctAnswer;
+        if (correctData === undefined || correctData === null) return undefined;
+        try {
+            const correctArr = Array.isArray(correctData) ? correctData : JSON.parse(correctData);
+            const studentArr = Array.isArray(selectedAnswer) ? selectedAnswer : [];
+            return correctArr.length === studentArr.length &&
+                correctArr.every((c: string) => studentArr.includes(c));
+        } catch { return undefined; }
+    }
+
+    // TRUE_FALSE: Check all items
+    if (type === 'TRUE_FALSE' && items && Array.isArray(items)) {
+        const studentItems = typeof selectedAnswer === 'object' ? selectedAnswer : {};
+        return items.every((item: any, i: number) => {
+            const itemKey = item.id || `item-${i}`;
+            return studentItems[itemKey] === item.isCorrect;
+        });
+    }
+
+    // MATCHING: Compare pairs
+    if (type === 'MATCHING' && pairs && Array.isArray(pairs)) {
+        const studentPairs = typeof selectedAnswer === 'object' ? selectedAnswer : {};
+        const cleanedPairs = { ...studentPairs };
+        delete cleanedPairs.selectedLeft;
+        if (Object.keys(cleanedPairs).length !== pairs.length) return false;
+        return pairs.every((pair: any) => cleanedPairs[pair.left] === pair.right);
+    }
+
+    // DRAG_DROP: Compare blanks
+    if (type === 'DRAG_DROP' && blanks && Array.isArray(blanks)) {
+        const studentBlanks = typeof selectedAnswer === 'object' ? selectedAnswer : {};
+        const studentValues = Object.values(studentBlanks);
+        if (studentValues.length !== blanks.length) return false;
+        const sortedKeys = Object.keys(studentBlanks).sort((a, b) => Number(a) - Number(b));
+        return sortedKeys.every((key, idx) => {
+            const studentWord = String(studentBlanks[key]).trim().toLowerCase();
+            const correctWord = String(blanks[idx]).trim().toLowerCase();
+            return studentWord === correctWord;
+        });
+    }
+
+    // DROPDOWN: Compare with blanks correctAnswer
+    if (type === 'DROPDOWN' && blanks && Array.isArray(blanks)) {
+        const studentDropdowns = typeof selectedAnswer === 'object' ? selectedAnswer : {};
+        return blanks.every((blank: any) => {
+            const studentVal = String(studentDropdowns[blank.id] || '').trim();
+            const correctVal = String(blank.correctAnswer || '').trim();
+            return studentVal === correctVal;
+        });
+    }
+
+    return undefined;
+};
+
 export const analyzeQuestionDifficulty = (
     results: StudentResult[],
-    questions: { id: string; question: string }[]
+    questions: QuestionWithCorrect[]
 ): QuestionAnalysis[] => {
     const questionStats: Record<string, { correct: number; wrong: number; totalTime: number }> = {};
+    const questionMap = new Map(questions.map(q => [q.id, q]));
 
     // Initialize stats for each question
     questions.forEach(q => {
@@ -133,12 +236,25 @@ export const analyzeQuestionDifficulty = (
         if (result.answers) {
             Object.entries(result.answers).forEach(([questionId, answer]) => {
                 if (questionStats[questionId]) {
-                    if (answer?.isCorrect) {
+                    const question = questionMap.get(questionId);
+                    let isCorrect: boolean | undefined;
+
+                    // Try to get isCorrect from answer object first
+                    if (typeof answer === 'object' && typeof answer?.isCorrect === 'boolean') {
+                        isCorrect = answer.isCorrect;
+                    } else if (question) {
+                        // Fallback: calculate from correctAnswer
+                        isCorrect = calculateIsCorrectFallback(answer, question);
+                    }
+
+                    if (isCorrect === true) {
                         questionStats[questionId].correct++;
-                    } else {
+                    } else if (isCorrect === false) {
                         questionStats[questionId].wrong++;
                     }
-                    if (answer?.timeSpent) {
+                    // If undefined, don't count (unknown)
+
+                    if (typeof answer === 'object' && answer?.timeSpent) {
                         questionStats[questionId].totalTime += answer.timeSpent;
                     }
                 }

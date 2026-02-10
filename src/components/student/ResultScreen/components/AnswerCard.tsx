@@ -79,7 +79,11 @@ const AnswerCard: React.FC<Props> = ({
             DRAG_DROP: 'Kéo thả',
             CATEGORIZATION: 'Phân loại',
             WORD_SCRAMBLE: 'Ghép từ',
-            RIDDLE: 'Câu đố'
+            RIDDLE: 'Câu đố',
+            UNDERLINE: 'Gạch chân',
+            IMAGE_QUESTION: 'Có hình',
+            DROPDOWN: 'Dropdown',
+            ORDERING: 'Sắp xếp',
         };
         return typeLabels[question.type] || question.type;
     };
@@ -87,11 +91,75 @@ const AnswerCard: React.FC<Props> = ({
     // Format student answer for display
     const formatStudentAnswer = () => {
         if (!studentAnswer) return 'Không trả lời';
+        const q = question as any;
+
+        switch (question.type) {
+            case QuestionType.UNDERLINE: {
+                const words: string[] = q.words || [];
+                const selectedIndexes: number[] = Array.isArray(studentAnswer) ? studentAnswer : [];
+                if (selectedIndexes.length === 0) return 'Không trả lời';
+                return selectedIndexes.map((idx: number) => words[idx] || `[${idx}]`).join(', ');
+            }
+            case QuestionType.TRUE_FALSE: {
+                // Show Đ/S for each item instead of "item-1: true"
+                const items = q.items || [];
+                return items.map((item: any, idx: number) => {
+                    const key = item.id || `item-${idx}`;
+                    const val = studentAnswer?.[key];
+                    return val === true ? 'Đ' : val === false ? 'S' : '?';
+                }).join(', ');
+            }
+            case QuestionType.MATCHING: {
+                // Show "A → B" pairs instead of "A: B"
+                const entries = Object.entries(studentAnswer).filter(([k]) => k !== 'selectedLeft');
+                if (entries.length === 0) return 'Không trả lời';
+                return entries.map(([k, v]) => `${k} → ${v}`).join('; ');
+            }
+            case QuestionType.DRAG_DROP: {
+                // Show only values: "word1, word2"
+                const values = Object.values(studentAnswer).filter(v => v);
+                if (values.length === 0) return 'Không trả lời';
+                return (values as string[]).join(', ');
+            }
+            case QuestionType.DROPDOWN: {
+                // Show only values: "val1, val2"
+                const vals = Object.values(studentAnswer).filter(v => v);
+                if (vals.length === 0) return 'Không trả lời';
+                return (vals as string[]).join(', ');
+            }
+            case QuestionType.ORDERING: {
+                // Convert index array to text items
+                const items = q.items || [];
+                if (Array.isArray(studentAnswer)) {
+                    return studentAnswer.map((item: any) => {
+                        if (typeof item === 'string') return item;
+                        if (typeof item === 'number') return items[item] || `[${item}]`;
+                        return String(item);
+                    }).join(' → ');
+                }
+                return 'Không trả lời';
+            }
+            case QuestionType.WORD_SCRAMBLE: {
+                // Join letter indexes into the word
+                const letters: string[] = q.letters || [];
+                if (Array.isArray(studentAnswer)) {
+                    return studentAnswer.map((idx: number) => letters[idx] || '?').join('');
+                }
+                return String(studentAnswer);
+            }
+            case QuestionType.CATEGORIZATION: {
+                // Show count: "4/6 đúng" or simplified
+                const items = q.items || [];
+                const placed = Object.keys(studentAnswer).filter(k => k !== '_selected').length;
+                return `${placed}/${items.length} đã phân loại`;
+            }
+            default:
+                break;
+        }
 
         if (typeof studentAnswer === 'string') return studentAnswer;
         if (Array.isArray(studentAnswer)) return studentAnswer.join(', ');
         if (typeof studentAnswer === 'object') {
-            // For TRUE_FALSE, MATCHING, etc.
             return Object.entries(studentAnswer)
                 .map(([k, v]) => `${k}: ${v}`)
                 .join('; ');

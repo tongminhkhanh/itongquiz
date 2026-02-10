@@ -128,6 +128,27 @@ export const fetchResultsFromSheets = async (sheetId: string, resultsGid: string
                 const correctCount = parseInt(row['Correct Count'] || row.correctCount) || 0;
                 const timeTaken = parseInt(row['Time Taken'] || row.timeTaken) || 0;
 
+                // Parse answers - handle old format (array) vs new format (object)
+                let answers: Record<string, any> = {};
+                if (row.answers) {
+                    try {
+                        const parsed = JSON.parse(row.answers);
+                        // If parsed is an array (old format), convert to object
+                        if (Array.isArray(parsed)) {
+                            parsed.forEach((item: any, index: number) => {
+                                if (item && typeof item === 'object' && item.questionId) {
+                                    answers[item.questionId] = item;
+                                }
+                            });
+                        } else if (typeof parsed === 'object') {
+                            answers = parsed;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing answers:', e);
+                        answers = {};
+                    }
+                }
+
                 return {
                     id: row.id || `result-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                     studentName,
@@ -139,7 +160,7 @@ export const fetchResultsFromSheets = async (sheetId: string, resultsGid: string
                     totalQuestions,
                     submittedAt,
                     timeTaken,
-                    answers: row.answers ? JSON.parse(row.answers) : []
+                    answers
                 };
             }).filter((r: StudentResult) => r.studentName); // Filter out invalid rows
         },
@@ -338,8 +359,17 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         type: QuestionType.UNDERLINE,
                         question: unescapeSheetValue(row.question),
                         sentence: unescapeSheetValue(row.sentence || ""),
-                        words: row.words ? JSON.parse(row.words) : [],
-                        correctWordIndexes: row.correctWordIndexes ? JSON.parse(row.correctWordIndexes) : []
+                        words: row.items ? JSON.parse(row.items) : [], // words stored in items column
+                        correctWordIndexes: row.correctAnswer ? JSON.parse(row.correctAnswer) : []
+                    } as any;
+                } else if (row.type === QuestionType.CATEGORIZATION) {
+                    // CATEGORIZATION: items stored in 'items' column, categories stored in 'distractors' column
+                    question = {
+                        id: row.id,
+                        type: QuestionType.CATEGORIZATION,
+                        question: unescapeSheetValue(row.question),
+                        items: row.items ? JSON.parse(row.items) : [],
+                        categories: row.distractors ? JSON.parse(row.distractors) : []
                     } as any;
                 }
 

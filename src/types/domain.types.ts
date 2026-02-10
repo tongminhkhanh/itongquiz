@@ -28,6 +28,7 @@ export interface MCQQuestion {
     correctAnswer: string; // "A", "B", "C", or "D"
     image?: string; // URL or Base64
     explanation?: string; // Detailed guide on how to solve
+    difficulty?: 1 | 2 | 3; // Mức độ khó: 1 = Dễ, 2 = Trung bình, 3 = Khó
 }
 
 export interface MultipleSelectQuestion {
@@ -38,6 +39,7 @@ export interface MultipleSelectQuestion {
     correctAnswers: string[]; // ["A", "C"]
     image?: string;
     explanation?: string;
+    difficulty?: 1 | 2 | 3;
 }
 
 export interface TrueFalseItem {
@@ -53,6 +55,7 @@ export interface TrueFalseQuestion {
     items: TrueFalseItem[];
     image?: string;
     explanation?: string;
+    difficulty?: 1 | 2 | 3;
 }
 
 export interface ShortAnswerQuestion {
@@ -62,6 +65,7 @@ export interface ShortAnswerQuestion {
     correctAnswer: string; // Short string
     image?: string;
     explanation?: string;
+    difficulty?: 1 | 2 | 3;
 }
 
 export interface MatchingPair {
@@ -76,6 +80,7 @@ export interface MatchingQuestion {
     pairs: MatchingPair[];
     image?: string;
     explanation?: string;
+    difficulty?: 1 | 2 | 3;
 }
 
 export interface DragDropQuestion {
@@ -87,6 +92,7 @@ export interface DragDropQuestion {
     distractors: string[]; // ["red", "green"]
     image?: string;
     explanation?: string;
+    difficulty?: 1 | 2 | 3;
 }
 
 // Image Library Item for teacher uploads
@@ -107,6 +113,7 @@ export interface OrderingQuestion {
     correctOrder: number[]; // Thứ tự đúng, ví dụ [2, 0, 3, 1] nghĩa là items[2] là câu 1, items[0] là câu 2...
     image?: string;
     explanation?: string;
+    difficulty?: 1 | 2 | 3;
 }
 
 // Image Question - Câu hỏi trắc nghiệm có hình vẽ BẮT BUỘC
@@ -118,6 +125,7 @@ export interface ImageQuestion {
     options: string[]; // [A, B, C, D]
     correctAnswer: string; // "A", "B", "C", or "D"
     explanation?: string;
+    difficulty?: 1 | 2 | 3;
 }
 
 // Dropdown blank item
@@ -131,23 +139,25 @@ export interface DropdownBlank {
 export interface DropdownQuestion {
     id: string;
     type: QuestionType.DROPDOWN;
-    question: string; // "Chọn đáp án đúng cho các chỗ trống"
-    text: string; // "Thủ đô Việt Nam là [1]. Dân số khoảng [2] triệu."
-    blanks: DropdownBlank[]; // Danh sách dropdown tương ứng [1], [2]...
+    question: string;
+    text: string;
+    blanks: DropdownBlank[];
     image?: string;
     explanation?: string;
+    difficulty?: 1 | 2 | 3;
 }
 
 // Underline Question - Câu hỏi gạch chân từ/cụm từ trong câu
 export interface UnderlineQuestion {
     id: string;
     type: QuestionType.UNDERLINE;
-    question: string; // "Gạch chân động từ trong câu sau"
-    sentence: string; // "Mặt trời ngả nắng đằng tây"
-    words: string[]; // ["Mặt trời", "ngả", "nắng", "đằng tây"]
-    correctWordIndexes: number[]; // [1] - index của từ "ngả" cần gạch chân
+    question: string;
+    sentence: string;
+    words: string[];
+    correctWordIndexes: number[];
     image?: string;
     explanation?: string;
+    difficulty?: 1 | 2 | 3;
 }
 
 // Category group for categorization question
@@ -167,38 +177,64 @@ export interface CategorizationItem {
 export interface CategorizationQuestion {
     id: string;
     type: QuestionType.CATEGORIZATION;
-    question: string; // "Hãy xếp các câu thơ sau vào nhóm thích hợp"
-    categories: CategoryGroup[]; // Các nhóm/danh mục
-    items: CategorizationItem[]; // Các mục cần phân loại
-    instruction?: string; // Hướng dẫn thêm, ví dụ "Với câu thơ không thuộc nhóm nào, em không xếp"
+    question: string;
+    categories: CategoryGroup[];
+    items: CategorizationItem[];
+    instruction?: string;
     image?: string;
     explanation?: string;
+    difficulty?: 1 | 2 | 3;
 }
 
 // Word Scramble Question - Sắp xếp chữ cái thành từ
 export interface WordScrambleQuestion {
     id: string;
     type: QuestionType.WORD_SCRAMBLE;
-    question: string; // "Sắp xếp các chữ sau thành một tính từ"
-    letters: string[]; // ["k", "i", "ê", "n", "t", "r", "i"] - các chữ đã xáo trộn
-    correctWord: string; // "kiên trì" - từ đúng
-    hint?: string; // Gợi ý (tùy chọn)
+    question: string;
+    letters: string[];
+    correctWord: string;
+    hint?: string;
     image?: string;
     explanation?: string;
+    difficulty?: 1 | 2 | 3;
 }
 
 // Riddle Question - Giải câu đố (Thêm/bớt dấu thanh)
 export interface RiddleQuestion {
     id: string;
     type: QuestionType.RIDDLE;
-    question: string; // "Giải câu đố sau:"
-    riddleLines: string[]; // Các dòng câu đố, VD: ["Để nguyên là tiếng chim kêu,", "Bỏ sắc, thành ngôi sao chiếu sáng đêm."]
-    correctAnswer: string; // Đáp án đúng (1 từ): "sáo" hoặc "sao" tùy answerType
-    answerType: 'original' | 'transformed'; // "original" = hỏi từ gốc, "transformed" = hỏi từ biến đổi
-    answerLabel: string; // Label hiển thị: "Từ để nguyên" hoặc "Từ bỏ sắc" 
-    hint?: string; // Gợi ý (tùy chọn)
+    question: string;
+    riddleLines: string[];
+    correctAnswer: string;
+    answerType: 'original' | 'transformed';
+    answerLabel: string;
+    hint?: string;
     image?: string;
     explanation?: string;
+    difficulty?: 1 | 2 | 3;
+}
+
+/**
+ * Question Snapshot - Lưu thông tin câu hỏi tối giản trong kết quả
+ * Dùng để xem chi tiết kết quả ngay cả khi quiz đã bị xóa
+ */
+export interface QuestionSnapshot {
+    question: string;           // Nội dung câu hỏi
+    type: QuestionType;         // Loại câu hỏi
+    options?: string[];         // Các đáp án (nếu MCQ/IMAGE_QUESTION)
+    correctAnswer?: string | string[];  // Đáp án đúng
+    items?: any[];              // Items (TRUE_FALSE, MATCHING, etc.)
+    mainQuestion?: string;      // Câu hỏi chính (TRUE_FALSE)
+}
+
+/**
+ * Answer Detail - Chi tiết câu trả lời của học sinh
+ */
+export interface AnswerDetail {
+    selectedAnswer: any;        // Câu trả lời của học sinh
+    isCorrect: boolean;         // Đúng hay sai
+    timeSpent?: number;         // Thời gian làm (nếu có)
+    questionSnapshot?: QuestionSnapshot;  // Snapshot câu hỏi (để xem khi quiz bị xóa)
 }
 
 export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion | CategorizationQuestion | WordScrambleQuestion | RiddleQuestion;

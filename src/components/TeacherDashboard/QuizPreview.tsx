@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, Question, QuestionType } from '../../types';
 import { Card, Button, Modal } from '../common';
-import { Save, PlusCircle, Edit3, Trash2, X, FileDown, Bold, Italic } from 'lucide-react';
+import { Save, PlusCircle, Edit3, Trash2, X, FileDown, Bold, Italic, Sparkles, Loader2 } from 'lucide-react';
 import { formatMathText } from '../../utils/formatters';
 import GeometryPreview from './GeometryPreview';
 import { renderMathJax } from '../../hooks/useMathJax';
 import TikZPreview from '../common/TikZPreview';
 import { generateQuizDocx } from '../../utils/docxGenerator';
+import { generateSmartDistractors } from '../../services/smartDistractorService';
 
 // Helper to fix "Reorder the words" questions - replace : with / for word separators
 const fixReorderQuestion = (text: string): string => {
@@ -105,6 +106,15 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
     // CATEGORIZATION specific
     const [editCategories, setEditCategories] = useState<{ id: string; name: string }[]>([]);
     const [editCategorizationItems, setEditCategorizationItems] = useState<{ id: string; content: string; categoryId: string }[]>([]);
+    // Difficulty level
+    const [editDifficulty, setEditDifficulty] = useState<1 | 2 | 3 | undefined>(undefined);
+
+    // Smart Distractors state
+    const [generatingDistractorId, setGeneratingDistractorId] = useState<string | null>(null);
+    const [isGeneratingDistractors, setIsGeneratingDistractors] = useState(false);
+    const [distractorCount, setDistractorCount] = useState(3);
+    const [showDistractorPopover, setShowDistractorPopover] = useState<string | null>(null);
+    const [distractorError, setDistractorError] = useState<string | null>(null);
 
     // Add Question modal state
     const [showAddModal, setShowAddModal] = useState(false);
@@ -147,6 +157,101 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             return () => clearTimeout(timeoutId);
         }
     }, [quiz]);
+
+    // Close distractor popover when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => setShowDistractorPopover(null);
+        if (showDistractorPopover) {
+            document.addEventListener('click', handleClickOutside);
+            return () => document.removeEventListener('click', handleClickOutside);
+        }
+    }, [showDistractorPopover]);
+
+    // Check if question type supports smart distractors
+    const supportsDistractors = (type: QuestionType) => {
+        return [QuestionType.MCQ, QuestionType.MULTIPLE_SELECT, QuestionType.IMAGE_QUESTION].includes(type);
+    };
+
+    // Generate smart distractors for a question (used in both preview list and edit modal)
+    const handleGenerateDistractors = async (questionId: string, count: number, isFromModal = false) => {
+        if (!quiz || !onUpdateQuestions) return;
+
+        const question = quiz.questions.find(q => q.id === questionId);
+        if (!question || !supportsDistractors(question.type)) return;
+
+        const q = question as any;
+        const options: string[] = q.options || [];
+
+        // Support both single correct answer (MCQ) and multiple correct answers (MULTIPLE_SELECT)
+        const correctLetters: string[] = q.correctAnswers && Array.isArray(q.correctAnswers)
+            ? q.correctAnswers
+            : q.correctAnswer ? [q.correctAnswer] : [];
+
+        const correctIndices = correctLetters.map((letter: string) => letter.charCodeAt(0) - 65);
+        const correctTexts = correctIndices.map((idx: number) => options[idx] || '').filter(Boolean);
+
+        if (correctTexts.length === 0) {
+            setDistractorError('Kh\u00f4ng t\u00ecm th\u1ea5y \u0111\u00e1p \u00e1n \u0111\u00fang. Vui l\u00f2ng ki\u1ec3m tra l\u1ea1i.');
+            return;
+        }
+
+        // Set loading state
+        if (isFromModal) {
+            setIsGeneratingDistractors(true);
+        } else {
+            setGeneratingDistractorId(questionId);
+        }
+        setDistractorError(null);
+        setShowDistractorPopover(null);
+
+        try {
+            // Number of distractors needed = total slots - correct answers
+            const numDistractorsNeeded = count;
+
+            const distractors = await generateSmartDistractors({
+                question: q.question || q.mainQuestion || '',
+                correctAnswer: correctTexts.join(', '),
+                classLevel: quiz.classLevel || '3',
+                difficulty: q.difficulty,
+                existingOptions: options.filter((_: string, i: number) => !correctIndices.includes(i)),
+                count: numDistractorsNeeded,
+            });
+
+            // Build new options array: keep correct answers at their positions, fill rest with distractors
+            const totalOptions = correctIndices.length + numDistractorsNeeded;
+            const newOptions: string[] = [];
+            let distractorIdx = 0;
+
+            for (let i = 0; i < totalOptions; i++) {
+                if (correctIndices.includes(i)) {
+                    // Keep correct answer at this position
+                    const correctTextIdx = correctIndices.indexOf(i);
+                    newOptions.push(correctTexts[correctTextIdx]);
+                } else if (distractorIdx < distractors.length) {
+                    newOptions.push(distractors[distractorIdx]);
+                    distractorIdx++;
+                }
+            }
+
+            // Update question in quiz
+            if (isFromModal) {
+                // Update edit state in modal
+                setEditOptions(newOptions);
+            } else {
+                // Update quiz directly
+                const updatedQuestions = quiz.questions.map(qq => {
+                    if (qq.id !== questionId) return qq;
+                    return { ...qq, options: newOptions } as Question;
+                });
+                onUpdateQuestions(updatedQuestions);
+            }
+        } catch (error: any) {
+            setDistractorError(error.message || 'Kh\u00f4ng th\u1ec3 t\u1ea1o \u0111\u00e1p \u00e1n nhi\u1ec5u. Th\u1eed l\u1ea1i sau.');
+        } finally {
+            setGeneratingDistractorId(null);
+            setIsGeneratingDistractors(false);
+        }
+    };
 
     // Delete a question
     const handleDeleteQuestion = (questionId: string) => {
@@ -238,6 +343,9 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             setEditCategories((question as any).categories ? (question as any).categories.map((c: any) => ({ ...c })) : []);
             setEditCategorizationItems((question as any).items ? (question as any).items.map((i: any) => ({ ...i })) : []);
         }
+
+        // Difficulty level (common for all types)
+        setEditDifficulty((question as any).difficulty || undefined);
     };
 
     // Save edited question
@@ -334,6 +442,11 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                 updated.items = editCategorizationItems;
             }
 
+            // Difficulty level (common for all types)
+            if (editDifficulty !== undefined) {
+                updated.difficulty = editDifficulty;
+            }
+
             return updated as Question;
         });
 
@@ -367,6 +480,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
         setEditCorrectWordIndexes([]);
         setEditCategories([]);
         setEditCategorizationItems([]);
+        setEditDifficulty(undefined);
     };
 
     // Open Add Question modal with defaults for selected type
@@ -607,9 +721,65 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                             </div>
                                         </div>
 
-                                        {/* Edit/Delete Buttons */}
+                                        {/* Edit/Delete/Smart Distractor Buttons */}
                                         {onUpdateQuestions && (
-                                            <div className="flex items-center gap-1">
+                                            <div className="flex items-center gap-1 relative">
+                                                {/* Smart Distractor button - only for MCQ-like types */}
+                                                {supportsDistractors(q.type) && (
+                                                    <div className="relative">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setShowDistractorPopover(showDistractorPopover === q.id ? null : q.id);
+                                                            }}
+                                                            disabled={generatingDistractorId === q.id}
+                                                            className={`p-1.5 rounded-lg transition-colors ${generatingDistractorId === q.id
+                                                                ? 'text-purple-400 bg-purple-50 cursor-wait'
+                                                                : 'text-purple-500 hover:bg-purple-50'
+                                                                }`}
+                                                            title="Tạo đáp án nhiễu bằng AI"
+                                                        >
+                                                            {generatingDistractorId === q.id
+                                                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                                : <Sparkles className="w-4 h-4" />
+                                                            }
+                                                        </button>
+
+                                                        {/* Popover to choose distractor count */}
+                                                        {showDistractorPopover === q.id && (
+                                                            <div
+                                                                className="absolute right-0 top-full mt-1 z-30 bg-white rounded-xl shadow-lg border border-gray-200 p-3 w-56"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <p className="text-xs font-medium text-gray-600 mb-2">Số đáp án nhiễu:</p>
+                                                                <div className="flex gap-1 mb-3">
+                                                                    {[2, 3, 4, 5].map(n => (
+                                                                        <button
+                                                                            key={n}
+                                                                            onClick={() => setDistractorCount(n)}
+                                                                            className={`w-9 h-9 rounded-lg font-bold text-sm transition-all ${distractorCount === n
+                                                                                ? 'bg-purple-500 text-white shadow-md'
+                                                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                                }`}
+                                                                        >
+                                                                            {n}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => handleGenerateDistractors(q.id, distractorCount)}
+                                                                    className="w-full py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-xs font-semibold rounded-lg hover:from-purple-600 hover:to-indigo-600 transition-all flex items-center justify-center gap-1.5"
+                                                                >
+                                                                    <Sparkles className="w-3.5 h-3.5" />
+                                                                    Tạo {distractorCount} đáp án nhiễu
+                                                                </button>
+                                                                {distractorError && (
+                                                                    <p className="text-xs text-red-500 mt-2">{distractorError}</p>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <button
                                                     onClick={() => handleEditQuestion(q)}
                                                     className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
@@ -1013,6 +1183,48 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                             </div>
                                         ))}
                                     </div>
+
+                                    {/* Smart Distractors button in edit modal */}
+                                    {editingQuestion && supportsDistractors(editingQuestion.type) && (
+                                        <div className="mt-3 space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <label className="text-xs font-medium text-gray-500">Số đáp án nhiễu:</label>
+                                                <div className="flex gap-1">
+                                                    {[2, 3, 4, 5].map(n => (
+                                                        <button
+                                                            key={n}
+                                                            onClick={() => setDistractorCount(n)}
+                                                            className={`w-7 h-7 rounded-md font-bold text-xs transition-all ${distractorCount === n
+                                                                ? 'bg-purple-500 text-white shadow-sm'
+                                                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                                                }`}
+                                                        >
+                                                            {n}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => editingQuestion && handleGenerateDistractors(editingQuestion.id, distractorCount, true)}
+                                                disabled={isGeneratingDistractors || (!editCorrectAnswer && editCorrectAnswers.length === 0)}
+                                                className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${isGeneratingDistractors || (!editCorrectAnswer && editCorrectAnswers.length === 0)
+                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                    : 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-md hover:shadow-lg'
+                                                    }`}
+                                            >
+                                                {isGeneratingDistractors
+                                                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang tạo...</>
+                                                    : <><Sparkles className="w-4 h-4" /> Tạo {distractorCount} đáp án nhiễu bằng AI</>
+                                                }
+                                            </button>
+                                            {!editCorrectAnswer && editCorrectAnswers.length === 0 && (
+                                                <p className="text-xs text-amber-600">⚠️ Cần chọn đáp án đúng trước</p>
+                                            )}
+                                            {distractorError && (
+                                                <p className="text-xs text-red-500">❌ {distractorError}</p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

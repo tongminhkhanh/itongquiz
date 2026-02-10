@@ -4,9 +4,11 @@
  * Shows difficulty analysis for each question
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { QuestionAnalysis } from '../../../utils/statisticsUtils';
 import { AlertTriangle, CheckCircle, HelpCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { renderMathJax } from '../../../hooks/useMathJax';
+import MathSpan from '../../common/MathSpan';
 
 interface QuestionAnalysisTableProps {
     analysis: QuestionAnalysis[];
@@ -20,6 +22,14 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
     const [sortBy, setSortBy] = useState<'index' | 'correctRate' | 'difficulty'>('index');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [showAll, setShowAll] = useState(false);
+    const tableRef = useRef<HTMLDivElement>(null);
+
+    // Render MathJax after content updates
+    useEffect(() => {
+        if (tableRef.current) {
+            renderMathJax(tableRef.current);
+        }
+    }, [analysis, showAll, sortBy, sortOrder]);
 
     // Get top missed questions
     const topMissedIds = [...analysis]
@@ -93,7 +103,7 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
     }
 
     return (
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <div ref={tableRef} className="bg-white rounded-xl border shadow-sm overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4">
                 <h3 className="font-bold flex items-center gap-2">
@@ -169,16 +179,17 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
                                 >
                                     <td className="p-3">
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isMissed
-                                                ? 'bg-red-500 text-white'
-                                                : 'bg-gray-200 text-gray-600'
+                                            ? 'bg-red-500 text-white'
+                                            : 'bg-gray-200 text-gray-600'
                                             }`}>
                                             {index + 1}
                                         </div>
                                     </td>
                                     <td className="p-3">
-                                        <p className="text-sm text-gray-800 line-clamp-2 max-w-md">
-                                            {item.questionText}
-                                        </p>
+                                        <MathSpan
+                                            content={item.questionText}
+                                            className="text-sm text-gray-800 line-clamp-2 max-w-md block"
+                                        />
                                         {isMissed && (
                                             <span className="inline-flex items-center gap-1 text-xs text-red-600 mt-1">
                                                 <AlertTriangle className="w-3 h-3" />
