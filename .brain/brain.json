@@ -28,6 +28,18 @@
             {
                 "name": "Results",
                 "description": "Stores student submission results with answers"
+            },
+            {
+                "name": "Classes",
+                "description": "[Planned] Stores class information and teacher assignment"
+            },
+            {
+                "name": "Students",
+                "description": "[Planned] Stores student accounts and class mapping"
+            },
+            {
+                "name": "Assignments",
+                "description": "[Planned] Stores quiz assignments with deadlines"
             }
         ]
     },
@@ -40,7 +52,9 @@
         "AI Tutor - Giải thích đáp án sai",
         "AI Tutor - Gợi ý câu hỏi tương tự",
         "Difficulty Levels (Mức 1/2/3) support in Questions & Word Export",
-        "Question Analysis with difficulty classification (Dễ/TB/Khó)"
+        "Question Analysis with difficulty classification (Dễ/TB/Khó)",
+        "Smart Distractors - AI-generated wrong answers for MCQ/MULTIPLE_SELECT",
+        "Virtual Classroom Management (Classes, Students, Assignments)"
     ],
     "knowledge_items": {
         "patterns": [
@@ -71,6 +85,14 @@
                 "files": [
                     "src/utils/statisticsUtils.ts",
                     "src/components/teacher/ResultsView/StudentDetailModal.tsx"
+                ]
+            },
+            {
+                "name": "resolveCorrectWordIndexes Fallback",
+                "description": "4-level fallback to resolve correctWordIndexes for UNDERLINE: quiz object → correctAnswer parse → snapshot → validationDetails",
+                "files": [
+                    "src/components/student/ResultScreen/tabs/DetailedAnswersTab.tsx",
+                    "src/components/student/ResultScreen/index.tsx"
                 ]
             }
         ],
@@ -110,12 +132,21 @@
             {
                 "issue": "UNDERLINE snapshots have correctAnswer string but missing correctWordIndexes array",
                 "solution": "Always fallback parse correctAnswer JSON string when correctWordIndexes is empty - apply in both getAnswerStatus and renderDetailedAnswer"
+            },
+            {
+                "issue": "AI LLM response wrapped in markdown code blocks (```json...```)",
+                "solution": "Use non-greedy regex /```(?:json)?\\s*([\\s\\S]*?)```/ instead of ^/$ anchored regex. Also update system prompt to discourage markdown wrapping"
+            },
+            {
+                "issue": "stripAnswerFields removes correctWordIndexes for anti-cheat",
+                "solution": "Use resolveCorrectWordIndexes helper with 4-level fallback in all UNDERLINE rendering code"
             }
         ],
         "conventions": [
             "AI prompts phải có format instructions rõ ràng (không Markdown headers, dùng numbered lists)",
             "Content formatting: MathSpan cho câu hỏi/options, ExplanationContent cho AI explanations",
-            "Question types have different correct answer fields: correctAnswer, correctAnswers, items, pairs, blanks"
+            "Question types have different correct answer fields: correctAnswer, correctAnswers, items, pairs, blanks",
+            "AI service functions should have [ServiceName] debug logging for response troubleshooting"
         ]
     }
 }

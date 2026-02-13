@@ -69,6 +69,34 @@ function handleRequest(e) {
                 return getAnnouncement(sheet);  // 📢 Get announcement for marquee
             case 'save_announcement':
                 return saveAnnouncement(sheet, data);  // 📢 Save announcement (admin only)
+            // --- Virtual Classroom ---
+            case 'get_classes':
+                return responseJSON(handleGetClasses(data));
+            case 'create_class':
+                return responseJSON(handleCreateClass(data));
+            case 'delete_class':
+                return responseJSON(handleDeleteClass(data));
+            case 'get_students':
+                return responseJSON(handleGetStudents(data));
+            case 'add_student':
+                return responseJSON(handleAddStudent(data));
+            case 'delete_student':
+                return responseJSON(handleDeleteStudent(data));
+            case 'reset_student_password':
+                return responseJSON(handleResetPassword(data));
+            case 'student_login':
+                return responseJSON(handleStudentLogin(data));
+            case 'get_assignments':
+                return responseJSON(handleGetAssignments(data));
+            case 'get_teacher_assignments':
+                return responseJSON(handleGetTeacherAssignments(data));
+            case 'get_student_assignments':
+                return responseJSON(handleGetStudentAssignments(data));
+            case 'create_assignment':
+                return responseJSON(handleCreateAssignment(data));
+            case 'delete_assignment':
+                return responseJSON(handleDeleteAssignment(data));
+
             default:
                 return responseJSON({ status: "error", message: "Unknown action: " + action });
         }
@@ -604,6 +632,315 @@ function saveAnnouncement(sheet, data) {
         status: "success",
         message: "Announcement saved successfully"
     });
+}
+
+// ============ VIRTUAL CLASSROOM API ============
+// Classes, Students, Assignments management
+// ================================================
+
+var CLASSROOM_SHEETS = {
+    CLASSES: 'Classes',
+    STUDENTS: 'Students',
+    ASSIGNMENTS: 'Assignments',
+};
+
+// --- Classroom Helpers ---
+
+function hashPassword(password) {
+    var rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password);
+    var hexHash = rawHash.map(function (byte) {
+        var v = (byte < 0) ? 256 + byte : byte;
+        return ('0' + v.toString(16)).slice(-2);
+    }).join('');
+    return hexHash;
+}
+
+function generateId(prefix) {
+    return prefix + '-' + Utilities.getUuid().substring(0, 8);
+}
+
+function generateRandomPassword() {
+    var chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+    var password = '';
+    for (var i = 0; i < 6; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+}
+
+// Read sheet as array of objects (renamed to avoid conflict with existing getSheetData)
+function getSheetDataAsObjects(sheetName) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return [];
+
+    var data = sheet.getDataRange().getValues();
+    if (data.length < 2) return [];
+
+    var headers = data[0];
+    var rows = [];
+    for (var i = 1; i < data.length; i++) {
+        var obj = {};
+        for (var j = 0; j < headers.length; j++) {
+            obj[headers[j]] = data[i][j];
+        }
+        if (obj.id) rows.push(obj);
+    }
+    return rows;
+}
+
+function appendRowToSheet(sheetName, rowObject) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) throw new Error('Sheet not found: ' + sheetName);
+
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var row = headers.map(function (h) { return rowObject[h] || ''; });
+    sheet.appendRow(row);
+}
+
+function deleteRowById(sheetName, id) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return false;
+
+    var data = sheet.getDataRange().getValues();
+    var idCol = data[0].indexOf('id');
+    if (idCol === -1) return false;
+
+    for (var i = data.length - 1; i >= 1; i--) {
+        if (String(data[i][idCol]) === String(id)) {
+            sheet.deleteRow(i + 1);
+            return true;
+        }
+    }
+    return false;
+}
+
+// --- Class Handlers ---
+
+function handleGetClasses(body) {
+    var classes = getSheetDataAsObjects(CLASSROOM_SHEETS.CLASSES);
+    if (body.teacherUsername) {
+        classes = classes.filter(function (c) {
+            return c.teacherUsername === body.teacherUsername;
+        });
+    }
+    return { status: 'success', data: classes };
+}
+
+function handleCreateClass(body) {
+    var newClass = {
+        id: generateId('c'),
+        name: body.name,
+        teacherUsername: body.teacherUsername,
+        createdAt: new Date().toISOString(),
+    };
+    appendRowToSheet(CLASSROOM_SHEETS.CLASSES, newClass);
+    return { status: 'success', data: newClass };
+}
+
+function handleDeleteClass(body) {
+    var students = getSheetDataAsObjects(CLASSROOM_SHEETS.STUDENTS);
+    students.forEach(function (s) {
+        if (s.classId === body.classId) deleteRowById(CLASSROOM_SHEETS.STUDENTS, s.id);
+    });
+    var assignments = getSheetDataAsObjects(CLASSROOM_SHEETS.ASSIGNMENTS);
+    assignments.forEach(function (a) {
+        if (a.classId === body.classId) deleteRowById(CLASSROOM_SHEETS.ASSIGNMENTS, a.id);
+    });
+    var ok = deleteRowById(CLASSROOM_SHEETS.CLASSES, body.classId);
+    return ok ? { status: 'success' } : { status: 'error', message: 'Class not found' };
+}
+
+// --- Student Handlers ---
+
+function handleGetStudents(body) {
+    var students = getSheetDataAsObjects(CLASSROOM_SHEETS.STUDENTS);
+    students = students.filter(function (s) { return s.classId === body.classId; });
+
+    if (body.role === 'student') {
+        students = students.map(function (s) {
+            return { id: s.id, fullName: s.fullName, username: s.username, classId: s.classId };
+        });
+    } else {
+        students = students.map(function (s) {
+            return { id: s.id, fullName: s.fullName, username: s.username, classId: s.classId, parentPhone: s.parentPhone || '', createdAt: s.createdAt };
+        });
+    }
+    return { status: 'success', data: students };
+}
+
+function handleAddStudent(body) {
+    var existing = getSheetDataAsObjects(CLASSROOM_SHEETS.STUDENTS);
+    var duplicate = existing.some(function (s) { return s.username === body.username; });
+    if (duplicate) return { status: 'error', message: 'Tên đăng nhập đã tồn tại: ' + body.username };
+
+    var newStudent = {
+        id: generateId('s'),
+        fullName: body.fullName,
+        username: body.username,
+        passwordHash: hashPassword(body.password),
+        classId: body.classId,
+        parentPhone: body.parentPhone || '',
+        createdAt: new Date().toISOString(),
+    };
+    appendRowToSheet(CLASSROOM_SHEETS.STUDENTS, newStudent);
+    return { status: 'success', data: { id: newStudent.id, fullName: newStudent.fullName, username: newStudent.username, classId: newStudent.classId, parentPhone: newStudent.parentPhone, createdAt: newStudent.createdAt } };
+}
+
+function handleDeleteStudent(body) {
+    var ok = deleteRowById(CLASSROOM_SHEETS.STUDENTS, body.studentId);
+    return ok ? { status: 'success' } : { status: 'error', message: 'Student not found' };
+}
+
+function handleResetPassword(body) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CLASSROOM_SHEETS.STUDENTS);
+    if (!sheet) return { status: 'error', message: 'Sheet not found' };
+
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var idCol = headers.indexOf('id');
+    var hashCol = headers.indexOf('passwordHash');
+
+    for (var i = 1; i < data.length; i++) {
+        if (String(data[i][idCol]) === String(body.studentId)) {
+            var newPassword = generateRandomPassword();
+            sheet.getRange(i + 1, hashCol + 1).setValue(hashPassword(newPassword));
+            return { status: 'success', data: { newPassword: newPassword } };
+        }
+    }
+    return { status: 'error', message: 'Student not found' };
+}
+
+function handleStudentLogin(body) {
+    var students = getSheetDataAsObjects(CLASSROOM_SHEETS.STUDENTS);
+    var inputHash = hashPassword(body.password);
+
+    var student = students.find(function (s) {
+        return s.username === body.username && s.passwordHash === inputHash;
+    });
+    if (!student) return { status: 'error', message: 'Sai tên đăng nhập hoặc mật khẩu.' };
+
+    var classes = getSheetDataAsObjects(CLASSROOM_SHEETS.CLASSES);
+    var cls = classes.find(function (c) { return c.id === student.classId; });
+
+    return { status: 'success', data: { studentId: student.id, fullName: student.fullName, username: student.username, classId: student.classId, className: cls ? cls.name : '' } };
+}
+
+// --- Assignment Handlers ---
+
+function autoCloseExpiredAssignments(assignments, sheet, allData) {
+    var now = new Date();
+    var headers = allData[0];
+    var statusCol = headers.indexOf('status');
+    var deadlineCol = headers.indexOf('deadline');
+    var idCol = headers.indexOf('id');
+
+    for (var i = 1; i < allData.length; i++) {
+        var rowId = String(allData[i][idCol]);
+        var deadline = new Date(allData[i][deadlineCol]);
+        var status = String(allData[i][statusCol]);
+
+        if (status === 'OPEN' && deadline < now) {
+            sheet.getRange(i + 1, statusCol + 1).setValue('CLOSED');
+            assignments.forEach(function (a) {
+                if (a.id === rowId) a.status = 'CLOSED';
+            });
+        }
+    }
+}
+
+function handleGetAssignments(body) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CLASSROOM_SHEETS.ASSIGNMENTS);
+    if (!sheet) return { status: 'success', data: [] };
+
+    var allData = sheet.getDataRange().getValues();
+    var assignments = getSheetDataAsObjects(CLASSROOM_SHEETS.ASSIGNMENTS);
+    assignments = assignments.filter(function (a) { return a.classId === body.classId; });
+    autoCloseExpiredAssignments(assignments, sheet, allData);
+    return { status: 'success', data: assignments };
+}
+
+function handleGetTeacherAssignments(body) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CLASSROOM_SHEETS.ASSIGNMENTS);
+    if (!sheet) return { status: 'success', data: [] };
+
+    var allData = sheet.getDataRange().getValues();
+    var assignments = getSheetDataAsObjects(CLASSROOM_SHEETS.ASSIGNMENTS);
+    var classes = getSheetDataAsObjects(CLASSROOM_SHEETS.CLASSES);
+    var teacherClassIds = classes.filter(function (c) { return c.teacherUsername === body.teacherUsername; }).map(function (c) { return c.id; });
+
+    assignments = assignments.filter(function (a) { return teacherClassIds.indexOf(a.classId) !== -1; });
+    autoCloseExpiredAssignments(assignments, sheet, allData);
+
+    assignments = assignments.map(function (a) {
+        var cls = classes.find(function (c) { return c.id === a.classId; });
+        a.className = cls ? cls.name : '';
+        return a;
+    });
+    return { status: 'success', data: assignments };
+}
+
+function handleGetStudentAssignments(body) {
+    var students = getSheetDataAsObjects(CLASSROOM_SHEETS.STUDENTS);
+    var student = students.find(function (s) { return s.id === body.studentId; });
+    if (!student) return { status: 'error', message: 'Student not found' };
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CLASSROOM_SHEETS.ASSIGNMENTS);
+    if (!sheet) return { status: 'success', data: [] };
+
+    var allData = sheet.getDataRange().getValues();
+    var assignments = getSheetDataAsObjects(CLASSROOM_SHEETS.ASSIGNMENTS);
+    assignments = assignments.filter(function (a) { return a.classId === student.classId; });
+    autoCloseExpiredAssignments(assignments, sheet, allData);
+
+    // Count attempts for each assignment from Results sheet
+    var resultsSheet = ss.getSheetByName('Results');
+    var resultsData = resultsSheet ? resultsSheet.getDataRange().getValues() : [];
+    var resultsHeaders = resultsData.length > 0 ? resultsData[0] : [];
+    var nameCol = resultsHeaders.indexOf('Student Name');
+    var quizIdCol = resultsHeaders.indexOf('Quiz ID');
+
+    assignments = assignments.map(function (a) {
+        var attemptCount = 0;
+        if (nameCol !== -1 && quizIdCol !== -1) {
+            for (var i = 1; i < resultsData.length; i++) {
+                if (String(resultsData[i][nameCol]) === student.fullName &&
+                    String(resultsData[i][quizIdCol]) === String(a.quizId)) {
+                    attemptCount++;
+                }
+            }
+        }
+        a.attemptCount = attemptCount;
+        a.maxAttempts = Number(a.maxAttempts) || 1;
+        return a;
+    });
+
+    return { status: 'success', data: assignments };
+}
+
+function handleCreateAssignment(body) {
+    var newAssignment = {
+        id: generateId('a'),
+        quizId: body.quizId,
+        classId: body.classId,
+        deadline: body.deadline,
+        maxAttempts: Number(body.maxAttempts) || 1,
+        status: 'OPEN',
+        createdAt: new Date().toISOString(),
+    };
+    appendRowToSheet(CLASSROOM_SHEETS.ASSIGNMENTS, newAssignment);
+    return { status: 'success', data: newAssignment };
+}
+
+function handleDeleteAssignment(body) {
+    var ok = deleteRowById(CLASSROOM_SHEETS.ASSIGNMENTS, body.assignmentId);
+    return ok ? { status: 'success' } : { status: 'error', message: 'Assignment not found' };
 }
 
 // === END OF CODE ===

@@ -1,7 +1,7 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Quiz } from '../../types';
 import { Tabs, TabItem, Button, ErrorBoundary } from '../common';
-import { LogOut, FileText, List, Settings, Bot, Key, X, Save, Loader2, Globe, Megaphone } from 'lucide-react';
+import { LogOut, FileText, List, Settings, Bot, Key, X, Save, Loader2, Globe, Megaphone, GraduationCap, ClipboardList } from 'lucide-react';
 import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID, QUIZ_CATEGORIES } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
@@ -16,6 +16,8 @@ const IoeTab = React.lazy(() => import('./IoeTab'));
 const IoeManageTab = React.lazy(() => import('./IoeManageTab'));
 const IoeResultsTab = React.lazy(() => import('./IoeResultsTab'));
 const AnnouncementSettings = React.lazy(() => import('./AnnouncementSettings'));
+const ClassManagementTab = React.lazy(() => import('./ClassManagementTab'));
+const AssignmentTab = React.lazy(() => import('./AssignmentTab'));
 
 
 const TeacherDashboard: React.FC = () => {
@@ -58,6 +60,8 @@ const TeacherDashboard: React.FC = () => {
         { id: 'results', label: 'Kết quả', icon: <FileText className="w-4 h-4" /> },
         { id: 'manage', label: 'Quản lý đề', icon: <List className="w-4 h-4" /> },
         { id: 'create', label: 'Tạo đề mới', icon: <Settings className="w-4 h-4" /> },
+        { id: 'classes', label: 'Lớp học', icon: <GraduationCap className="w-4 h-4" /> },
+        { id: 'assignments', label: 'Giao bài', icon: <ClipboardList className="w-4 h-4" /> },
         { id: 'ioe', label: 'Tạo đề IOE', icon: <Globe className="w-4 h-4" /> },
         { id: 'ioe-manage', label: 'IOE Quản lý', icon: <Globe className="w-4 h-4" /> },
         { id: 'ioe-results', label: 'IOE Kết quả', icon: <Globe className="w-4 h-4" /> },
@@ -71,9 +75,9 @@ const TeacherDashboard: React.FC = () => {
         // Results tab - luôn hiển thị cho tất cả
         if (tab.id === 'results') return true;
 
-        // Manage và Create - cho phép cả Teacher và Admin
-        if (tab.id === 'manage' || tab.id === 'create') {
-            return true; // Tất cả GV đều có thể quản lý và tạo đề ôn tập
+        // Manage, Create, Classes - cho phép cả Teacher và Admin
+        if (tab.id === 'manage' || tab.id === 'create' || tab.id === 'classes' || tab.id === 'assignments') {
+            return true;
         }
 
         // IOE Tabs & Announcements - CHỈ Admin được phép (tất cả admin đều có quyền)
@@ -216,6 +220,14 @@ const TeacherDashboard: React.FC = () => {
                             <div className="max-w-2xl mx-auto">
                                 <AnnouncementSettings />
                             </div>
+                        )}
+
+                        {activeTab === 'classes' && (
+                            <ClassManagementTab />
+                        )}
+
+                        {activeTab === 'assignments' && (
+                            <AssignmentTab />
                         )}
 
 

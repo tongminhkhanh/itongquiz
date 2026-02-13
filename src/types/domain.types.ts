@@ -337,7 +337,7 @@ export interface ResultsFilterState {
 /**
  * App View State
  */
-export type AppView = 'home' | 'student' | 'teacher_login' | 'teacher_dash';
+export type AppView = 'home' | 'student' | 'teacher_login' | 'teacher_dash' | 'student_portal';
 
 /**
  * Pagination State

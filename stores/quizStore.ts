@@ -4,7 +4,7 @@ import { Quiz, StudentResult } from '../src/types';
 import { fetchQuizzesFromSheets, fetchResultsFromSheets, saveQuizToSheet, saveResultToSheet, updateQuizInSheet, deleteQuizFromSheet } from '../src/services/googleSheetService';
 import { GOOGLE_SHEET_ID, QUIZ_GID, QUESTION_GID, RESULTS_GID, GOOGLE_SCRIPT_URL } from '../src/config/constants';
 
-type ViewType = 'home' | 'student' | 'teacher_login' | 'teacher_dash';
+type ViewType = 'home' | 'student' | 'teacher_login' | 'teacher_dash' | 'student_portal';
 
 interface QuizState {
     // State

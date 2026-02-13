@@ -1,21 +1,54 @@
 {
-    "updated_at": "2026-02-10T04:36:00Z",
+    "updated_at": "2026-02-11T07:20:00Z",
     "working_on": {
-        "feature": "UNDERLINE Question Type Bug Fixes",
-        "task": "Fix getAnswerStatus fallback for correctWordIndexes",
-        "status": "completed",
+        "feature": "Virtual Classroom",
+        "task": "Phase 1: Database & Backend (GAS) - Implementation",
+        "status": "execution",
         "files": [
-            "src/components/student/ResultScreen/tabs/DetailedAnswersTab.tsx"
+            "implementation_plan.md",
+            "task.md"
         ],
-        "notes": "Added fallback parse correctAnswer string to correctWordIndexes array in getAnswerStatus. Rendering detail already had this fallback."
+        "notes": "Starting Phase 1. Source code backed up to backups/20260211_pre_virtual_classroom."
     },
     "recent_changes": [
         {
+            "timestamp": "2026-02-11",
+            "type": "backup",
+            "description": "Backed up entire source code to backups/20260211_pre_virtual_classroom before starting Virtual Classroom features",
+            "files": []
+        },
+        {
+            "timestamp": "2026-02-11",
+            "type": "doc",
+            "description": "Created detailed implementation plan and specs for Virtual Classroom (Classes, Students, Assignments)",
+            "files": [
+                "implementation_plan.md",
+                "task.md"
+            ]
+        },
+        {
+            "timestamp": "2026-02-11",
+            "type": "feature",
+            "description": "Added difficulty dropdown UI to QuizPreview Edit/Add modals + colored badge in preview list (green/yellow/red for levels 1/2/3)",
+            "files": [
+                "src/components/TeacherDashboard/QuizPreview.tsx"
+            ]
+        },
+        {
             "timestamp": "2026-02-10",
             "type": "fix",
-            "description": "Fixed UNDERLINE getAnswerStatus always returning wrong - added fallback parse correctAnswer string to correctWordIndexes",
+            "description": "Fixed AI distractor generation failing - improved parseJSONResponse regex for markdown code blocks, updated system prompt, added debug logging",
             "files": [
-                "src/components/student/ResultScreen/tabs/DetailedAnswersTab.tsx"
+                "src/services/smartDistractorService.ts"
+            ]
+        },
+        {
+            "timestamp": "2026-02-10",
+            "type": "fix",
+            "description": "Fixed UNDERLINE word chips rendering - added resolveCorrectWordIndexes helper with 4-level fallback (quiz -> correctAnswer -> snapshot -> validationDetails)",
+            "files": [
+                "src/components/student/ResultScreen/tabs/DetailedAnswersTab.tsx",
+                "src/components/student/ResultScreen/index.tsx"
             ]
         },
         {
@@ -34,77 +67,47 @@
             "files": [
                 "src/components/teacher/ResultsView/QuestionAnalysisTable.tsx"
             ]
-        },
-        {
-            "timestamp": "2026-02-06",
-            "type": "fix",
-            "description": "Fixed StudentDetailModal showing all questions as wrong - added fallback isCorrect calculation",
-            "files": [
-                "src/components/teacher/ResultsView/StudentDetailModal.tsx"
-            ]
-        },
-        {
-            "timestamp": "2026-02-06",
-            "type": "fix",
-            "description": "Fixed TRUE_FALSE validation - changed isTrue to isCorrect property",
-            "files": [
-                "src/components/teacher/ResultsView/StudentDetailModal.tsx"
-            ]
-        },
-        {
-            "timestamp": "2026-02-06",
-            "type": "fix",
-            "description": "Fixed MCQ validation - handle correctAnswer format 'B. Answer' vs 'B'",
-            "files": [
-                "gas_script.js"
-            ]
         }
     ],
     "decisions_made": [
         {
-            "decision": "Add correctAnswer fallback in getAnswerStatus for UNDERLINE",
-            "reason": "Snapshots store correctAnswer as JSON string but not correctWordIndexes array - need to parse at display time"
+            "decision": "Choose 'Virtual Classroom' approach over simple link sharing",
+            "reason": "Better long-term tracking and student management capabilities"
         },
         {
-            "decision": "Use fallback calculation for old results without isCorrect field",
-            "reason": "Old submitted results don't have isCorrect, need to recalculate from correctAnswer"
+            "decision": "Difficulty dropdown uses select element with green focus ring, consistent with existing design",
+            "reason": "Matches DifficultyLevelSelector green theme, simple and familiar UI pattern"
         },
         {
-            "decision": "Use MathSpan component instead of dangerouslySetInnerHTML for LaTeX",
-            "reason": "MathSpan handles MathJax rendering properly with useLayoutEffect"
+            "decision": "Difficulty badge uses star emojis with colored backgrounds (green/yellow/red)",
+            "reason": "Visual distinction by color for quick scanning, matches common education UI patterns"
         },
         {
-            "decision": "Support correctAnswers (plural) for MULTIPLE_SELECT in statistics",
-            "reason": "MULTIPLE_SELECT uses correctAnswers array, not correctAnswer string"
+            "decision": "Use non-greedy regex for AI response markdown stripping",
+            "reason": "Old regex ^```json only matched start of string. AI wraps response in ```json...``` with leading whitespace, causing parse failure"
+        },
+        {
+            "decision": "4-level fallback for correctWordIndexes resolution",
+            "reason": "Anti-cheat stripAnswerFields removes correctWordIndexes. Need multiple data sources: quiz object → correctAnswer → snapshot → validationDetails"
         }
     ],
     "errors_encountered": [
         {
-            "error": "UNDERLINE questions always show wrong in ResultScreen card list",
-            "solution": "getAnswerStatus used correctWordIndexes (empty in snapshots) without fallback to correctAnswer string",
+            "error": "AI distractor generation fails: 'AI không thể tạo đáp án nhiễu'",
+            "solution": "parseJSONResponse regex couldn't strip markdown code blocks. Fixed with non-greedy regex /```(?:json)?\\\\s*([\\\\s\\\\S]*?)```/ and updated system prompt",
             "resolved": true
         },
         {
-            "error": "QuestionAnalysis TỶ LỆ ĐÚNG always 0%",
-            "solution": "Added fallback calculation in statisticsUtils.ts + pass correctAnswers field",
-            "resolved": true
-        },
-        {
-            "error": "StudentDetailModal shows all questions wrong",
-            "solution": "Added calculateIsCorrect fallback function for all question types",
-            "resolved": true
-        },
-        {
-            "error": "LaTeX displays as raw $32$ in QuestionAnalysisTable",
-            "solution": "Use MathSpan component instead of dangerouslySetInnerHTML",
+            "error": "UNDERLINE word chips all show red (Gạch sai) even when answer is correct",
+            "solution": "correctWordIndexes stripped by anti-cheat. Added resolveCorrectWordIndexes helper with 4-level fallback in both DetailedAnswersTab and ResultScreen",
             "resolved": true
         }
     ],
     "pending_tasks": [
-        {
-            "task": "Add difficulty dropdown in QuizPreview edit modal",
-            "priority": "low",
-            "notes": "State logic done, only UI dropdown missing"
-        }
+        "Phase 1: Database & Backend (GAS)",
+        "Phase 2: Teacher UI - Class Management",
+        "Phase 3: Teacher UI - Assignment Management",
+        "Phase 4: Student Portal",
+        "Phase 5: Testing & Polish"
     ]
 }

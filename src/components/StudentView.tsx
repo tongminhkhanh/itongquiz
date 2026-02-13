@@ -9,6 +9,7 @@ import {
   QuestionRenderer
 } from './student';
 import { validateAnswersOnServer } from '../services/quizValidationService';
+import { useClassroomStore } from '../stores/useClassroomStore';
 
 interface Props {
   quiz: Quiz;
@@ -19,12 +20,25 @@ interface Props {
 const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
   // DEBUG: Log quiz data to see structure
   console.log('🎓 StudentView quiz data:', JSON.stringify(quiz, null, 2));
-  // Determine initial step based on whether quiz requires access code
-  const [step, setStep] = useState<'code' | 'info' | 'quiz' | 'result'>(
-    quiz.requireCode ? 'code' : 'info'
-  );
-  const [studentName, setStudentName] = useState('');
-  const [studentClass, setStudentClass] = useState('');
+
+  // Get student session from store (if logged in via Student Portal)
+  const classroomStore = useClassroomStore();
+  const session = classroomStore.studentSession;
+  const isLoggedIn = !!session;
+
+  // Determine initial step:
+  // - Logged in + no access code → skip straight to 'quiz' (auto-start)
+  // - Logged in + has access code → 'code' first, then skip 'info'
+  // - Not logged in → normal flow (code/info)
+  const getInitialStep = (): 'code' | 'info' | 'quiz' | 'result' => {
+    if (isLoggedIn && !quiz.requireCode) return 'info'; // Will auto-start via useEffect
+    if (quiz.requireCode) return 'code';
+    return 'info';
+  };
+
+  const [step, setStep] = useState<'code' | 'info' | 'quiz' | 'result'>(getInitialStep());
+  const [studentName, setStudentName] = useState(session?.fullName || '');
+  const [studentClass, setStudentClass] = useState(session?.className || '');
 
   // Access code verification state
   const [enteredCode, setEnteredCode] = useState('');
@@ -115,6 +129,14 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     }
   }, [step, onExit]);
 
+  // Auto-start when logged in and step is 'info' (skip the form)
+  useEffect(() => {
+    if (isLoggedIn && step === 'info' && studentName && studentClass) {
+      handleStart();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, step]);
+
   const handleStart = () => {
     if (!studentName || !studentClass) return;
     // Shuffle trong cùng mức độ, giữ thứ tự: Mức 1 (đầu) → Mức 2 (giữa) → Mức 3 (cuối)
@@ -144,7 +166,12 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
   const handleCodeVerify = () => {
     if (enteredCode.toUpperCase() === quiz.accessCode?.toUpperCase()) {
       setCodeError('');
-      setStep('info');
+      // If logged in, skip info form and go to quiz directly
+      if (isLoggedIn) {
+        setStep('info'); // Will auto-start via useEffect
+      } else {
+        setStep('info');
+      }
     } else {
       setCodeError('Mã không đúng. Vui lòng thử lại!');
     }

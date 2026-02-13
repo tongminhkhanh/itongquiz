@@ -2,11 +2,12 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { Quiz, QuestionType } from './src/types';
 import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID, QUIZ_CATEGORIES } from './src/config/constants';
-import { GraduationCap, Lock, KeyRound, RefreshCw, Loader2 } from 'lucide-react';
+import { GraduationCap, Lock, KeyRound, RefreshCw, Loader2, User } from 'lucide-react';
 import { fetchTeachersFromSheets } from './src/services/googleSheetService';
 import { fetchIoeQuizzes, saveIoeResult } from './src/services/ioeSheetService';
 import { useAuthStore } from './stores/authStore';
 import { useQuizStore } from './stores/quizStore';
+import { useClassroomStore } from './src/stores/useClassroomStore';
 
 // Lazy load main views
 const StudentView = React.lazy(() => import('./src/components/StudentView'));
@@ -16,6 +17,7 @@ import { QuizListByCategory } from './src/components/QuizListByCategory';
 const GameCanvas = React.lazy(() => import('./src/components/Game/GameCanvas'));
 const ChatBot = React.lazy(() => import('./src/components/ChatBot/ChatBot'));
 const TeacherDashboard = React.lazy(() => import('./src/components/TeacherDashboard'));
+const StudentPortal = React.lazy(() => import('./src/components/StudentPortal'));
 import AnnouncementMarquee from './src/components/common/AnnouncementMarquee';
 
 // ... existing code ...
@@ -149,6 +151,18 @@ const App: React.FC = () => {
                 </Suspense>
                 <Analytics />
             </>
+        );
+    }
+
+    if (quizStore.view === 'student_portal') {
+        return (
+            <Suspense fallback={
+                <div className="min-h-screen flex items-center justify-center bg-white">
+                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+                </div>
+            }>
+                <StudentPortal />
+            </Suspense>
         );
     }
 
@@ -473,27 +487,39 @@ const App: React.FC = () => {
                                                             <p className="text-gray-400 text-sm">Chưa có bài ôn tập nào ở đây.</p>
                                                         </div>
                                                     ) : (
-                                                        filteredQuizzes.map((q, index) => (
-                                                            <button
-                                                                key={q.id}
-                                                                onClick={() => { quizStore.selectQuiz(q); quizStore.setView('student'); }}
-                                                                className={`w-full text-left quest-card animate-slide-up stagger-${Math.min(index + 1, 5)}`}
-                                                            >
-                                                                <div className="flex justify-between items-center">
-                                                                    <span className="font-bold text-emerald-800 flex items-center gap-2">
-                                                                        {q.requireCode && <Lock className="w-4 h-4 text-amber-500" />}
-                                                                        {q.title}
-                                                                    </span>
-                                                                    <span className="bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-sm">
-                                                                        Bắt đầu →
-                                                                    </span>
-                                                                </div>
-                                                                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                                                    <span>📝 {q.questions.length} câu</span>
-                                                                    <span>⏱️ {q.timeLimit} phút</span>
-                                                                </div>
-                                                            </button>
-                                                        ))
+                                                        filteredQuizzes.map((q, index) => {
+                                                            const classroomStore = useClassroomStore.getState();
+                                                            const isStudentLoggedIn = !!classroomStore.studentSession;
+
+                                                            return (
+                                                                <button
+                                                                    key={q.id}
+                                                                    onClick={() => {
+                                                                        if (isStudentLoggedIn) {
+                                                                            alert('Bạn đã đăng nhập bằng tài khoản học sinh. Vui lòng làm bài trong mục "Bài tập được giao" của Cổng Học Sinh.');
+                                                                            return;
+                                                                        }
+                                                                        quizStore.selectQuiz(q); quizStore.setView('student');
+                                                                    }}
+                                                                    className={`w-full text-left quest-card animate-slide-up stagger-${Math.min(index + 1, 5)} ${isStudentLoggedIn ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                                                >
+                                                                    <div className="flex justify-between items-center">
+                                                                        <span className="font-bold text-emerald-800 flex items-center gap-2">
+                                                                            {q.requireCode && <Lock className="w-4 h-4 text-amber-500" />}
+                                                                            {isStudentLoggedIn && <Lock className="w-4 h-4 text-red-400" />}
+                                                                            {q.title}
+                                                                        </span>
+                                                                        <span className={`px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-sm ${isStudentLoggedIn ? 'bg-gray-400' : 'bg-gradient-to-r from-emerald-500 to-teal-500'}`}>
+                                                                            {isStudentLoggedIn ? '🔒 Chỉ làm qua bài giao' : 'Bắt đầu →'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                                                        <span>📝 {q.questions.length} câu</span>
+                                                                        <span>⏱️ {q.timeLimit} phút</span>
+                                                                    </div>
+                                                                </button>
+                                                            );
+                                                        })
                                                     )}
                                                 </div>
                                             </>
@@ -501,9 +527,11 @@ const App: React.FC = () => {
                                     })()
                                 )}
                             </div>
+
+
                         </div>
 
-                        {/* Right Panel - Teacher Desk */}
+                        {/* Right Panel - Teacher & Student Desk */}
                         <div className="w-full lg:w-80 space-y-4 animate-slide-up">
                             {/* Teacher Desk Card */}
                             <div className="teacher-desk p-5">
@@ -529,6 +557,26 @@ const App: React.FC = () => {
                                 >
                                     <KeyRound className="w-5 h-5" />
                                     Đăng nhập hệ thống
+                                </button>
+                            </div>
+
+                            {/* Student Desk Card */}
+                            <div className="student-desk p-5 bg-white/60 rounded-xl border border-blue-100 shadow-sm hover:shadow-md transition-all">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
+                                        <GraduationCap className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-gray-800">Góc Học sinh</h3>
+                                        <p className="text-xs text-blue-600">Bài tập & Kết quả</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => quizStore.setView('student_portal')}
+                                    className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-lg hover:-translate-y-0.5 transition-all press-effect"
+                                >
+                                    <User className="w-5 h-5" />
+                                    Đăng nhập Học sinh
                                 </button>
                             </div>
 
