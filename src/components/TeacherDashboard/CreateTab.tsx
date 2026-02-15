@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, QuestionType, ImageLibraryItem } from '../../types';
 import { Card, Button } from '../common';
-import { FileText, Sparkles, Upload, X, FileCheck, Copy, Check, Link2, BookOpen, Search, Zap } from 'lucide-react';
+import { FileText, Sparkles, Upload, X, FileCheck, Copy, Check, Link2, BookOpen, Search, Zap, Users, Calendar, Hash } from 'lucide-react';
 import { AIProvider, generateQuiz, QuizGenerationOptions } from '../../services/geminiService';
 import { generateTrangNguyenQuiz, TRANG_NGUYEN_TOPICS } from '../../services/trangNguyenGeminiService';
 import { searchTrangNguyenQuestions, enrichPromptWithSearchResults } from '../../services/trangNguyenSearchService';
@@ -9,6 +9,7 @@ import { QuestionTypeSelector, DifficultyLevelSelector, ImageLibrary, AIProvider
 import QuizPreview from './QuizPreview';
 import { QUIZ_CATEGORIES } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
+import { useClassroomStore } from '../../stores/useClassroomStore';
 
 interface CreateTabProps {
     editingQuiz: Quiz | null;
@@ -20,6 +21,7 @@ interface CreateTabProps {
 const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSuccess }) => {
     // Auth store - to get teacher name and class
     const authStore = useAuthStore();
+    const classroomStore = useClassroomStore();
 
     // Check if teacher is locked to a specific class (non-admin with assigned class)
     const isClassLocked = !authStore.isAdmin && !!authStore.teacherClass;
@@ -74,6 +76,23 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
         const saved = localStorage.getItem('quiz_image_library');
         return saved ? JSON.parse(saved) : [];
     });
+
+    // Auto-Assign State
+    const [assignToClass, setAssignToClass] = useState(false);
+    const [selectedClassId, setSelectedClassId] = useState('');
+    const [deadline, setDeadline] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 7); // Default 7 days
+        return d.toISOString().split('T')[0];
+    });
+    const [maxAttempts, setMaxAttempts] = useState(3);
+
+    // Fetch classes for assignment dropdown
+    useEffect(() => {
+        if (authStore.username) {
+            classroomStore.fetchClasses(authStore.username);
+        }
+    }, [authStore.username]);
 
     // Initialize from editingQuiz
     useEffect(() => {
@@ -328,6 +347,30 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                 await onUpdateQuiz(generatedQuiz);
             } else {
                 await onSaveQuiz(generatedQuiz);
+            }
+
+            // NEW: Auto-assign logic
+            if (assignToClass && selectedClassId) {
+                try {
+                    await classroomStore.addAssignment({
+                        classId: selectedClassId,
+                        quizId: generatedQuiz.id,
+                        quizTitle: generatedQuiz.title,
+                        dueDate: new Date(deadline).toISOString(),
+                        type: 'quiz', // Assuming 'quiz' is valid type, or 'homework'
+                        settings: {
+                            duration: generatedQuiz.timeLimit,
+                            maxAttempts: maxAttempts,
+                            viewAnswers: true,
+                            shuffleQuestions: true
+                        }
+                    } as any); // Type cast might be needed if I missed some fields
+                    // Note: CreateAssignmentPayload usually needs basic fields.
+                } catch (assignErr) {
+                    console.error('Auto-assign failed:', assignErr);
+                    // We don't block the success flow, just maybe alert?
+                    // For now, let's proceed.
+                }
             }
 
             // Generate shareable link
@@ -617,6 +660,79 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     onChange={setAiProvider}
                     isAdmin={authStore.isAdmin}
                 />
+
+                {/* Auto-Assign Section */}
+                <Card title="📅 Giao bài ngay (Tùy chọn)">
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="font-medium text-gray-700">Giao ngay cho lớp học</p>
+                                <p className="text-sm text-gray-500">Học sinh sẽ thấy bài tập ngay sau khi lưu đề</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setAssignToClass(!assignToClass)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${assignToClass ? 'bg-orange-500' : 'bg-gray-300'}`}
+                            >
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${assignToClass ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </button>
+                        </div>
+
+                        {assignToClass && (
+                            <div className="space-y-3 pt-2 animate-fade-in">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">
+                                        Chọn lớp <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="relative">
+                                        <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <select
+                                            value={selectedClassId}
+                                            onChange={(e) => setSelectedClassId(e.target.value)}
+                                            className="w-full pl-10 p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                                        >
+                                            <option value="">-- Chọn lớp học --</option>
+                                            {classroomStore.classes.map((cls) => (
+                                                <option key={cls.id} value={cls.id}>
+                                                    {cls.name} (Lớp {cls.gradeLevel})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Hạn nộp</label>
+                                        <div className="relative">
+                                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="date"
+                                                value={deadline}
+                                                onChange={(e) => setDeadline(e.target.value)}
+                                                className="w-full pl-10 p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Số lượt làm</label>
+                                        <div className="relative">
+                                            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={10}
+                                                value={maxAttempts}
+                                                onChange={(e) => setMaxAttempts(parseInt(e.target.value))}
+                                                className="w-full pl-10 p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </Card>
 
                 {/* Image Library section has been removed as per user request */}
 

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ít Ong Quiz - Sticker Land</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Baloo 2', cursive;
+            background-color: #E0F2FE;
+            /* Sky light */
+            background-image:
+                radial-gradient(#BAE6FD 20%, transparent 20%),
+                radial-gradient(#FEF3C7 20%, transparent 20%);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+            background-attachment: fixed;
+        }
+
+        /* 3D Sticker Effect */
+        .sticker-img {
+            filter: drop-shadow(0 8px 4px rgba(0, 0, 0, 0.1));
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .sticker-img:hover {
+            transform: scale(1.15) rotate(5deg) translateY(-10px);
+            filter: drop-shadow(0 15px 10px rgba(0, 0, 0, 0.15));
+        }
+
+        /* Card with Sticker Pop */
+        .card-sticker {
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 10px 0 #CBD5E1;
+            /* Stone 300 shadow */
+            transition: all 0.2s;
+            border: 4px solid white;
+            position: relative;
+            overflow: visible;
+        }
+
+        .card-sticker:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 16px 0 #94A3B8;
+            z-index: 10;
+        }
+
+        .card-sticker:active {
+            transform: translateY(5px);
+            box-shadow: 0 4px 0 #94A3B8;
+        }
+
+        /* Sun Animation */
+        @keyframes sun-spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .sun-rays {
+            animation: sun-spin 60s linear infinite;
+        }
+
+        /* Floating Animation */
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px) rotate(2deg);
+            }
+
+            50% {
+                transform: translateY(-15px) rotate(-2deg);
+            }
+        }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .btn-push {
+            transition: all 0.1s;
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-push:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+        }
+    </style>
+</head>
+
+<body class="overflow-x-hidden text-slate-700">
+
+    <!-- Sun Decoration -->
+    <div class="fixed -top-32 -left-32 w-96 h-96 pointer-events-none z-0 opacity-80">
+        <!-- Sun: assets/Sun/3D/sun_3d.png -->
+        <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Sun/3D/sun_3d.png"
+            class="w-full h-full object-contain sun-rays">
+    </div>
+
+    <!-- Cloud Decoration -->
+    <div class="fixed top-20 right-10 w-48 h-48 pointer-events-none z-0 opacity-60 animate-float"
+        style="animation-delay: 2s;">
+        <!-- Cloud: assets/Cloud/3D/cloud_3d.png -->
+        <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Cloud/3D/cloud_3d.png"
+            class="w-full h-full object-contain">
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="sticky top-4 z-50 px-4">
+        <div
+            class="max-w-5xl mx-auto bg-white/90 backdrop-blur-md rounded-full px-4 py-2 shadow-xl border-4 border-white flex items-center justify-between">
+            <div class="flex items-center gap-2 cursor-pointer group">
+                <!-- Honeybee: assets/Honeybee/3D/honeybee_3d.png -->
+                <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Honeybee/3D/honeybee_3d.png"
+                    class="w-12 h-12 object-contain group-hover:rotate-12 transition sticker-img">
+                <span
+                    class="text-3xl font-black text-blue-500 tracking-tight group-hover:scale-105 transition-transform inline-block">ÍtOng<span
+                        class="text-yellow-400">Quiz</span></span>
+            </div>
+
+            <div class="hidden md:flex gap-4">
+                <a href="#"
+                    class="px-6 py-2 rounded-2xl font-bold text-slate-500 hover:bg-blue-50 hover:text-blue-500 transition border-2 border-transparent hover:border-blue-100">Trang
+                    chủ 🏠</a>
+                <a href="#"
+                    class="px-6 py-2 rounded-2xl font-bold text-slate-500 hover:bg-yellow-50 hover:text-yellow-500 transition border-2 border-transparent hover:border-yellow-100">Xếp
+                    hạng 🏆</a>
+                <a href="#"
+                    class="px-6 py-2 rounded-2xl font-bold text-slate-500 hover:bg-pink-50 hover:text-pink-500 transition border-2 border-transparent hover:border-pink-100">Cửa
+                    hàng 🎁</a>
+            </div>
+
+            <button onclick="document.getElementById('loginModal').classList.remove('hidden')"
+                class="btn-push bg-gradient-to-b from-blue-400 to-blue-600 text-white px-8 py-3 rounded-full font-black border-b-4 border-blue-700 shadow-lg hover:brightness-110 flex items-center gap-2">
+                <span>Vào Lớp</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <header class="max-w-5xl mx-auto text-center pt-24 pb-20 px-4 relative z-10">
+        <div
+            class="inline-block bg-white px-8 py-3 rounded-full shadow-lg mb-8 animate-bounce border-4 border-pink-100">
+            <span class="font-extrabold text-pink-500 text-xl">Học mà chơi - Chơi mà học</span>
+        </div>
+
+        <h1 class="text-6xl md:text-8xl font-black text-slate-800 mb-10 leading-tight drop-shadow-sm tracking-tight">
+            Vùng Đất <span class="text-blue-500 inline-block hover:scale-110 transition cursor-default">Tri
+                Thức</span><br>
+            Của Bé <span class="text-yellow-500 inline-block hover:scale-110 transition cursor-default">Ong Vàng</span>
+        </h1>
+
+        <!-- Floating 3D Icons Row -->
+        <div class="flex justify-center flex-wrap gap-8 md:gap-16 mb-16 px-4">
+            <!-- Abacus -->
+            <div class="w-24 h-24 md:w-32 md:h-32 animate-float hover:z-20 relative" style="animation-delay: 0s;">
+                <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Abacus/3D/abacus_3d.png"
+                    class="sticker-img w-full h-full object-contain" title="Giỏi Toán">
+            </div>
+            <!-- Books -->
+            <div class="w-24 h-24 md:w-32 md:h-32 animate-float hover:z-20 relative" style="animation-delay: 1.5s;">
+                <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Books/3D/books_3d.png"
+                    class="sticker-img w-full h-full object-contain" title="Yêu Văn">
+            </div>
+            <!-- Globe showing Americas -->
+            <div class="w-24 h-24 md:w-32 md:h-32 animate-float hover:z-20 relative" style="animation-delay: 3s;">
+                <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Globe%20showing%20Americas/3D/globe_showing_americas_3d.png"
+                    class="sticker-img w-full h-full object-contain" title="Hiểu Địa Lý">
+            </div>
+            <!-- Graduation cap -->
+            <div class="w-24 h-24 md:w-32 md:h-32 animate-float hover:z-20 relative" style="animation-delay: 2s;">
+                <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Graduation%20cap/3D/graduation_cap_3d.png"
+                    class="sticker-img w-full h-full object-contain" title="Tốt Nghiệp">
+            </div>
+        </div>
+
+        <button onclick="document.getElementById('grid').scrollIntoView({behavior: 'smooth'})"
+            class="btn-push bg-yellow-400 hover:bg-yellow-300 text-yellow-900 border-b-8 border-yellow-600 px-12 py-5 rounded-[2rem] font-black text-3xl shadow-xl flex items-center gap-3 mx-auto">
+            <span>CHỌN MÔN HỌC</span>
+            <span class="animate-bounce">👇</span>
+        </button>
+    </header>
+
+    <!-- SUBJECT GRID -->
+    <main id="grid" class="max-w-6xl mx-auto px-6 py-12 pb-40">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+
+            <!-- TOÁN -->
+            <div class="card-sticker p-8 group cursor-pointer border-b-blue-300 hover:border-blue-400">
+                <div class="absolute -top-12 left-6 w-24 h-24">
+                    <!-- Abacus -->
+                    <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Abacus/3D/abacus_3d.png"
+                        class="sticker-img w-full h-full object-contain">
+                </div>
+                <div class="mt-8 flex justify-end mb-2">
+                    <span
+                        class="bg-blue-100 text-blue-600 px-4 py-1.5 rounded-xl font-bold text-sm border-2 border-blue-200">Toán
+                        Học</span>
+                </div>
+                <h3 class="text-3xl font-black text-slate-800 mb-2 group-hover:text-blue-500 transition">Toán Thông Minh
+                </h3>
+                <p class="text-slate-500 font-bold mb-8 text-lg">Cộng trừ nhân chia thật dễ!</p>
+                <div
+                    class="w-full bg-blue-500 text-white text-center py-4 rounded-2xl font-black text-xl group-hover:bg-blue-400 transition shadow-md border-b-4 border-blue-700 active:border-b-0 active:translate-y-1">
+                    Bắt đầu ▶️</div>
+            </div>
+
+            <!-- TIẾNG VIỆT -->
+            <div class="card-sticker p-8 group cursor-pointer border-b-pink-300 hover:border-pink-400">
+                <div class="absolute -top-12 left-6 w-24 h-24">
+                    <!-- Pencil -->
+                    <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Pencil/3D/pencil_3d.png"
+                        class="sticker-img w-full h-full object-contain rotate-12">
+                </div>
+                <div class="mt-8 flex justify-end mb-2">
+                    <span
+                        class="bg-pink-100 text-pink-600 px-4 py-1.5 rounded-xl font-bold text-sm border-2 border-pink-200">Tiếng
+                        Việt</span>
+                </div>
+                <h3 class="text-3xl font-black text-slate-800 mb-2 group-hover:text-pink-500 transition">Vua Tiếng Việt
+                </h3>
+                <p class="text-slate-500 font-bold mb-8 text-lg">Ghép chữ, đoán từ, kể chuyện.</p>
+                <div
+                    class="w-full bg-pink-500 text-white text-center py-4 rounded-2xl font-black text-xl group-hover:bg-pink-400 transition shadow-md border-b-4 border-pink-700 active:border-b-0 active:translate-y-1">
+                    Bắt đầu ▶️</div>
+            </div>
+
+            <!-- TIẾNG ANH -->
+            <div class="card-sticker p-8 group cursor-pointer border-b-yellow-300 hover:border-yellow-400">
+                <div class="absolute -top-12 left-6 w-24 h-24">
+                    <!-- Speech balloon -->
+                    <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Speech%20balloon/3D/speech_balloon_3d.png"
+                        class="sticker-img w-full h-full object-contain -rotate-6">
+                </div>
+                <div class="mt-8 flex justify-end mb-2">
+                    <span
+                        class="bg-yellow-100 text-yellow-600 px-4 py-1.5 rounded-xl font-bold text-sm border-2 border-yellow-200">Tiếng
+                        Anh</span>
+                </div>
+                <h3 class="text-3xl font-black text-slate-800 mb-2 group-hover:text-yellow-500 transition">English Fun
+                </h3>
+                <p class="text-slate-500 font-bold mb-8 text-lg">Hello! How are you?</p>
+                <div
+                    class="w-full bg-yellow-400 text-yellow-900 text-center py-4 rounded-2xl font-black text-xl group-hover:bg-yellow-300 transition shadow-md border-b-4 border-yellow-600 active:border-b-0 active:translate-y-1">
+                    Start Now ▶️</div>
+            </div>
+
+            <!-- KHOA HỌC -->
+            <div class="card-sticker p-8 group cursor-pointer border-b-green-300 hover:border-green-400">
+                <div class="absolute -top-12 left-6 w-24 h-24">
+                    <!-- Test tube -->
+                    <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Test%20tube/3D/test_tube_3d.png"
+                        class="sticker-img w-full h-full object-contain rotate-45">
+                </div>
+                <div class="mt-8 flex justify-end mb-2">
+                    <span
+                        class="bg-green-100 text-green-600 px-4 py-1.5 rounded-xl font-bold text-sm border-2 border-green-200">Khoa
+                        Học</span>
+                </div>
+                <h3 class="text-3xl font-black text-slate-800 mb-2 group-hover:text-green-500 transition">Nhà Khoa Học
+                </h3>
+                <p class="text-slate-500 font-bold mb-8 text-lg">Thí nghiệm và khám phá.</p>
+                <div
+                    class="w-full bg-green-500 text-white text-center py-4 rounded-2xl font-black text-xl group-hover:bg-green-400 transition shadow-md border-b-4 border-green-700 active:border-b-0 active:translate-y-1">
+                    Bắt đầu ▶️</div>
+            </div>
+
+            <!-- LỊCH SỬ -->
+            <div class="card-sticker p-8 group cursor-pointer border-b-orange-300 hover:border-orange-400">
+                <div class="absolute -top-12 left-6 w-24 h-24">
+                    <!-- Scroll -->
+                    <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Scroll/3D/scroll_3d.png"
+                        class="sticker-img w-full h-full object-contain">
+                </div>
+                <div class="mt-8 flex justify-end mb-2">
+                    <span
+                        class="bg-orange-100 text-orange-600 px-4 py-1.5 rounded-xl font-bold text-sm border-2 border-orange-200">Lịch
+                        Sử</span>
+                </div>
+                <h3 class="text-3xl font-black text-slate-800 mb-2 group-hover:text-orange-500 transition">Sử Việt Hào
+                    Hùng</h3>
+                <p class="text-slate-500 font-bold mb-8 text-lg">Danh nhân và sự kiện.</p>
+                <div
+                    class="w-full bg-orange-500 text-white text-center py-4 rounded-2xl font-black text-xl group-hover:bg-orange-400 transition shadow-md border-b-4 border-orange-700 active:border-b-0 active:translate-y-1">
+                    Bắt đầu ▶️</div>
+            </div>
+
+            <!-- GAME -->
+            <div class="card-sticker p-8 group cursor-pointer border-b-purple-300 hover:border-purple-400">
+                <div class="absolute -top-12 left-6 w-24 h-24">
+                    <!-- Video game -->
+                    <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Video%20game/3D/video_game_3d.png"
+                        class="sticker-img w-full h-full object-contain rotate-12">
+                </div>
+                <div class="mt-8 flex justify-end mb-2">
+                    <span
+                        class="bg-purple-100 text-purple-600 px-4 py-1.5 rounded-xl font-bold text-sm border-2 border-purple-200">Trò
+                        Chơi</span>
+                </div>
+                <h3 class="text-3xl font-black text-slate-800 mb-2 group-hover:text-purple-500 transition">Giải Lao IQ
+                </h3>
+                <p class="text-slate-500 font-bold mb-8 text-lg">Game vui luyện não.</p>
+                <div
+                    class="w-full bg-purple-500 text-white text-center py-4 rounded-2xl font-black text-xl group-hover:bg-purple-400 transition shadow-md border-b-4 border-purple-700 active:border-b-0 active:translate-y-1">
+                    Chơi ngay ▶️</div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- SIMPLE LOGIN MODAL -->
+    <div id="loginModal" class="fixed inset-0 z-[100] flex items-center justify-center px-4 hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            onclick="document.getElementById('loginModal').classList.add('hidden')"></div>
+
+        <div
+            class="bg-white max-w-sm w-full rounded-[3rem] p-10 relative z-10 border-[8px] border-white shadow-2xl animate-bounce-in ring-4 ring-blue-100">
+            <button onclick="document.getElementById('loginModal').classList.add('hidden')"
+                class="absolute top-6 right-6 text-slate-300 hover:text-red-500 text-2xl font-black transition">✕</button>
+
+            <div class="text-center mb-8">
+                <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Honeybee/3D/honeybee_3d.png"
+                    class="w-28 h-28 mx-auto mb-4 animate-float">
+                <h2 class="text-4xl font-black text-slate-800 mb-2">Xin Chào!</h2>
+                <p class="text-slate-400 font-bold text-lg">Vào lớp điểm danh nào!</p>
+            </div>
+
+            <div class="space-y-4">
+                <div class="relative group">
+                    <div class="absolute left-5 top-1/2 -translate-y-1/2 w-8 h-8 opacity-50 text-2xl">👤</div>
+                    <input type="text" placeholder="Tên đăng nhập"
+                        class="w-full bg-slate-50 border-4 border-slate-100 rounded-3xl pl-16 pr-6 py-4 font-bold text-xl text-slate-700 focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-100 transition outline-none placeholder:text-slate-300">
+                </div>
+
+                <div class="relative group">
+                    <div class="absolute left-5 top-1/2 -translate-y-1/2 w-8 h-8 opacity-50 text-2xl">🔑</div>
+                    <input type="password" placeholder="Mật khẩu"
+                        class="w-full bg-slate-50 border-4 border-slate-100 rounded-3xl pl-16 pr-6 py-4 font-bold text-xl text-slate-700 focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-100 transition outline-none placeholder:text-slate-300">
+                </div>
+            </div>
+
+            <button
+                class="w-full mt-8 btn-push bg-blue-500 hover:bg-blue-600 text-white font-black text-2xl py-5 rounded-3xl shadow-lg border-b-[6px] border-blue-700 active:border-b-0 active:translate-y-1 transition-all">
+                ĐĂNG NHẬP
+            </button>
+        </div>
+    </div>
+
+</body>
+
+</html>

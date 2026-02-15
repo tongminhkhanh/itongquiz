@@ -1,0 +1,676 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { Quiz } from '../../types';
+import { useAuthStore } from '../../../stores/authStore';
+import { useQuizStore } from '../../../stores/quizStore';
+import { useClassroomStore } from '../../stores/useClassroomStore';
+import { Lock, Search, Clock, ChevronRight } from 'lucide-react';
+import Modal from '../common/Modal';
+import LoginModal from '../common/LoginModal';
+import AnnouncementMarquee from '../common/AnnouncementMarquee';
+import QuizListPage from './QuizListPage';
+import { getAllAssignments } from '../../services/classroomService';
+import { Assignment } from '../../types/classroom.types';
+
+// --- Types ---
+interface HomePageProps {
+    ioeQuizzes: Quiz[];
+    ioeLoading: boolean;
+    onRefreshIoe: () => void;
+}
+
+// --- Fluent Emoji CDN Base ---
+const FLUENT_CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
+
+// --- Coming Soon Categories ---
+const COMING_SOON_CATEGORIES = ['science', 'history'];
+
+// --- Subject Config (Sticker Land) ---
+const SUBJECT_CONFIG: Record<string, {
+    label: string;
+    title: string;
+    desc: string;
+    icon: string;
+    color: string;
+    bgColor: string;
+    borderColor: string;
+    btnColor: string;
+    btnBorder: string;
+    btnText: string;
+    btnLabel: string;
+    highlight?: boolean;
+}> = {
+    'class': {
+        label: 'Bài Tập',
+        title: 'Bài Tập Lớp',
+        desc: 'Bài tập được giao từ thầy cô.',
+        icon: `${FLUENT_CDN}/Books/3D/books_3d.png`,
+        color: '#3B82F6',
+        bgColor: 'bg-blue-50',
+        borderColor: 'border-blue-200',
+        btnColor: 'bg-blue-500 hover:bg-blue-400',
+        btnBorder: 'border-blue-700',
+        btnText: 'text-white',
+        btnLabel: 'Bắt đầu',
+    },
+    'ioe': {
+        label: 'Tiếng Anh',
+        title: 'English Fun',
+        desc: 'Hello! How are you?',
+        icon: `${FLUENT_CDN}/Speech%20balloon/3D/speech_balloon_3d.png`,
+        color: '#F59E0B',
+        bgColor: 'bg-yellow-50',
+        borderColor: 'border-yellow-200',
+        btnColor: 'bg-yellow-400 hover:bg-yellow-300',
+        btnBorder: 'border-yellow-600',
+        btnText: 'text-yellow-900',
+        btnLabel: 'Start Now',
+    },
+    'vioedu': {
+        label: 'Toán Học',
+        title: 'Toán Thông Minh',
+        desc: 'Cộng trừ nhân chia thật dễ!',
+        icon: `${FLUENT_CDN}/Abacus/3D/abacus_3d.png`,
+        color: '#3B82F6',
+        bgColor: 'bg-blue-50',
+        borderColor: 'border-blue-200',
+        btnColor: 'bg-blue-500 hover:bg-blue-400',
+        btnBorder: 'border-blue-700',
+        btnText: 'text-white',
+        btnLabel: 'Bắt đầu',
+    },
+    'trang-nguyen': {
+        label: 'Tiếng Việt',
+        title: 'Vua Tiếng Việt',
+        desc: 'Ghép chữ, đoán từ, kể chuyện.',
+        icon: `${FLUENT_CDN}/Pencil/3D/pencil_3d.png`,
+        color: '#EC4899',
+        bgColor: 'bg-pink-50',
+        borderColor: 'border-pink-200',
+        btnColor: 'bg-pink-500 hover:bg-pink-400',
+        btnBorder: 'border-pink-700',
+        btnText: 'text-white',
+        btnLabel: 'Bắt đầu',
+        highlight: true,
+    },
+    'science': {
+        label: 'Khoa Học',
+        title: 'Nhà Khoa Học',
+        desc: 'Thí nghiệm và khám phá.',
+        icon: `${FLUENT_CDN}/Test%20tube/3D/test_tube_3d.png`,
+        color: '#10B981',
+        bgColor: 'bg-green-50',
+        borderColor: 'border-green-200',
+        btnColor: 'bg-green-500 hover:bg-green-400',
+        btnBorder: 'border-green-700',
+        btnText: 'text-white',
+        btnLabel: 'Bắt đầu',
+    },
+    'history': {
+        label: 'Lịch Sử',
+        title: 'Sử Việt Hào Hùng',
+        desc: 'Danh nhân và sự kiện.',
+        icon: `${FLUENT_CDN}/Scroll/3D/scroll_3d.png`,
+        color: '#F97316',
+        bgColor: 'bg-orange-50',
+        borderColor: 'border-orange-200',
+        btnColor: 'bg-orange-500 hover:bg-orange-400',
+        btnBorder: 'border-orange-700',
+        btnText: 'text-white',
+        btnLabel: 'Bắt đầu',
+    },
+};
+
+// --- Grade Colors ---
+const GRADE_COLORS: Record<string, string> = {
+    '1': '#00B894', '2': '#0984E3', '3': '#6C5CE7', '4': '#E17055', '5': '#F39C12',
+};
+
+const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIoe }) => {
+    // --- State ---
+    const [view, setView] = useState<'home' | 'quiz-list'>('home');
+    const [activeTab, setActiveTab] = useState<string>('all');
+    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+    const [loginTab, setLoginTab] = useState<'student' | 'teacher'>('student');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [assignments, setAssignments] = useState<Assignment[]>([]);
+    const [showComingSoon, setShowComingSoon] = useState(false);
+
+    // --- Stores ---
+    const authStore = useAuthStore();
+    const quizStore = useQuizStore();
+    const classroomStore = useClassroomStore();
+
+    // --- Derived State ---
+    const isStudentLoggedIn = !!classroomStore.studentSession;
+    const isTeacherLoggedIn = authStore.isLoggedIn;
+    const isLoggedIn = isStudentLoggedIn || isTeacherLoggedIn;
+
+    // --- Fetch Assignments on Mount ---
+    useEffect(() => {
+        const fetchAssignments = async () => {
+            try {
+                const data = await getAllAssignments();
+                setAssignments(data);
+            } catch (error) {
+                console.error('Failed to fetch assignments:', error);
+            }
+        };
+        fetchAssignments();
+    }, []);
+
+    // --- Fetch Student Assignments if Logged In ---
+    useEffect(() => {
+        if (isStudentLoggedIn && classroomStore.studentSession) {
+            classroomStore.fetchStudentAssignments(classroomStore.studentSession.studentId);
+        }
+    }, [isStudentLoggedIn, classroomStore.studentSession?.studentId]);
+
+    // --- Map Assignments to Quiz Format ---
+    const assignmentQuizzes = useMemo((): Quiz[] => {
+        return assignments.map((assignment) => ({
+            id: assignment.quizId,
+            title: assignment.quizTitle || 'Bài tập',
+            category: 'class',
+            questions: [],
+            duration: 0,
+            timeLimit: 0,
+            requireCode: false,
+            allowReview: false,
+            classLevel: '',
+            subject: 'class',
+            createdAt: assignment.createdAt,
+            maxScore: 0,
+            // Store assignment metadata for later use
+            _assignmentData: assignment
+        } as Quiz & { _assignmentData?: Assignment }));
+    }, [assignments]);
+
+    // Filter assignments for current student
+    // Filter assignments for current student
+    const myAssignmentQuizzes = useMemo(() => {
+        if (!isStudentLoggedIn || !classroomStore.studentSession) return [];
+
+        // Use classroomStore.assignments which has attemptCount populated
+        const studentAssignments = classroomStore.assignments;
+        const allQuizzes = quizStore.quizzes;
+
+        return studentAssignments.map((assignment) => {
+            const originalQuiz = allQuizzes.find(q => q.id === assignment.quizId);
+
+            return {
+                id: assignment.quizId,
+                title: originalQuiz?.title || assignment.quizTitle || 'Bài tập',
+                category: 'class',
+                questions: originalQuiz?.questions || [],
+                // Quiz does not have 'duration', use 0 or timeLimit if compatible
+                duration: 0,
+                timeLimit: originalQuiz?.timeLimit || 0,
+                requireCode: false,
+                allowReview: false,
+                classLevel: originalQuiz?.classLevel || '',
+                subject: 'class',
+                createdAt: assignment.createdAt,
+                // Quiz does not have 'maxScore', calculate or default
+                maxScore: originalQuiz ? (originalQuiz.questions?.length || 0) * 10 : 0,
+                // Store assignment metadata for later use
+                _assignmentData: assignment
+            } as Quiz & { _assignmentData?: Assignment; duration?: number; maxScore?: number };
+        });
+    }, [isStudentLoggedIn, classroomStore.studentSession, classroomStore.assignments, quizStore.quizzes]);
+
+    // --- Filter Quizzes ---
+    const filteredQuizzes = useMemo(() => {
+        let quizzes: Quiz[] = [];
+        if (activeTab === 'all') {
+            quizzes = [...quizStore.quizzes, ...ioeQuizzes];
+        } else if (activeTab === 'ioe') {
+            quizzes = ioeQuizzes;
+        } else if (activeTab === 'game') {
+            return [];
+        } else if (activeTab === 'class') {
+            // Show assignments instead of regular quizzes for "Bài Tập Lớp"
+            if (isStudentLoggedIn) {
+                quizzes = myAssignmentQuizzes;
+            } else if (isTeacherLoggedIn) {
+                // Teacher sees ALL assignments (monitoring view)
+                quizzes = assignmentQuizzes;
+            } else {
+                // Guest sees nothing (must login)
+                quizzes = [];
+            }
+        } else {
+            // General library: Exclude quizzes that are assigned (to anyone) - UNLESS user is a Teacher
+            // Logic: "Nếu quiz nào được giao thì sẽ không hiển thị [in general]" (cho học sinh/khách)
+            const assignedQuizIds = new Set(assignments.map(a => a.quizId));
+
+            quizzes = quizStore.quizzes.filter(q => {
+                const matchesCategory = (q.category || 'class') === activeTab;
+
+                // Logic Update:
+                // - Teacher: Show All (to check/manage)
+                // - Guests & Students: HIDE Assigned Quizzes (they are for classes only)
+                // "đề đã giao riêng cho lớp thì không hiển thị"
+                // "khách thấy được bài tập giao công cộng" -> User says this is happening and implies it's wrong (debug)
+
+                const isAssigned = assignedQuizIds.has(q.id);
+                // Hide if NOT Teacher AND is Assigned
+                const shouldHide = !isTeacherLoggedIn && isAssigned;
+
+                return matchesCategory && !shouldHide;
+            });
+        }
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            quizzes = quizzes.filter(q => q.title.toLowerCase().includes(term));
+        }
+        if (quizStore.selectedClassLevel) {
+            quizzes = quizzes.filter(q => q.classLevel === quizStore.selectedClassLevel);
+        }
+        return quizzes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }, [activeTab, quizStore.quizzes, ioeQuizzes, myAssignmentQuizzes, assignments, searchTerm, quizStore.selectedClassLevel, isTeacherLoggedIn]);
+
+    // --- Handlers ---
+    const openLogin = (tab: 'student' | 'teacher') => {
+        setLoginTab(tab);
+        setIsLoginModalOpen(true);
+    };
+
+    const handleQuizClick = async (q: Quiz) => {
+        // CASE 1: Student is logged in
+        if (isStudentLoggedIn && classroomStore.studentSession) {
+            // If it's an assignment (has _assignmentData), track attempt
+            if (q._assignmentData) {
+                const assignmentId = q._assignmentData.id;
+                const studentId = classroomStore.studentSession.studentId;
+
+                // 1. RE-FETCH latest assignment status to ensure attempt count is fresh
+                await classroomStore.fetchStudentAssignments(studentId);
+                const freshAssignments = useClassroomStore.getState().assignments;
+                const freshAssignment = freshAssignments.find(a => a.id === assignmentId);
+
+                if (freshAssignment) {
+                    const maxAttempts = freshAssignment.maxAttempts || 1;
+                    const usedAttempts = freshAssignment.attemptCount || 0;
+
+                    if (usedAttempts >= maxAttempts) {
+                        alert(`Bạn đã hết lượt làm bài này! (${usedAttempts}/${maxAttempts} lượt)`);
+                        return; // BLOCK
+                    }
+                }
+
+                // 2. Track attempt (START) - Increment count on server
+                const success = await classroomStore.startAssignmentAttempt(assignmentId, studentId);
+
+                if (!success) {
+                    alert('Lỗi khi bắt đầu làm bài. Vui lòng thử lại.');
+                    return;
+                }
+
+                // 3. Refresh assignments again to reflect the NEW attempt count immediately
+                await classroomStore.fetchStudentAssignments(studentId);
+            } else {
+                // If student clicks a non-assignment quiz (e.g. from library), we might want to allow it?
+                // But previous logic blocked it.
+                // "Bạn đã đăng nhập..." logic was for blocking library access?
+                // Re-reading previous code: "if (isStudentLoggedIn) alert..."
+                // The user requirement changed: "hiển thị tất cả các quiz đã tạo... trừ khi được giao".
+                // So if it's NOT in assignment list, they CAN take it?
+                // But `filteredQuizzes` ALREADY hides assigned quizzes from library.
+                // So if they see it in library, it's a value-add practice.
+                // Let's allow them to take practice quizzes?
+                // Or keep blocking?
+                // User said: "Nếu quiz nào được giao thì sẽ không hiển thị [ở library]".
+                // This implies library quizzes are free to take.
+                // So I will REMOVE the alert block for library quizzes.
+            }
+        }
+
+        // CASE 2: Teacher/Guest (or Student taking practice)
+        quizStore.selectQuiz(q);
+        quizStore.setView('student');
+    };
+
+    const handleCategoryClick = (catId: string) => {
+        // Coming soon categories
+        if (COMING_SOON_CATEGORIES.includes(catId)) {
+            setShowComingSoon(true);
+            return;
+        }
+        setActiveTab(catId);
+        setView('quiz-list'); // Navigate to quiz list view
+        if (catId === 'ioe') onRefreshIoe();
+    };
+
+    const handleBackHome = () => {
+        setView('home');
+        setActiveTab('all');
+        setSearchTerm('');
+    };
+
+    // --- Subject Stats (for cards) ---
+    const subjectCards = useMemo(() => {
+        const allQuizzes = [...quizStore.quizzes, ...ioeQuizzes];
+        const categories = Object.keys(SUBJECT_CONFIG);
+        return categories.map(cat => {
+            const catQuizzes = cat === 'ioe'
+                ? ioeQuizzes
+                : allQuizzes.filter(q => (q.category || 'class') === cat);
+            return {
+                id: cat,
+                ...SUBJECT_CONFIG[cat],
+                total: catQuizzes.length,
+            };
+        });
+    }, [quizStore.quizzes, ioeQuizzes]);
+
+    // =====================================================
+    // RENDER — STICKER LAND
+    // =====================================================
+    return (
+        <div className="sticker-land">
+            <AnnouncementMarquee />
+
+            {/* Sun Decoration */}
+            <div className="sticker-land__sun">
+                <img
+                    src={`${FLUENT_CDN}/Sun/3D/sun_3d.png`}
+                    alt=""
+                    className="sticker-land__sun-img"
+                />
+            </div>
+
+            {/* Cloud 1 */}
+            <div className="sticker-land__cloud sticker-land__cloud--1">
+                <img src={`${FLUENT_CDN}/Cloud/3D/cloud_3d.png`} alt="" />
+            </div>
+            {/* Cloud 2 */}
+            <div className="sticker-land__cloud sticker-land__cloud--2">
+                <img src={`${FLUENT_CDN}/Cloud/3D/cloud_3d.png`} alt="" />
+            </div>
+
+            {/* ===== NAVBAR (Glass Pill) ===== */}
+            <nav className="sticker-nav">
+                <div className="sticker-nav__inner">
+                    {/* Logo */}
+                    <div className="sticker-nav__logo" onClick={() => { setActiveTab('all'); quizStore.setClassLevel(null); }}>
+                        <img
+                            src={`${FLUENT_CDN}/Honeybee/3D/honeybee_3d.png`}
+                            alt="Ít Ong Quiz"
+                            className="sticker-nav__logo-img"
+                        />
+                        <span className="sticker-nav__logo-text">
+                            ÍtOng<span className="sticker-nav__logo-accent">Quiz</span>
+                        </span>
+                    </div>
+
+                    {/* Nav Links */}
+                    <div className="sticker-nav__links">
+                        <button
+                            onClick={() => { setActiveTab('all'); quizStore.setClassLevel(null); }}
+                            className="sticker-nav__link"
+                        >
+                            Trang chủ
+                        </button>
+                        <button className="sticker-nav__link">
+                            Xếp hạng
+                        </button>
+                        <button className="sticker-nav__link">
+                            Cửa hàng
+                        </button>
+                    </div>
+
+                    {/* Auth Button */}
+                    {!isLoggedIn ? (
+                        <button
+                            onClick={() => openLogin('student')}
+                            className="sticker-nav__cta"
+                        >
+                            Vào Lớp
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => isTeacherLoggedIn ? quizStore.setView('teacher_dash') : quizStore.setView('student_portal')}
+                            className="sticker-nav__cta"
+                        >
+                            Vào Quản Lý
+                        </button>
+                    )}
+                </div>
+            </nav>
+
+            {/* ===== QUIZ LIST VIEW ===== */}
+            {view === 'quiz-list' && (
+                <QuizListPage
+                    category={activeTab}
+                    quizzes={filteredQuizzes}
+                    onBack={handleBackHome}
+                    onQuizClick={handleQuizClick}
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    selectedGrade={quizStore.selectedClassLevel}
+                    onGradeChange={quizStore.setClassLevel}
+                />
+            )}
+
+            {/* ===== HOME VIEW ===== */}
+            {view === 'home' && (
+                <>
+                    {/* ===== HERO ===== */}
+                    <header className="sticker-hero">
+
+
+                        <h1 className="sticker-hero__title">
+                            Vùng Đất <span className="sticker-hero__title--blue">Tri Thức</span>
+                            <br />
+                            Của <span className="sticker-hero__title--yellow">Ong Vàng</span>
+                        </h1>
+
+                        {/* Floating 3D Icons */}
+                        <div className="sticker-hero__icons">
+                            <div className="sticker-hero__icon" style={{ animationDelay: '0s' }}>
+                                <img src={`${FLUENT_CDN}/Abacus/3D/abacus_3d.png`} alt="Toán" className="sticker-img" />
+                            </div>
+                            <div className="sticker-hero__icon" style={{ animationDelay: '1.5s' }}>
+                                <img src={`${FLUENT_CDN}/Books/3D/books_3d.png`} alt="Văn" className="sticker-img" />
+                            </div>
+                            <div className="sticker-hero__icon" style={{ animationDelay: '2s' }}>
+                                <img src={`${FLUENT_CDN}/Graduation%20cap/3D/graduation_cap_3d.png`} alt="Tốt Nghiệp" className="sticker-img" />
+                            </div>
+                        </div>
+
+                        {/* CTA Button */}
+                        <button
+                            onClick={() => document.getElementById('subject-cards')?.scrollIntoView({ behavior: 'smooth' })}
+                            className="sticker-hero__btn"
+                        >
+                            CHỌN MÔN HỌC 👇
+                        </button>
+                    </header>
+
+                    {/* ===== SUBJECT CARDS ===== */}
+                    <main id="subject-cards" className="sticker-main">
+                        <div className="sticker-cards">
+                            {subjectCards.map((subject) => (
+                                <button
+                                    key={subject.id}
+                                    className={`sticker-card ${activeTab === subject.id ? 'sticker-card--active' : ''} ${subject.highlight ? 'sticker-card--highlight' : ''}`}
+                                    onClick={() => handleCategoryClick(subject.id)}
+                                    style={{ '--card-color': subject.color } as React.CSSProperties}
+                                >
+                                    {/* 3D Sticker Icon */}
+                                    <div className="sticker-card__icon-wrap">
+                                        <img src={subject.icon} alt={subject.label} className="sticker-card__icon" />
+                                    </div>
+
+                                    {/* Label */}
+                                    <div className="sticker-card__label-wrap">
+                                        <span
+                                            className="sticker-card__label"
+                                            style={{ background: `${subject.color}15`, color: subject.color, borderColor: `${subject.color}30` }}
+                                        >
+                                            {subject.label}
+                                        </span>
+                                    </div>
+
+                                    {/* Title & Description */}
+                                    <h3
+                                        className="sticker-card__title"
+                                        style={subject.id === 'science' ? { fontSize: '1.8rem' } : {}}
+                                    >
+                                        {subject.title}
+                                    </h3>
+                                    <p className="sticker-card__desc">{subject.desc}</p>
+
+                                    {/* Action Button */}
+                                    <div
+                                        className={`sticker-card__btn ${subject.btnColor} ${subject.btnText}`}
+                                        style={{ borderBottomColor: `${subject.color}99` }}
+                                    >
+                                        {subject.btnLabel} ▶️
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* ===== SEARCH BAR ===== */}
+                        {activeTab !== 'all' && !COMING_SOON_CATEGORIES.includes(activeTab) && (
+                            <div className="sticker-search">
+                                <Search className="sticker-search__icon" />
+                                <input
+                                    type="text"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder="Tìm bài ôn tập..."
+                                    className="sticker-search__input"
+                                />
+                            </div>
+                        )}
+
+                        {/* ===== QUIZ LIST ===== */}
+                        {activeTab !== 'all' && !COMING_SOON_CATEGORIES.includes(activeTab) && (
+                            <section className="sticker-quiz-list">
+                                <h2 className="sticker-quiz-list__title">
+                                    <img
+                                        src={SUBJECT_CONFIG[activeTab]?.icon || `${FLUENT_CDN}/Books/3D/books_3d.png`}
+                                        alt=""
+                                        className="sticker-quiz-list__title-icon"
+                                    />
+                                    {SUBJECT_CONFIG[activeTab]?.title || 'Bài ôn tập'}
+                                    <span className="sticker-quiz-list__count">{filteredQuizzes.length} bài</span>
+                                </h2>
+
+                                <div className="sticker-quiz-grid">
+                                    {filteredQuizzes.length > 0 ? (
+                                        filteredQuizzes.map((quiz) => {
+                                            const catConfig = SUBJECT_CONFIG[quiz.category || 'class'] || SUBJECT_CONFIG['class'];
+                                            return (
+                                                <button
+                                                    key={quiz.id}
+                                                    onClick={() => handleQuizClick(quiz)}
+                                                    className="sticker-quiz-item"
+                                                >
+                                                    <div
+                                                        className="sticker-quiz-item__stripe"
+                                                        style={{ background: catConfig.color }}
+                                                    />
+                                                    <div className="sticker-quiz-item__header">
+                                                        <img src={catConfig.icon} alt="" className="sticker-quiz-item__emoji" />
+                                                        {quiz.requireCode && (
+                                                            <Lock className="sticker-quiz-item__lock" />
+                                                        )}
+                                                    </div>
+                                                    <h4 className="sticker-quiz-item__title">{quiz.title}</h4>
+                                                    <div className="sticker-quiz-item__meta">
+                                                        <span><Clock className="w-3.5 h-3.5" /> {quiz.timeLimit} phút</span>
+                                                        <span>📝 {quiz.questions.length} câu</span>
+                                                    </div>
+                                                    <div className="sticker-quiz-item__cta" style={{ color: catConfig.color }}>
+                                                        Bắt đầu <ChevronRight className="w-4 h-4" />
+                                                    </div>
+                                                </button>
+                                            );
+                                        })
+                                    ) : (
+                                        activeTab === 'class' && !isLoggedIn ? (
+                                            <div className="sticker-empty">
+                                                <img
+                                                    src={`${FLUENT_CDN}/Locked/3D/locked_3d.png`}
+                                                    alt="Locked"
+                                                    className="sticker-empty__img"
+                                                />
+                                                <h3 className="sticker-empty__title">Khu vực dành cho học sinh</h3>
+                                                <p className="sticker-empty__text">Bé cần đăng nhập để xem bài tập của lớp nhé!</p>
+                                                <button
+                                                    onClick={() => openLogin('student')}
+                                                    className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95"
+                                                >
+                                                    Vào Lớp Ngay
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="sticker-empty">
+                                                <img
+                                                    src={`${FLUENT_CDN}/See-no-evil%20monkey/3D/see-no-evil_monkey_3d.png`}
+                                                    alt=""
+                                                    className="sticker-empty__img"
+                                                />
+                                                <h3 className="sticker-empty__title">Không tìm thấy bài nào!</h3>
+                                                <p className="sticker-empty__text">Thử tìm từ khóa khác xem sao?</p>
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+                            </section>
+                        )}
+                    </main>
+
+                    {/* ===== COMING SOON MODAL ===== */}
+                    <Modal
+                        isOpen={showComingSoon}
+                        onClose={() => setShowComingSoon(false)}
+                        title=""
+                        showCloseButton={false}
+                        size="sm"
+                    >
+                        <div className="text-center p-4">
+                            <div className="mb-4 flex justify-center">
+                                <img
+                                    src={`${FLUENT_CDN}/Rocket/3D/rocket_3d.png`}
+                                    alt="Rocket"
+                                    className="w-24 h-24 object-contain animate-bounce"
+                                    onError={(e) => {
+                                        // Fallback if image fails
+                                        e.currentTarget.src = "https://cdn-icons-png.flaticon.com/512/1356/1356479.png";
+                                    }}
+                                />
+                            </div>
+                            <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                                Sắp ra mắt!
+                            </h3>
+                            <p className="text-gray-600 font-medium mb-6">
+                                Chức năng này đang được phát triển.<br />
+                                Các em quay lại sau nhé!
+                            </p>
+                            <button
+                                onClick={() => setShowComingSoon(false)}
+                                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95"
+                            >
+                                Dạ vâng ạ!
+                            </button>
+                        </div>
+                    </Modal>
+                </>
+            )
+            }
+
+            {/* ===== LOGIN MODAL ===== */}
+            <LoginModal
+                isOpen={isLoginModalOpen}
+                onClose={() => setIsLoginModalOpen(false)}
+                initialTab={loginTab}
+            />
+        </div >
+    );
+};
+
+export default HomePage;

@@ -208,3 +208,22 @@ export const getStudentAssignments = async (studentId: string): Promise<Assignme
     }
     return [];
 };
+
+/**
+ * Get ALL assignments (for "Bài Tập Lớp" category on HomePage)
+ */
+export const getAllAssignments = async (): Promise<Assignment[]> => {
+    const res = await callGasApi<Assignment[]>('get_all_assignments', {});
+    if (res.status === 'success' && Array.isArray(res.data)) {
+        return res.data;
+    }
+    return [];
+};
+
+/**
+ * Start an assignment attempt (tracks attempt count & creates initial result)
+ */
+export const startAssignmentAttempt = async (assignmentId: string, studentId: string): Promise<boolean> => {
+    const res = await callGasApi('start_assignment_attempt', { assignmentId, studentId });
+    return res.status === 'success';
+};

@@ -90,12 +90,16 @@ function handleRequest(e) {
                 return responseJSON(handleGetAssignments(data));
             case 'get_teacher_assignments':
                 return responseJSON(handleGetTeacherAssignments(data));
+            case 'get_all_assignments':
+                return responseJSON(handleGetAllAssignments(data));
             case 'get_student_assignments':
                 return responseJSON(handleGetStudentAssignments(data));
             case 'create_assignment':
                 return responseJSON(handleCreateAssignment(data));
             case 'delete_assignment':
                 return responseJSON(handleDeleteAssignment(data));
+            case 'start_assignment_attempt':
+                return handleStartAssignmentAttempt(data);
 
             default:
                 return responseJSON({ status: "error", message: "Unknown action: " + action });
@@ -885,6 +889,30 @@ function handleGetTeacherAssignments(body) {
     return { status: 'success', data: assignments };
 }
 
+function handleGetAllAssignments(body) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CLASSROOM_SHEETS.ASSIGNMENTS);
+    if (!sheet) return { status: 'success', data: [] };
+
+    var allData = sheet.getDataRange().getValues();
+    var assignments = getSheetDataAsObjects(CLASSROOM_SHEETS.ASSIGNMENTS);
+    var classes = getSheetDataAsObjects(CLASSROOM_SHEETS.CLASSES);
+    var quizzes = getSheetDataAsObjects('QUIZZES');
+
+    autoCloseExpiredAssignments(assignments, sheet, allData);
+
+    // Enrich assignments with quiz title and class name
+    assignments = assignments.map(function (a) {
+        var quiz = quizzes.find(function (q) { return String(q.id) === String(a.quizId); });
+        var cls = classes.find(function (c) { return c.id === a.classId; });
+        a.quizTitle = quiz ? quiz.title : 'Bài tập';
+        a.className = cls ? cls.name : '';
+        return a;
+    });
+
+    return { status: 'success', data: assignments };
+}
+
 function handleGetStudentAssignments(body) {
     var students = getSheetDataAsObjects(CLASSROOM_SHEETS.STUDENTS);
     var student = students.find(function (s) { return s.id === body.studentId; });
@@ -899,12 +927,13 @@ function handleGetStudentAssignments(body) {
     assignments = assignments.filter(function (a) { return a.classId === student.classId; });
     autoCloseExpiredAssignments(assignments, sheet, allData);
 
-    // Count attempts for each assignment from Results sheet
+    // Count attempts for each assignment from Results sheet (skip STARTED-only rows)
     var resultsSheet = ss.getSheetByName('Results');
     var resultsData = resultsSheet ? resultsSheet.getDataRange().getValues() : [];
     var resultsHeaders = resultsData.length > 0 ? resultsData[0] : [];
     var nameCol = resultsHeaders.indexOf('Student Name');
     var quizIdCol = resultsHeaders.indexOf('Quiz ID');
+    var answersCol = resultsHeaders.indexOf('answers');
 
     assignments = assignments.map(function (a) {
         var attemptCount = 0;
@@ -912,6 +941,9 @@ function handleGetStudentAssignments(body) {
             for (var i = 1; i < resultsData.length; i++) {
                 if (String(resultsData[i][nameCol]) === student.fullName &&
                     String(resultsData[i][quizIdCol]) === String(a.quizId)) {
+                    // Skip STARTED-only rows (incomplete attempts from old logic)
+                    var answersStr = answersCol !== -1 ? String(resultsData[i][answersCol]) : '';
+                    if (answersStr === '{"status":"STARTED"}') continue;
                     attemptCount++;
                 }
             }
@@ -941,6 +973,51 @@ function handleCreateAssignment(body) {
 function handleDeleteAssignment(body) {
     var ok = deleteRowById(CLASSROOM_SHEETS.ASSIGNMENTS, body.assignmentId);
     return ok ? { status: 'success' } : { status: 'error', message: 'Assignment not found' };
+}
+
+function handleStartAssignmentAttempt(body) {
+    // 1. Get Student Info
+    var students = getSheetDataAsObjects(CLASSROOM_SHEETS.STUDENTS);
+    var student = students.find(function (s) { return s.id === body.studentId; });
+    if (!student) return responseJSON({ status: 'error', message: 'Student not found' });
+
+    // 2. Get Assignment Info
+    var assignments = getSheetDataAsObjects(CLASSROOM_SHEETS.ASSIGNMENTS);
+    var assignment = assignments.find(function (a) { return String(a.id) === String(body.assignmentId); });
+    if (!assignment) return responseJSON({ status: 'error', message: 'Assignment not found' });
+
+    // 3. Server-side Attempt Check (count COMPLETED submissions only)
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var resultsSheet = ss.getSheetByName('Results');
+
+    var attemptCount = 0;
+    if (resultsSheet) {
+        var resultsData = resultsSheet.getDataRange().getValues();
+        var headers = resultsData.length > 0 ? resultsData[0] : [];
+        var nameCol = headers.indexOf('Student Name');
+        var quizIdCol = headers.indexOf('Quiz ID');
+        var answersCol = headers.indexOf('answers');
+
+        if (nameCol !== -1 && quizIdCol !== -1) {
+            for (var i = 1; i < resultsData.length; i++) {
+                if (String(resultsData[i][nameCol]) === student.fullName &&
+                    String(resultsData[i][quizIdCol]) === String(assignment.quizId)) {
+                    // Skip STARTED-only rows (incomplete attempts from old logic)
+                    var answersStr = answersCol !== -1 ? String(resultsData[i][answersCol]) : '';
+                    if (answersStr === '{"status":"STARTED"}') continue;
+                    attemptCount++;
+                }
+            }
+        }
+    }
+
+    var maxAttempts = Number(assignment.maxAttempts) || 1;
+    if (attemptCount >= maxAttempts) {
+        return responseJSON({ status: 'error', message: 'Max attempts reached', attemptCount: attemptCount, maxAttempts: maxAttempts });
+    }
+
+    // No longer create a STARTED row - just validate and allow
+    return responseJSON({ status: 'success', attemptCount: attemptCount, maxAttempts: maxAttempts });
 }
 
 // === END OF CODE ===

@@ -51,6 +51,7 @@ interface ClassroomStore {
     logoutStudent: () => void;
     restoreStudentSession: () => void;
     fetchStudentAssignments: (studentId: string) => Promise<void>;
+    startAssignmentAttempt: (assignmentId: string, studentId: string) => Promise<boolean>;
 
     // Utilities
     clearError: () => void;
@@ -265,6 +266,17 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
             return false;
         } catch (err) {
             set({ error: 'Lỗi khi đăng nhập.', isLoading: false });
+            return false;
+        }
+    },
+
+    startAssignmentAttempt: async (assignmentId: string, studentId: string) => {
+        try {
+            await classroomService.startAssignmentAttempt(assignmentId, studentId);
+            // Optionally refresh assignments to update attempt counts, but not strictly necessary for UX
+            return true;
+        } catch (err) {
+            console.error('Failed to start assignment attempt', err);
             return false;
         }
     },

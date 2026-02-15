@@ -1,28 +1,77 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useQuizStore } from '../../../stores/quizStore'; // Adjusted import path
-import { LogOut, BookOpen, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Assignment } from '../../types/classroom.types';
+import { cacheService } from '../../services/CacheService';
+import { LogOut, BookOpen, Clock, AlertCircle, CheckCircle, Loader2, Home } from 'lucide-react';
 
 
 const AssignmentsView: React.FC = () => {
     const store = useClassroomStore();
     const quizStore = useQuizStore();
     const { studentSession, assignments } = store;
+    const [loadingQuizId, setLoadingQuizId] = useState<string | null>(null);
 
     useEffect(() => {
         if (studentSession) {
             store.fetchStudentAssignments(studentSession.studentId);
+            // Ensure quizzes are loaded fresh (not stale from localStorage cache)
+            quizStore.loadQuizzes();
         }
     }, [studentSession]);
 
-    const handleStartQuiz = (quizId: string) => {
-        const quiz = quizStore.quizzes.find(q => q.id === quizId);
-        if (quiz) {
-            quizStore.selectQuiz(quiz);
-            quizStore.setView('student');
-        } else {
-            alert('Bài kiểm tra không tồn tại hoặc đã bị xóa.');
+    const handleStartQuiz = async (assignment: Assignment) => {
+        if (!studentSession || loadingQuizId) return;
+        setLoadingQuizId(assignment.id);
+
+        // 1. Re-fetch latest assignment data from server
+        await store.fetchStudentAssignments(studentSession.studentId);
+        const freshAssignments = useClassroomStore.getState().assignments;
+        const freshAssignment = freshAssignments.find(a => a.id === assignment.id);
+
+        if (freshAssignment) {
+            const maxAttempts = freshAssignment.maxAttempts || 1;
+            const usedAttempts = freshAssignment.attemptCount || 0;
+
+            if (usedAttempts >= maxAttempts) {
+                alert(`Bạn đã hết lượt làm bài này! (${usedAttempts}/${maxAttempts} lượt)`);
+                setLoadingQuizId(null);
+                return;
+            }
         }
+
+        // 2. Server-side attempt validation
+        const success = await store.startAssignmentAttempt(assignment.id, studentSession.studentId);
+        if (!success) {
+            alert('Bạn đã hết lượt hoặc có lỗi xảy ra. Vui lòng thử lại.');
+            await store.fetchStudentAssignments(studentSession.studentId);
+            setLoadingQuizId(null);
+            return;
+        }
+
+        // 3. Refresh assignments
+        await store.fetchStudentAssignments(studentSession.studentId);
+
+        // 4. Ensure quizzes are loaded fresh, then find the quiz
+        cacheService.invalidatePrefix('quizzes:');
+        await quizStore.loadQuizzes();
+        const latestQuizzes = useQuizStore.getState().quizzes;
+        const quiz = latestQuizzes.find(q => q.id === assignment.quizId);
+
+        if (!quiz) {
+            alert('Bài kiểm tra không tồn tại hoặc đã bị xóa.');
+            setLoadingQuizId(null);
+            return;
+        }
+
+        if (!quiz.questions || quiz.questions.length === 0) {
+            alert('Bài kiểm tra chưa có câu hỏi. Vui lòng liên hệ giáo viên.');
+            setLoadingQuizId(null);
+            return;
+        }
+
+        quizStore.selectQuiz(quiz);
+        quizStore.setView('student');
     };
 
     // Filter assignments
@@ -43,13 +92,22 @@ const AssignmentsView: React.FC = () => {
                             <p className="text-slate-500 text-sm">Lớp: <span className="font-semibold text-indigo-600">{studentSession?.className}</span></p>
                         </div>
                     </div>
-                    <button
-                        onClick={store.logoutStudent}
-                        className="px-4 py-2 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl font-medium transition-colors flex items-center gap-2"
-                    >
-                        <LogOut className="w-4 h-4" />
-                        Đăng xuất
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => quizStore.setView('home')}
+                            className="px-4 py-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl font-medium transition-colors flex items-center gap-2"
+                        >
+                            <Home className="w-4 h-4" />
+                            Trang chủ
+                        </button>
+                        <button
+                            onClick={store.logoutStudent}
+                            className="px-4 py-2 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl font-medium transition-colors flex items-center gap-2"
+                        >
+                            <LogOut className="w-4 h-4" />
+                            Đăng xuất
+                        </button>
+                    </div>
                 </header>
 
                 {/* Main Content */}
@@ -75,8 +133,9 @@ const AssignmentsView: React.FC = () => {
                                         const isExpired = new Date(assignment.deadline) < new Date();
                                         const maxAttempts = assignment.maxAttempts || 1;
                                         const attemptCount = assignment.attemptCount || 0;
+                                        const isLoading = loadingQuizId === assignment.id;
                                         const hasReachedLimit = attemptCount >= maxAttempts;
-                                        const isDisabled = !quiz || isExpired || hasReachedLimit;
+                                        const isDisabled = !quiz || isExpired || hasReachedLimit || isLoading;
 
                                         return (
                                             <div key={assignment.id} className={`bg-white p-5 rounded-2xl shadow-sm border transition-shadow relative overflow-hidden group ${hasReachedLimit ? 'border-green-200 bg-green-50/30' : 'border-slate-100 hover:shadow-md'}`}>
@@ -114,16 +173,27 @@ const AssignmentsView: React.FC = () => {
                                                         </div>
                                                     ) : (
                                                         <button
-                                                            onClick={() => handleStartQuiz(assignment.quizId)}
+                                                            onClick={() => handleStartQuiz(assignment)}
                                                             disabled={isDisabled}
                                                             className={`px-5 py-2.5 rounded-xl font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2
-                                                                ${isDisabled
-                                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
-                                                                    : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-green-200 hover:shadow-green-300'
+                                                                ${isLoading
+                                                                    ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white cursor-wait shadow-green-200'
+                                                                    : isDisabled
+                                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+                                                                        : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-green-200 hover:shadow-green-300'
                                                                 }`}
                                                         >
-                                                            {isExpired ? 'Hết hạn' : (maxAttempts > 1 ? `Làm bài (còn ${maxAttempts - attemptCount} lượt)` : 'Làm bài')}
-                                                            {!isExpired && !isDisabled && <span className="text-lg">→</span>}
+                                                            {isLoading ? (
+                                                                <>
+                                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                                    Đang tải...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    {isExpired ? 'Hết hạn' : (maxAttempts > 1 ? `Làm bài (còn ${maxAttempts - attemptCount} lượt)` : 'Làm bài')}
+                                                                    {!isExpired && !isDisabled && <span className="text-lg">→</span>}
+                                                                </>
+                                                            )}
                                                         </button>
                                                     )}
                                                 </div>
