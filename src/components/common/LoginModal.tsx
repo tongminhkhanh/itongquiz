@@ -120,8 +120,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                     <button
                         onClick={() => { setActiveTab('student'); setLocalError(''); }}
                         className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${activeTab === 'student'
-                                ? 'bg-white text-slate-800 shadow-sm scale-[1.02]'
-                                : 'text-slate-400 hover:text-slate-600'
+                            ? 'bg-white text-slate-800 shadow-sm scale-[1.02]'
+                            : 'text-slate-400 hover:text-slate-600'
                             }`}
                     >
                         <GraduationCap className={`w-5 h-5 ${activeTab === 'student' ? 'text-blue-500' : ''}`} />
@@ -130,8 +130,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                     <button
                         onClick={() => { setActiveTab('teacher'); setLocalError(''); }}
                         className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${activeTab === 'teacher'
-                                ? 'bg-white text-slate-800 shadow-sm scale-[1.02]'
-                                : 'text-slate-400 hover:text-slate-600'
+                            ? 'bg-white text-slate-800 shadow-sm scale-[1.02]'
+                            : 'text-slate-400 hover:text-slate-600'
                             }`}
                     >
                         <Apple className={`w-5 h-5 ${activeTab === 'teacher' ? 'text-red-500' : ''}`} />
@@ -143,7 +143,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                 <div className="space-y-6">
                     <div className="text-center mb-2">
                         <h2 className="text-2xl font-black text-slate-800">
-                            {activeTab === 'student' ? 'Chào mừng em! 👋' : 'Kính chào Thầy/Cô! 🍎'}
+                            {activeTab === 'student' ? 'Chào mừng em!' : 'Kính chào Thầy/Cô!'}
                         </h2>
                         <p className="text-slate-500 font-medium text-sm mt-1">
                             {activeTab === 'student' ? 'Nhập tài khoản để vào lớp học ảo' : 'Đăng nhập để quản lý lớp học'}
@@ -208,7 +208,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                             ) : (
                                 <>
                                     Vào lớp ngay!
-                                    <KeyRound className="w-6 h-6" />
                                 </>
                             )}
                         </button>

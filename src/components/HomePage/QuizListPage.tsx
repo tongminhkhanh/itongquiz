@@ -288,7 +288,7 @@ const QuizListPage: React.FC<Props> = ({
                                     className="quiz-list-empty__img"
                                 />
                                 <h3 className="quiz-list-empty__title">Đăng nhập tài khoản để làm bài tập</h3>
-                                <p className="quiz-list-empty__text">Bé cần đăng nhập để xem bài tập của lớp nhé!</p>
+                                <p className="quiz-list-empty__text">Các em cần đăng nhập để xem bài tập của lớp nhé!</p>
                                 {onLoginClick && (
                                     <button
                                         onClick={onLoginClick}

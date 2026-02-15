@@ -23,7 +23,7 @@ interface HomePageProps {
 const FLUENT_CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
 
 // --- Coming Soon Categories ---
-const COMING_SOON_CATEGORIES = ['science', 'history'];
+const COMING_SOON_CATEGORIES = ['science', 'history', 'vioedu', 'trang-nguyen'];
 
 // --- Subject Config (Sticker Land) ---
 const SUBJECT_CONFIG: Record<string, {
