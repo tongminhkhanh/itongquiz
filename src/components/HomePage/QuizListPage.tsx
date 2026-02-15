@@ -129,6 +129,8 @@ interface Props {
     onSearchChange: (term: string) => void;
     selectedGrade: string | null;
     onGradeChange: (grade: string | null) => void;
+    isLoggedIn?: boolean;
+    onLoginClick?: () => void;
 }
 
 const QuizListPage: React.FC<Props> = ({
@@ -140,6 +142,8 @@ const QuizListPage: React.FC<Props> = ({
     onSearchChange,
     selectedGrade,
     onGradeChange,
+    isLoggedIn,
+    onLoginClick,
 }) => {
     const categoryConfig = SUBJECT_CONFIG[category] || SUBJECT_CONFIG['class'];
 
@@ -276,15 +280,35 @@ const QuizListPage: React.FC<Props> = ({
                             );
                         })
                     ) : (
-                        <div className="quiz-list-empty">
-                            <img
-                                src={`${FLUENT_CDN}/See-no-evil%20monkey/3D/see-no-evil_monkey_3d.png`}
-                                alt=""
-                                className="quiz-list-empty__img"
-                            />
-                            <h3 className="quiz-list-empty__title">Không tìm thấy bài nào!</h3>
-                            <p className="quiz-list-empty__text">Thử tìm từ khóa khác xem sao?</p>
-                        </div>
+                        category === 'class' && !isLoggedIn ? (
+                            <div className="quiz-list-empty">
+                                <img
+                                    src={`${FLUENT_CDN}/Locked/3D/locked_3d.png`}
+                                    alt="Locked"
+                                    className="quiz-list-empty__img"
+                                />
+                                <h3 className="quiz-list-empty__title">Đăng nhập tài khoản để làm bài tập</h3>
+                                <p className="quiz-list-empty__text">Bé cần đăng nhập để xem bài tập của lớp nhé!</p>
+                                {onLoginClick && (
+                                    <button
+                                        onClick={onLoginClick}
+                                        className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95"
+                                    >
+                                        Vào Lớp Ngay
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="quiz-list-empty">
+                                <img
+                                    src={`${FLUENT_CDN}/See-no-evil%20monkey/3D/see-no-evil_monkey_3d.png`}
+                                    alt=""
+                                    className="quiz-list-empty__img"
+                                />
+                                <h3 className="quiz-list-empty__title">Không tìm thấy bài nào!</h3>
+                                <p className="quiz-list-empty__text">Thử tìm từ khóa khác xem sao?</p>
+                            </div>
+                        )
                     )}
                 </div>
             </div>

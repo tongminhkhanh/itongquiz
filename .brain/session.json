@@ -1,16 +1,57 @@
 {
-    "updated_at": "2026-02-11T07:20:00Z",
+    "updated_at": "2026-02-15T18:40:00Z",
     "working_on": {
-        "feature": "Virtual Classroom",
-        "task": "Phase 1: Database & Backend (GAS) - Implementation",
-        "status": "execution",
+        "feature": "Student Experience & UI Polish",
+        "task": "Refining Guest/Student Visibility & Navigation",
+        "status": "verification",
         "files": [
-            "implementation_plan.md",
-            "task.md"
+            "src/components/HomePage/HomePage.tsx",
+            "src/components/StudentPortal/AssignmentsView.tsx",
+            "walkthrough.md"
         ],
-        "notes": "Starting Phase 1. Source code backed up to backups/20260211_pre_virtual_classroom."
+        "notes": "Completed UI polish for Home Page and Assignments View. Ready for next phase."
     },
     "recent_changes": [
+        {
+            "timestamp": "2026-02-15",
+            "type": "feature",
+            "description": "Added 'Home' button to Student Portal Assignments View for easier navigation",
+            "files": [
+                "src/components/StudentPortal/AssignmentsView.tsx"
+            ]
+        },
+        {
+            "timestamp": "2026-02-15",
+            "type": "fix",
+            "description": "Fixed Guest Visibility: Guests now see a 'Login Required' prompt instead of 'No quizzes found' in Class Assignments tab",
+            "files": [
+                "src/components/HomePage/HomePage.tsx"
+            ]
+        },
+        {
+            "timestamp": "2026-02-15",
+            "type": "fix",
+            "description": "Fixed Assignment Details: Fetching Title, Time Limit, and Max Score correctly from Quiz Store instead of using fallback defaults",
+            "files": [
+                "src/components/HomePage/HomePage.tsx"
+            ]
+        },
+        {
+            "timestamp": "2026-02-15",
+            "type": "ui",
+            "description": "Implemented 'Coming Soon' Modal with 3D Rocket icon for Science/History categories",
+            "files": [
+                "src/components/HomePage/HomePage.tsx"
+            ]
+        },
+        {
+            "timestamp": "2026-02-15",
+            "type": "ui",
+            "description": "Adjusted UI: Increased Subject Card Label font size (0.95rem), icon size (60px), and refined scroll margins",
+            "files": [
+                "styles/sticker-theme.css"
+            ]
+        },
         {
             "timestamp": "2026-02-11",
             "type": "backup",

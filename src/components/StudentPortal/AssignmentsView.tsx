@@ -101,7 +101,7 @@ const AssignmentsView: React.FC = () => {
                             Trang chủ
                         </button>
                         <button
-                            onClick={store.logoutStudent}
+                            onClick={() => { store.logoutStudent(); quizStore.setView('home'); }}
                             className="px-4 py-2 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl font-medium transition-colors flex items-center gap-2"
                         >
                             <LogOut className="w-4 h-4" />

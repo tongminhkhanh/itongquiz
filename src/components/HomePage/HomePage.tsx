@@ -8,6 +8,7 @@ import Modal from '../common/Modal';
 import LoginModal from '../common/LoginModal';
 import AnnouncementMarquee from '../common/AnnouncementMarquee';
 import QuizListPage from './QuizListPage';
+import LeaderboardPage from './LeaderboardPage';
 import { getAllAssignments } from '../../services/classroomService';
 import { Assignment } from '../../types/classroom.types';
 
@@ -127,7 +128,7 @@ const GRADE_COLORS: Record<string, string> = {
 
 const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIoe }) => {
     // --- State ---
-    const [view, setView] = useState<'home' | 'quiz-list'>('home');
+    const [view, setView] = useState<'home' | 'quiz-list' | 'leaderboard'>('home');
     const [activeTab, setActiveTab] = useState<string>('all');
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [loginTab, setLoginTab] = useState<'student' | 'teacher'>('student');
@@ -222,7 +223,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
     const filteredQuizzes = useMemo(() => {
         let quizzes: Quiz[] = [];
         if (activeTab === 'all') {
-            quizzes = [...quizStore.quizzes, ...ioeQuizzes];
+            quizzes = [...quizStore.quizzes];
         } else if (activeTab === 'ioe') {
             quizzes = ioeQuizzes;
         } else if (activeTab === 'game') {
@@ -411,7 +412,10 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                         >
                             Trang chủ
                         </button>
-                        <button className="sticker-nav__link">
+                        <button
+                            onClick={() => setView('leaderboard')}
+                            className="sticker-nav__link"
+                        >
                             Xếp hạng
                         </button>
                         <button className="sticker-nav__link">
@@ -432,11 +436,16 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                             onClick={() => isTeacherLoggedIn ? quizStore.setView('teacher_dash') : quizStore.setView('student_portal')}
                             className="sticker-nav__cta"
                         >
-                            Vào Quản Lý
+                            {isTeacherLoggedIn ? 'Vào Quản Lý' : 'Vào Học'}
                         </button>
                     )}
                 </div>
             </nav>
+
+            {/* ===== LEADERBOARD VIEW ===== */}
+            {view === 'leaderboard' && (
+                <LeaderboardPage onBack={() => setView('home')} />
+            )}
 
             {/* ===== QUIZ LIST VIEW ===== */}
             {view === 'quiz-list' && (
@@ -449,6 +458,8 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                     onSearchChange={setSearchTerm}
                     selectedGrade={quizStore.selectedClassLevel}
                     onGradeChange={quizStore.setClassLevel}
+                    isLoggedIn={isLoggedIn}
+                    onLoginClick={() => openLogin('student')}
                 />
             )}
 

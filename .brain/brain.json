@@ -54,7 +54,11 @@
         "Difficulty Levels (Mức 1/2/3) support in Questions & Word Export",
         "Question Analysis with difficulty classification (Dễ/TB/Khó)",
         "Smart Distractors - AI-generated wrong answers for MCQ/MULTIPLE_SELECT",
-        "Virtual Classroom Management (Classes, Students, Assignments)"
+        "Virtual Classroom Management (Classes, Students, Assignments)",
+        "Auto-Assign Quizzes to Class upon Creation",
+        "Public Library Privacy (Hidden assignments for guests)",
+        "Custom 'Coming Soon' Modal for locked features",
+        "Improved Student Portal UI (Home button, better visibility)"
     ],
     "knowledge_items": {
         "patterns": [
