@@ -229,22 +229,22 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
         }
     };
 
-    // Calculate correct count based on server validation or getAnswerStatus
+    // Calculate correct count using getAnswerStatus (which has local overrides for buggy server types)
     const calculatedCorrectCount = useMemo(() => {
-        // If server has validation details, count from there
-        if (result.validationDetails && result.validationDetails.length > 0) {
-            return result.validationDetails.filter(d => d.isCorrect).length;
-        }
-        // Fallback to local calculation
         return quiz.questions.filter(q => getAnswerStatus(q, answers[q.id]) === 'correct').length;
     }, [quiz.questions, answers, result.validationDetails]);
 
-    // Use server correctCount if available, otherwise use calculated
-    const displayResult: StudentResult = useMemo(() => ({
-        ...result,
-        correctCount: result.validationDetails?.length ? calculatedCorrectCount : result.correctCount,
-        totalQuestions: result.validationDetails?.length ? result.validationDetails.length : result.totalQuestions
-    }), [result, calculatedCorrectCount]);
+    // Always use recalculated correct count for consistent display
+    const displayResult: StudentResult = useMemo(() => {
+        const total = quiz.questions.length;
+        const recalcScore = total > 0 ? parseFloat(((calculatedCorrectCount / total) * 10).toFixed(1)) : 0;
+        return {
+            ...result,
+            correctCount: calculatedCorrectCount,
+            totalQuestions: total,
+            score: recalcScore
+        };
+    }, [result, calculatedCorrectCount, quiz.questions.length]);
 
     const renderActiveTab = () => {
         switch (activeTab) {
