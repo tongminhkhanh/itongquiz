@@ -73,7 +73,8 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                 // When server says wrong for these types, fall through to local comparison
                 if (!serverResult.isCorrect && (
                     question.type === QuestionType.ORDERING ||
-                    question.type === QuestionType.UNDERLINE
+                    question.type === QuestionType.UNDERLINE ||
+                    question.type === QuestionType.ERROR_CORRECTION
                 )) {
                     // Fall through to local validation below
                 } else {

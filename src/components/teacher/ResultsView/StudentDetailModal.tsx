@@ -180,6 +180,18 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 return false;
             }
 
+            // ERROR_CORRECTION: Compare wrongWord and correctWord
+            if (questionType === 'ERROR_CORRECTION') {
+                if (typeof selectedAnswer === 'object' && selectedAnswer !== null) {
+                    const sWrong = String(selectedAnswer.wrongWord || '').trim().toLowerCase();
+                    const sCorrect = String(selectedAnswer.correctWord || '').trim().toLowerCase();
+                    const eCorrect = String(correctAnswer || '').trim().toLowerCase();
+                    // wrongWord might not be in correctAnswer, check if both match
+                    return sCorrect !== '' && sCorrect === eCorrect && sWrong !== '';
+                }
+                return false;
+            }
+
             // For unknown types, return undefined
             return undefined;
         };

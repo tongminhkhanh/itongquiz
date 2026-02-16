@@ -70,7 +70,8 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                 if (!answer && answer !== false && answer !== 0) return 'skipped';
                 // Override: Server has bugs for ORDERING and UNDERLINE → fall through to local
                 if (!serverResult.isCorrect && (
-                    question.type === 'ORDERING' || question.type === 'UNDERLINE'
+                    question.type === 'ORDERING' || question.type === 'UNDERLINE' ||
+                    question.type === 'ERROR_CORRECTION'
                 )) {
                     // Fall through to local validation below
                 } else {
@@ -216,6 +217,13 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                 const cSorted = [...correctIdxs].sort((a, b) => a - b);
                 const isUnderlineCorrect = sSorted.every((val, idx) => val === cSorted[idx]);
                 return isUnderlineCorrect ? 'correct' : 'wrong';
+            case 'ERROR_CORRECTION':
+                const ecAns = answer as { wrongWord?: string; correctWord?: string } || {};
+                const ecWrong = String(ecAns.wrongWord || '').toLowerCase().trim();
+                const ecCorrect = String(ecAns.correctWord || '').toLowerCase().trim();
+                const ecExpWrong = String((question as any).wrongWord || (question as any).distractors || '').toLowerCase().trim();
+                const ecExpCorrect = String((question as any).correctWord || (question as any).correctAnswer || '').toLowerCase().trim();
+                return (ecWrong && ecCorrect && ecWrong === ecExpWrong && ecCorrect === ecExpCorrect) ? 'correct' : 'wrong';
             default:
                 return 'wrong';
         }

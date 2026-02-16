@@ -503,6 +503,21 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
           }
         }
 
+        // 🔧 Client-side override for ERROR_CORRECTION
+        // Server may fail due to subtle format mismatches (whitespace, encoding)
+        if (q.type === QuestionType.ERROR_CORRECTION && !isCorrect && studentAnswer) {
+          const ecStudent = studentAnswer as { wrongWord?: string; correctWord?: string };
+          const ecWrongWord = (q as any).wrongWord || (q as any).distractors || '';
+          const ecCorrectWord = (q as any).correctWord || (q as any).correctAnswer || '';
+          const sWrong = String(ecStudent.wrongWord || '').trim().toLowerCase();
+          const sCorrect = String(ecStudent.correctWord || '').trim().toLowerCase();
+          const eWrong = String(ecWrongWord).trim().toLowerCase();
+          const eCorrect = String(ecCorrectWord).trim().toLowerCase();
+          if (sWrong && sCorrect && sWrong === eWrong && sCorrect === eCorrect) {
+            isCorrect = true;
+          }
+        }
+
         // Build type-specific snapshot fields
         const typeSpecificFields: Record<string, any> = {};
         const qa = q as any;
@@ -569,7 +584,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       // Count how many questions were corrected from wrong → right
       let correctedCorrectCount = correctCount;
       quiz.questions.forEach(q => {
-        if (q.type === QuestionType.UNDERLINE || q.type === QuestionType.ORDERING) {
+        if (q.type === QuestionType.UNDERLINE || q.type === QuestionType.ORDERING || q.type === QuestionType.ERROR_CORRECTION) {
           const serverResult = validationResult.details?.find((d: any) => d.questionId === q.id);
           const clientResult = answersWithSnapshots[q.id];
           // If server said wrong but client override says correct → add 1
