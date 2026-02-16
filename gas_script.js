@@ -257,6 +257,9 @@ function saveQuiz(sheet, data) {
             textField,
             blanksField,
             distractorsField,
+            q.type === 'UNDERLINE' ? (q.sentence || "") : "",  // Placeholder for 'sentence' column (or real data if available)
+            q.type === 'UNDERLINE' ? JSON.stringify(q.words || []) : "",  // Placeholder for 'words' column
+            q.type === 'UNDERLINE' ? JSON.stringify(q.correctWordIndexes || []) : "",  // Placeholder for 'correctWordIndexes' column
             imageField  // 🖼️ Image URL for IMAGE_QUESTION type
         ];
     });
