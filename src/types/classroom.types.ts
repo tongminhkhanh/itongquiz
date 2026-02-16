@@ -26,6 +26,7 @@ export interface Student {
     username: string;          // Unique login identifier (e.g., "an.nguyen.001")
     classId: string;           // Foreign key to Classroom.id
     parentPhone?: string;      // Only visible to teacher
+    avatar?: string;           // Avatar sticker key (e.g., "cat", "dog", "robot")
     createdAt?: string;
 }
 
@@ -48,6 +49,7 @@ export interface StudentSession {
     username: string;
     classId: string;
     className?: string;
+    avatar?: string;           // Avatar sticker key
 }
 
 // --- Assignment ---

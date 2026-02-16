@@ -46,7 +46,7 @@ const MathSpan: React.FC<{ content: string; className?: string }> = React.memo((
         }
     }, [content]);
 
-    return <span ref={ref} className={className} />;
+    return <span ref={ref} className={className} style={{ whiteSpace: 'pre-line' }} />;
 });
 
 
@@ -104,15 +104,15 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
             <div className="mb-4">
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Câu hỏi {index + 1}</h3>
                 <div className="text-gray-700 font-medium">
-                    {q.type === QuestionType.TRUE_FALSE || q.type === QuestionType.MATCHING ? (
-                        <MathSpan content={q.mainQuestion || ""} className="whitespace-pre-wrap" />
+                    {q.type === QuestionType.TRUE_FALSE ? (
+                        <MathSpan content={(q as any).mainQuestion || ""} className="whitespace-pre-wrap" />
                     ) : (
                         <MathSpan content={(q as any).question || ""} className="whitespace-pre-wrap" />
                     )}
                 </div>
 
-                {/* Image in header - exclude IMAGE_QUESTION since it has its own section */}
-                {q.image && q.type !== QuestionType.IMAGE_QUESTION && (
+                {/* Image in header - exclude IMAGE_QUESTION and DROPDOWN since they have their own sections */}
+                {q.image && q.type !== QuestionType.IMAGE_QUESTION && q.type !== QuestionType.DROPDOWN && (
                     <div className="mt-3">
                         <img
                             src={q.image}
@@ -494,12 +494,23 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                     const currentAnswers = (answers[q.id] as Record<number, number>) || {};
                     const items = (q as any).items || [];
 
-                    const handleOrderChange = (itemIndex: number, orderValue: string) => {
+                    // Visual Shuffle: Shuffle items for display but keep track of original indices
+                    const shuffledItems = React.useMemo(() => {
+                        const itemsWithIndex = items.map((content: string, idx: number) => ({ content, idx }));
+                        // Fisher-Yates shuffle
+                        for (let i = itemsWithIndex.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [itemsWithIndex[i], itemsWithIndex[j]] = [itemsWithIndex[j], itemsWithIndex[i]];
+                        }
+                        return itemsWithIndex;
+                    }, [items]); // Shuffle only when items change (or on mount)
+
+                    const handleOrderChange = (originalIndex: number, orderValue: string) => {
                         const num = parseInt(orderValue, 10);
                         if (orderValue === '' || (!isNaN(num) && num >= 1 && num <= items.length)) {
                             onAnswerChange(q.id, {
                                 ...currentAnswers,
-                                [itemIndex]: orderValue === '' ? undefined : num
+                                [originalIndex]: orderValue === '' ? undefined : num
                             });
                         }
                     };
@@ -513,21 +524,21 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                             </div>
 
                             <div className="space-y-3">
-                                {items.map((item: string, idx: number) => (
-                                    <div key={idx} className="flex items-start gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                {shuffledItems.map((item: { content: string, idx: number }, visualIndex: number) => (
+                                    <div key={item.idx} className="flex items-start gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
                                         <div className="flex-shrink-0">
                                             <input
                                                 type="number"
                                                 min="1"
                                                 max={items.length}
-                                                value={currentAnswers[idx] || ''}
-                                                onChange={(e) => handleOrderChange(idx, e.target.value)}
+                                                value={currentAnswers[item.idx] || ''}
+                                                onChange={(e) => handleOrderChange(item.idx, e.target.value)}
                                                 placeholder="?"
                                                 className="w-12 h-12 text-center text-xl font-bold border-2 border-amber-400 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
                                             />
                                         </div>
                                         <div className="flex-1 pt-2">
-                                            <p className="text-gray-800">{renderHtml(item)}</p>
+                                            <MathSpan content={item.content} className="text-gray-800 font-medium text-lg leading-relaxed" />
                                         </div>
                                     </div>
                                 ))}
@@ -549,43 +560,91 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 })()}
 
                 {/* Image Question - MCQ với hình bắt buộc */}
-                {q.type === QuestionType.IMAGE_QUESTION && (
-                    <div className="space-y-4">
-                        {/* Hình ảnh - hiển thị nổi bật */}
-                        {(q as any).image && (
-                            <div className="flex justify-center">
-                                <img
-                                    src={(q as any).image}
-                                    alt="Question illustration"
-                                    className="max-h-72 rounded-xl border-2 border-gray-200 shadow-md object-contain"
-                                />
-                            </div>
-                        )}
-                        {/* Options giống MCQ */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {((q as any).options || []).map((opt: string, idx: number) => {
-                                const label = String.fromCharCode(65 + idx);
-                                const isSelected = answers[q.id] === label;
-                                return (
-                                    <button
-                                        key={idx}
-                                        onClick={() => onAnswerChange(q.id, label)}
-                                        className={`text-left p-3 rounded-lg border transition-all flex items-center ${isSelected
-                                            ? 'border-orange-500 bg-orange-50 text-orange-900 ring-1 ring-orange-500'
-                                            : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        <span className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mr-3 flex-shrink-0 ${isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-gray-300 text-gray-500'
-                                            }`}>
-                                            {label}
-                                        </span>
-                                        <MathSpan content={opt} className="flex-1" />
-                                    </button>
-                                );
-                            })}
+                {q.type === QuestionType.IMAGE_QUESTION && (() => {
+                    const optionImages: string[] = (q as any).optionImages || [];
+                    const hasOptionImages = optionImages.some((img: string) => img && img.trim());
+
+                    return (
+                        <div className="space-y-4">
+                            {/* Hình ảnh câu hỏi - hiển thị nổi bật */}
+                            {(q as any).image && (
+                                <div className="flex justify-center">
+                                    <img
+                                        src={(q as any).image}
+                                        alt="Question illustration"
+                                        className="max-h-72 rounded-xl border-2 border-gray-200 shadow-md object-contain"
+                                    />
+                                </div>
+                            )}
+                            {/* Options - hiển thị dạng hình nếu có optionImages */}
+                            {hasOptionImages ? (
+                                <div className="grid grid-cols-2 gap-3">
+                                    {((q as any).options || []).map((opt: string, idx: number) => {
+                                        const label = String.fromCharCode(65 + idx);
+                                        const isSelected = answers[q.id] === label;
+                                        const imgUrl = optionImages[idx];
+                                        return (
+                                            <button
+                                                key={idx}
+                                                onClick={() => onAnswerChange(q.id, label)}
+                                                className={`relative rounded-xl border-2 transition-all overflow-hidden ${isSelected
+                                                    ? 'border-orange-500 ring-2 ring-orange-300 shadow-lg'
+                                                    : 'border-gray-200 hover:border-orange-300 hover:shadow-md'
+                                                    }`}
+                                            >
+                                                {/* Label badge */}
+                                                <span className={`absolute top-2 left-2 z-10 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md ${isSelected
+                                                    ? 'bg-orange-500 text-white'
+                                                    : 'bg-white/90 text-gray-600 border border-gray-300'
+                                                    }`}>
+                                                    {label}
+                                                </span>
+                                                {imgUrl ? (
+                                                    <img
+                                                        src={imgUrl}
+                                                        alt={`Option ${label}`}
+                                                        className="w-full h-40 object-cover"
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="p-4 pt-8 text-left">
+                                                        <MathSpan content={opt} className="text-sm" />
+                                                    </div>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                /* Options dạng text giống MCQ */
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {((q as any).options || []).map((opt: string, idx: number) => {
+                                        const label = String.fromCharCode(65 + idx);
+                                        const isSelected = answers[q.id] === label;
+                                        return (
+                                            <button
+                                                key={idx}
+                                                onClick={() => onAnswerChange(q.id, label)}
+                                                className={`text-left p-3 rounded-lg border transition-all flex items-center ${isSelected
+                                                    ? 'border-orange-500 bg-orange-50 text-orange-900 ring-1 ring-orange-500'
+                                                    : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                <span className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mr-3 flex-shrink-0 ${isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-gray-300 text-gray-500'
+                                                    }`}>
+                                                    {label}
+                                                </span>
+                                                <MathSpan content={opt} className="flex-1" />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
 
                 {/* Dropdown Question - Điền vào chỗ trống bằng dropdown */}
                 {q.type === QuestionType.DROPDOWN && (() => {
@@ -597,6 +656,9 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
                     return (
                         <div className="space-y-4">
+                            {(q as any).image && (
+                                <img src={(q as any).image} alt="Question" className="w-full max-h-64 object-contain rounded-lg mb-4 bg-gray-50 border border-gray-100" />
+                            )}
                             <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                                 {parts.map((part: string, idx: number) => {
                                     const match = part.match(/\[(\d+)\]/);
@@ -984,13 +1046,6 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                 </div>
                             </div>
 
-                            {/* Hint */}
-                            {hint && (
-                                <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
-                                    💡 <strong>Gợi ý:</strong> {hint}
-                                </p>
-                            )}
-
                             {/* Single Answer Input */}
                             <div className="flex items-center gap-3 bg-indigo-50 p-3 rounded-lg border border-indigo-200">
                                 <span className="text-indigo-700 font-medium whitespace-nowrap">{answerLabel}:</span>
@@ -1007,6 +1062,59 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                             <div className="flex justify-end">
                                 <button
                                     onClick={() => onAnswerChange(q.id, '')}
+                                    className="text-xs text-red-500 hover:underline flex items-center"
+                                >
+                                    <RefreshCcw className="w-3 h-3 mr-1" /> Xóa đáp án
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
+            </div>
+
+            {/* ERROR_CORRECTION - Tìm từ sai và sửa lại */}
+            <div className="mt-4">
+                {q.type === QuestionType.ERROR_CORRECTION && (() => {
+                    const passage = (q as any).passage || '';
+                    const currentAnswer = answers[q.id] || { wrongWord: '', correctWord: '' };
+
+                    return (
+                        <div className="space-y-4">
+                            {/* Passage */}
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <p className="text-blue-900 leading-relaxed whitespace-pre-line text-lg">
+                                    {passage}
+                                </p>
+                            </div>
+
+                            {/* Two input fields */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="flex items-center gap-3 bg-red-50 p-3 rounded-lg border border-red-200">
+                                    <span className="text-red-700 font-medium whitespace-nowrap text-sm">Từ viết sai:</span>
+                                    <input
+                                        type="text"
+                                        value={currentAnswer.wrongWord || ''}
+                                        onChange={(e) => onAnswerChange(q.id, { ...currentAnswer, wrongWord: e.target.value })}
+                                        placeholder="Nhập từ sai..."
+                                        className="flex-1 px-3 py-2 border-2 border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-lg font-bold text-center bg-white"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-3 bg-green-50 p-3 rounded-lg border border-green-200">
+                                    <span className="text-green-700 font-medium whitespace-nowrap text-sm">Sửa lại là:</span>
+                                    <input
+                                        type="text"
+                                        value={currentAnswer.correctWord || ''}
+                                        onChange={(e) => onAnswerChange(q.id, { ...currentAnswer, correctWord: e.target.value })}
+                                        placeholder="Nhập từ đúng..."
+                                        className="flex-1 px-3 py-2 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg font-bold text-center bg-white"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Reset */}
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={() => onAnswerChange(q.id, { wrongWord: '', correctWord: '' })}
                                     className="text-xs text-red-500 hover:underline flex items-center"
                                 >
                                     <RefreshCcw className="w-3 h-3 mr-1" /> Xóa đáp án

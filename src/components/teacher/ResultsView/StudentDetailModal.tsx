@@ -398,6 +398,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                             {questionText ? (
                                                 <p
                                                     className="font-medium text-gray-800 mb-2"
+                                                    style={{ whiteSpace: 'pre-line' }}
                                                     dangerouslySetInnerHTML={{ __html: questionText }}
                                                 />
                                             ) : (

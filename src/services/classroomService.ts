@@ -227,3 +227,11 @@ export const startAssignmentAttempt = async (assignmentId: string, studentId: st
     const res = await callGasApi('start_assignment_attempt', { assignmentId, studentId });
     return res.status === 'success';
 };
+
+/**
+ * Update student avatar
+ */
+export const updateStudentAvatar = async (studentId: string, avatar: string): Promise<boolean> => {
+    const res = await callGasApi('update_student_avatar', { studentId, avatar });
+    return res.status === 'success';
+};

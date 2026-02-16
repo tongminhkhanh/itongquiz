@@ -10,6 +10,8 @@ import { Trophy, ArrowLeft, TrendingUp, TrendingDown, Minus, Star, Users, Filter
 import { StudentResult } from '../../types';
 import { fetchResultsFromSheets } from '../../services/googleSheetService';
 import { GOOGLE_SHEET_ID, RESULTS_GID } from '../../config/constants';
+import { useClassroomStore } from '../../stores/useClassroomStore';
+import { getAvatarUrl } from '../../config/avatars';
 
 // Fluent 3D Emoji CDN
 const FLUENT_CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
@@ -32,6 +34,7 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [selectedGrade, setSelectedGrade] = useState<string>('all');
     const [timePeriod, setTimePeriod] = useState<string>('all');
+    const studentSession = useClassroomStore(s => s.studentSession);
 
     // Fetch results on mount
     useEffect(() => {
@@ -137,6 +140,20 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
         return name.charAt(0).toUpperCase();
     };
 
+    // Check if entry matches logged-in student (to show their avatar sticker)
+    const isCurrentStudent = (name: string) => {
+        return studentSession && studentSession.fullName === name;
+    };
+
+    // Render avatar: sticker for logged-in student, initial char for others
+    const renderAvatarContent = (name: string, isLarge?: boolean) => {
+        if (isCurrentStudent(name) && studentSession?.avatar) {
+            const size = isLarge ? 'w-12 h-12' : 'w-9 h-9';
+            return <img src={getAvatarUrl(studentSession.avatar)} alt="Avatar" className={`${size} object-contain`} />;
+        }
+        return isLarge ? <span style={{ fontSize: '1.5rem' }}>{getInitial(name)}</span> : getInitial(name);
+    };
+
     // Grade tabs
     const gradeTabs = [
         { id: 'all', label: 'Tất cả' },
@@ -198,9 +215,9 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
                                 />
                                 <div
                                     className="podium-card__avatar"
-                                    style={{ background: getAvatarColor(top3[1].studentName) }}
+                                    style={{ background: isCurrentStudent(top3[1].studentName) ? 'linear-gradient(135deg, #FFE0B2, #FFCC80)' : getAvatarColor(top3[1].studentName) }}
                                 >
-                                    {getInitial(top3[1].studentName)}
+                                    {renderAvatarContent(top3[1].studentName)}
                                 </div>
                                 <span className="podium-card__name">{top3[1].studentName}</span>
                                 <span className="podium-card__class">{top3[1].studentClass}</span>
@@ -228,9 +245,9 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
                                 />
                                 <div
                                     className="podium-card__avatar podium-card__avatar--lg"
-                                    style={{ background: getAvatarColor(top3[0].studentName) }}
+                                    style={{ background: isCurrentStudent(top3[0].studentName) ? 'linear-gradient(135deg, #FFE0B2, #FFCC80)' : getAvatarColor(top3[0].studentName) }}
                                 >
-                                    {getInitial(top3[0].studentName)}
+                                    {renderAvatarContent(top3[0].studentName, true)}
                                 </div>
                                 <span className="podium-card__name">{top3[0].studentName}</span>
                                 <span className="podium-card__class">{top3[0].studentClass}</span>
@@ -258,9 +275,9 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
                                 />
                                 <div
                                     className="podium-card__avatar"
-                                    style={{ background: getAvatarColor(top3[2].studentName) }}
+                                    style={{ background: isCurrentStudent(top3[2].studentName) ? 'linear-gradient(135deg, #FFE0B2, #FFCC80)' : getAvatarColor(top3[2].studentName) }}
                                 >
-                                    {getInitial(top3[2].studentName)}
+                                    {renderAvatarContent(top3[2].studentName)}
                                 </div>
                                 <span className="podium-card__name">{top3[2].studentName}</span>
                                 <span className="podium-card__class">{top3[2].studentClass}</span>
@@ -318,9 +335,9 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
                             </span>
                             <div
                                 className="leaderboard-row__avatar"
-                                style={{ background: getAvatarColor(entry.studentName) }}
+                                style={{ background: isCurrentStudent(entry.studentName) ? 'linear-gradient(135deg, #FFE0B2, #FFCC80)' : getAvatarColor(entry.studentName) }}
                             >
-                                {getInitial(entry.studentName)}
+                                {renderAvatarContent(entry.studentName)}
                             </div>
                             <div className="leaderboard-row__info">
                                 <span className="leaderboard-row__name">{entry.studentName}</span>

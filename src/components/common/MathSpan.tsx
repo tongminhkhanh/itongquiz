@@ -22,7 +22,7 @@ const MathSpan: React.FC<{ content: string; className?: string }> = React.memo((
         }
     }, [content]);
 
-    return <span ref={ref} className={className} />;
+    return <span ref={ref} className={className} style={{ whiteSpace: 'pre-line' }} />;
 });
 
 export default MathSpan;

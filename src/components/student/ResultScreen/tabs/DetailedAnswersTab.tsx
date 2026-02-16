@@ -145,6 +145,11 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                 const cSorted = [...correctIdxs].sort((a, b) => a - b);
                 const isUnderlineCorrect = sSorted.every((val, idx) => val === cSorted[idx]);
                 return isUnderlineCorrect ? 'correct' : 'wrong';
+            case QuestionType.ERROR_CORRECTION:
+                const ecAnswer = answer as { wrongWord?: string; correctWord?: string } || {};
+                const ecWrongMatch = String(ecAnswer.wrongWord || '').toLowerCase().trim() === String((question as any).wrongWord || '').toLowerCase().trim();
+                const ecCorrectMatch = String(ecAnswer.correctWord || '').toLowerCase().trim() === String((question as any).correctWord || '').toLowerCase().trim();
+                return (ecWrongMatch && ecCorrectMatch) ? 'correct' : 'wrong';
             default:
                 return 'wrong';
         }
@@ -382,6 +387,9 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                     {/* DROPDOWN */}
                     {q.type === QuestionType.DROPDOWN && (
                         <div className="space-y-3">
+                            {(q as any).image && (
+                                <img src={(q as any).image} alt="Question" className="max-h-48 rounded-lg object-contain border border-gray-200" />
+                            )}
                             {/* Show the full text with blanks */}
                             {q.text && (
                                 <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
@@ -581,6 +589,37 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                 <div className="p-3 rounded-lg bg-green-50 border border-green-200">
                                     <p className="text-sm text-gray-600 mb-1">Đáp án đúng:</p>
                                     <p className="font-bold text-green-700">{q.correctWord}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ERROR_CORRECTION */}
+                    {q.type === QuestionType.ERROR_CORRECTION && (
+                        <div className="space-y-3">
+                            {/* Passage */}
+                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <p className="text-blue-900 whitespace-pre-line">{(q as any).passage}</p>
+                            </div>
+                            {/* Student answer */}
+                            <div className={`p-3 rounded-lg ${status === 'correct' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                                <p className="text-sm text-gray-600 mb-1">Em trả lời:</p>
+                                <div className="flex gap-4">
+                                    <p className={`font-bold ${status === 'correct' ? 'text-green-700' : 'text-red-700'}`}>
+                                        Từ sai: {(answer as any)?.wrongWord || '(Không trả lời)'}
+                                    </p>
+                                    <p className={`font-bold ${status === 'correct' ? 'text-green-700' : 'text-red-700'}`}>
+                                        Sửa lại: {(answer as any)?.correctWord || '(Không trả lời)'}
+                                    </p>
+                                </div>
+                            </div>
+                            {status !== 'correct' && (
+                                <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                                    <p className="text-sm text-gray-600 mb-1">Đáp án đúng:</p>
+                                    <div className="flex gap-4">
+                                        <p className="font-bold text-green-700">Từ sai: {(q as any).wrongWord}</p>
+                                        <p className="font-bold text-green-700">Sửa lại: {(q as any).correctWord}</p>
+                                    </div>
                                 </div>
                             )}
                         </div>

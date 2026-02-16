@@ -100,6 +100,8 @@ function handleRequest(e) {
                 return responseJSON(handleDeleteAssignment(data));
             case 'start_assignment_attempt':
                 return handleStartAssignmentAttempt(data);
+            case 'update_student_avatar':
+                return responseJSON(handleUpdateStudentAvatar(data));
 
             default:
                 return responseJSON({ status: "error", message: "Unknown action: " + action });
@@ -765,11 +767,11 @@ function handleGetStudents(body) {
 
     if (body.role === 'student') {
         students = students.map(function (s) {
-            return { id: s.id, fullName: s.fullName, username: s.username, classId: s.classId };
+            return { id: s.id, fullName: s.fullName, username: s.username, classId: s.classId, avatar: s.avatar || '' };
         });
     } else {
         students = students.map(function (s) {
-            return { id: s.id, fullName: s.fullName, username: s.username, classId: s.classId, parentPhone: s.parentPhone || '', createdAt: s.createdAt };
+            return { id: s.id, fullName: s.fullName, username: s.username, classId: s.classId, parentPhone: s.parentPhone || '', avatar: s.avatar || '', createdAt: s.createdAt };
         });
     }
     return { status: 'success', data: students };
@@ -830,7 +832,34 @@ function handleStudentLogin(body) {
     var classes = getSheetDataAsObjects(CLASSROOM_SHEETS.CLASSES);
     var cls = classes.find(function (c) { return c.id === student.classId; });
 
-    return { status: 'success', data: { studentId: student.id, fullName: student.fullName, username: student.username, classId: student.classId, className: cls ? cls.name : '' } };
+    return { status: 'success', data: { studentId: student.id, fullName: student.fullName, username: student.username, classId: student.classId, className: cls ? cls.name : '', avatar: student.avatar || '' } };
+}
+
+function handleUpdateStudentAvatar(body) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CLASSROOM_SHEETS.STUDENTS);
+    if (!sheet) return { status: 'error', message: 'Students sheet not found' };
+
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var idCol = headers.indexOf('id');
+    var avatarCol = headers.indexOf('avatar');
+
+    // Auto-create avatar column if missing
+    if (avatarCol === -1) {
+        avatarCol = headers.length;
+        sheet.getRange(1, avatarCol + 1).setValue('avatar');
+    }
+
+    // Find student and update avatar
+    for (var i = 1; i < data.length; i++) {
+        if (String(data[i][idCol]) === String(body.studentId)) {
+            sheet.getRange(i + 1, avatarCol + 1).setValue(body.avatar || '');
+            return { status: 'success', data: { avatar: body.avatar } };
+        }
+    }
+
+    return { status: 'error', message: 'Student not found' };
 }
 
 // --- Assignment Handlers ---

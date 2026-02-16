@@ -65,7 +65,8 @@ export const sanitizeLatex = (text: string): string => {
     result = result.replace(/\$\s*\$/g, '');  // Only remove $$ with optional whitespace between
 
     // Clean up multiple spaces
-    result = result.replace(/\s+/g, ' ');
+    // Collapse multiple spaces but preserve newlines
+    result = result.replace(/[^\S\n]+/g, ' ');
 
     return result.trim();
 };
@@ -128,9 +129,8 @@ export const formatMathText = (text: string | any): string => {
 
     let result = processedParts.join('');
 
-    // Clean up: remove literal \n and collapse spaces (but preserve LaTeX)
-    result = result.replace(/\\n/g, ' ');
-    result = result.replace(/\n/g, ' ');
+    // Clean up: remove literal \n from JSON (but preserve actual newlines for pre-line rendering)
+    result = result.replace(/\\n/g, '\n');
 
     // Collapse multiple spaces (outside LaTeX - simple approach)
     result = result.replace(/  +/g, ' ');

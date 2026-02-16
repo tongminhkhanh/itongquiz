@@ -52,6 +52,7 @@ interface ClassroomStore {
     restoreStudentSession: () => void;
     fetchStudentAssignments: (studentId: string) => Promise<void>;
     startAssignmentAttempt: (assignmentId: string, studentId: string) => Promise<boolean>;
+    updateAvatar: (studentId: string, avatar: string) => Promise<boolean>;
 
     // Utilities
     clearError: () => void;
@@ -313,4 +314,23 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
     // ==========================================
 
     clearError: () => set({ error: null }),
+
+    updateAvatar: async (studentId: string, avatar: string) => {
+        try {
+            const ok = await classroomService.updateStudentAvatar(studentId, avatar);
+            if (ok) {
+                const session = get().studentSession;
+                if (session) {
+                    const updatedSession = { ...session, avatar };
+                    localStorage.setItem(STUDENT_SESSION_KEY, JSON.stringify(updatedSession));
+                    set({ studentSession: updatedSession });
+                }
+                return true;
+            }
+            return false;
+        } catch (err) {
+            console.error('Failed to update avatar', err);
+            return false;
+        }
+    },
 }));

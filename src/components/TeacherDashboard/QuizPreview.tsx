@@ -90,6 +90,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
     const [editCorrectAnswers, setEditCorrectAnswers] = useState<string[]>([]); // MULTIPLE_SELECT correctAnswers
     // IMAGE_QUESTION specific
     const [editImageUrl, setEditImageUrl] = useState(''); // IMAGE_QUESTION image
+    const [editOptionImages, setEditOptionImages] = useState<string[]>(['', '', '', '']); // IMAGE_QUESTION option images
     // DRAG_DROP specific
     const [editDragDropText, setEditDragDropText] = useState('');
     const [editBlanks, setEditBlanks] = useState<string[]>([]);
@@ -106,6 +107,10 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
     // CATEGORIZATION specific
     const [editCategories, setEditCategories] = useState<{ id: string; name: string }[]>([]);
     const [editCategorizationItems, setEditCategorizationItems] = useState<{ id: string; content: string; categoryId: string }[]>([]);
+    // ERROR_CORRECTION specific
+    const [editPassage, setEditPassage] = useState('');
+    const [editWrongWord, setEditWrongWord] = useState('');
+    const [editCorrectWord2, setEditCorrectWord2] = useState('');
     // Difficulty level
     const [editDifficulty, setEditDifficulty] = useState<1 | 2 | 3 | undefined>(undefined);
 
@@ -312,6 +317,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
         // IMAGE_QUESTION specific
         if (question.type === QuestionType.IMAGE_QUESTION) {
             setEditImageUrl((question as any).image || '');
+            setEditOptionImages((question as any).optionImages || ['', '', '', '']);
         }
         // DRAG_DROP specific
         if (question.type === QuestionType.DRAG_DROP) {
@@ -414,6 +420,10 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             // IMAGE_QUESTION specific - always save image field
             if (updated.type === QuestionType.IMAGE_QUESTION) {
                 updated.image = editImageUrl;
+                const hasAnyOptionImage = editOptionImages.some(img => img.trim());
+                if (hasAnyOptionImage) {
+                    updated.optionImages = editOptionImages;
+                }
             }
 
             // DRAG_DROP specific - always save all fields
@@ -515,6 +525,11 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             case QuestionType.DROPDOWN:
                 setEditDropdownText('');
                 setEditDropdownBlanks([{ id: '1', options: ['', '', ''], correctAnswer: '' }]);
+                setEditImageUrl('');
+                break;
+            case QuestionType.ORDERING:
+                setEditItems(['', '', '']);
+                setEditCorrectOrder([0, 1, 2]);
                 break;
             case QuestionType.WORD_SCRAMBLE:
                 setEditLetters([]);
@@ -534,6 +549,21 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                 setEditSentence('');
                 setEditWords([]);
                 setEditCorrectWordIndexes([]);
+                break;
+            case QuestionType.DRAG_DROP:
+                setEditDragDropText('');
+                setEditBlanks([]);
+                setEditDistractors([]);
+                break;
+            case QuestionType.RIDDLE:
+                setEditRiddleLines(['', '']);
+                setEditAnswerLabel('');
+                setEditCorrectAnswer('');
+                break;
+            case QuestionType.ERROR_CORRECTION:
+                setEditPassage('');
+                setEditWrongWord('');
+                setEditCorrectWord2('');
                 break;
             default:
                 break;
@@ -592,16 +622,22 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                     pairs: editPairs.filter(p => p.left.trim() && p.right.trim()),
                 } as any;
                 break;
-            case QuestionType.IMAGE_QUESTION:
-                newQuestion = {
+            case QuestionType.IMAGE_QUESTION: {
+                const imgQ: any = {
                     id: newId,
                     type: QuestionType.IMAGE_QUESTION,
                     question: editQuestionText,
                     image: editImageUrl,
                     options: editOptions.filter(o => o.trim()),
                     correctAnswer: editCorrectAnswer,
-                } as any;
+                };
+                const hasAnyOptImg = editOptionImages.some(img => img.trim());
+                if (hasAnyOptImg) {
+                    imgQ.optionImages = editOptionImages;
+                }
+                newQuestion = imgQ;
                 break;
+            }
             case QuestionType.DROPDOWN:
                 newQuestion = {
                     id: newId,
@@ -609,6 +645,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                     question: editQuestionText,
                     text: editDropdownText,
                     blanks: editDropdownBlanks.filter(b => b.correctAnswer.trim()),
+                    image: editImageUrl,
                 } as any;
                 break;
             case QuestionType.WORD_SCRAMBLE:
@@ -637,6 +674,45 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                     sentence: editSentence,
                     words: editWords,
                     correctWordIndexes: editCorrectWordIndexes,
+                } as any;
+                break;
+            case QuestionType.DRAG_DROP:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.DRAG_DROP,
+                    question: editQuestionText,
+                    text: editDragDropText,
+                    blanks: editBlanks.filter(b => b.trim()),
+                    distractors: editDistractors.filter(d => d.trim()),
+                } as any;
+                break;
+            case QuestionType.RIDDLE:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.RIDDLE,
+                    question: editQuestionText,
+                    riddleLines: editRiddleLines.filter(l => l.trim()),
+                    correctAnswer: editCorrectAnswer,
+                    answerLabel: editAnswerLabel || 'Đáp án',
+                } as any;
+                break;
+            case QuestionType.ERROR_CORRECTION:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.ERROR_CORRECTION,
+                    question: editQuestionText,
+                    passage: editPassage,
+                    wrongWord: editWrongWord,
+                    correctWord: editCorrectWord2,
+                } as any;
+                break;
+            case QuestionType.ORDERING:
+                newQuestion = {
+                    id: newId,
+                    type: QuestionType.ORDERING,
+                    question: editQuestionText,
+                    items: editItems.filter(item => (typeof item === 'string' ? item : '').trim()),
+                    correctOrder: editCorrectOrder,
                 } as any;
                 break;
             default:
@@ -675,6 +751,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             [QuestionType.CATEGORIZATION]: 'Phân loại',
             [QuestionType.WORD_SCRAMBLE]: 'Ghép chữ',
             [QuestionType.RIDDLE]: 'Câu đố',
+            [QuestionType.ERROR_CORRECTION]: 'Tìm từ sai',
         };
         return labels[type] || type;
     };
@@ -720,7 +797,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 Câu {idx + 1}:
                                             </span>
                                             <div className="flex-1">
-                                                <p className="text-gray-800 font-medium">
+                                                <p className="text-gray-800 font-medium" style={{ whiteSpace: 'pre-line' }}>
                                                     <span>{formatMathText(fixReorderQuestion((q as any).question || (q as any).mainQuestion || ''))}</span>
                                                 </p>
                                             </div>
@@ -940,6 +1017,9 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                     {/* DROPDOWN */}
                                     {q.type === QuestionType.DROPDOWN && (
                                         <div className="ml-8 space-y-2">
+                                            {(q as any).image && (
+                                                <img src={(q as any).image} alt="Question" className="max-h-48 rounded-lg object-contain border" />
+                                            )}
                                             <p className="text-sm text-gray-600">{formatMathText((q as any).text)}</p>
                                             <div className="space-y-1">
                                                 {((q as any).blanks || []).map((blank: any, i: number) => (
@@ -1032,6 +1112,52 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                         </div>
                                     )}
 
+                                    {/* ORDERING */}
+                                    {q.type === QuestionType.ORDERING && (
+                                        <div className="ml-8 space-y-2">
+                                            <p className="text-sm text-gray-500 mb-1">Thứ tự đúng:</p>
+                                            <div className="space-y-1">
+                                                {(() => {
+                                                    const items = (q as any).items || [];
+                                                    const correctOrder = (q as any).correctOrder || [];
+                                                    return correctOrder.map((idx: number, pos: number) => (
+                                                        <div key={pos} className="flex items-center gap-2">
+                                                            <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">{pos + 1}</span>
+                                                            <span className="text-sm text-gray-700">{items[idx] || ''}</span>
+                                                        </div>
+                                                    ));
+                                                })()}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* DRAG_DROP */}
+                                    {q.type === QuestionType.DRAG_DROP && (
+                                        <div className="ml-8 space-y-2">
+                                            <p className="text-sm text-gray-600">
+                                                {((q as any).text || '').replace(/\[([^\]]+)\]/g, '[ ___ ]')}
+                                            </p>
+                                            <div className="flex flex-wrap gap-1">
+                                                <span className="text-sm text-gray-500 mr-2">Đáp án:</span>
+                                                {((q as any).blanks || []).map((blank: string, i: number) => (
+                                                    <span key={i} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
+                                                        {blank}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            {((q as any).distractors || []).length > 0 && (
+                                                <div className="flex flex-wrap gap-1">
+                                                    <span className="text-sm text-gray-500 mr-2">Gây nhiễu:</span>
+                                                    {((q as any).distractors || []).map((d: string, i: number) => (
+                                                        <span key={i} className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs">
+                                                            {d}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     {/* WORD_SCRAMBLE */}
                                     {q.type === QuestionType.WORD_SCRAMBLE && (
                                         <div className="ml-8 space-y-2">
@@ -1065,9 +1191,25 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 <span className="text-gray-500">{(q as any).answerLabel || 'Đáp án'}:</span>
                                                 <span className="font-bold text-green-700 ml-2">{(q as any).correctAnswer}</span>
                                             </p>
-                                            {(q as any).hint && (
-                                                <p className="text-xs text-blue-600 italic">💡 Gợi ý: {(q as any).hint}</p>
-                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* ERROR_CORRECTION */}
+                                    {q.type === QuestionType.ERROR_CORRECTION && (
+                                        <div className="ml-8 space-y-2">
+                                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                                <p className="text-sm text-blue-900 whitespace-pre-line">{(q as any).passage}</p>
+                                            </div>
+                                            <div className="flex gap-4 text-sm">
+                                                <p>
+                                                    <span className="text-gray-500">Từ sai:</span>
+                                                    <span className="font-bold text-red-600 ml-1">{(q as any).wrongWord}</span>
+                                                </p>
+                                                <p>
+                                                    <span className="text-gray-500">Sửa lại:</span>
+                                                    <span className="font-bold text-green-700 ml-1">{(q as any).correctWord}</span>
+                                                </p>
+                                            </div>
                                         </div>
                                     )}
 
@@ -1078,10 +1220,10 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                         </span>
                                         {(q as any).difficulty && (
                                             <span className={`text-xs px-2 py-0.5 rounded font-medium ${(q as any).difficulty === 1
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : (q as any).difficulty === 2
-                                                        ? 'bg-yellow-100 text-yellow-700'
-                                                        : 'bg-red-100 text-red-700'
+                                                ? 'bg-green-100 text-green-700'
+                                                : (q as any).difficulty === 2
+                                                    ? 'bg-yellow-100 text-yellow-700'
+                                                    : 'bg-red-100 text-red-700'
                                                 }`}>
                                                 {(q as any).difficulty === 1 ? '⭐ Mức 1' : (q as any).difficulty === 2 ? '⭐⭐ Mức 2' : '⭐⭐⭐ Mức 3'}
                                             </span>
@@ -1106,6 +1248,10 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                             { type: QuestionType.WORD_SCRAMBLE, label: 'Ghép chữ', emoji: '🔤' },
                                             { type: QuestionType.CATEGORIZATION, label: 'Phân loại', emoji: '📦' },
                                             { type: QuestionType.UNDERLINE, label: 'Gạch chân', emoji: '📋' },
+                                            { type: QuestionType.DRAG_DROP, label: 'Kéo thả', emoji: '🎯' },
+                                            { type: QuestionType.RIDDLE, label: 'Câu đố', emoji: '🧩' },
+                                            { type: QuestionType.ERROR_CORRECTION, label: 'Tìm từ sai', emoji: '🔍' },
+                                            { type: QuestionType.ORDERING, label: 'Sắp xếp', emoji: '🔢' },
                                         ].map(item => (
                                             <button
                                                 key={item.type}
@@ -1477,10 +1623,10 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                             {/* IMAGE_QUESTION Edit */}
                             {editingQuestion.type === QuestionType.IMAGE_QUESTION && (
                                 <div className="space-y-4">
-                                    {/* Reuse MCQ options - already handled above */}
+                                    {/* Main question image */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            URL/Base64 Hình ảnh
+                                            🖼️ URL hình ảnh câu hỏi
                                         </label>
                                         <input
                                             type="text"
@@ -1491,9 +1637,46 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                         />
                                         {editImageUrl && (
                                             <div className="mt-2">
-                                                <img src={editImageUrl} alt="Preview" className="max-h-32 rounded-lg border" />
+                                                <img src={editImageUrl} alt="Preview" className="max-h-32 rounded-lg border"
+                                                    onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                                                />
                                             </div>
                                         )}
+                                    </div>
+                                    {/* Option images */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            🔗 Link ảnh cho từng đáp án (tùy chọn)
+                                        </label>
+                                        <p className="text-xs text-gray-500 mb-2">Nếu đáp án là hình ảnh, dán URL ảnh vào ô tương ứng. Để trống nếu đáp án là chữ.</p>
+                                        <div className="space-y-2">
+                                            {editOptions.map((_, i) => (
+                                                <div key={i} className="flex items-start gap-2">
+                                                    <span className="w-6 text-center font-bold text-gray-500 mt-2">
+                                                        {String.fromCharCode(65 + i)}.
+                                                    </span>
+                                                    <div className="flex-1">
+                                                        <input
+                                                            type="text"
+                                                            value={editOptionImages[i] || ''}
+                                                            onChange={(e) => {
+                                                                const newImgs = [...editOptionImages];
+                                                                newImgs[i] = e.target.value;
+                                                                setEditOptionImages(newImgs);
+                                                            }}
+                                                            className="w-full px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-teal-500 text-sm"
+                                                            placeholder={`URL ảnh đáp án ${String.fromCharCode(65 + i)} (tùy chọn)`}
+                                                        />
+                                                        {editOptionImages[i] && (
+                                                            <img src={editOptionImages[i]} alt={`Option ${String.fromCharCode(65 + i)}`}
+                                                                className="mt-1 max-h-20 rounded border"
+                                                                onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -1634,6 +1817,18 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Đoạn văn (dùng [1], [2]... để đánh dấu dropdown)
                                         </label>
+                                        <div className="mb-2">
+                                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                Link ảnh minh họa (tùy chọn)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editImageUrl}
+                                                onChange={(e) => setEditImageUrl(e.target.value)}
+                                                className="w-full px-3 py-2 border rounded-lg text-sm"
+                                                placeholder="https://example.com/image.jpg"
+                                            />
+                                        </div>
                                         <textarea
                                             value={editDropdownText}
                                             onChange={(e) => setEditDropdownText(e.target.value)}
@@ -2086,7 +2281,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                     {/* Image URL */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            URL hình ảnh
+                                            🖼️ URL hình ảnh câu hỏi
                                         </label>
                                         <input
                                             type="text"
@@ -2102,6 +2297,42 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 />
                                             </div>
                                         )}
+                                    </div>
+
+                                    {/* Option images */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            🔗 Link ảnh cho từng đáp án (tùy chọn)
+                                        </label>
+                                        <p className="text-xs text-gray-500 mb-2">Nếu đáp án là hình ảnh, dán URL ảnh vào ô tương ứng. Để trống nếu đáp án là chữ.</p>
+                                        <div className="space-y-2">
+                                            {editOptions.map((_, i) => (
+                                                <div key={i} className="flex items-start gap-2">
+                                                    <span className="w-6 text-center font-bold text-gray-500 mt-2">
+                                                        {String.fromCharCode(65 + i)}.
+                                                    </span>
+                                                    <div className="flex-1">
+                                                        <input
+                                                            type="text"
+                                                            value={editOptionImages[i] || ''}
+                                                            onChange={(e) => {
+                                                                const newImgs = [...editOptionImages];
+                                                                newImgs[i] = e.target.value;
+                                                                setEditOptionImages(newImgs);
+                                                            }}
+                                                            className="w-full px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-teal-500 text-sm"
+                                                            placeholder={`URL ảnh đáp án ${String.fromCharCode(65 + i)} (tùy chọn)`}
+                                                        />
+                                                        {editOptionImages[i] && (
+                                                            <img src={editOptionImages[i]} alt={`Option ${String.fromCharCode(65 + i)}`}
+                                                                className="mt-1 max-h-20 rounded border"
+                                                                onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
 
                                     {/* Options */}
@@ -2151,6 +2382,18 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                             {newQuestionType === QuestionType.DROPDOWN && (
                                 <div className="space-y-4">
                                     <div>
+                                        <div className="mb-2">
+                                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                Link ảnh minh họa (tùy chọn)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editImageUrl}
+                                                onChange={(e) => setEditImageUrl(e.target.value)}
+                                                className="w-full px-3 py-2 border rounded-lg text-sm"
+                                                placeholder="https://example.com/image.jpg"
+                                            />
+                                        </div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Câu văn (dùng [blank] để đánh dấu chỗ trống)
                                         </label>
@@ -2360,6 +2603,261 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                     {word}
                                                 </button>
                                             ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* DRAG_DROP */}
+                            {newQuestionType === QuestionType.DRAG_DROP && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Đoạn văn (dùng [từ] để đánh dấu chỗ trống)
+                                        </label>
+                                        <textarea
+                                            value={editDragDropText}
+                                            onChange={(e) => {
+                                                const text = e.target.value;
+                                                setEditDragDropText(text);
+                                                const matches = text.match(/\[([^\]]+)\]/g);
+                                                if (matches) {
+                                                    setEditBlanks(matches.map(m => m.replace(/[\[\]]/g, '')));
+                                                }
+                                            }}
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            placeholder="VD: Bầu trời màu [xanh] và cỏ màu [xanh lá]."
+                                            rows={3}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Các từ đáp án đúng (tự động trích từ [từ])
+                                        </label>
+                                        <div className="space-y-2">
+                                            {editBlanks.map((blank, i) => (
+                                                <div key={i} className="flex items-center gap-2">
+                                                    <span className="w-6 text-center text-gray-500 text-sm">{i + 1}.</span>
+                                                    <input
+                                                        type="text"
+                                                        value={blank}
+                                                        onChange={(e) => {
+                                                            const newBlanks = [...editBlanks];
+                                                            newBlanks[i] = e.target.value;
+                                                            setEditBlanks(newBlanks);
+                                                        }}
+                                                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                                                    />
+                                                    {editBlanks.length > 1 && (
+                                                        <button
+                                                            onClick={() => setEditBlanks(editBlanks.filter((_, idx) => idx !== i))}
+                                                            className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                                        >✕</button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            <button
+                                                onClick={() => setEditBlanks([...editBlanks, ''])}
+                                                className="text-sm text-blue-600 hover:underline"
+                                            >+ Thêm blank</button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Từ gây nhiễu (distractors)
+                                        </label>
+                                        <div className="space-y-2">
+                                            {editDistractors.map((d, i) => (
+                                                <div key={i} className="flex items-center gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={d}
+                                                        onChange={(e) => {
+                                                            const newD = [...editDistractors];
+                                                            newD[i] = e.target.value;
+                                                            setEditDistractors(newD);
+                                                        }}
+                                                        className="flex-1 px-3 py-2 border rounded-lg"
+                                                        placeholder="Từ gây nhiễu..."
+                                                    />
+                                                    <button
+                                                        onClick={() => setEditDistractors(editDistractors.filter((_, idx) => idx !== i))}
+                                                        className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                                    >✕</button>
+                                                </div>
+                                            ))}
+                                            <button
+                                                onClick={() => setEditDistractors([...editDistractors, ''])}
+                                                className="text-sm text-blue-600 hover:underline"
+                                            >+ Thêm từ gây nhiễu</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* RIDDLE */}
+                            {newQuestionType === QuestionType.RIDDLE && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Các dòng câu đố
+                                        </label>
+                                        <div className="space-y-2">
+                                            {editRiddleLines.map((line, i) => (
+                                                <div key={i} className="flex items-center gap-2">
+                                                    <span className="w-6 text-center text-gray-500 text-sm">{i + 1}.</span>
+                                                    <input
+                                                        type="text"
+                                                        value={line}
+                                                        onChange={(e) => {
+                                                            const newLines = [...editRiddleLines];
+                                                            newLines[i] = e.target.value;
+                                                            setEditRiddleLines(newLines);
+                                                        }}
+                                                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500"
+                                                        placeholder={`Dòng ${i + 1} của câu đố...`}
+                                                    />
+                                                    {editRiddleLines.length > 1 && (
+                                                        <button
+                                                            onClick={() => setEditRiddleLines(editRiddleLines.filter((_, idx) => idx !== i))}
+                                                            className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                                        >✕</button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            <button
+                                                onClick={() => setEditRiddleLines([...editRiddleLines, ''])}
+                                                className="text-sm text-blue-600 hover:underline"
+                                            >+ Thêm dòng</button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Nhãn đáp án
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editAnswerLabel}
+                                            onChange={(e) => setEditAnswerLabel(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500"
+                                            placeholder="VD: Từ giữ nguyên là từ gì?"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Đáp án đúng
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editCorrectAnswer}
+                                            onChange={(e) => setEditCorrectAnswer(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                                            placeholder="Nhập đáp án..."
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ORDERING */}
+                            {newQuestionType === QuestionType.ORDERING && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Các câu / mục cần sắp xếp (nhập theo THỨ TỰ ĐÚNG)
+                                        </label>
+                                        <div className="space-y-2">
+                                            {editItems.map((item, i) => (
+                                                <div key={i} className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
+                                                    <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                                                        {i + 1}
+                                                    </span>
+                                                    <input
+                                                        type="text"
+                                                        value={typeof item === 'string' ? item : ''}
+                                                        onChange={(e) => {
+                                                            const newItems = [...editItems];
+                                                            newItems[i] = e.target.value;
+                                                            setEditItems(newItems);
+                                                            // Keep correctOrder in sync
+                                                            if (editCorrectOrder.length !== newItems.length) {
+                                                                setEditCorrectOrder(newItems.map((_, idx) => idx));
+                                                            }
+                                                        }}
+                                                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                                        placeholder={`Câu ${i + 1}...`}
+                                                    />
+                                                    {editItems.length > 2 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const newItems = editItems.filter((_, idx) => idx !== i);
+                                                                setEditItems(newItems);
+                                                                setEditCorrectOrder(newItems.map((_, idx) => idx));
+                                                            }}
+                                                            className="text-red-400 hover:text-red-600 text-lg"
+                                                            title="Xóa câu này"
+                                                        >✕</button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const newItems = [...editItems, ''];
+                                                setEditItems(newItems);
+                                                setEditCorrectOrder(newItems.map((_, idx) => idx));
+                                            }}
+                                            className="mt-2 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                                        >
+                                            ➕ Thêm câu
+                                        </button>
+                                        <p className="text-xs text-gray-500 mt-2">
+                                            💡 Nhập các câu theo thứ tự đúng. Khi hiển thị cho học sinh, các câu sẽ được xáo trộn tự động.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ERROR_CORRECTION */}
+                            {newQuestionType === QuestionType.ERROR_CORRECTION && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Đoạn văn / đoạn thơ (chứa từ sai)
+                                        </label>
+                                        <textarea
+                                            value={editPassage}
+                                            onChange={(e) => setEditPassage(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            placeholder="VD: Ngày đẹp lắm bạn ơi&#10;Nắng vàng chải khắp nơi&#10;Chim ca trong bóng lá&#10;Ra sân ta cùng chơi."
+                                            rows={5}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Từ viết sai
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editWrongWord}
+                                                onChange={(e) => setEditWrongWord(e.target.value)}
+                                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500"
+                                                placeholder="VD: chải"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Sửa lại là
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editCorrectWord2}
+                                                onChange={(e) => setEditCorrectWord2(e.target.value)}
+                                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                                                placeholder="VD: trải"
+                                            />
                                         </div>
                                     </div>
                                 </div>

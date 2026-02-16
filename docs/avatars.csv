@@ -1,0 +1,21 @@
+id,name,url,category
+owl,Cú Mèo,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Owl/3D/owl_3d.png,animal
+cat,Mèo,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Cat%20face/3D/cat_face_3d.png,animal
+dog,Chó,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Dog%20face/3D/dog_face_3d.png,animal
+bear,Gấu,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Bear/3D/bear_3d.png,animal
+fox,Cáo,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Fox/3D/fox_3d.png,animal
+rabbit,Thỏ,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Rabbit%20face/3D/rabbit_face_3d.png,animal
+panda,Gấu Trúc,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Panda/3D/panda_3d.png,animal
+unicorn,Kỳ Lân,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Unicorn/3D/unicorn_3d.png,animal
+monkey,Khỉ,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Monkey%20face/3D/monkey_face_3d.png,animal
+lion,Sư Tử,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Lion/3D/lion_3d.png,animal
+koala,Gấu Koala,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Koala/3D/koala_3d.png,animal
+penguin,Chim Cánh Cụt,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Penguin/3D/penguin_3d.png,animal
+robot,Robot,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Robot/3D/robot_3d.png,character
+alien,Người Ngoài Hành Tinh,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Alien/3D/alien_3d.png,character
+ghost,Ma,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Ghost/3D/ghost_3d.png,character
+astronaut,Phi Hành Gia,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Ringed%20planet/3D/ringed_planet_3d.png,character
+star_eyes,Ngôi Sao,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Star-struck/3D/star-struck_3d.png,expression
+cool,Ngầu,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Smiling%20face%20with%20sunglasses/3D/smiling_face_with_sunglasses_3d.png,expression
+nerd,Học Giỏi,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Nerd%20face/3D/nerd_face_3d.png,expression
+party,Tiệc Tùng,https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Partying%20face/3D/partying_face_3d.png,expression

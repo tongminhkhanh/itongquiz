@@ -18,6 +18,7 @@ export enum QuestionType {
     CATEGORIZATION = 'CATEGORIZATION', // Kéo thả phân loại vào nhóm
     WORD_SCRAMBLE = 'WORD_SCRAMBLE', // Sắp xếp chữ cái thành từ
     RIDDLE = 'RIDDLE', // Giải câu đố
+    ERROR_CORRECTION = 'ERROR_CORRECTION', // Tìm từ sai và sửa lại
 }
 
 export interface MCQQuestion {
@@ -123,6 +124,7 @@ export interface ImageQuestion {
     question: string;
     image: string; // Base64 hoặc URL - BẮT BUỘC
     options: string[]; // [A, B, C, D]
+    optionImages?: string[]; // URL hình ảnh cho từng đáp án
     correctAnswer: string; // "A", "B", "C", or "D"
     explanation?: string;
     difficulty?: 1 | 2 | 3;
@@ -214,6 +216,19 @@ export interface RiddleQuestion {
     difficulty?: 1 | 2 | 3;
 }
 
+// Error Correction Question - Tìm từ sai chính tả và sửa lại
+export interface ErrorCorrectionQuestion {
+    id: string;
+    type: QuestionType.ERROR_CORRECTION;
+    question: string;         // Đề bài
+    passage: string;          // Đoạn văn/thơ chứa từ sai
+    wrongWord: string;        // Từ viết sai
+    correctWord: string;      // Từ đúng (sửa lại)
+    explanation?: string;
+    image?: string;
+    difficulty?: 1 | 2 | 3;
+}
+
 /**
  * Question Snapshot - Lưu thông tin câu hỏi tối giản trong kết quả
  * Dùng để xem chi tiết kết quả ngay cả khi quiz đã bị xóa
@@ -237,7 +252,7 @@ export interface AnswerDetail {
     questionSnapshot?: QuestionSnapshot;  // Snapshot câu hỏi (để xem khi quiz bị xóa)
 }
 
-export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion | CategorizationQuestion | WordScrambleQuestion | RiddleQuestion;
+export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion | CategorizationQuestion | WordScrambleQuestion | RiddleQuestion | ErrorCorrectionQuestion;
 
 export interface Quiz {
     id: string;

@@ -4,6 +4,8 @@ import { useQuizStore } from '../../../stores/quizStore'; // Adjusted import pat
 import { Assignment } from '../../types/classroom.types';
 import { cacheService } from '../../services/CacheService';
 import { LogOut, BookOpen, Clock, AlertCircle, CheckCircle, Loader2, Home } from 'lucide-react';
+import AvatarSelectorModal from '../common/AvatarSelectorModal';
+import { getAvatarUrl } from '../../config/avatars';
 
 
 const AssignmentsView: React.FC = () => {
@@ -11,6 +13,7 @@ const AssignmentsView: React.FC = () => {
     const quizStore = useQuizStore();
     const { studentSession, assignments } = store;
     const [loadingQuizId, setLoadingQuizId] = useState<string | null>(null);
+    const [showAvatarModal, setShowAvatarModal] = useState(false);
 
     useEffect(() => {
         if (studentSession) {
@@ -84,9 +87,13 @@ const AssignmentsView: React.FC = () => {
                 {/* Header */}
                 <header className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                     <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                            <span className="text-2xl font-bold">{studentSession?.fullName.charAt(0)}</span>
-                        </div>
+                        <button
+                            onClick={() => setShowAvatarModal(true)}
+                            className="w-14 h-14 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl flex items-center justify-center shadow-lg border-2 border-orange-300 hover:border-orange-400 transition-all cursor-pointer hover:scale-105"
+                            title="Đổi avatar"
+                        >
+                            <img src={getAvatarUrl(studentSession?.avatar)} alt="Avatar" className="w-10 h-10 object-contain" />
+                        </button>
                         <div>
                             <h1 className="text-xl font-bold text-slate-800">Xin chào, {studentSession?.fullName}</h1>
                             <p className="text-slate-500 text-sm">Lớp: <span className="font-semibold text-indigo-600">{studentSession?.className}</span></p>
@@ -109,6 +116,13 @@ const AssignmentsView: React.FC = () => {
                         </button>
                     </div>
                 </header>
+
+                {/* Avatar Selector Modal */}
+                <AvatarSelectorModal
+                    isOpen={showAvatarModal}
+                    onClose={() => setShowAvatarModal(false)}
+                    currentAvatar={studentSession?.avatar}
+                />
 
                 {/* Main Content */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
