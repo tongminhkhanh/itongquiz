@@ -299,10 +299,32 @@ const parseIoeQuestion = (row: any): Question => {
             question.question = fixReorderQuestion(row.question);
             question.items = row.items ? JSON.parse(row.items) : [];
             // correctOrder stored in correctAnswer column
-            let correctOrder = row.correctAnswer ? JSON.parse(row.correctAnswer) : [];
-            // Normalize: if correctOrder contains strings, convert to indices
+            let correctOrder: any[] = [];
+            if (row.correctAnswer) {
+                try { correctOrder = JSON.parse(row.correctAnswer); } catch { correctOrder = []; }
+            }
+            // Normalize: if correctOrder contains strings, convert to item indices
             if (correctOrder.length > 0 && typeof correctOrder[0] === 'string') {
-                correctOrder = correctOrder.map((str: string) => question.items.indexOf(str)).filter((idx: number) => idx !== -1);
+                // Extract text from items (items might be strings or objects with content/text)
+                const getItemText = (item: any): string => {
+                    if (typeof item === 'string') return item;
+                    if (typeof item === 'object' && item) return item.content || item.text || String(item);
+                    return String(item);
+                };
+                const itemTexts = question.items.map(getItemText);
+                correctOrder = correctOrder.map((str: string) => {
+                    // Try exact match first
+                    let idx = itemTexts.indexOf(str);
+                    if (idx === -1) {
+                        // Try trimmed match
+                        idx = itemTexts.findIndex((t: string) => t.trim() === str.trim());
+                    }
+                    return idx;
+                }).filter((idx: number) => idx !== -1);
+            }
+            // If correctOrder is still empty after parsing, default to natural order [0, 1, 2...]
+            if (correctOrder.length === 0 && question.items.length > 0) {
+                correctOrder = Array.from({ length: question.items.length }, (_: any, i: number) => i);
             }
             question.correctOrder = correctOrder;
             break;

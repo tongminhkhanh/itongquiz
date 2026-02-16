@@ -1,17 +1,43 @@
 {
-    "updated_at": "2026-02-15T18:40:00Z",
+    "updated_at": "2026-02-16T12:58:00Z",
     "working_on": {
-        "feature": "Student Experience & UI Polish",
-        "task": "Refining Guest/Student Visibility & Navigation",
-        "status": "verification",
+        "feature": "Bug Fixes & System Stability",
+        "task": "Fixing Question Saving Issues (Dropdown, Riddle)",
+        "status": "completed",
         "files": [
-            "src/components/HomePage/HomePage.tsx",
-            "src/components/StudentPortal/AssignmentsView.tsx",
+            "src/components/TeacherDashboard/QuizPreview.tsx",
+            "src/services/googleSheetService.ts",
             "walkthrough.md"
         ],
-        "notes": "Completed UI polish for Home Page and Assignments View. Ready for next phase."
+        "notes": "Fixed critical data loss issues for Dropdown images and Riddle questions. Verified both frontend editor and backend mapping."
     },
     "recent_changes": [
+        {
+            "timestamp": "2026-02-16",
+            "type": "fix",
+            "description": "Fixed Dropdown Question: Added image field support in Editor and Google Sheet service (mapped to 'image' column)",
+            "files": [
+                "src/components/TeacherDashboard/QuizPreview.tsx",
+                "src/services/googleSheetService.ts"
+            ]
+        },
+        {
+            "timestamp": "2026-02-16",
+            "type": "fix",
+            "description": "Fixed Riddle Question: Mapped riddleLines (items), answerLabel (text), hint (sentence) to generic Sheet columns to prevent data loss",
+            "files": [
+                "src/services/googleSheetService.ts",
+                "src/components/TeacherDashboard/QuizPreview.tsx"
+            ]
+        },
+        {
+            "timestamp": "2026-02-16",
+            "type": "fix",
+            "description": "Fixed Image Question Editor: Added missing text input fields for answer options",
+            "files": [
+                "src/components/TeacherDashboard/QuizPreview.tsx"
+            ]
+        },
         {
             "timestamp": "2026-02-15",
             "type": "feature",
@@ -112,6 +138,10 @@
     ],
     "decisions_made": [
         {
+             "decision": "Map Riddle fields to generic Sheet columns",
+             "reason": "Avoid modifying external GAS script or Sheet structure. items->riddleLines, text->answerLabel, sentence->hint."
+        },
+        {
             "decision": "Choose 'Virtual Classroom' approach over simple link sharing",
             "reason": "Better long-term tracking and student management capabilities"
         },
@@ -133,6 +163,16 @@
         }
     ],
     "errors_encountered": [
+        {
+            "error": "Dropdown Question images not saving (User Reported)",
+            "solution": "Frontend: Added image state to Edit Modal. Backend: Mapped 'image' column in googleSheetService.",
+            "resolved": true
+        },
+        {
+            "error": "Riddle Question data lost on save (User Reported)",
+            "solution": "Backend: Mapped riddleLines->items, answerLabel->text, hint->sentence in googleSheetService to use existing columns.",
+            "resolved": true
+        },
         {
             "error": "AI distractor generation fails: 'AI không thể tạo đáp án nhiễu'",
             "solution": "parseJSONResponse regex couldn't strip markdown code blocks. Fixed with non-greedy regex /```(?:json)?\\\\s*([\\\\s\\\\S]*?)```/ and updated system prompt",

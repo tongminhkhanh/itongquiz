@@ -67,7 +67,18 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
             const serverResult = result.validationDetails.find(d => d.questionId === question.id);
             if (serverResult) {
                 if (!answer && answer !== false && answer !== 0) return 'skipped';
-                return serverResult.isCorrect ? 'correct' : 'wrong';
+                // 🔧 Override: Server has bugs for ORDERING and UNDERLINE
+                // - ORDERING: server compares JSON.stringify(object) vs JSON.stringify(array) → always false
+                // - UNDERLINE: server compares array with string → always false
+                // When server says wrong for these types, fall through to local comparison
+                if (!serverResult.isCorrect && (
+                    question.type === QuestionType.ORDERING ||
+                    question.type === QuestionType.UNDERLINE
+                )) {
+                    // Fall through to local validation below
+                } else {
+                    return serverResult.isCorrect ? 'correct' : 'wrong';
+                }
             }
         }
 
@@ -120,11 +131,34 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                 const isDropdownCorrect = dropdownBlanks.every((b: any) => answer?.[b.id] === b.correctAnswer);
                 return isDropdownCorrect ? 'correct' : 'wrong';
             case QuestionType.ORDERING:
-                const studentOrder = (answer as number[]) || [];
-                const correctOrder = (question as any).correctOrder || [];
-                if (studentOrder.length !== correctOrder.length) return 'wrong';
-                const isOrderCorrect = studentOrder.every((val, idx) => val === correctOrder[idx]);
-                return isOrderCorrect ? 'correct' : 'wrong';
+                let oCorrect = (question as any).correctOrder || [];
+                if (!Array.isArray(oCorrect) || oCorrect.length === 0) {
+                    if ((question as any).correctAnswer) {
+                        try { oCorrect = JSON.parse((question as any).correctAnswer); } catch { }
+                    }
+                }
+                const oItems = (question as any).items || [];
+                if (!Array.isArray(oCorrect) || oCorrect.length === 0) {
+                    oCorrect = Array.from({ length: oItems.length }, (_: any, i: number) => i);
+                }
+                // Handle both formats: array [idx, idx] or object {itemIndex: position}
+                if (Array.isArray(answer)) {
+                    if (answer.length !== oCorrect.length) return 'wrong';
+                    return answer.every((val: number, idx: number) => Number(val) === Number(oCorrect[idx])) ? 'correct' : 'wrong';
+                } else if (typeof answer === 'object' && answer !== null) {
+                    // Object format: {itemIndex: position(1-indexed)}
+                    // correctOrder[i] = itemIndex that should be at position i+1
+                    let allMatch = true;
+                    for (let i = 0; i < oCorrect.length; i++) {
+                        const expectedIdx = oCorrect[i];
+                        if (Number(answer[expectedIdx]) !== i + 1) {
+                            allMatch = false;
+                            break;
+                        }
+                    }
+                    return (allMatch && oCorrect.length > 0) ? 'correct' : 'wrong';
+                }
+                return 'wrong';
             case QuestionType.CATEGORIZATION:
                 const catItems = (question as any).items || [];
                 const isCatCorrect = catItems.every((item: any) => {
@@ -419,23 +453,89 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                     {q.type === QuestionType.ORDERING && (
                         <div className="space-y-2">
                             <p className="text-sm text-gray-600 mb-2">Thứ tự em sắp xếp:</p>
-                            {(answer || []).map((item: string, idx: number) => (
-                                <div key={idx} className="p-2 rounded-lg bg-gray-100 border border-gray-200 flex items-center gap-2">
-                                    <span className="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-sm font-bold">{idx + 1}</span>
-                                    <MathSpan content={item} className="flex-1" />
-                                </div>
-                            ))}
-                            {status !== 'correct' && q.correctOrder && (
-                                <div className="mt-3 p-3 rounded-lg bg-green-50 border border-green-200">
-                                    <p className="text-sm text-green-600 mb-1">Thứ tự đúng:</p>
-                                    {q.correctOrder.map((orderIdx: number, i: number) => (
-                                        <p key={i} className="text-green-700">{i + 1}. {q.items?.[orderIdx] || ''}</p>
-                                    ))}
-                                </div>
-                            )}
+                            {(() => {
+                                // Safe normalize ordering answer (could be array or object {index: position})
+                                let displayItems: any[] = [];
+                                if (Array.isArray(answer)) {
+                                    displayItems = answer;
+                                } else if (typeof answer === 'object' && answer !== null) {
+                                    // Convert {originalIndex: position} to ordered items array
+                                    const items = q.items || [];
+                                    const ordered = new Array(items.length).fill(null);
+                                    Object.entries(answer).forEach(([origIdx, pos]: [string, any]) => {
+                                        const position = Number(pos);
+                                        const originalIndex = Number(origIdx);
+                                        if (!isNaN(position) && position > 0 && position <= items.length && items[originalIndex]) {
+                                            ordered[position - 1] = items[originalIndex];
+                                        }
+                                    });
+                                    displayItems = ordered.filter(i => i !== null);
+                                }
+
+                                return displayItems.map((item: any, idx: number) => {
+                                    // Reconstruct text: handle string, {content} object, or char-index object
+                                    const itemText = (() => {
+                                        if (!item) return '';
+                                        if (typeof item === 'string') return item;
+                                        if (typeof item === 'object') {
+                                            if (item.content || item.text) return item.content || item.text;
+                                            const keys = Object.keys(item);
+                                            if (keys.length > 0 && keys.every((k: string) => /^\d+$/.test(k))) {
+                                                const maxIdx = Math.max(...keys.map(Number));
+                                                let r = '';
+                                                for (let ci = 0; ci <= maxIdx; ci++) r += item[ci] || '';
+                                                if (r.trim()) return r;
+                                            }
+                                        }
+                                        return String(item);
+                                    })();
+                                    return (
+                                        <div key={idx} className="p-2 rounded-lg bg-gray-100 border border-gray-200 flex items-center gap-2">
+                                            <span className="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-sm font-bold">{idx + 1}</span>
+                                            <MathSpan content={itemText} className="flex-1" />
+                                        </div>
+                                    );
+                                });
+                            })()}
+                            {status !== 'correct' && (() => {
+                                // Fallback: If correctOrder is missing but we have items, assume items are stored in correct order [0, 1, 2...]
+                                let correctOrder = q.correctOrder;
+                                if (!correctOrder || correctOrder.length === 0) {
+                                    correctOrder = Array.from({ length: q.items?.length || 0 }, (_, i) => i);
+                                }
+
+                                if (correctOrder && Array.isArray(correctOrder)) {
+                                    return (
+                                        <div className="mt-3 p-3 rounded-lg bg-green-50 border border-green-200">
+                                            <p className="text-sm text-green-600 mb-1">Thứ tự đúng:</p>
+                                            {correctOrder.map((orderIdx: number, i: number) => {
+                                                const rawItem = q.items?.[orderIdx];
+                                                const itemText = (() => {
+                                                    if (!rawItem) return '';
+                                                    if (typeof rawItem === 'string') return rawItem;
+                                                    if (typeof rawItem === 'object') {
+                                                        if (rawItem.content || rawItem.text) return rawItem.content || rawItem.text;
+                                                        const keys = Object.keys(rawItem);
+                                                        if (keys.length > 0 && keys.every((k: string) => /^\d+$/.test(k))) {
+                                                            const maxIdx = Math.max(...keys.map(Number));
+                                                            let r = '';
+                                                            for (let i = 0; i <= maxIdx; i++) r += rawItem[i] || '';
+                                                            if (r.trim()) return r;
+                                                        }
+                                                    }
+                                                    return String(rawItem);
+                                                })();
+                                                return (
+                                                    <p key={i} className="text-green-700">{i + 1}. {itemText}</p>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
                         </div>
                     )}
-
                     {/* CATEGORIZATION */}
                     {q.type === QuestionType.CATEGORIZATION && (
                         <div className="space-y-3">
@@ -582,7 +682,9 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                             <div className={`p-3 rounded-lg ${status === 'correct' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
                                 <p className="text-sm text-gray-600 mb-1">Em trả lời:</p>
                                 <p className={`font-bold ${status === 'correct' ? 'text-green-700' : 'text-red-700'}`}>
-                                    {answer || '(Không trả lời)'}
+                                    {Array.isArray(answer)
+                                        ? answer.map((idx: number) => (q.letters || [])[idx] || '?').join('')
+                                        : (answer || '(Không trả lời)')}
                                 </p>
                             </div>
                             {status !== 'correct' && (
@@ -651,7 +753,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                         </button>
                     )}
                 </div>
-            </div>
+            </div >
         );
     };
 

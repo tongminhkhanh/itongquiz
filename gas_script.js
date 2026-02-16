@@ -219,6 +219,9 @@ function saveQuiz(sheet, data) {
 
         if (q.type === 'MCQ') {
             options = q.options.join('|');
+        } else if (q.type === 'IMAGE_QUESTION') {
+            options = (q.options || []).join('|');
+            distractorsField = JSON.stringify(q.optionImages || []); // Save optionImages to distractors column
         } else if (q.type === 'TRUE_FALSE') {
             items = JSON.stringify(q.items);
         } else if (q.type === 'MATCHING') {
@@ -244,6 +247,20 @@ function saveQuiz(sheet, data) {
             items = JSON.stringify(q.words || []);
             // Save correctWordIndexes to correctAnswer column
             q.correctAnswer = JSON.stringify(q.correctWordIndexes || []);
+        } else if (q.type === 'RIDDLE') {
+            // RIDDLE: riddleLines → items, answerLabel → text, hint → sentence (line 263)
+            items = JSON.stringify(q.items || q.riddleLines || []);
+            textField = q.text || q.answerLabel || "";
+        } else if (q.type === 'WORD_SCRAMBLE') {
+            // WORD_SCRAMBLE: letters → items, correctWord → correctAnswer, hint → text
+            items = JSON.stringify(q.letters || []);
+            textField = q.text || q.hint || "";
+            q.correctAnswer = q.correctWord || q.correctAnswer || "";
+        } else if (q.type === 'ERROR_CORRECTION') {
+            // ERROR_CORRECTION: passage → text, wrongWord → distractors, correctWord → correctAnswer
+            textField = q.text || q.passage || "";
+            distractorsField = q.wrongWord || q.distractors || "";
+            q.correctAnswer = q.correctWord || q.correctAnswer || "";
         }
 
         return [
@@ -257,7 +274,7 @@ function saveQuiz(sheet, data) {
             textField,
             blanksField,
             distractorsField,
-            q.type === 'UNDERLINE' ? (q.sentence || "") : "",  // Placeholder for 'sentence' column (or real data if available)
+            (q.type === 'UNDERLINE' || q.type === 'RIDDLE') ? (q.sentence || q.hint || "") : "",  // sentence column for UNDERLINE and RIDDLE (hint)
             q.type === 'UNDERLINE' ? JSON.stringify(q.words || []) : "",  // Placeholder for 'words' column
             q.type === 'UNDERLINE' ? JSON.stringify(q.correctWordIndexes || []) : "",  // Placeholder for 'correctWordIndexes' column
             imageField  // 🖼️ Image URL for IMAGE_QUESTION type
@@ -395,6 +412,7 @@ function validateAnswers(sheet, data) {
         const qType = row[colIdx['type']];
         const correctAnswer = row[colIdx['correctAnswer']];
         const items = row[colIdx['items']];
+        const distractors = row[colIdx['distractors']]; // Needed for ERROR_CORRECTION (wrongWord)
         const studentAnswer = studentAnswers[qId];
 
         let isCorrect = false;
@@ -536,13 +554,26 @@ function validateAnswers(sheet, data) {
                 var letters = JSON.parse(items || '[]');
                 var studentIdxArr = Array.isArray(studentAnswer) ? studentAnswer : [];
                 var studentWord = studentIdxArr.map(function (idx) { return letters[idx] || ''; }).join('');
-                isCorrect = studentWord.trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
+                // Remove all spaces before comparison for multi-word answers (e.g. "rộng lượng")
+                isCorrect = studentWord.trim().toLowerCase().replace(/\s+/g, '') === String(correctAnswer).trim().toLowerCase().replace(/\s+/g, '');
             } catch (e) {
                 isCorrect = false;
             }
         } else if (qType === 'RIDDLE') {
             // RIDDLE: Simple string comparison (case-insensitive)
             isCorrect = String(studentAnswer || '').trim().toLowerCase() === String(correctAnswer || '').trim().toLowerCase();
+        } else if (qType === 'ERROR_CORRECTION') {
+            // ERROR_CORRECTION: Student sends { wrongWord, correctWord }
+            // correctAnswer = the correct word, distractors = the wrong word in passage
+            try {
+                var ecStudentWrong = String((studentAnswer && studentAnswer.wrongWord) || '').trim().toLowerCase();
+                var ecStudentCorrect = String((studentAnswer && studentAnswer.correctWord) || '').trim().toLowerCase();
+                var ecExpectedWrong = String(distractors || '').trim().toLowerCase();
+                var ecExpectedCorrect = String(correctAnswer || '').trim().toLowerCase();
+                isCorrect = ecStudentWrong === ecExpectedWrong && ecStudentCorrect === ecExpectedCorrect;
+            } catch (e) {
+                isCorrect = false;
+            }
         }
 
         if (isCorrect) correctCount++;

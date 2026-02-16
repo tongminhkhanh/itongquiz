@@ -3,6 +3,7 @@ import { Question, QuestionType } from '../../types';
 import { CheckCircle, RefreshCcw } from 'lucide-react';
 import GeometryRenderer, { GeometryData } from '../common/GeometryRenderer';
 import { renderMathJax } from '../../hooks/useMathJax';
+import DraggableCategorization from './DraggableCategorization';
 
 interface QuestionRendererProps {
     question: Question;
@@ -494,9 +495,41 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                     const currentAnswers = (answers[q.id] as Record<number, number>) || {};
                     const items = (q as any).items || [];
 
+
+                    // Robust helper: extract text from any item format
+                    const extractItemText = (item: any): string => {
+                        if (!item && item !== 0) return '';
+                        if (typeof item === 'string') return item;
+                        if (typeof item === 'number') return String(item);
+                        // Object handling
+                        if (typeof item === 'object') {
+                            // Try common text properties first
+                            const textVal = item.content || item.text || item.sentence || item.label || item.name || item.value;
+                            if (textVal && typeof textVal === 'string') return textVal;
+                            if (textVal && typeof textVal === 'object') return extractItemText(textVal);
+                            // Check if it's a character-index object: {"0":"H","1":"o","2":"a",...}
+                            // This happens when strings are spread into objects during save/load
+                            const keys = Object.keys(item);
+                            if (keys.length > 0 && keys.every(k => /^\d+$/.test(k))) {
+                                const maxIdx = Math.max(...keys.map(Number));
+                                let result = '';
+                                for (let i = 0; i <= maxIdx; i++) {
+                                    result += item[i] || '';
+                                }
+                                if (result.trim()) return result;
+                            }
+                            // Last resort
+                            return JSON.stringify(item);
+                        }
+                        return String(item);
+                    };
+
                     // Visual Shuffle: Shuffle items for display but keep track of original indices
                     const shuffledItems = React.useMemo(() => {
-                        const itemsWithIndex = items.map((content: string, idx: number) => ({ content, idx }));
+                        const itemsWithIndex = items.map((item: any, idx: number) => ({
+                            content: extractItemText(item),
+                            idx
+                        }));
                         // Fisher-Yates shuffle
                         for (let i = itemsWithIndex.length - 1; i > 0; i--) {
                             const j = Math.floor(Math.random() * (i + 1));
@@ -587,7 +620,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                             <button
                                                 key={idx}
                                                 onClick={() => onAnswerChange(q.id, label)}
-                                                className={`relative rounded-xl border-2 transition-all overflow-hidden ${isSelected
+                                                className={`relative rounded-xl border-2 transition-all overflow-hidden flex flex-col ${isSelected
                                                     ? 'border-orange-500 ring-2 ring-orange-300 shadow-lg'
                                                     : 'border-gray-200 hover:border-orange-300 hover:shadow-md'
                                                     }`}
@@ -599,18 +632,23 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                     }`}>
                                                     {label}
                                                 </span>
-                                                {imgUrl ? (
+
+                                                {/* Option Image */}
+                                                {imgUrl && (
                                                     <img
                                                         src={imgUrl}
                                                         alt={`Option ${label}`}
-                                                        className="w-full h-40 object-cover"
+                                                        className="w-full h-40 object-cover bg-gray-50"
                                                         onError={(e) => {
                                                             (e.target as HTMLImageElement).style.display = 'none';
                                                         }}
                                                     />
-                                                ) : (
-                                                    <div className="p-4 pt-8 text-left">
-                                                        <MathSpan content={opt} className="text-sm" />
+                                                )}
+
+                                                {/* Option Text - Render if exists */}
+                                                {opt && opt.trim() && (
+                                                    <div className={`p-3 text-left w-full flex-1 ${imgUrl ? 'border-t border-gray-100 bg-white' : 'pt-10'}`}>
+                                                        <MathSpan content={opt} className="text-sm font-medium text-gray-800" />
                                                     </div>
                                                 )}
                                             </button>
@@ -778,156 +816,15 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                     const items = (q as any).items || [];
                     const instruction = (q as any).instruction || '';
                     const currentAnswers = (answers[q.id] as Record<string, string>) || {};
-                    const selectedItem = currentAnswers._selected || null;
-
-                    // Items chưa được phân loại
-                    const unplacedItems = items.filter((item: any) => !currentAnswers[item.id]);
-
-                    // Lấy items đã phân loại vào category
-                    const getItemsInCategory = (catId: string) => {
-                        return items.filter((item: any) => currentAnswers[item.id] === catId);
-                    };
-
-                    const handleItemClick = (itemId: string) => {
-                        if (currentAnswers[itemId]) {
-                            // Item đã được phân loại → trả về vùng chưa phân loại
-                            const newAnswers = { ...currentAnswers };
-                            delete newAnswers[itemId];
-                            onAnswerChange(q.id, newAnswers);
-                        } else if (selectedItem === itemId) {
-                            // Bỏ chọn item
-                            const newAnswers = { ...currentAnswers };
-                            delete newAnswers._selected;
-                            onAnswerChange(q.id, newAnswers);
-                        } else {
-                            // Chọn item
-                            onAnswerChange(q.id, { ...currentAnswers, _selected: itemId });
-                        }
-                    };
-
-                    const handleCategoryClick = (catId: string) => {
-                        if (selectedItem && !currentAnswers[selectedItem]) {
-                            // Di chuyển item vào category
-                            const newAnswers = { ...currentAnswers, [selectedItem]: catId };
-                            delete newAnswers._selected;
-                            onAnswerChange(q.id, newAnswers);
-                        }
-                    };
-
-                    // Màu sắc cho các items
-                    const categoryColors = [
-                        { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-700', hover: 'hover:bg-blue-200' },
-                        { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-700', hover: 'hover:bg-green-200' },
-                        { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-700', hover: 'hover:bg-purple-200' },
-                        { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-700', hover: 'hover:bg-orange-200' },
-                        { bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-700', hover: 'hover:bg-pink-200' },
-                    ];
-
-                    const getCategoryColor = (catIndex: number) => categoryColors[catIndex % categoryColors.length];
 
                     return (
-                        <div className="space-y-4">
-                            {/* Instruction */}
-                            {instruction && (
-                                <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
-                                    <p className="text-sm text-amber-800">
-                                        📝 <em>{instruction}</em>
-                                    </p>
-                                </div>
-                            )}
-
-                            {/* Items chưa phân loại */}
-                            <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300">
-                                <p className="text-xs font-bold text-gray-600 mb-3 uppercase tracking-wide">
-                                    Các mục cần phân loại (Chạm để chọn):
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                    {unplacedItems.length === 0 ? (
-                                        <p className="text-gray-400 text-sm italic">Đã phân loại hết!</p>
-                                    ) : (
-                                        unplacedItems.map((item: any) => {
-                                            const isSelected = selectedItem === item.id;
-                                            return (
-                                                <button
-                                                    key={item.id}
-                                                    onClick={() => handleItemClick(item.id)}
-                                                    className={`px-4 py-2 rounded-lg font-medium text-sm shadow-sm transition-all transform active:scale-95 ${isSelected
-                                                        ? 'bg-indigo-500 text-white ring-2 ring-indigo-300 ring-offset-2 scale-105'
-                                                        : 'bg-white border border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
-                                                        }`}
-                                                >
-                                                    <MathSpan content={item.content} />
-                                                </button>
-                                            );
-                                        })
-                                    )}
-                                </div>
-                                {selectedItem && (
-                                    <p className="text-xs text-indigo-600 mt-3 font-medium">
-                                        👆 Đã chọn! Giờ hãy chạm vào nhóm bên dưới để xếp vào.
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Categories */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {categories.map((cat: any, catIdx: number) => {
-                                    const color = getCategoryColor(catIdx);
-                                    const itemsInCat = getItemsInCategory(cat.id);
-                                    const isHighlighted = selectedItem && !currentAnswers[selectedItem];
-
-                                    return (
-                                        <div
-                                            key={cat.id}
-                                            onClick={() => handleCategoryClick(cat.id)}
-                                            className={`p-4 rounded-xl border-2 min-h-[120px] transition-all ${isHighlighted
-                                                ? `${color.border} ${color.bg} cursor-pointer ring-2 ring-offset-1 ring-indigo-300`
-                                                : `border-gray-200 bg-white`
-                                                }`}
-                                        >
-                                            <p className={`font-bold text-sm mb-3 ${color.text}`}>
-                                                {cat.name}
-                                            </p>
-                                            <div className="flex flex-wrap gap-2 min-h-[40px]">
-                                                {itemsInCat.length === 0 ? (
-                                                    <p className="text-gray-300 text-xs italic">
-                                                        {isHighlighted ? 'Chạm vào đây để thả...' : 'Chưa có mục nào'}
-                                                    </p>
-                                                ) : (
-                                                    itemsInCat.map((item: any) => (
-                                                        <button
-                                                            key={item.id}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleItemClick(item.id);
-                                                            }}
-                                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium ${color.bg} ${color.text} ${color.border} border transition-all hover:opacity-80`}
-                                                            title="Chạm để bỏ ra"
-                                                        >
-                                                            <MathSpan content={item.content} />
-                                                            <span className="ml-1 opacity-60">×</span>
-                                                        </button>
-                                                    ))
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Status and Reset */}
-                            <div className="flex justify-between items-center">
-                                <p className="text-xs text-gray-500">
-                                    Đã phân loại: {Object.keys(currentAnswers).filter(k => k !== '_selected').length}/{items.length}
-                                </p>
-                                <button
-                                    onClick={() => onAnswerChange(q.id, {})}
-                                    className="text-xs text-red-500 hover:underline flex items-center"
-                                >
-                                    <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này
-                                </button>
-                            </div>
-                        </div>
+                        <DraggableCategorization
+                            categories={categories}
+                            items={items}
+                            instruction={instruction}
+                            currentAnswers={currentAnswers}
+                            onAnswerChange={(newAnswers) => onAnswerChange(q.id, newAnswers)}
+                        />
                     );
                 })()}
             </div>

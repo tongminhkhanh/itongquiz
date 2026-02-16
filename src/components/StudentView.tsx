@@ -18,8 +18,6 @@ interface Props {
 }
 
 const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
-  // DEBUG: Log quiz data to see structure
-  console.log('🎓 StudentView quiz data:', JSON.stringify(quiz, null, 2));
 
   // Get student session from store (if logged in via Student Portal)
   const classroomStore = useClassroomStore();
@@ -471,6 +469,40 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
             sSorted.every((val, idx) => val === cSorted[idx]);
         }
 
+        // 🔧 Client-side override for ORDERING
+        // Server bug: compares JSON.stringify(object) with JSON.stringify(array) → always false
+        // Student answer is Record<number, number> {itemIndex: position}, correctOrder is number[]
+        if (q.type === QuestionType.ORDERING && !isCorrect && studentAnswer) {
+          let oCorrectOrder = (q as any).correctOrder || [];
+          if (!Array.isArray(oCorrectOrder) || oCorrectOrder.length === 0) {
+            if ((q as any).correctAnswer) {
+              try { oCorrectOrder = JSON.parse((q as any).correctAnswer); } catch { }
+            }
+          }
+          const oItems = (q as any).items || [];
+          if (!Array.isArray(oCorrectOrder) || oCorrectOrder.length === 0) {
+            oCorrectOrder = Array.from({ length: oItems.length }, (_: any, i: number) => i);
+          }
+
+          if (Array.isArray(studentAnswer)) {
+            // Array format: direct comparison
+            isCorrect = studentAnswer.length === oCorrectOrder.length &&
+              studentAnswer.every((val: number, idx: number) => Number(val) === Number(oCorrectOrder[idx]));
+          } else if (typeof studentAnswer === 'object' && studentAnswer !== null) {
+            // Object format: {itemIndex: position(1-indexed)}
+            let allMatch = true;
+            for (let i = 0; i < oCorrectOrder.length; i++) {
+              const expectedItemIdx = oCorrectOrder[i];
+              const studentPos = studentAnswer[expectedItemIdx];
+              if (Number(studentPos) !== i + 1) {
+                allMatch = false;
+                break;
+              }
+            }
+            isCorrect = allMatch && oCorrectOrder.length > 0;
+          }
+        }
+
         // Build type-specific snapshot fields
         const typeSpecificFields: Record<string, any> = {};
         const qa = q as any;
@@ -533,11 +565,11 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         };
       });
 
-      // Recalculate score after client-side UNDERLINE correction
-      // Count how many UNDERLINE questions were corrected from wrong → right
+      // Recalculate score after client-side UNDERLINE + ORDERING corrections
+      // Count how many questions were corrected from wrong → right
       let correctedCorrectCount = correctCount;
       quiz.questions.forEach(q => {
-        if (q.type === QuestionType.UNDERLINE) {
+        if (q.type === QuestionType.UNDERLINE || q.type === QuestionType.ORDERING) {
           const serverResult = validationResult.details?.find((d: any) => d.questionId === q.id);
           const clientResult = answersWithSnapshots[q.id];
           // If server said wrong but client override says correct → add 1

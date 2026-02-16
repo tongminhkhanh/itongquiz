@@ -68,7 +68,14 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
             const serverResult = result.validationDetails.find(d => d.questionId === question.id);
             if (serverResult) {
                 if (!answer && answer !== false && answer !== 0) return 'skipped';
-                return serverResult.isCorrect ? 'correct' : 'wrong';
+                // Override: Server has bugs for ORDERING and UNDERLINE → fall through to local
+                if (!serverResult.isCorrect && (
+                    question.type === 'ORDERING' || question.type === 'UNDERLINE'
+                )) {
+                    // Fall through to local validation below
+                } else {
+                    return serverResult.isCorrect ? 'correct' : 'wrong';
+                }
             }
         }
 
@@ -121,10 +128,51 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                 const isDropdownCorrect = dropdownBlanks.every((b: any) => answer?.[b.id] === b.correctAnswer);
                 return isDropdownCorrect ? 'correct' : 'wrong';
             case 'ORDERING':
-                const studentOrder = (answer as number[]) || [];
-                const correctOrder = (question as any).correctOrder || [];
-                if (studentOrder.length !== correctOrder.length) return 'wrong';
-                const isOrderCorrect = studentOrder.every((val: number, idx: number) => val === correctOrder[idx]);
+                let studentIndices: number[] = [];
+                const rawAnswer = answer;
+
+                // Hydrate correctOrder safely (handle if it's stringified JSON or missing)
+                let correctOrder = (question as any).correctOrder;
+                if (!Array.isArray(correctOrder) && correctOrder) {
+                    try { correctOrder = JSON.parse(correctOrder); } catch { }
+                }
+                if (!Array.isArray(correctOrder) && (question as any).correctAnswer) {
+                    try { correctOrder = JSON.parse((question as any).correctAnswer); } catch { }
+                }
+
+                // If correctOrder is strict array
+                correctOrder = Array.isArray(correctOrder) ? correctOrder : [];
+
+                const itemsCount = (question as any).items?.length || 0;
+
+                // Fallback: If correctOrder is missing but we have items, assume items are stored in correct order [0, 1, 2...]
+                if (correctOrder.length === 0 && itemsCount > 0) {
+                    correctOrder = Array.from({ length: itemsCount }, (_, i) => i);
+                }
+
+                // Normalize answer: Could be array of indices (if changed later) or object {originalIndex: position}
+                if (Array.isArray(rawAnswer)) {
+                    studentIndices = rawAnswer;
+                } else if (typeof rawAnswer === 'object' && rawAnswer !== null) {
+                    // Convert {originalIndex: position} -> [originalIndex at pos 1, originalIndex at pos 2...]
+                    const tempOrdered = new Array(Math.max(itemsCount, correctOrder.length)).fill(-1);
+                    Object.entries(rawAnswer).forEach(([origIdx, pos]) => {
+                        const position = Number(pos);
+                        const originalIndex = Number(origIdx);
+                        if (!isNaN(position) && position > 0) {
+                            tempOrdered[position - 1] = originalIndex;
+                        }
+                    });
+                    studentIndices = tempOrdered;
+                }
+
+                if (studentIndices.length !== correctOrder.length) {
+                    return 'wrong';
+                }
+
+                const isOrderCorrect = studentIndices.every((val: number, idx: number) => {
+                    return Number(val) === Number(correctOrder[idx]);
+                });
                 return isOrderCorrect ? 'correct' : 'wrong';
             case 'CATEGORIZATION':
                 const catItems = (question as any).items || [];

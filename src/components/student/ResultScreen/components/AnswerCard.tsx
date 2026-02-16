@@ -84,6 +84,7 @@ const AnswerCard: React.FC<Props> = ({
             IMAGE_QUESTION: 'Có hình',
             DROPDOWN: 'Dropdown',
             ORDERING: 'Sắp xếp',
+            ERROR_CORRECTION: 'Tìm từ sai',
         };
         return typeLabels[question.type] || question.type;
     };
@@ -130,11 +131,46 @@ const AnswerCard: React.FC<Props> = ({
             case QuestionType.ORDERING: {
                 // Convert index array to text items
                 const items = q.items || [];
+                // Helper to extract text from item (string or {content} object)
+                // Helper to extract text from item (string, {content} object, or char-index object)
+                const getItemText = (item: any): string => {
+                    if (typeof item === 'string') return item;
+                    if (typeof item === 'object' && item !== null) {
+                        if (item.content || item.text) return item.content || item.text;
+                        // Reconstruct char-index object: {"0":"H","1":"o",...}
+                        const keys = Object.keys(item);
+                        if (keys.length > 0 && keys.every(k => /^\d+$/.test(k))) {
+                            const maxIdx = Math.max(...keys.map(Number));
+                            let result = '';
+                            for (let i = 0; i <= maxIdx; i++) result += item[i] || '';
+                            if (result.trim()) return result;
+                        }
+                    }
+                    return String(item);
+                };
+                // Normalize studentAnswer (array or {index: position})
+                let displayAnswer: any[] = [];
                 if (Array.isArray(studentAnswer)) {
-                    return studentAnswer.map((item: any) => {
+                    displayAnswer = studentAnswer;
+                } else if (typeof studentAnswer === 'object' && studentAnswer !== null) {
+                    const ordered = new Array(items.length).fill(null);
+                    Object.entries(studentAnswer).forEach(([idx, pos]: [string, any]) => {
+                        const p = Number(pos);
+                        if (!isNaN(p) && p > 0 && p <= items.length) {
+                            ordered[p - 1] = items[Number(idx)];
+                        }
+                    });
+                    displayAnswer = ordered.filter(i => i !== null);
+                }
+
+                if (displayAnswer.length > 0) {
+                    return displayAnswer.map((item: any) => {
                         if (typeof item === 'string') return item;
-                        if (typeof item === 'number') return items[item] || `[${item}]`;
-                        return String(item);
+                        if (typeof item === 'number') {
+                            const resolved = items[item];
+                            return resolved ? getItemText(resolved) : `[${item}]`;
+                        }
+                        return getItemText(item);
                     }).join(' → ');
                 }
                 return 'Không trả lời';
@@ -146,6 +182,13 @@ const AnswerCard: React.FC<Props> = ({
                     return studentAnswer.map((idx: number) => letters[idx] || '?').join('');
                 }
                 return String(studentAnswer);
+            }
+            case QuestionType.ERROR_CORRECTION: {
+                const ecAnswer = studentAnswer as { wrongWord?: string; correctWord?: string };
+                if (ecAnswer?.wrongWord || ecAnswer?.correctWord) {
+                    return `${ecAnswer.wrongWord || '?'} → ${ecAnswer.correctWord || '?'}`;
+                }
+                return 'Không trả lời';
             }
             case QuestionType.CATEGORIZATION: {
                 // Show count: "4/6 đúng" or simplified

@@ -14,6 +14,8 @@
     "cypress:run": "cypress run"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/utilities": "^3.2.2",
     "@google/genai": "^1.34.0",
     "@headlessui/react": "^2.2.9",
     "@types/papaparse": "^5.5.2",

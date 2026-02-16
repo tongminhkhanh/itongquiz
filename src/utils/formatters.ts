@@ -77,9 +77,27 @@ export const formatMathText = (text: string | any): string => {
     if (typeof text !== 'string') {
         // If it's an array (like correctAnswers), join with comma
         if (Array.isArray(text)) {
-            return text.join(', ');
+            return text.map((item: any) => typeof item === 'string' ? item : formatMathText(item)).join(', ');
         }
-        // Convert other types to string
+        // If it's an object with a text property, extract it
+        if (typeof text === 'object' && text !== null) {
+            const extracted = text.content || text.text || text.sentence || text.label || text.name || text.value;
+            if (extracted) return formatMathText(extracted);
+            // Check if it's a character-index object: {"0":"H","1":"o","2":"a",...}
+            // This happens when strings are spread into objects during save/load
+            const keys = Object.keys(text);
+            if (keys.length > 0 && keys.every(k => /^\d+$/.test(k))) {
+                const maxIdx = Math.max(...keys.map(Number));
+                let reconstructed = '';
+                for (let i = 0; i <= maxIdx; i++) {
+                    reconstructed += text[i] || '';
+                }
+                if (reconstructed.trim()) return formatMathText(reconstructed);
+            }
+            // Last resort: JSON stringify to show something useful instead of [object Object]
+            return JSON.stringify(text);
+        }
+        // Convert other primitive types to string
         return String(text);
     }
     if (!text) return "";

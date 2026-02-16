@@ -335,6 +335,8 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
         if (question.type === QuestionType.DROPDOWN) {
             setEditDropdownText((question as any).text || '');
             setEditDropdownBlanks((question as any).blanks ? (question as any).blanks.map((b: any) => ({ ...b })) : []);
+            // Fix: Load image for DROPDOWN
+            setEditImageUrl((question as any).image || '');
         }
 
         // UNDERLINE specific
@@ -348,6 +350,13 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
         if (question.type === QuestionType.CATEGORIZATION) {
             setEditCategories((question as any).categories ? (question as any).categories.map((c: any) => ({ ...c })) : []);
             setEditCategorizationItems((question as any).items ? (question as any).items.map((i: any) => ({ ...i })) : []);
+        }
+
+        // ERROR_CORRECTION specific
+        if (question.type === QuestionType.ERROR_CORRECTION) {
+            setEditPassage((question as any).passage || '');
+            setEditWrongWord((question as any).wrongWord || '');
+            setEditCorrectWord2((question as any).correctWord || '');
         }
 
         // Difficulty level (common for all types)
@@ -437,6 +446,8 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             if (updated.type === QuestionType.DROPDOWN) {
                 updated.text = editDropdownText;
                 updated.blanks = editDropdownBlanks;
+                // Fix: Save image for DROPDOWN
+                updated.image = editImageUrl;
             }
 
             // UNDERLINE specific - always save all fields
@@ -450,6 +461,13 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             if (updated.type === QuestionType.CATEGORIZATION) {
                 updated.categories = editCategories;
                 updated.items = editCategorizationItems;
+            }
+
+            // ERROR_CORRECTION specific - always save all fields
+            if (updated.type === QuestionType.ERROR_CORRECTION) {
+                updated.passage = editPassage;
+                updated.wrongWord = editWrongWord;
+                updated.correctWord = editCorrectWord2;
             }
 
             // Difficulty level (common for all types)
@@ -1651,28 +1669,52 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                         <p className="text-xs text-gray-500 mb-2">Nếu đáp án là hình ảnh, dán URL ảnh vào ô tương ứng. Để trống nếu đáp án là chữ.</p>
                                         <div className="space-y-2">
                                             {editOptions.map((_, i) => (
-                                                <div key={i} className="flex items-start gap-2">
+                                                <div key={i} className="flex items-start gap-2 border p-3 rounded-lg bg-gray-50">
                                                     <span className="w-6 text-center font-bold text-gray-500 mt-2">
                                                         {String.fromCharCode(65 + i)}.
                                                     </span>
-                                                    <div className="flex-1">
-                                                        <input
-                                                            type="text"
-                                                            value={editOptionImages[i] || ''}
-                                                            onChange={(e) => {
-                                                                const newImgs = [...editOptionImages];
-                                                                newImgs[i] = e.target.value;
-                                                                setEditOptionImages(newImgs);
-                                                            }}
-                                                            className="w-full px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-teal-500 text-sm"
-                                                            placeholder={`URL ảnh đáp án ${String.fromCharCode(65 + i)} (tùy chọn)`}
-                                                        />
-                                                        {editOptionImages[i] && (
-                                                            <img src={editOptionImages[i]} alt={`Option ${String.fromCharCode(65 + i)}`}
-                                                                className="mt-1 max-h-20 rounded border"
-                                                                onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                                                    <div className="flex-1 space-y-2">
+                                                        {/* Text Input */}
+                                                        <div>
+                                                            <label className="text-xs font-semibold text-gray-600 block mb-1">
+                                                                Nội dung (Text):
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={editOptions[i] || ''}
+                                                                onChange={(e) => {
+                                                                    const newOptions = [...editOptions];
+                                                                    newOptions[i] = e.target.value;
+                                                                    setEditOptions(newOptions);
+                                                                }}
+                                                                className="w-full px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                                                placeholder={`Nội dung đáp án ${String.fromCharCode(65 + i)}`}
                                                             />
-                                                        )}
+                                                        </div>
+
+                                                        {/* Image URL Input */}
+                                                        <div>
+                                                            <label className="text-xs font-semibold text-gray-600 block mb-1">
+                                                                Link ảnh (URL) - Tùy chọn:
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={editOptionImages[i] || ''}
+                                                                onChange={(e) => {
+                                                                    const newImgs = [...editOptionImages];
+                                                                    newImgs[i] = e.target.value;
+                                                                    setEditOptionImages(newImgs);
+                                                                }}
+                                                                className="w-full px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-teal-500 text-sm font-mono"
+                                                                placeholder={`https://...`}
+                                                            />
+                                                            {editOptionImages[i] && (
+                                                                <img src={editOptionImages[i]} alt={`Option ${String.fromCharCode(65 + i)}`}
+                                                                    className="mt-2 max-h-24 rounded border bg-white"
+                                                                    onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                                                                />
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}
@@ -2052,6 +2094,50 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 onClick={() => setEditCategorizationItems([...editCategorizationItems, { id: `item-${Date.now()}`, content: '', categoryId: '' }])}
                                                 className="text-sm text-blue-600 hover:underline"
                                             >+ Thêm mục</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ERROR_CORRECTION - Tìm từ sai */}
+                            {editingQuestion.type === QuestionType.ERROR_CORRECTION && (
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Đoạn văn chứa từ sai
+                                        </label>
+                                        <textarea
+                                            value={editPassage}
+                                            onChange={(e) => setEditPassage(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                                            rows={4}
+                                            placeholder="Nhập đoạn văn/câu chứa từ viết sai..."
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                🔴 Từ sai
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editWrongWord}
+                                                onChange={(e) => setEditWrongWord(e.target.value)}
+                                                className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-sm bg-red-50"
+                                                placeholder="Từ viết sai trong đoạn văn"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                🟢 Từ đúng
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editCorrectWord2}
+                                                onChange={(e) => setEditCorrectWord2(e.target.value)}
+                                                className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm bg-green-50"
+                                                placeholder="Từ đúng (sửa lại)"
+                                            />
                                         </div>
                                     </div>
                                 </div>

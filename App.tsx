@@ -29,6 +29,7 @@ const App: React.FC = () => {
         quizStore.loadQuizzes();
         quizStore.loadResults();
 
+
         // Check URL for quizId - if it's an IOE quiz, load IOE quizzes
         const params = new URLSearchParams(window.location.search);
         const quizId = params.get('quizId') || params.get('quiz');

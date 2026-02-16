@@ -334,7 +334,7 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         type: QuestionType.ORDERING,
                         question: unescapeSheetValue(row.question),
                         items: row.items ? JSON.parse(row.items) : [],
-                        correctOrder: row.correctOrder ? JSON.parse(row.correctOrder) : []
+                        correctOrder: row.correctAnswer ? JSON.parse(row.correctAnswer) : [] // Fix: correctOrder is stored in correctAnswer column
                     } as any;
                 } else if (row.type === QuestionType.IMAGE_QUESTION) {
                     question = {
@@ -343,6 +343,7 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         question: unescapeSheetValue(row.question),
                         image: row.image || "",
                         options: processOptions(row.options),
+                        optionImages: row.distractors ? JSON.parse(row.distractors) : [], // Fix: Map optionImages from distractors column
                         correctAnswer: unescapeSheetValue(row.correctAnswer)
                     } as any;
                 } else if (row.type === QuestionType.DROPDOWN) {
@@ -351,7 +352,8 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         type: QuestionType.DROPDOWN,
                         question: unescapeSheetValue(row.question),
                         text: unescapeSheetValue(row.text || ""),
-                        blanks: row.blanks ? JSON.parse(row.blanks) : []
+                        blanks: row.blanks ? JSON.parse(row.blanks) : [],
+                        image: row.image || "" // Fix: Map image field
                     } as any;
                 } else if (row.type === QuestionType.UNDERLINE) {
                     question = {
@@ -362,6 +364,17 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         words: row.items ? JSON.parse(row.items) : [], // words stored in items column
                         correctWordIndexes: row.correctAnswer ? JSON.parse(row.correctAnswer) : []
                     } as any;
+                } else if (row.type === QuestionType.RIDDLE) {
+                    // RIDDLE: riddleLines -> items, answerLabel -> text, hint -> sentence
+                    question = {
+                        id: row.id,
+                        type: QuestionType.RIDDLE,
+                        question: unescapeSheetValue(row.question),
+                        riddleLines: row.items ? JSON.parse(row.items) : [],
+                        answerLabel: unescapeSheetValue(row.text || ""),
+                        hint: unescapeSheetValue(row.sentence || ""),
+                        correctAnswer: unescapeSheetValue(row.correctAnswer)
+                    } as any;
                 } else if (row.type === QuestionType.CATEGORIZATION) {
                     // CATEGORIZATION: items stored in 'items' column, categories stored in 'distractors' column
                     question = {
@@ -370,6 +383,26 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         question: unescapeSheetValue(row.question),
                         items: row.items ? JSON.parse(row.items) : [],
                         categories: row.distractors ? JSON.parse(row.distractors) : []
+                    } as any;
+                } else if (row.type === QuestionType.WORD_SCRAMBLE) {
+                    // WORD_SCRAMBLE: letters → items, correctWord → correctAnswer, hint → text
+                    question = {
+                        id: row.id,
+                        type: QuestionType.WORD_SCRAMBLE,
+                        question: unescapeSheetValue(row.question),
+                        letters: row.items ? JSON.parse(row.items) : [],
+                        correctWord: unescapeSheetValue(row.correctAnswer),
+                        hint: unescapeSheetValue(row.text || ""),
+                    } as any;
+                } else if (row.type === QuestionType.ERROR_CORRECTION) {
+                    // ERROR_CORRECTION: passage → text, wrongWord → distractors, correctWord → correctAnswer
+                    question = {
+                        id: row.id,
+                        type: QuestionType.ERROR_CORRECTION,
+                        question: unescapeSheetValue(row.question),
+                        passage: unescapeSheetValue(row.text || ""),
+                        wrongWord: unescapeSheetValue(row.distractors || ""),
+                        correctWord: unescapeSheetValue(row.correctAnswer),
                     } as any;
                 }
 
@@ -423,6 +456,32 @@ const prepareQuizForSave = (quiz: Quiz) => {
         // Escape options array
         if (eq.options && Array.isArray(eq.options)) {
             eq.options = eq.options.map(escapeSheetValue);
+        }
+
+        // RIDDLE mapping for save
+        if (eq.type === QuestionType.RIDDLE) {
+            if (eq.riddleLines) eq.items = eq.riddleLines; // Save riddleLines to items column
+            if (eq.answerLabel) eq.text = escapeSheetValue(eq.answerLabel); // Save answerLabel to text column
+            if (eq.hint) eq.sentence = escapeSheetValue(eq.hint); // Save hint to sentence column
+        }
+
+        // IMAGE_QUESTION mapping for save
+        if (eq.type === QuestionType.IMAGE_QUESTION) {
+            if (eq.optionImages) eq.distractors = eq.optionImages; // Save optionImages to distractors column (GAS handles JSON.stringify)
+        }
+
+        // WORD_SCRAMBLE mapping for save
+        if (eq.type === QuestionType.WORD_SCRAMBLE) {
+            if (eq.letters) eq.items = eq.letters; // Save letters to items column
+            if (eq.correctWord) eq.correctAnswer = escapeSheetValue(eq.correctWord); // Save correctWord to correctAnswer column
+            if (eq.hint) eq.text = escapeSheetValue(eq.hint); // Save hint to text column
+        }
+
+        // ERROR_CORRECTION mapping for save
+        if (eq.type === QuestionType.ERROR_CORRECTION) {
+            if (eq.passage) eq.text = escapeSheetValue(eq.passage); // Save passage to text column
+            if (eq.wrongWord) eq.distractors = eq.wrongWord; // Save wrongWord to distractors column
+            if (eq.correctWord) eq.correctAnswer = escapeSheetValue(eq.correctWord); // Save correctWord to correctAnswer column
         }
 
         return eq;

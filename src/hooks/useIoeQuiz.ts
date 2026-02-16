@@ -161,8 +161,16 @@ export function useQuizScoring(
                 if (allCorrect) correctCount++;
             } else if (q.type === QuestionType.ORDERING) {
                 const studentAns = answers[q.id] as number[] || [];
-                const correctOrder = (q as any).correctOrder || [];
-                if (JSON.stringify(studentAns) === JSON.stringify(correctOrder)) correctCount++;
+                let correctOrder = (q as any).correctOrder || [];
+                // Fallback: if correctOrder is empty, assume DB order is correct
+                const orderItems = (q as any).items || [];
+                if ((!correctOrder || correctOrder.length === 0) && orderItems.length > 0) {
+                    correctOrder = Array.from({ length: orderItems.length }, (_: any, i: number) => i);
+                }
+                if (studentAns.length === correctOrder.length &&
+                    studentAns.every((val: number, idx: number) => Number(val) === Number(correctOrder[idx]))) {
+                    correctCount++;
+                }
             }
         });
 

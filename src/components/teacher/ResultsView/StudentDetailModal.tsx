@@ -158,6 +158,28 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                     sortedCorrect.every((idx: number, i: number) => idx === sortedStudent[i]);
             }
 
+            // ORDERING: Compare student order with correctOrder
+            if (questionType === 'ORDERING') {
+                let oCorrect = correctAnswer;
+                if (!Array.isArray(oCorrect)) {
+                    try { oCorrect = JSON.parse(oCorrect); } catch { oCorrect = []; }
+                }
+                if (!Array.isArray(oCorrect) || oCorrect.length === 0) {
+                    const itemCount = items?.length || 0;
+                    oCorrect = Array.from({ length: itemCount }, (_: any, i: number) => i);
+                }
+                if (Array.isArray(selectedAnswer)) {
+                    return selectedAnswer.length === oCorrect.length &&
+                        selectedAnswer.every((val: number, idx: number) => Number(val) === Number(oCorrect[idx]));
+                } else if (typeof selectedAnswer === 'object' && selectedAnswer !== null) {
+                    for (let i = 0; i < oCorrect.length; i++) {
+                        if (Number(selectedAnswer[oCorrect[i]]) !== i + 1) return false;
+                    }
+                    return oCorrect.length > 0;
+                }
+                return false;
+            }
+
             // For unknown types, return undefined
             return undefined;
         };
@@ -225,7 +247,8 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                         (questionType === 'DRAG_DROP' && blanks) ||
                         (questionType === 'DROPDOWN' && blanks) ||
                         (questionType === 'TRUE_FALSE' && items) ||
-                        (questionType === 'UNDERLINE' && correctWordIndexes);
+                        (questionType === 'UNDERLINE' && correctWordIndexes) ||
+                        (questionType === 'ORDERING');
 
                     if (canRecalculate) {
                         const calculated = calculateIsCorrect(
@@ -567,14 +590,51 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
 
                                             {/* ORDERING render */}
                                             {questionType === 'ORDERING' && items && items.length > 0 && (() => {
-                                                const studentOrder: any[] = Array.isArray(selectedAnswer) ? selectedAnswer : [];
+                                                const studentOrderInput = selectedAnswer;
                                                 const correctOrd: number[] = correctOrder || [];
+
+                                                // Normalize studentOrder (array or {index: position})
+                                                let studentOrder: any[] = [];
+                                                if (Array.isArray(studentOrderInput)) {
+                                                    studentOrder = studentOrderInput;
+                                                } else if (typeof studentOrderInput === 'object' && studentOrderInput !== null) {
+                                                    const ordered = new Array(items.length).fill(null);
+                                                    Object.entries(studentOrderInput).forEach(([idx, pos]: [string, any]) => {
+                                                        const p = Number(pos);
+                                                        if (!isNaN(p) && p > 0 && p <= items.length) {
+                                                            ordered[p - 1] = items[Number(idx)];
+                                                        }
+                                                    });
+                                                    studentOrder = ordered.filter(i => i !== null);
+                                                }
+                                                // Helper to extract text from item (string, {content} object, or char-index object)
+                                                const getItemText = (item: any): string => {
+                                                    if (typeof item === 'string') return item;
+                                                    if (typeof item === 'object' && item !== null) {
+                                                        if (item.content || item.text) return item.content || item.text;
+                                                        const keys = Object.keys(item);
+                                                        if (keys.length > 0 && keys.every((k: string) => /^\d+$/.test(k))) {
+                                                            const maxIdx = Math.max(...keys.map(Number));
+                                                            let r = '';
+                                                            for (let i = 0; i <= maxIdx; i++) r += item[i] || '';
+                                                            if (r.trim()) return r;
+                                                        }
+                                                    }
+                                                    return String(item);
+                                                };
 
                                                 return (
                                                     <div className="space-y-1 mb-2 text-sm">
                                                         <p className="font-medium text-gray-600">Thứ tự HS sắp xếp:</p>
                                                         {studentOrder.map((item: any, idx: number) => {
-                                                            const label = typeof item === 'string' ? item : (items[item] || `[${item}]`);
+                                                            let label: string;
+                                                            if (typeof item === 'string') {
+                                                                label = item;
+                                                            } else if (typeof item === 'number') {
+                                                                label = items[item] ? getItemText(items[item]) : `[${item}]`;
+                                                            } else {
+                                                                label = getItemText(item);
+                                                            }
                                                             return (
                                                                 <div key={idx} className="flex items-center gap-2 p-1.5 rounded bg-gray-100">
                                                                     <span className="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold">{idx + 1}</span>
@@ -586,7 +646,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                             <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
                                                                 <p className="text-green-700 font-medium">Thứ tự đúng:</p>
                                                                 {correctOrd.map((itemIdx: number, i: number) => (
-                                                                    <p key={i} className="text-green-600">{i + 1}. {items[itemIdx] || ''}</p>
+                                                                    <p key={i} className="text-green-600">{i + 1}. {items[itemIdx] ? getItemText(items[itemIdx]) : ''}</p>
                                                                 ))}
                                                             </div>
                                                         )}
