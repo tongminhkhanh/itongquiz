@@ -12,6 +12,7 @@ import { useGamificationStore } from '../../stores/useGamificationStore';
 import PetDisplay from '../gamification/PetDisplay';
 import StatusBar from '../gamification/StatusBar';
 import ShopModal from '../gamification/ShopModal';
+import { getAvatarUrl } from '../../config/avatars';
 
 interface StudentDashboardProps {
     onStartStudy: () => void;
@@ -55,9 +56,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-extrabold shadow-lg" style={{ background: 'linear-gradient(135deg, #1CB0F6, #1899D6)', borderBottom: '3px solid #1899D6' }}>
-                            {studentSession.fullName?.charAt(0)?.toUpperCase() || '?'}
-                        </div>
+                        {studentSession.avatar ? (
+                            <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg" style={{ borderBottom: '3px solid #1899D6' }}>
+                                <img src={getAvatarUrl(studentSession.avatar)} alt="Avatar" className="w-full h-full object-cover" />
+                            </div>
+                        ) : (
+                            <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-extrabold shadow-lg" style={{ background: 'linear-gradient(135deg, #1CB0F6, #1899D6)', borderBottom: '3px solid #1899D6' }}>
+                                {studentSession.fullName?.charAt(0)?.toUpperCase() || '?'}
+                            </div>
+                        )}
                         <div>
                             <p className="font-extrabold text-lg leading-tight" style={{ color: '#4B4B4B' }}>
                                 {studentSession.fullName}
