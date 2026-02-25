@@ -1770,6 +1770,37 @@
     font-weight: 500;
 }
 
+.avatar-modal__tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.avatar-modal__tab {
+    padding: 6px 16px;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    border: 2px solid #E2E8F0;
+    background: white;
+    color: #64748B;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.avatar-modal__tab:hover {
+    border-color: #FB923C;
+    color: #FB923C;
+}
+
+.avatar-modal__tab--active {
+    background: linear-gradient(135deg, #FB923C, #F97316);
+    color: white;
+    border-color: #FB923C;
+    box-shadow: 0 2px 0 #EA580C;
+}
+
 .avatar-modal__grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);

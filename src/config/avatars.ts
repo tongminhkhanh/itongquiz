@@ -1,52 +1,49 @@
 /**
- * Avatar Configuration
+ * Avatar Configuration — Chibi Children Edition
  *
- * List of available avatar stickers for students.
- * Uses Microsoft Fluent UI Emoji CDN (jsdelivr) for consistent, high-quality 3D sticker images.
+ * Cute chibi-style avatars of Vietnamese elementary school children.
+ * Hosted on Cloudinary (cloud: dwv7hot9x, folder: itongquiz/avatars).
+ * AI-generated, unique to iTong Quiz.
  */
 
-const FLUENT_CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
+const CLOUDINARY_BASE = 'https://res.cloudinary.com/dwv7hot9x/image/upload';
+
+// Auto-optimize: resize to 200x200, auto format, auto quality
+const avatarUrl = (id: string) =>
+    `${CLOUDINARY_BASE}/w_200,h_200,c_fill,f_auto,q_auto/itongquiz/avatars/${id}`;
 
 export interface AvatarOption {
     id: string;
     name: string;
     url: string;
-    category: 'animal' | 'character' | 'expression';
+    category: 'girl' | 'boy';
 }
 
 export const AVATAR_LIST: AvatarOption[] = [
-    // --- Animals ---
-    { id: 'owl', name: 'Cú Mèo', url: `${FLUENT_CDN}/Owl/3D/owl_3d.png`, category: 'animal' },
-    { id: 'cat', name: 'Mèo', url: `${FLUENT_CDN}/Cat%20face/3D/cat_face_3d.png`, category: 'animal' },
-    { id: 'dog', name: 'Chó', url: `${FLUENT_CDN}/Dog%20face/3D/dog_face_3d.png`, category: 'animal' },
-    { id: 'bear', name: 'Gấu', url: `${FLUENT_CDN}/Bear/3D/bear_3d.png`, category: 'animal' },
-    { id: 'fox', name: 'Cáo', url: `${FLUENT_CDN}/Fox/3D/fox_3d.png`, category: 'animal' },
-    { id: 'rabbit', name: 'Thỏ', url: `${FLUENT_CDN}/Rabbit%20face/3D/rabbit_face_3d.png`, category: 'animal' },
-    { id: 'panda', name: 'Gấu Trúc', url: `${FLUENT_CDN}/Panda/3D/panda_3d.png`, category: 'animal' },
-    { id: 'unicorn', name: 'Kỳ Lân', url: `${FLUENT_CDN}/Unicorn/3D/unicorn_3d.png`, category: 'animal' },
-    { id: 'monkey', name: 'Khỉ', url: `${FLUENT_CDN}/Monkey%20face/3D/monkey_face_3d.png`, category: 'animal' },
-    { id: 'lion', name: 'Sư Tử', url: `${FLUENT_CDN}/Lion/3D/lion_3d.png`, category: 'animal' },
-    { id: 'koala', name: 'Gấu Koala', url: `${FLUENT_CDN}/Koala/3D/koala_3d.png`, category: 'animal' },
-    { id: 'penguin', name: 'Chim Cánh Cụt', url: `${FLUENT_CDN}/Penguin/3D/penguin_3d.png`, category: 'animal' },
+    // --- Girls ---
+    { id: 'girl_01', name: 'Bé Hoa', url: avatarUrl('girl_01'), category: 'girl' },
+    { id: 'girl_02', name: 'Bé Đào', url: avatarUrl('girl_02'), category: 'girl' },
+    { id: 'girl_03', name: 'Bé Tím', url: avatarUrl('girl_03'), category: 'girl' },
+    { id: 'girl_04', name: 'Bé Thảo', url: avatarUrl('girl_04'), category: 'girl' },
+    { id: 'girl_05', name: 'Bé Mint', url: avatarUrl('girl_05'), category: 'girl' },
+    { id: 'girl_06', name: 'Bé Cầu Vồng', url: avatarUrl('girl_06'), category: 'girl' },
+    { id: 'girl_07', name: 'Bé Nắng', url: avatarUrl('girl_07'), category: 'girl' },
+    { id: 'girl_08', name: 'Bé Jean', url: avatarUrl('girl_08'), category: 'girl' },
 
-    // --- Characters ---
-    { id: 'robot', name: 'Robot', url: `${FLUENT_CDN}/Robot/3D/robot_3d.png`, category: 'character' },
-    { id: 'alien', name: 'Người Ngoài Hành Tinh', url: `${FLUENT_CDN}/Alien/3D/alien_3d.png`, category: 'character' },
-    { id: 'ghost', name: 'Ma', url: `${FLUENT_CDN}/Ghost/3D/ghost_3d.png`, category: 'character' },
-    { id: 'astronaut', name: 'Phi Hành Gia', url: `${FLUENT_CDN}/Ringed%20planet/3D/ringed_planet_3d.png`, category: 'character' },
-
-    // --- Expressions ---
-    { id: 'star_eyes', name: 'Ngôi Sao', url: `${FLUENT_CDN}/Star-struck/3D/star-struck_3d.png`, category: 'expression' },
-    { id: 'cool', name: 'Ngầu', url: `${FLUENT_CDN}/Smiling%20face%20with%20sunglasses/3D/smiling_face_with_sunglasses_3d.png`, category: 'expression' },
-    { id: 'nerd', name: 'Học Giỏi', url: `${FLUENT_CDN}/Nerd%20face/3D/nerd_face_3d.png`, category: 'expression' },
-    { id: 'party', name: 'Tiệc Tùng', url: `${FLUENT_CDN}/Partying%20face/3D/partying_face_3d.png`, category: 'expression' },
+    // --- Boys ---
+    { id: 'boy_01', name: 'Bé Minh', url: avatarUrl('boy_01'), category: 'boy' },
+    { id: 'boy_02', name: 'Bé Sao', url: avatarUrl('boy_02'), category: 'boy' },
+    { id: 'boy_03', name: 'Bé Cam', url: avatarUrl('boy_03'), category: 'boy' },
+    { id: 'boy_04', name: 'Bé Thông Minh', url: avatarUrl('boy_04'), category: 'boy' },
+    { id: 'boy_05', name: 'Bé Khỏe', url: avatarUrl('boy_05'), category: 'boy' },
+    { id: 'boy_06', name: 'Bé Navy', url: avatarUrl('boy_06'), category: 'boy' },
 ];
 
 /**
- * Get avatar URL by key. Falls back to default owl avatar.
+ * Get avatar URL by key. Falls back to default girl_01 avatar.
  */
 export const getAvatarUrl = (avatarId?: string): string => {
-    if (!avatarId) return AVATAR_LIST[0].url; // Default: Owl
+    if (!avatarId) return AVATAR_LIST[0].url;
     const found = AVATAR_LIST.find(a => a.id === avatarId);
     return found ? found.url : AVATAR_LIST[0].url;
 };

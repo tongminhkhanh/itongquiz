@@ -5,7 +5,7 @@
  * Calls API to persist the selection.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AVATAR_LIST, getAvatarUrl } from '../../config/avatars';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { Loader2, X, Check } from 'lucide-react';
@@ -18,7 +18,13 @@ interface AvatarSelectorModalProps {
 }
 
 const AvatarSelectorModal: React.FC<AvatarSelectorModalProps> = ({ isOpen, onClose, currentAvatar }) => {
-    const [selectedAvatar, setSelectedAvatar] = useState<string>(currentAvatar || 'owl');
+    const [selectedAvatar, setSelectedAvatar] = useState<string>(currentAvatar || 'girl_01');
+    const [activeTab, setActiveTab] = useState<'all' | 'girl' | 'boy'>('all');
+
+    const filteredAvatars = useMemo(() => {
+        if (activeTab === 'all') return AVATAR_LIST;
+        return AVATAR_LIST.filter(a => a.category === activeTab);
+    }, [activeTab]);
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
@@ -43,7 +49,7 @@ const AvatarSelectorModal: React.FC<AvatarSelectorModalProps> = ({ isOpen, onClo
 
     if (!isOpen) return null;
 
-    const hasChanged = selectedAvatar !== (currentAvatar || 'owl');
+    const hasChanged = selectedAvatar !== (currentAvatar || 'girl_01');
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -82,9 +88,22 @@ const AvatarSelectorModal: React.FC<AvatarSelectorModalProps> = ({ isOpen, onClo
                     <p className="avatar-modal__subtitle">Bấm vào hình yêu thích rồi nhấn Lưu nhé</p>
                 </div>
 
+                {/* Category Tabs */}
+                <div className="avatar-modal__tabs">
+                    {(['all', 'girl', 'boy'] as const).map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`avatar-modal__tab ${activeTab === tab ? 'avatar-modal__tab--active' : ''}`}
+                        >
+                            {tab === 'all' ? '✨ Tất Cả' : tab === 'girl' ? '👧 Bé Gái' : '👦 Bé Trai'}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Grid */}
                 <div className="avatar-modal__grid">
-                    {AVATAR_LIST.map((avatar) => (
+                    {filteredAvatars.map((avatar) => (
                         <button
                             key={avatar.id}
                             onClick={() => setSelectedAvatar(avatar.id)}
