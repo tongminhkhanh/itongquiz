@@ -17,6 +17,8 @@ import {
     StudentLoginPayload,
 } from '../types/classroom.types';
 import * as classroomService from '../services/classroomService';
+import { useGamificationStore, restoreGamificationData } from './useGamificationStore';
+import { PetData, ShopItem } from '../types/gamification.types';
 
 // --- Store Interface ---
 
@@ -45,6 +47,8 @@ interface ClassroomStore {
     fetchTeacherAssignments: (teacherUsername: string) => Promise<void>;
     addAssignment: (payload: CreateAssignmentPayload) => Promise<Assignment | null>;
     removeAssignment: (assignmentId: string) => Promise<boolean>;
+    updateAssignmentDeadline: (assignmentId: string, newDeadline: string) => Promise<boolean>;
+    updateAssignmentStatus: (assignmentId: string, newStatus: 'OPEN' | 'CLOSED') => Promise<boolean>;
 
     // Student portal actions
     loginStudent: (payload: StudentLoginPayload) => Promise<boolean>;
@@ -250,6 +254,52 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
         }
     },
 
+    updateAssignmentDeadline: async (assignmentId, newDeadline) => {
+        set({ isLoading: true, error: null });
+        try {
+            const ok = await classroomService.updateAssignmentDeadline(assignmentId, newDeadline);
+            if (ok) {
+                // Update local state
+                const newStatus = new Date(newDeadline) > new Date() ? 'OPEN' : 'CLOSED';
+                set((s) => ({
+                    assignments: s.assignments.map((a) =>
+                        a.id === assignmentId
+                            ? { ...a, deadline: newDeadline, status: newStatus as 'OPEN' | 'CLOSED' }
+                            : a
+                    ),
+                    isLoading: false,
+                }));
+            } else {
+                set({ error: 'Không thể cập nhật hạn nộp.', isLoading: false });
+            }
+            return ok;
+        } catch (err) {
+            set({ error: 'Lỗi khi cập nhật hạn nộp.', isLoading: false });
+            return false;
+        }
+    },
+
+    updateAssignmentStatus: async (assignmentId, newStatus) => {
+        set({ isLoading: true, error: null });
+        try {
+            const ok = await classroomService.updateAssignmentStatus(assignmentId, newStatus);
+            if (ok) {
+                set((s) => ({
+                    assignments: s.assignments.map((a) =>
+                        a.id === assignmentId ? { ...a, status: newStatus } : a
+                    ),
+                    isLoading: false,
+                }));
+            } else {
+                set({ error: 'Không thể cập nhật trạng thái.', isLoading: false });
+            }
+            return ok;
+        } catch (err) {
+            set({ error: 'Lỗi khi cập nhật trạng thái.', isLoading: false });
+            return false;
+        }
+    },
+
     // ==========================================
     // STUDENT PORTAL ACTIONS
     // ==========================================
@@ -261,6 +311,16 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
             if (session) {
                 localStorage.setItem(STUDENT_SESSION_KEY, JSON.stringify(session));
                 set({ studentSession: session, isLoading: false });
+
+                // Initialize gamification data from login response
+                if (session.pet || session.coins !== undefined) {
+                    useGamificationStore.getState().initFromLoginData(
+                        session.pet as PetData | null,
+                        session.coins || 0,
+                        (session.shopItems || []) as ShopItem[]
+                    );
+                }
+
                 return true;
             }
             set({ error: 'Sai tên đăng nhập hoặc mật khẩu.', isLoading: false });
@@ -285,6 +345,8 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
     logoutStudent: () => {
         localStorage.removeItem(STUDENT_SESSION_KEY);
         set({ studentSession: null, assignments: [] });
+        // Clear gamification data on logout
+        useGamificationStore.getState().clearGamification();
     },
 
     restoreStudentSession: () => {
@@ -293,6 +355,8 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
             if (saved) {
                 const session: StudentSession = JSON.parse(saved);
                 set({ studentSession: session });
+                // Also restore gamification data from localStorage
+                restoreGamificationData();
             }
         } catch {
             localStorage.removeItem(STUDENT_SESSION_KEY);

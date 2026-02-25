@@ -1,0 +1,11 @@
+itemId,name,price,type,category,assetUrl
+hat_01,Mũ phù thủy,50,HEAD,hat,
+glass_01,Kính mát,30,FACE,glasses,
+bow_01,Nơ hồng,20,HEAD,bow,
+crown_01,Vương miện,100,HEAD,crown,
+scarf_01,Khăn quàng,40,BODY,scarf,
+wing_01,Cánh thiên thần,80,BODY,wing,
+tie_01,Nơ thắt cổ,25,BODY,tie,
+hat_02,Mũ cao bồi,60,HEAD,hat,
+glass_02,Kính trái tim,35,FACE,glasses,
+mask_01,Mặt nạ siêu nhân,70,FACE,mask,

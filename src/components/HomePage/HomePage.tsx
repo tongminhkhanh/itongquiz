@@ -23,10 +23,10 @@ interface HomePageProps {
 const FLUENT_CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
 
 // --- Coming Soon Categories ---
-const COMING_SOON_CATEGORIES = ['science', 'history', 'vioedu', 'trang-nguyen'];
+const COMING_SOON_CATEGORIES = ['science', 'history'];
 
 // --- Subject Config (Sticker Land) ---
-const SUBJECT_CONFIG: Record<string, {
+export const SUBJECT_CONFIG: Record<string, {
     label: string;
     title: string;
     desc: string;
@@ -40,6 +40,19 @@ const SUBJECT_CONFIG: Record<string, {
     btnLabel: string;
     highlight?: boolean;
 }> = {
+    'all': {
+        label: 'Tất Cả',
+        title: 'Thư Viện Đề Thi',
+        desc: 'Khám phá tất cả bài tập.',
+        icon: `${FLUENT_CDN}/Open%20book/3D/open_book_3d.png`,
+        color: '#6366F1', // Indigo
+        bgColor: 'bg-indigo-50',
+        borderColor: 'border-indigo-200',
+        btnColor: 'bg-indigo-500 hover:bg-indigo-400',
+        btnBorder: 'border-indigo-700',
+        btnText: 'text-white',
+        btnLabel: 'Khám phá ngay',
+    },
     'class': {
         label: 'Bài Tập',
         title: 'Bài Tập Lớp',
@@ -92,6 +105,19 @@ const SUBJECT_CONFIG: Record<string, {
         btnText: 'text-white',
         btnLabel: 'Bắt đầu',
         highlight: true,
+    },
+    'on-tap': {
+        label: 'Ôn Tập',
+        title: 'Ôn Tập Chung',
+        desc: 'Ôn tập theo từng chủ đề bài học.',
+        icon: `${FLUENT_CDN}/Notebook/3D/notebook_3d.png`,
+        color: '#8B5CF6',
+        bgColor: 'bg-purple-50',
+        borderColor: 'border-purple-200',
+        btnColor: 'bg-purple-500 hover:bg-purple-400',
+        btnBorder: 'border-purple-700',
+        btnText: 'text-white',
+        btnLabel: 'Bắt đầu',
     },
     'science': {
         label: 'Khoa Học',
@@ -222,6 +248,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
     // --- Filter Quizzes ---
     const filteredQuizzes = useMemo(() => {
         let quizzes: Quiz[] = [];
+
         if (activeTab === 'all') {
             quizzes = [...quizStore.quizzes];
         } else if (activeTab === 'ioe') {
@@ -232,34 +259,20 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
             // Show assignments instead of regular quizzes for "Bài Tập Lớp"
             if (isStudentLoggedIn) {
                 quizzes = myAssignmentQuizzes;
-            } else if (isTeacherLoggedIn) {
-                // Teacher sees ALL assignments (monitoring view)
-                quizzes = assignmentQuizzes;
             } else {
-                // Guest sees nothing (must login)
-                quizzes = [];
+                quizzes = assignmentQuizzes;
             }
         } else {
-            // General library: Exclude quizzes that are assigned (to anyone) - UNLESS user is a Teacher
-            // Logic: "Nếu quiz nào được giao thì sẽ không hiển thị [in general]" (cho học sinh/khách)
-            const assignedQuizIds = new Set(assignments.map(a => a.quizId));
-
-            quizzes = quizStore.quizzes.filter(q => {
-                const matchesCategory = (q.category || 'class') === activeTab;
-
-                // Logic Update:
-                // - Teacher: Show All (to check/manage)
-                // - Guests & Students: HIDE Assigned Quizzes (they are for classes only)
-                // "đề đã giao riêng cho lớp thì không hiển thị"
-                // "khách thấy được bài tập giao công cộng" -> User says this is happening and implies it's wrong (debug)
-
-                const isAssigned = assignedQuizIds.has(q.id);
-                // Hide if NOT Teacher AND is Assigned
-                const shouldHide = !isTeacherLoggedIn && isAssigned;
-
-                return matchesCategory && !shouldHide;
-            });
+            // Specific category
+            quizzes = quizStore.quizzes.filter(q => (q.category || 'class') === activeTab);
         }
+
+        // Apply Global Visibility Rules
+        // If it's a general library category (not class assignments and not IOE), hide quizzes with showOnHome === false
+        if (activeTab !== 'class' && activeTab !== 'ioe') {
+            quizzes = quizzes.filter(q => q.showOnHome !== false);
+        }
+
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             quizzes = quizzes.filter(q => q.title.toLowerCase().includes(term));
@@ -351,18 +364,27 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
     // --- Subject Stats (for cards) ---
     const subjectCards = useMemo(() => {
         const allQuizzes = [...quizStore.quizzes, ...ioeQuizzes];
-        const categories = Object.keys(SUBJECT_CONFIG);
+        // Only show explicit categories on Home page Grid
+        const categories = ['all', 'class', 'ioe'];
         return categories.map(cat => {
-            const catQuizzes = cat === 'ioe'
-                ? ioeQuizzes
-                : allQuizzes.filter(q => (q.category || 'class') === cat);
+            let catQuizzes = [];
+            if (cat === 'all') {
+                catQuizzes = allQuizzes.filter(q => q.showOnHome !== false);
+            } else if (cat === 'ioe') {
+                catQuizzes = ioeQuizzes;
+            } else if (cat === 'class') {
+                catQuizzes = isStudentLoggedIn ? myAssignmentQuizzes : assignmentQuizzes;
+            } else {
+                // For regular subjects, only count those that are supposed to be shown on Home
+                catQuizzes = quizStore.quizzes.filter(q => (q.category || 'class') === cat && q.showOnHome !== false);
+            }
             return {
                 id: cat,
                 ...SUBJECT_CONFIG[cat],
                 total: catQuizzes.length,
             };
         });
-    }, [quizStore.quizzes, ioeQuizzes]);
+    }, [quizStore.quizzes, ioeQuizzes, myAssignmentQuizzes, assignmentQuizzes, isStudentLoggedIn]);
 
     // =====================================================
     // RENDER — STICKER LAND
@@ -602,33 +624,15 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                                             );
                                         })
                                     ) : (
-                                        activeTab === 'class' && !isLoggedIn ? (
-                                            <div className="sticker-empty">
-                                                <img
-                                                    src={`${FLUENT_CDN}/Locked/3D/locked_3d.png`}
-                                                    alt="Locked"
-                                                    className="sticker-empty__img"
-                                                />
-                                                <h3 className="sticker-empty__title">Khu vực dành cho học sinh</h3>
-                                                <p className="sticker-empty__text">Bé cần đăng nhập để xem bài tập của lớp nhé!</p>
-                                                <button
-                                                    onClick={() => openLogin('student')}
-                                                    className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95"
-                                                >
-                                                    Vào Lớp Ngay
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="sticker-empty">
-                                                <img
-                                                    src={`${FLUENT_CDN}/See-no-evil%20monkey/3D/see-no-evil_monkey_3d.png`}
-                                                    alt=""
-                                                    className="sticker-empty__img"
-                                                />
-                                                <h3 className="sticker-empty__title">Không tìm thấy bài nào!</h3>
-                                                <p className="sticker-empty__text">Thử tìm từ khóa khác xem sao?</p>
-                                            </div>
-                                        )
+                                        <div className="sticker-empty">
+                                            <img
+                                                src={`${FLUENT_CDN}/See-no-evil%20monkey/3D/see-no-evil_monkey_3d.png`}
+                                                alt=""
+                                                className="sticker-empty__img"
+                                            />
+                                            <h3 className="sticker-empty__title">Không tìm thấy bài nào!</h3>
+                                            <p className="sticker-empty__text">Thử tìm từ khóa khác xem sao?</p>
+                                        </div>
                                     )}
                                 </div>
                             </section>

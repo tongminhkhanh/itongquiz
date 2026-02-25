@@ -430,7 +430,8 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                 createdBy: row.createdBy || undefined, // Tên giáo viên tạo đề
                 questions: questionsByQuizId[row.id] || [],
                 accessCode: row.accessCode || "",
-                requireCode: row.requireCode === "TRUE" || row.requireCode === true
+                requireCode: row.requireCode === "TRUE" || row.requireCode === true,
+                showOnHome: row.showOnHome !== "FALSE" && row.showOnHome !== false // Map explicitly
             }));
 
             return quizzes;

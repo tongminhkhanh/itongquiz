@@ -58,7 +58,8 @@
         "Auto-Assign Quizzes to Class upon Creation",
         "Public Library Privacy (Hidden assignments for guests)",
         "Custom 'Coming Soon' Modal for locked features",
-        "Improved Student Portal UI (Home button, better visibility)"
+        "Improved Student Portal UI (Home button, better visibility)",
+        "Gamification Pet System (3D Chibi CSS pets: Cat/Dog/Rabbit with mood-reactive expressions)"
     ],
     "knowledge_items": {
         "patterns": [
@@ -97,6 +98,14 @@
                 "files": [
                     "src/components/student/ResultScreen/tabs/DetailedAnswersTab.tsx",
                     "src/components/student/ResultScreen/index.tsx"
+                ]
+            },
+            {
+                "name": "Css3dChibiPet Pattern",
+                "description": "Pure CSS 3D chibi-style pets supporting cat/dog/rabbit with per-type ears/tail/animations, mood-reactive face, and click bounce interaction",
+                "files": [
+                    "src/components/gamification/Css3dChibiPet.tsx",
+                    "src/components/gamification/PetDisplay.tsx"
                 ]
             }
         ],

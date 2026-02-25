@@ -181,6 +181,10 @@ function routeClassroomAction(action, body) {
             lock.waitLock(10000);
             try { return handleDeleteAssignment(body); }
             finally { lock.releaseLock(); }
+        case 'update_assignment_deadline':
+            lock.waitLock(10000);
+            try { return handleUpdateAssignmentDeadline(body); }
+            finally { lock.releaseLock(); }
 
         default:
             return null; // Not a classroom action
@@ -483,4 +487,44 @@ function handleDeleteAssignment(body) {
     return ok
         ? { status: 'success' }
         : { status: 'error', message: 'Assignment not found' };
+}
+
+/**
+ * Update assignment deadline (and optionally re-open if new deadline is in future)
+ */
+function handleUpdateAssignmentDeadline(body) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(SHEETS.ASSIGNMENTS);
+    if (!sheet) return { status: 'error', message: 'Sheet not found' };
+
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var idCol = headers.indexOf('id');
+    var deadlineCol = headers.indexOf('deadline');
+    var statusCol = headers.indexOf('status');
+
+    for (var i = 1; i < data.length; i++) {
+        if (String(data[i][idCol]) === String(body.assignmentId)) {
+            // Update deadline
+            sheet.getRange(i + 1, deadlineCol + 1).setValue(body.newDeadline);
+
+            // Re-open if new deadline is in the future and currently CLOSED
+            var newDeadline = new Date(body.newDeadline);
+            var currentStatus = String(data[i][statusCol]);
+            if (currentStatus === 'CLOSED' && newDeadline > new Date()) {
+                sheet.getRange(i + 1, statusCol + 1).setValue('OPEN');
+            }
+
+            return {
+                status: 'success',
+                data: {
+                    assignmentId: body.assignmentId,
+                    newDeadline: body.newDeadline,
+                    status: (newDeadline > new Date()) ? 'OPEN' : currentStatus,
+                },
+            };
+        }
+    }
+
+    return { status: 'error', message: 'Assignment not found' };
 }

@@ -58,9 +58,10 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     // Trạng Nguyên specific state
     const [tnSearchMode, setTnSearchMode] = useState<'search' | 'quick'>('search');
 
-    // Access Code state
+    // Access Code & Visibility state
     const [requireCode, setRequireCode] = useState(false);
     const [accessCode, setAccessCode] = useState('');
+    const [showOnHome, setShowOnHome] = useState(true);
 
     // PDF/Document file upload
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -105,6 +106,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             setGeneratedQuiz(editingQuiz);
             setRequireCode(!!editingQuiz.requireCode);
             setAccessCode(editingQuiz.accessCode || '');
+            setShowOnHome(editingQuiz.showOnHome !== false); // default to true
             setCategory(editingQuiz.category || 'vioedu');
             // We don't restore selectedTypes/difficultyLevels from quiz yet as it's complex to reverse engineer
         } else {
@@ -117,6 +119,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             setGeneratedQuiz(null);
             setRequireCode(false);
             setAccessCode('');
+            setShowOnHome(true);
             setCustomPrompt('');
             setUploadedFile(null);
             setCategory('on-tap'); // Mặc định: Ôn tập theo chủ đề
@@ -152,12 +155,15 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                 updates.category = category;
             }
 
-            // Sync access code settings
+            // Sync access code & visibility settings
             if (requireCode !== generatedQuiz.requireCode) {
                 updates.requireCode = requireCode;
             }
             if (accessCode !== generatedQuiz.accessCode) {
                 updates.accessCode = accessCode.toUpperCase() || undefined;
+            }
+            if (showOnHome !== generatedQuiz.showOnHome) {
+                updates.showOnHome = showOnHome;
             }
 
             // Sync quiz title
@@ -175,7 +181,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                 setGeneratedQuiz({ ...generatedQuiz, ...updates });
             }
         }
-    }, [manualTimeLimit, classLevel, category, requireCode, accessCode, quizTitle, authStore.teacherName]);
+    }, [manualTimeLimit, classLevel, category, requireCode, accessCode, showOnHome, quizTitle, authStore.teacherName]);
 
 
     // Generate random access code
@@ -265,6 +271,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     accessCode: requireCode ? accessCode.toUpperCase() : undefined,
                     requireCode: requireCode,
                     category: 'trang-nguyen',
+                    showOnHome: showOnHome,
                 };
 
                 setGeneratedQuiz(quiz);
@@ -325,6 +332,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                 createdBy: editingQuiz?.createdBy || authStore.teacherName || undefined,
                 accessCode: requireCode ? accessCode.toUpperCase() : undefined,
                 requireCode: requireCode,
+                showOnHome: showOnHome,
                 category: category, // Lưu danh mục
             };
 
@@ -386,6 +394,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
             setCustomPrompt('');
             setRequireCode(false);
             setAccessCode('');
+            setShowOnHome(true);
             setUploadedFile(null);
             setGeneratedQuiz(null);
 
@@ -639,6 +648,26 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                 </button>
                             </div>
                         )}
+
+                        <div className="pt-2 border-t border-gray-100"></div>
+
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="font-medium text-gray-700">Hiển thị bài trên trang chủ</p>
+                                <p className="text-sm text-gray-500">Tắt đi nếu muốn làm đề thi riêng, chống lộ đề</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowOnHome(!showOnHome)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showOnHome ? 'bg-blue-500' : 'bg-gray-300'
+                                    }`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showOnHome ? 'translate-x-6' : 'translate-x-1'
+                                        }`}
+                                />
+                            </button>
+                        </div>
                     </div>
                 </Card>
 

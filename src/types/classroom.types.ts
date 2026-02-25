@@ -50,7 +50,28 @@ export interface StudentSession {
     classId: string;
     className?: string;
     avatar?: string;           // Avatar sticker key
+    // Gamification fields (loaded on login)
+    coins?: number;
+    pet?: {
+        petId: string;
+        petName: string;
+        level: number;
+        exp: number;
+        expToNext: number;
+        mood: string;
+        items: string[];
+        lastActive: string;
+    } | null;
+    shopItems?: Array<{
+        itemId: string;
+        name: string;
+        price: number;
+        type: string;
+        category: string;
+        assetUrl: string;
+    }>;
 }
+
 
 // --- Assignment ---
 
@@ -67,6 +88,8 @@ export interface Assignment {
     // Computed / joined fields (from server)
     quizTitle?: string;
     className?: string;
+    studentId?: string;         // ID of assigned student (if specific)
+    studentName?: string;       // Name of assigned student
     submittedCount?: number;    // How many students submitted
     totalStudents?: number;     // Total students in class
     attemptCount?: number;      // How many times current student has submitted
@@ -75,6 +98,7 @@ export interface Assignment {
 export interface CreateAssignmentPayload {
     quizId: string;
     classId: string;
+    studentId?: string;         // Optional: if given, assigned only to this student
     deadline: string;           // ISO timestamp
     maxAttempts: number;        // Max times a student can take this quiz (default: 1)
 }

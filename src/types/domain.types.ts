@@ -267,6 +267,7 @@ export interface Quiz {
     createdBy?: string; // Tên giáo viên tạo đề
     accessCode?: string; // 6-character code for quiz access
     requireCode?: boolean; // Whether to require code to start quiz
+    showOnHome?: boolean; // Whether to show on HomePage library
     _assignmentData?: any; // Optional assignment metadata (avoid circular dependency)
 }
 

@@ -98,10 +98,23 @@ function handleRequest(e) {
                 return responseJSON(handleCreateAssignment(data));
             case 'delete_assignment':
                 return responseJSON(handleDeleteAssignment(data));
+            case 'update_assignment_deadline':
+                return responseJSON(handleUpdateAssignmentDeadline(data));
+            case 'update_assignment_status':
+                return responseJSON(handleUpdateAssignmentStatus(data));
             case 'start_assignment_attempt':
                 return handleStartAssignmentAttempt(data);
             case 'update_student_avatar':
                 return responseJSON(handleUpdateStudentAvatar(data));
+            // --- Gamification ---
+            case 'get_pet_data':
+                return responseJSON(handleGetPetData(data));
+            case 'update_game_state':
+                return responseJSON(handleUpdateGameState(data));
+            case 'buy_shop_item':
+                return responseJSON(handleBuyShopItem(data));
+            case 'get_leaderboard':
+                return responseJSON(handleGetLeaderboard(data));
 
             default:
                 return responseJSON({ status: "error", message: "Unknown action: " + action });
@@ -201,7 +214,8 @@ function saveQuiz(sheet, data) {
         data.createdAt,
         data.accessCode || "",
         data.requireCode ? "TRUE" : "FALSE",
-        sanitizeInput(data.createdBy || "") // Tên giáo viên tạo đề
+        sanitizeInput(data.createdBy || ""), // Tên giáo viên tạo đề
+        data.showOnHome === false ? "FALSE" : "TRUE" // Cột 10: showOnHome
     ]);
 
     // 2. Save Questions to 'Questions' sheet
@@ -684,6 +698,11 @@ var CLASSROOM_SHEETS = {
     ASSIGNMENTS: 'Assignments',
 };
 
+var GAMIFICATION_SHEETS = {
+    USER_PETS: 'UserPets',
+    SHOP_ITEMS: 'ShopItems',
+};
+
 // --- Classroom Helpers ---
 
 function hashPassword(password) {
@@ -724,7 +743,8 @@ function getSheetDataAsObjects(sheetName) {
         for (var j = 0; j < headers.length; j++) {
             obj[headers[j]] = data[i][j];
         }
-        if (obj.id) rows.push(obj);
+        // Check for id OR itemId OR username to consider row valid
+        if (obj.id || obj.itemId || obj.username) rows.push(obj);
     }
     return rows;
 }
@@ -755,6 +775,14 @@ function deleteRowById(sheetName, id) {
         }
     }
     return false;
+}
+
+function getColIndex(headers, name) {
+    var lowerName = String(name).toLowerCase().trim();
+    for (var i = 0; i < headers.length; i++) {
+        if (String(headers[i]).toLowerCase().trim() === lowerName) return i;
+    }
+    return -1;
 }
 
 // --- Class Handlers ---
@@ -866,7 +894,51 @@ function handleStudentLogin(body) {
     var classes = getSheetDataAsObjects(CLASSROOM_SHEETS.CLASSES);
     var cls = classes.find(function (c) { return c.id === student.classId; });
 
-    return { status: 'success', data: { studentId: student.id, fullName: student.fullName, username: student.username, classId: student.classId, className: cls ? cls.name : '', avatar: student.avatar || '' } };
+    // Load pet data for gamification
+    var petData = null;
+    var pets = getSheetDataAsObjects(GAMIFICATION_SHEETS.USER_PETS);
+    var pet = pets.find(function (p) { return p.username === student.username; });
+    if (pet) {
+        petData = {
+            petId: pet.petId,
+            petName: pet.petName,
+            level: Number(pet.level || pet.Level || pet.LEVEL) || 1,
+            exp: Number(pet.exp || pet.EXP || pet.Exp) || 0,
+            expToNext: Number(pet.expToNext || pet.ExpToNext) || 100,
+            mood: pet.mood || 'happy',
+            items: pet.items ? JSON.parse(pet.items) : [],
+            lastActive: pet.lastActive || '',
+        };
+        // Update lastActive and mood on login
+        updatePetLastActive(student.username);
+    }
+
+    // Load shop items
+    var shopItems = getSheetDataAsObjects(GAMIFICATION_SHEETS.SHOP_ITEMS);
+
+    return {
+        status: 'success',
+        data: {
+            studentId: student.id,
+            fullName: student.fullName,
+            username: student.username,
+            classId: student.classId,
+            className: cls ? cls.name : '',
+            avatar: student.avatar || '',
+            coins: Number(student.coins) || 0,
+            pet: petData,
+            shopItems: shopItems.map(function (item) {
+                return {
+                    itemId: item.itemId || item.id,
+                    name: item.name,
+                    price: Number(item.price) || 0,
+                    type: item.type || 'ACCESSORY',
+                    category: item.category || '',
+                    assetUrl: item.assetUrl || '',
+                };
+            }),
+        },
+    };
 }
 
 function handleUpdateStudentAvatar(body) {
@@ -944,9 +1016,15 @@ function handleGetTeacherAssignments(body) {
     assignments = assignments.filter(function (a) { return teacherClassIds.indexOf(a.classId) !== -1; });
     autoCloseExpiredAssignments(assignments, sheet, allData);
 
+    var students = getSheetDataAsObjects(CLASSROOM_SHEETS.STUDENTS);
+
     assignments = assignments.map(function (a) {
         var cls = classes.find(function (c) { return c.id === a.classId; });
+        var student = a.studentId ? students.find(function (s) { return s.id === a.studentId; }) : null;
+
         a.className = cls ? cls.name : '';
+        if (student) a.studentName = student.fullName;
+
         return a;
     });
     return { status: 'success', data: assignments };
@@ -964,12 +1042,16 @@ function handleGetAllAssignments(body) {
 
     autoCloseExpiredAssignments(assignments, sheet, allData);
 
-    // Enrich assignments with quiz title and class name
+    // Enrich assignments with quiz title, class name, and student name
+    var students = getSheetDataAsObjects(CLASSROOM_SHEETS.STUDENTS);
     assignments = assignments.map(function (a) {
         var quiz = quizzes.find(function (q) { return String(q.id) === String(a.quizId); });
         var cls = classes.find(function (c) { return c.id === a.classId; });
+        var student = a.studentId ? students.find(function (s) { return s.id === a.studentId; }) : null;
+
         a.quizTitle = quiz ? quiz.title : 'Bài tập';
         a.className = cls ? cls.name : '';
+        if (student) a.studentName = student.fullName;
         return a;
     });
 
@@ -987,7 +1069,12 @@ function handleGetStudentAssignments(body) {
 
     var allData = sheet.getDataRange().getValues();
     var assignments = getSheetDataAsObjects(CLASSROOM_SHEETS.ASSIGNMENTS);
-    assignments = assignments.filter(function (a) { return a.classId === student.classId; });
+    // Filter conditions:
+    // 1. Must belong to the student's class
+    // 2. AND (assigned to whole class OR assigned specifically to this student)
+    assignments = assignments.filter(function (a) {
+        return a.classId === student.classId && (!a.studentId || a.studentId === student.id);
+    });
     autoCloseExpiredAssignments(assignments, sheet, allData);
 
     // Count attempts for each assignment from Results sheet (skip STARTED-only rows)
@@ -1024,6 +1111,7 @@ function handleCreateAssignment(body) {
         id: generateId('a'),
         quizId: body.quizId,
         classId: body.classId,
+        studentId: body.studentId || '', // Handle individual assignment
         deadline: body.deadline,
         maxAttempts: Number(body.maxAttempts) || 1,
         status: 'OPEN',
@@ -1036,6 +1124,73 @@ function handleCreateAssignment(body) {
 function handleDeleteAssignment(body) {
     var ok = deleteRowById(CLASSROOM_SHEETS.ASSIGNMENTS, body.assignmentId);
     return ok ? { status: 'success' } : { status: 'error', message: 'Assignment not found' };
+}
+
+/**
+ * Update assignment deadline (auto re-opens if new deadline is in the future)
+ */
+function handleUpdateAssignmentDeadline(body) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CLASSROOM_SHEETS.ASSIGNMENTS);
+    if (!sheet) return { status: 'error', message: 'Sheet not found' };
+
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var idCol = headers.indexOf('id');
+    var deadlineCol = headers.indexOf('deadline');
+    var statusCol = headers.indexOf('status');
+
+    for (var i = 1; i < data.length; i++) {
+        if (String(data[i][idCol]) === String(body.assignmentId)) {
+            // Update deadline
+            sheet.getRange(i + 1, deadlineCol + 1).setValue(body.newDeadline);
+
+            // Re-open if new deadline is in the future and currently CLOSED
+            var newDeadline = new Date(body.newDeadline);
+            var currentStatus = String(data[i][statusCol]);
+            if (currentStatus === 'CLOSED' && newDeadline > new Date()) {
+                sheet.getRange(i + 1, statusCol + 1).setValue('OPEN');
+            }
+
+            return {
+                status: 'success',
+                data: {
+                    assignmentId: body.assignmentId,
+                    newDeadline: body.newDeadline,
+                    status: (newDeadline > new Date()) ? 'OPEN' : currentStatus,
+                },
+            };
+        }
+    }
+
+    return { status: 'error', message: 'Assignment not found' };
+}
+
+/**
+ * Toggle assignment status (OPEN <-> CLOSED)
+ */
+function handleUpdateAssignmentStatus(body) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CLASSROOM_SHEETS.ASSIGNMENTS);
+    if (!sheet) return { status: 'error', message: 'Sheet not found' };
+
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var idCol = headers.indexOf('id');
+    var statusCol = headers.indexOf('status');
+
+    for (var i = 1; i < data.length; i++) {
+        if (String(data[i][idCol]) === String(body.assignmentId)) {
+            var newStatus = body.newStatus || (String(data[i][statusCol]) === 'OPEN' ? 'CLOSED' : 'OPEN');
+            sheet.getRange(i + 1, statusCol + 1).setValue(newStatus);
+            return {
+                status: 'success',
+                data: { assignmentId: body.assignmentId, status: newStatus },
+            };
+        }
+    }
+
+    return { status: 'error', message: 'Assignment not found' };
 }
 
 function handleStartAssignmentAttempt(body) {
@@ -1081,6 +1236,338 @@ function handleStartAssignmentAttempt(body) {
 
     // No longer create a STARTED row - just validate and allow
     return responseJSON({ status: 'success', attemptCount: attemptCount, maxAttempts: maxAttempts });
+}
+
+// ============ GAMIFICATION API ============
+// Pet system, Shop, EXP/Coins management
+// ==========================================
+
+// Helper: Update pet lastActive and mood based on inactivity
+function updatePetLastActive(username) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(GAMIFICATION_SHEETS.USER_PETS);
+    if (!sheet) return;
+
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var usernameCol = headers.indexOf('username');
+    var lastActiveCol = headers.indexOf('lastActive');
+    var moodCol = headers.indexOf('mood');
+
+    for (var i = 1; i < data.length; i++) {
+        if (String(data[i][usernameCol]) === String(username)) {
+            var now = new Date();
+            // Calculate mood based on days since last active
+            var lastActive = data[i][lastActiveCol] ? new Date(data[i][lastActiveCol]) : now;
+            var daysDiff = Math.floor((now - lastActive) / (1000 * 60 * 60 * 24));
+            var mood = 'happy';
+            if (daysDiff >= 3) mood = 'sad';
+            else if (daysDiff >= 1) mood = 'neutral';
+
+            sheet.getRange(i + 1, lastActiveCol + 1).setValue(now.toISOString());
+            sheet.getRange(i + 1, moodCol + 1).setValue(mood);
+            return;
+        }
+    }
+}
+
+// Get pet data + shop items for a student
+function handleGetPetData(body) {
+    if (!body.username) return { status: 'error', message: 'Missing username' };
+
+    var pets = getSheetDataAsObjects(GAMIFICATION_SHEETS.USER_PETS);
+    var pet = pets.find(function (p) { return p.username === body.username; });
+
+    // If no pet exists, create default one
+    if (!pet) {
+        pet = createDefaultPet(body.username, body.petId || 'cat_01', body.petName || 'Mèo Con');
+    } else {
+        pet = {
+            petId: pet.petId,
+            petName: pet.petName,
+            level: Number(pet.level || pet.Level || pet.LEVEL) || 1,
+            exp: Number(pet.exp || pet.EXP || pet.Exp) || 0,
+            expToNext: Number(pet.expToNext || pet.ExpToNext) || 100,
+            mood: pet.mood || 'happy',
+            items: pet.items ? JSON.parse(pet.items) : [],
+            items: pet.items ? JSON.parse(pet.items) : [],
+            lastActive: pet.lastActive || '',
+            imageUrl: pet.imageUrl || '',
+        };
+    }
+
+    // Get student coins
+    var students = getSheetDataAsObjects(CLASSROOM_SHEETS.STUDENTS);
+    var student = students.find(function (s) { return s.username === body.username; });
+    var coins = student ? (Number(student.coins) || 0) : 0;
+
+    // Get shop items
+    var shopItems = getSheetDataAsObjects(GAMIFICATION_SHEETS.SHOP_ITEMS);
+
+    return {
+        status: 'success',
+        data: {
+            pet: pet,
+            coins: coins,
+            shopItems: shopItems.map(function (item) {
+                return {
+                    itemId: item.itemId || item.id,
+                    name: item.name,
+                    price: Number(item.price) || 0,
+                    type: item.type || 'ACCESSORY',
+                    category: item.category || '',
+                    assetUrl: item.assetUrl || '',
+                };
+            }),
+        },
+    };
+}
+
+// Create a default pet for a new student
+function createDefaultPet(username, petId, petName) {
+    var newPet = {
+        username: username,
+        petId: petId || 'cat_01',
+        petName: petName || 'Mèo Con',
+        level: 1,
+        exp: 0,
+        expToNext: 100,
+        mood: 'happy',
+        items: '[]',
+        lastActive: new Date().toISOString(),
+    };
+    appendRowToSheet(GAMIFICATION_SHEETS.USER_PETS, newPet);
+    newPet.items = [];
+    return newPet;
+}
+
+// Calculate EXP needed for next level (increases each level)
+function calcExpToNext(level) {
+    return 100 + (level - 1) * 20; // Level 1: 100, Level 2: 120, Level 3: 140...
+}
+
+// Update game state after completing a quiz
+function handleUpdateGameState(body) {
+    if (!body.username) return { status: 'error', message: 'Missing username' };
+    var addExp = Number(body.addExp) || 0;
+    var addCoins = Number(body.addCoins) || 0;
+    if (addExp <= 0 && addCoins <= 0) return { status: 'error', message: 'Nothing to update' };
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // --- Update Coins in Students sheet ---
+    var studentsSheet = ss.getSheetByName(CLASSROOM_SHEETS.STUDENTS);
+    if (!studentsSheet) return { status: 'error', message: 'Students sheet not found' };
+
+    var sData = studentsSheet.getDataRange().getValues();
+    var sHeaders = sData[0];
+    var sUsernameCol = sHeaders.indexOf('username');
+    var sCoinsCol = getColIndex(sHeaders, 'coins');
+
+    // Auto-create coins column if missing
+    if (sCoinsCol === -1) {
+        sCoinsCol = sHeaders.length;
+        studentsSheet.getRange(1, sCoinsCol + 1).setValue('coins');
+    }
+
+    var studentRow = -1;
+    var currentCoins = 0;
+    for (var i = 1; i < sData.length; i++) {
+        if (String(sData[i][sUsernameCol]) === String(body.username)) {
+            studentRow = i + 1;
+            currentCoins = Number(sData[i][sCoinsCol]) || 0;
+            break;
+        }
+    }
+    if (studentRow === -1) return { status: 'error', message: 'Student not found' };
+
+    var newCoins = currentCoins + addCoins;
+    studentsSheet.getRange(studentRow, sCoinsCol + 1).setValue(newCoins);
+
+    // --- Update EXP & Level in UserPets sheet ---
+    var petSheet = ss.getSheetByName(GAMIFICATION_SHEETS.USER_PETS);
+    if (!petSheet) return { status: 'error', message: 'UserPets sheet not found' };
+
+    var pData = petSheet.getDataRange().getValues();
+    var pHeaders = pData[0];
+    var pUsernameCol = getColIndex(pHeaders, 'username');
+    var pLevelCol = getColIndex(pHeaders, 'level');
+    var pExpCol = getColIndex(pHeaders, 'exp');
+    var pExpToNextCol = getColIndex(pHeaders, 'expToNext');
+    var pMoodCol = getColIndex(pHeaders, 'mood');
+    var pLastActiveCol = getColIndex(pHeaders, 'lastActive');
+
+    var petRow = -1;
+    var currentLevel = 1;
+    var currentExp = 0;
+    var currentExpToNext = 100;
+
+    for (var j = 1; j < pData.length; j++) {
+        if (String(pData[j][pUsernameCol]) === String(body.username)) {
+            petRow = j + 1;
+            currentLevel = Number(pData[j][pLevelCol]) || 1;
+            currentExp = Number(pData[j][pExpCol]) || 0;
+            currentExpToNext = Number(pData[j][pExpToNextCol]) || 100;
+            break;
+        }
+    }
+
+    if (petRow === -1) {
+        // No pet yet, create one
+        createDefaultPet(body.username, 'cat_01', 'Mèo Con');
+        return {
+            status: 'success',
+            data: {
+                newLevel: 1,
+                newExp: addExp,
+                newCoins: newCoins,
+                leveledUp: false,
+                mood: 'excited',
+            },
+        };
+    }
+
+    // Add EXP and check for level up
+    var newExp = currentExp + addExp;
+    var newLevel = currentLevel;
+    var leveledUp = false;
+    var newExpToNext = currentExpToNext;
+
+    // Multi-level up support (e.g., bonus EXP could skip levels)
+    while (newExp >= newExpToNext) {
+        newExp -= newExpToNext;
+        newLevel++;
+        leveledUp = true;
+        newExpToNext = calcExpToNext(newLevel);
+    }
+
+    // Update pet sheet
+    petSheet.getRange(petRow, pLevelCol + 1).setValue(newLevel);
+    petSheet.getRange(petRow, pExpCol + 1).setValue(newExp);
+    petSheet.getRange(petRow, pExpToNextCol + 1).setValue(newExpToNext);
+    petSheet.getRange(petRow, pMoodCol + 1).setValue('excited');
+    petSheet.getRange(petRow, pLastActiveCol + 1).setValue(new Date().toISOString());
+
+    return {
+        status: 'success',
+        data: {
+            newLevel: newLevel,
+            newExp: newExp,
+            newExpToNext: newExpToNext,
+            newCoins: newCoins,
+            leveledUp: leveledUp,
+            mood: 'excited',
+        },
+    };
+}
+
+// Buy a shop item
+function handleBuyShopItem(body) {
+    if (!body.username || !body.itemId) return { status: 'error', message: 'Missing username or itemId' };
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Get item price
+    var shopItems = getSheetDataAsObjects(GAMIFICATION_SHEETS.SHOP_ITEMS);
+    var item = shopItems.find(function (i) { return (i.itemId || i.id) === body.itemId; });
+    if (!item) return { status: 'error', message: 'Item not found' };
+    var price = Number(item.price) || 0;
+
+    // Check student coins
+    var studentsSheet = ss.getSheetByName(CLASSROOM_SHEETS.STUDENTS);
+    var sData = studentsSheet.getDataRange().getValues();
+    var sHeaders = sData[0];
+    var sUsernameCol = sHeaders.indexOf('username');
+    var sCoinsCol = sHeaders.indexOf('coins');
+
+    if (sCoinsCol === -1) return { status: 'error', message: 'Coins column not found' };
+
+    var studentRow = -1;
+    var currentCoins = 0;
+    for (var i = 1; i < sData.length; i++) {
+        if (String(sData[i][sUsernameCol]) === String(body.username)) {
+            studentRow = i + 1;
+            currentCoins = Number(sData[i][sCoinsCol]) || 0;
+            break;
+        }
+    }
+    if (studentRow === -1) return { status: 'error', message: 'Student not found' };
+    if (currentCoins < price) return { status: 'error', message: 'Không đủ vàng! Cần ' + price + ' nhưng chỉ có ' + currentCoins };
+
+    // Deduct coins
+    var newCoins = currentCoins - price;
+    studentsSheet.getRange(studentRow, sCoinsCol + 1).setValue(newCoins);
+
+    // Add item to pet's inventory
+    var petSheet = ss.getSheetByName(GAMIFICATION_SHEETS.USER_PETS);
+    var pData = petSheet.getDataRange().getValues();
+    var pHeaders = pData[0];
+    var pUsernameCol = pHeaders.indexOf('username');
+    var pItemsCol = pHeaders.indexOf('items');
+
+    for (var j = 1; j < pData.length; j++) {
+        if (String(pData[j][pUsernameCol]) === String(body.username)) {
+            var currentItems = [];
+            try { currentItems = JSON.parse(pData[j][pItemsCol]) || []; } catch (e) { currentItems = []; }
+
+            // Check if already owns this item
+            if (currentItems.indexOf(body.itemId) !== -1) {
+                // Refund
+                studentsSheet.getRange(studentRow, sCoinsCol + 1).setValue(currentCoins);
+                return { status: 'error', message: 'Bé đã có món đồ này rồi!' };
+            }
+
+            currentItems.push(body.itemId);
+            petSheet.getRange(j + 1, pItemsCol + 1).setValue(JSON.stringify(currentItems));
+
+            return {
+                status: 'success',
+                data: {
+                    newCoins: newCoins,
+                    items: currentItems,
+                    purchasedItem: {
+                        itemId: body.itemId,
+                        name: item.name,
+                        price: price,
+                    },
+                },
+            };
+        }
+    }
+
+    return { status: 'error', message: 'Pet not found for this student' };
+}
+
+// Get leaderboard (top students by level)
+function handleGetLeaderboard(body) {
+    var pets = getSheetDataAsObjects(GAMIFICATION_SHEETS.USER_PETS);
+    var students = getSheetDataAsObjects(CLASSROOM_SHEETS.STUDENTS);
+
+    // Build leaderboard
+    var leaderboard = pets.map(function (pet) {
+        var student = students.find(function (s) { return s.username === pet.username; });
+        return {
+            username: pet.username,
+            fullName: student ? student.fullName : pet.username,
+            petId: pet.petId,
+            petName: pet.petName,
+            level: Number(pet.level) || 1,
+            exp: Number(pet.exp) || 0,
+            avatar: student ? (student.avatar || '') : '',
+        };
+    });
+
+    // Sort by level DESC, then EXP DESC
+    leaderboard.sort(function (a, b) {
+        if (b.level !== a.level) return b.level - a.level;
+        return b.exp - a.exp;
+    });
+
+    // Return top 10
+    return {
+        status: 'success',
+        data: leaderboard.slice(0, 10),
+    };
 }
 
 // === END OF CODE ===

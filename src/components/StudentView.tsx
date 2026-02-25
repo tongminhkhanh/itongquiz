@@ -10,6 +10,8 @@ import {
 } from './student';
 import { validateAnswersOnServer } from '../services/quizValidationService';
 import { useClassroomStore } from '../stores/useClassroomStore';
+import { useGamificationStore } from '../stores/useGamificationStore';
+import RewardOverlay from './gamification/RewardOverlay';
 
 interface Props {
   quiz: Quiz;
@@ -52,6 +54,15 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // 🎮 Gamification reward state
+  const [showReward, setShowReward] = useState(false);
+  const [rewardData, setRewardData] = useState<{
+    expEarned: number;
+    coinsEarned: number;
+    newLevel: number;
+    leveledUp: boolean;
+  } | null>(null);
 
   // Pagination: 10 câu/trang
   const QUESTIONS_PER_PAGE = 10;
@@ -470,8 +481,6 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         }
 
         // 🔧 Client-side override for ORDERING
-        // Server bug: compares JSON.stringify(object) with JSON.stringify(array) → always false
-        // Student answer is Record<number, number> {itemIndex: position}, correctOrder is number[]
         if (q.type === QuestionType.ORDERING && !isCorrect && studentAnswer) {
           let oCorrectOrder = (q as any).correctOrder || [];
           if (!Array.isArray(oCorrectOrder) || oCorrectOrder.length === 0) {
@@ -613,6 +622,46 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       // Save result
       await onSaveResult(resultData);
       setResult(resultData);
+
+      // 🎮 Gamification: Award EXP + Coins after quiz submission
+      const addExp = correctedCorrectCount * 10 + (correctedScore === 10 ? 50 : 0);
+      const addCoins = correctedCorrectCount * 5;
+
+      // Always show reward overlay for motivation
+      let rewardLevel = 1;
+      let didLevelUp = false;
+
+      // Try to sync with backend if student is logged in + has pet
+      const gamStore = useGamificationStore.getState();
+      const classStore = useClassroomStore.getState();
+      if (classStore.studentSession?.username && gamStore.pet) {
+        try {
+          const success = await gamStore.updateGameState(
+            classStore.studentSession.username,
+            addExp,
+            addCoins
+          );
+          if (success) {
+            const reward = useGamificationStore.getState().lastReward;
+            rewardLevel = reward?.newLevel ?? gamStore.pet?.level ?? 1;
+            didLevelUp = reward?.leveledUp ?? false;
+          }
+        } catch (e) {
+          console.warn('⚠️ Gamification sync failed (non-blocking):', e);
+        }
+      }
+
+      // Show reward animation (always, even without backend)
+      if (correctedCorrectCount > 0) {
+        setRewardData({
+          expEarned: addExp,
+          coinsEarned: addCoins,
+          newLevel: rewardLevel,
+          leveledUp: didLevelUp,
+        });
+        setShowReward(true);
+      }
+
       setStep('result');
     } catch (error: any) {
       console.error('🚨 Submit failed:', error);
@@ -729,12 +778,24 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
   // RESULT VIEW
   if (step === 'result' && result) {
     return (
-      <ResultScreen
-        quiz={quiz}
-        result={result}
-        answers={answers}
-        onExit={onExit}
-      />
+      <>
+        <ResultScreen
+          quiz={quiz}
+          result={result}
+          answers={answers}
+          onExit={onExit}
+        />
+        {/* Gamification Reward Overlay */}
+        {showReward && rewardData && (
+          <RewardOverlay
+            expEarned={rewardData.expEarned}
+            coinsEarned={rewardData.coinsEarned}
+            newLevel={rewardData.newLevel}
+            leveledUp={rewardData.leveledUp}
+            onClose={() => setShowReward(false)}
+          />
+        )}
+      </>
     );
   }
 

@@ -67,9 +67,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
             const serverResult = result.validationDetails.find(d => d.questionId === question.id);
             if (serverResult) {
                 if (!answer && answer !== false && answer !== 0) return 'skipped';
-                // 🔧 Override: Server has bugs for ORDERING and UNDERLINE
-                // - ORDERING: server compares JSON.stringify(object) vs JSON.stringify(array) → always false
-                // - UNDERLINE: server compares array with string → always false
+                // 🔧 Override: Server has bugs for ORDERING and UNDERLINE.
                 // When server says wrong for these types, fall through to local comparison
                 if (!serverResult.isCorrect && (
                     question.type === QuestionType.ORDERING ||

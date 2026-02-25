@@ -199,6 +199,34 @@ export const deleteAssignment = async (assignmentId: string): Promise<boolean> =
 };
 
 /**
+ * Update assignment deadline (server auto-reopens if new deadline is in the future)
+ */
+export const updateAssignmentDeadline = async (
+    assignmentId: string,
+    newDeadline: string
+): Promise<boolean> => {
+    const res = await callGasApi('update_assignment_deadline', { assignmentId, newDeadline });
+    if (res.status !== 'success') {
+        console.error('[ClassroomService] updateAssignmentDeadline failed:', res.message);
+    }
+    return res.status === 'success';
+};
+
+/**
+ * Toggle assignment status (OPEN <-> CLOSED)
+ */
+export const updateAssignmentStatus = async (
+    assignmentId: string,
+    newStatus: 'OPEN' | 'CLOSED'
+): Promise<boolean> => {
+    const res = await callGasApi('update_assignment_status', { assignmentId, newStatus });
+    if (res.status !== 'success') {
+        console.error('[ClassroomService] updateAssignmentStatus failed:', res.message);
+    }
+    return res.status === 'success';
+};
+
+/**
  * Get student assignments (for student portal dashboard)
  */
 export const getStudentAssignments = async (studentId: string): Promise<Assignment[]> => {

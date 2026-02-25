@@ -4,101 +4,7 @@ import { Search, Clock, ChevronRight, ArrowLeft, Lock } from 'lucide-react';
 // --- Fluent Emoji CDN Base ---
 const FLUENT_CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
 
-// --- Subject Config (imported from HomePage) ---
-const SUBJECT_CONFIG: Record<string, {
-    label: string;
-    title: string;
-    desc: string;
-    icon: string;
-    color: string;
-    bgColor: string;
-    borderColor: string;
-    btnColor: string;
-    btnBorder: string;
-    btnText: string;
-    btnLabel: string;
-    highlight?: boolean;
-}> = {
-    'class': {
-        label: 'Bài Tập',
-        title: 'Bài Tập Lớp',
-        desc: 'Bài tập được giao từ thầy cô.',
-        icon: `${FLUENT_CDN}/Books/3D/books_3d.png`,
-        color: '#3B82F6',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-200',
-        btnColor: 'bg-blue-500 hover:bg-blue-400',
-        btnBorder: 'border-blue-700',
-        btnText: 'text-white',
-        btnLabel: 'Bắt đầu',
-    },
-    'ioe': {
-        label: 'Tiếng Anh',
-        title: 'English Fun',
-        desc: 'Hello! How are you?',
-        icon: `${FLUENT_CDN}/Speech%20balloon/3D/speech_balloon_3d.png`,
-        color: '#F59E0B',
-        bgColor: 'bg-yellow-50',
-        borderColor: 'border-yellow-200',
-        btnColor: 'bg-yellow-400 hover:bg-yellow-300',
-        btnBorder: 'border-yellow-600',
-        btnText: 'text-yellow-900',
-        btnLabel: 'Start Now',
-    },
-    'vioedu': {
-        label: 'Toán Học',
-        title: 'Toán Thông Minh',
-        desc: 'Cộng trừ nhân chia thật dễ!',
-        icon: `${FLUENT_CDN}/Abacus/3D/abacus_3d.png`,
-        color: '#3B82F6',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-200',
-        btnColor: 'bg-blue-500 hover:bg-blue-400',
-        btnBorder: 'border-blue-700',
-        btnText: 'text-white',
-        btnLabel: 'Bắt đầu',
-    },
-    'trang-nguyen': {
-        label: 'Tiếng Việt',
-        title: 'Vua Tiếng Việt',
-        desc: 'Ghép chữ, đoán từ, kể chuyện.',
-        icon: `${FLUENT_CDN}/Pencil/3D/pencil_3d.png`,
-        color: '#EC4899',
-        bgColor: 'bg-pink-50',
-        borderColor: 'border-pink-200',
-        btnColor: 'bg-pink-500 hover:bg-pink-400',
-        btnBorder: 'border-pink-700',
-        btnText: 'text-white',
-        btnLabel: 'Bắt đầu',
-        highlight: true,
-    },
-    'science': {
-        label: 'Khoa Học',
-        title: 'Nhà Khoa Học',
-        desc: 'Thí nghiệm và khám phá.',
-        icon: `${FLUENT_CDN}/Test%20tube/3D/test_tube_3d.png`,
-        color: '#10B981',
-        bgColor: 'bg-green-50',
-        borderColor: 'border-green-200',
-        btnColor: 'bg-green-500 hover:bg-green-400',
-        btnBorder: 'border-green-700',
-        btnText: 'text-white',
-        btnLabel: 'Bắt đầu',
-    },
-    'history': {
-        label: 'Lịch Sử',
-        title: 'Sử Việt Hào Hùng',
-        desc: 'Danh nhân và sự kiện.',
-        icon: `${FLUENT_CDN}/Scroll/3D/scroll_3d.png`,
-        color: '#F97316',
-        bgColor: 'bg-orange-50',
-        borderColor: 'border-orange-200',
-        btnColor: 'bg-orange-500 hover:bg-orange-400',
-        btnBorder: 'border-orange-700',
-        btnText: 'text-white',
-        btnLabel: 'Bắt đầu',
-    },
-};
+import { SUBJECT_CONFIG } from './HomePage';
 
 // --- Grade Config ---
 const GRADE_LEVELS = [
@@ -280,23 +186,29 @@ const QuizListPage: React.FC<Props> = ({
                             );
                         })
                     ) : (
-                        category === 'class' && !isLoggedIn ? (
+                        category === 'class' ? (
+                            /* Loading skeleton while fetching from Google Sheets */
                             <div className="quiz-list-empty">
-                                <img
-                                    src={`${FLUENT_CDN}/Locked/3D/locked_3d.png`}
-                                    alt="Locked"
-                                    className="quiz-list-empty__img"
-                                />
-                                <h3 className="quiz-list-empty__title">Đăng nhập tài khoản để làm bài tập</h3>
-                                <p className="quiz-list-empty__text">Các em cần đăng nhập để xem bài tập của lớp nhé!</p>
-                                {onLoginClick && (
-                                    <button
-                                        onClick={onLoginClick}
-                                        className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95"
-                                    >
-                                        Vào Lớp Ngay
-                                    </button>
-                                )}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem', width: '100%', maxWidth: '800px' }}>
+                                    {[1, 2, 3, 4].map(i => (
+                                        <div key={i} style={{
+                                            background: '#fff',
+                                            borderRadius: '16px',
+                                            padding: '1.5rem',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                                            animation: 'pulse 1.5s ease-in-out infinite',
+                                        }}>
+                                            <div style={{ width: '100%', height: '8px', background: '#e0e0e0', borderRadius: '4px', marginBottom: '1rem' }} />
+                                            <div style={{ width: '48px', height: '48px', background: '#f0f0f0', borderRadius: '12px', marginBottom: '0.75rem' }} />
+                                            <div style={{ width: '80%', height: '14px', background: '#f0f0f0', borderRadius: '4px', marginBottom: '0.5rem' }} />
+                                            <div style={{ width: '60%', height: '12px', background: '#f5f5f5', borderRadius: '4px' }} />
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="quiz-list-empty__text" style={{ marginTop: '1.5rem' }}>
+                                    ⏳ Đang tải bài tập...
+                                </p>
+                                <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
                             </div>
                         ) : (
                             <div className="quiz-list-empty">
