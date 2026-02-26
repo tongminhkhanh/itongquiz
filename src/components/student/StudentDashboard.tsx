@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, ShoppingBag, Trophy, LogOut, Sparkles } from 'lucide-react';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useGamificationStore } from '../../stores/useGamificationStore';
+import { useQuizStore } from '../../stores/quizStore';
 import PetDisplay from '../gamification/PetDisplay';
 import StatusBar from '../gamification/StatusBar';
 import ShopModal from '../gamification/ShopModal';
@@ -25,6 +26,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 }) => {
     const { studentSession, logoutStudent } = useClassroomStore();
     const { pet, coins, lastReward, clearReward } = useGamificationStore();
+    const setView = useQuizStore(s => s.setView);
     const [showShop, setShowShop] = useState(false);
 
     if (!studentSession) return null;
@@ -38,6 +40,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const handleLogout = () => {
         if (window.confirm('Bạn muốn đăng xuất?')) {
             logoutStudent();
+            setView('home');
         }
     };
 
