@@ -9,7 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, ShoppingBag, Trophy, LogOut, Sparkles } from 'lucide-react';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useGamificationStore } from '../../stores/useGamificationStore';
-import { useQuizStore } from '../../stores/quizStore';
+import { useQuizStore } from '../../../stores/quizStore';
 import PetDisplay from '../gamification/PetDisplay';
 import StatusBar from '../gamification/StatusBar';
 import ShopModal from '../gamification/ShopModal';
