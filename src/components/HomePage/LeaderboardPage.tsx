@@ -23,6 +23,8 @@ interface LeaderboardEntry {
     totalScore: number; // Cumulative score points
     quizCount: number; // Number of quizzes taken
     avgScore: number; // Average score per quiz (0-10)
+    totalCorrect: number; // Total correct answers across all quizzes
+    totalWrong: number; // Total wrong answers across all quizzes
 }
 
 interface LeaderboardPageProps {
@@ -83,19 +85,23 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
         }
 
         // Aggregate by student name + class
-        const studentMap = new Map<string, { name: string; cls: string; totalScore: number; count: number }>();
+        const studentMap = new Map<string, { name: string; cls: string; totalScore: number; count: number; totalCorrect: number; totalQuestions: number }>();
         filtered.forEach(r => {
             const key = `${r.studentName}__${r.studentClass}`;
             const existing = studentMap.get(key);
             if (existing) {
                 existing.totalScore += Math.round(r.score * 100);
                 existing.count += 1;
+                existing.totalCorrect += r.correctCount || 0;
+                existing.totalQuestions += r.totalQuestions || 0;
             } else {
                 studentMap.set(key, {
                     name: r.studentName,
                     cls: r.studentClass,
                     totalScore: Math.round(r.score * 100),
                     count: 1,
+                    totalCorrect: r.correctCount || 0,
+                    totalQuestions: r.totalQuestions || 0,
                 });
             }
         });
@@ -109,6 +115,8 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
                 totalScore: s.totalScore,
                 quizCount: s.count,
                 avgScore: s.count > 0 ? Math.round((s.totalScore / s.count / 100) * 10) / 10 : 0,
+                totalCorrect: s.totalCorrect,
+                totalWrong: s.totalQuestions - s.totalCorrect,
             }))
             .sort((a, b) => b.totalScore - a.totalScore);
 
@@ -345,6 +353,10 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
                             </div>
                             <div className="leaderboard-row__stats">
                                 <span className="leaderboard-row__quizcount">{entry.quizCount} bài</span>
+                                <div className="leaderboard-row__correct-wrong" style={{ display: 'flex', gap: '8px', fontSize: '11px', marginTop: '2px' }}>
+                                    <span style={{ color: '#16a34a' }}>✅ {entry.totalCorrect}</span>
+                                    <span style={{ color: '#dc2626' }}>❌ {entry.totalWrong}</span>
+                                </div>
                             </div>
                             <div className="leaderboard-row__score">
                                 <img

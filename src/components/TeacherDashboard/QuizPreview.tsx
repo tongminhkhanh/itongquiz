@@ -319,6 +319,11 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             setEditImageUrl((question as any).image || '');
             setEditOptionImages((question as any).optionImages || ['', '', '', '']);
         }
+
+        // Load image for all types (except IMAGE_QUESTION/DROPDOWN which have their own handlers)
+        if (question.type !== QuestionType.IMAGE_QUESTION && question.type !== QuestionType.DROPDOWN) {
+            setEditImageUrl((question as any).image || '');
+        }
         // DRAG_DROP specific
         if (question.type === QuestionType.DRAG_DROP) {
             setEditDragDropText((question as any).text || '');
@@ -391,6 +396,11 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                 updated.type === QuestionType.IMAGE_QUESTION ||
                 updated.type === QuestionType.RIDDLE) {
                 updated.correctAnswer = editCorrectAnswer;
+            }
+
+            // Save image for all types (except IMAGE_QUESTION/DROPDOWN which have their own handlers)
+            if (updated.type !== QuestionType.IMAGE_QUESTION && updated.type !== QuestionType.DROPDOWN) {
+                updated.image = editImageUrl || undefined;
             }
 
             // RIDDLE specific
@@ -516,6 +526,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
         setNewQuestionType(type);
         setEditQuestionText('');
         setEditCorrectAnswer('');
+        setEditImageUrl(''); // Reset image for all types
 
         // Set defaults based on type
         switch (type) {
@@ -524,6 +535,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             case QuestionType.IMAGE_QUESTION:
                 setEditOptions(['', '', '', '']);
                 setEditCorrectAnswers([]);
+                setEditImageUrl('');
                 break;
             case QuestionType.TRUE_FALSE:
                 setEditItems([
@@ -539,6 +551,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                 break;
             case QuestionType.SHORT_ANSWER:
                 // Just question and correct answer
+                setEditImageUrl('');
                 break;
             case QuestionType.DROPDOWN:
                 setEditDropdownText('');
@@ -605,6 +618,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                     question: editQuestionText,
                     options: editOptions.filter(o => o.trim()),
                     correctAnswer: editCorrectAnswer,
+                    image: editImageUrl || undefined,
                 } as any;
                 break;
             case QuestionType.MULTIPLE_SELECT:
@@ -614,6 +628,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                     question: editQuestionText,
                     options: editOptions.filter(o => o.trim()),
                     correctAnswers: editCorrectAnswers,
+                    image: editImageUrl || undefined,
                 } as any;
                 break;
             case QuestionType.TRUE_FALSE:
@@ -630,6 +645,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                     type: QuestionType.SHORT_ANSWER,
                     question: editQuestionText,
                     correctAnswer: editCorrectAnswer,
+                    image: editImageUrl || undefined,
                 } as any;
                 break;
             case QuestionType.MATCHING:
@@ -745,6 +761,11 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
         // Save difficulty if selected
         if (editDifficulty !== undefined) {
             (newQuestion as any).difficulty = editDifficulty;
+        }
+
+        // Save image if provided (for types that don't already include it)
+        if (editImageUrl && (newQuestion as any).image === undefined) {
+            (newQuestion as any).image = editImageUrl;
         }
 
         const updated = [...quiz.questions, newQuestion];
@@ -897,6 +918,14 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Optional Image Preview for all types (except IMAGE_QUESTION/DROPDOWN) */}
+                                    {q.type !== QuestionType.IMAGE_QUESTION &&
+                                        q.type !== QuestionType.DROPDOWN && (q as any).image && (
+                                            <div className="ml-8 mt-2 mb-3">
+                                                <img src={(q as any).image} alt="Attached" className="max-h-32 rounded-lg border object-contain bg-gray-50" />
+                                            </div>
+                                        )}
 
                                     {/* MCQ Options */}
                                     {q.type === QuestionType.MCQ && (
@@ -1329,6 +1358,31 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                 )}
                             </div>
 
+                            {/* Optional Image for all types (except IMAGE_QUESTION/DROPDOWN) */}
+                            {editingQuestion.type !== QuestionType.IMAGE_QUESTION &&
+                                editingQuestion.type !== QuestionType.DROPDOWN && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            🖼️ Hình ảnh đính kèm (Tuỳ chọn)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editImageUrl}
+                                            onChange={(e) => setEditImageUrl(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                            placeholder="Nhập phần đường link URL ảnh..."
+                                        />
+                                        {editImageUrl && (
+                                            <div className="mt-2">
+                                                <img src={editImageUrl} alt="Preview" className="max-h-32 rounded-lg border object-contain bg-gray-50"
+                                                    onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                                                    onLoad={(e) => (e.target as HTMLImageElement).style.display = 'block'}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                             {/* Options for MCQ */}
                             {(editingQuestion.type === QuestionType.MCQ || editingQuestion.type === QuestionType.MULTIPLE_SELECT) && editOptions.length > 0 && (
                                 <div>
@@ -1352,6 +1406,17 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                         }}
                                                         className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                                     />
+                                                    {editOptions.length > 2 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const newOptions = editOptions.filter((_, idx) => idx !== i);
+                                                                setEditOptions(newOptions);
+                                                            }}
+                                                            className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-colors"
+                                                            title="Xóa đáp án"
+                                                        >✕</button>
+                                                    )}
                                                 </div>
                                                 {/* Preview if has LaTeX */}
                                                 {opt && opt.includes('$') && (
@@ -1362,6 +1427,15 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                             </div>
                                         ))}
                                     </div>
+                                    {editOptions.length < 8 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditOptions([...editOptions, ''])}
+                                            className="mt-2 text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                        >
+                                            + Thêm đáp án {String.fromCharCode(65 + editOptions.length)}
+                                        </button>
+                                    )}
 
                                     {/* Smart Distractors button in edit modal */}
                                     {editingQuestion && supportsDistractors(editingQuestion.type) && (
@@ -1719,6 +1793,44 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 </div>
                                             ))}
                                         </div>
+                                    </div>
+
+                                    {/* Correct Answer Selector */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            ✅ Đáp án đúng
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {editOptions.map((opt, i) => {
+                                                const letter = String.fromCharCode(65 + i);
+                                                const isCorrect = editCorrectAnswer === letter;
+                                                return (
+                                                    <button
+                                                        key={i}
+                                                        type="button"
+                                                        onClick={() => setEditCorrectAnswer(letter)}
+                                                        className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all text-left ${isCorrect
+                                                            ? 'border-green-500 bg-green-50 ring-1 ring-green-400'
+                                                            : 'border-gray-200 hover:border-green-300 hover:bg-gray-50'
+                                                            }`}
+                                                    >
+                                                        <span className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold flex-shrink-0 ${isCorrect
+                                                            ? 'border-green-500 bg-green-500 text-white'
+                                                            : 'border-gray-300 text-gray-500'
+                                                            }`}>
+                                                            {letter}
+                                                        </span>
+                                                        <span className={`text-sm truncate ${isCorrect ? 'font-semibold text-green-700' : 'text-gray-600'}`}>
+                                                            {opt || `Đáp án ${letter}`}
+                                                        </span>
+                                                        {isCorrect && <span className="ml-auto text-green-600">✓</span>}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        {!editCorrectAnswer && (
+                                            <p className="text-xs text-red-500 mt-1">⚠️ Chưa chọn đáp án đúng!</p>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -2211,7 +2323,31 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                 />
                             </div>
 
-                            {/* Options for MCQ/MULTIPLE_SELECT */}
+                            {/* Optional Image for all types (except IMAGE_QUESTION/DROPDOWN) */}
+                            {newQuestionType !== QuestionType.IMAGE_QUESTION &&
+                                newQuestionType !== QuestionType.DROPDOWN && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            🖼️ Hình ảnh đính kèm (Tuỳ chọn)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editImageUrl}
+                                            onChange={(e) => setEditImageUrl(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                            placeholder="Nhập đường link URL ảnh..."
+                                        />
+                                        {editImageUrl && (
+                                            <div className="mt-2">
+                                                <img src={editImageUrl} alt="Preview" className="max-h-32 rounded-lg border object-contain bg-gray-50"
+                                                    onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                                                    onLoad={(e) => (e.target as HTMLImageElement).style.display = 'block'}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                             {(newQuestionType === QuestionType.MCQ || newQuestionType === QuestionType.MULTIPLE_SELECT) && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2250,9 +2386,32 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                         title="Đáp án đúng"
                                                     />
                                                 )}
+                                                {editOptions.length > 2 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newOptions = editOptions.filter((_, idx) => idx !== i);
+                                                            setEditOptions(newOptions);
+                                                            // Clean up correctAnswers that reference removed indices
+                                                            const removedLetter = String.fromCharCode(65 + i);
+                                                            setEditCorrectAnswers(editCorrectAnswers.filter(a => a !== removedLetter));
+                                                        }}
+                                                        className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-colors"
+                                                        title="Xóa đáp án"
+                                                    >✕</button>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
+                                    {editOptions.length < 8 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditOptions([...editOptions, ''])}
+                                            className="mt-2 text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                        >
+                                            + Thêm đáp án {String.fromCharCode(65 + editOptions.length)}
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
@@ -2364,9 +2523,6 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                             {/* IMAGE_QUESTION */}
                             {newQuestionType === QuestionType.IMAGE_QUESTION && (
                                 <div className="space-y-4">
-                                    <div className="bg-red-100 p-2 text-red-600 font-bold border border-red-500 rounded mb-4">
-                                        ⚠️ CODE MỚI ĐÃ ĐƯỢC LOAD (TEST)
-                                    </div>
                                     {/* Image URL */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
