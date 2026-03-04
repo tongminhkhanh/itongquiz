@@ -193,6 +193,11 @@ const PdfTab: React.FC<PdfTabProps> = ({ onSaveQuiz, onSuccess }) => {
             return;
         }
 
+        if (!classLevel || !classLevel.trim()) {
+            setError('Vui lòng chọn Khối lớp cho đề thi');
+            return;
+        }
+
         setIsGenerating(true);
         setError(null);
         setSuccessMessage(null);
@@ -283,6 +288,11 @@ ${editedText}
     const handleSaveAll = async () => {
         if (extractedQuestions.length === 0) {
             setError('Không có câu hỏi nào để lưu');
+            return;
+        }
+
+        if (!classLevel || !classLevel.trim()) {
+            setError('Vui lòng chọn Khối lớp trước khi lưu đề thi');
             return;
         }
 

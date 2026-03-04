@@ -859,6 +859,11 @@ TOTAL: ${totalQuestions} questions
             return;
         }
 
+        if (!classLevel || !classLevel.trim()) {
+            setError('Vui lòng chọn Khối lớp cho đề thi');
+            return;
+        }
+
         // Limit max questions to prevent timeout
         if (totalQuestions > 100) {
             setError(`⚠️ Tối đa 100 câu/lần tạo (bạn đang chọn ${totalQuestions} câu). Hãy giảm số lượng để tránh timeout.`);
@@ -1006,6 +1011,11 @@ ${searchResult.content}
     // Handle save - Use IOE Sheet Service instead of main quiz store
     const handleSaveQuiz = async () => {
         if (!generatedQuiz) return;
+
+        if (!classLevel || !classLevel.trim()) {
+            setError('Vui lòng chọn Khối lớp trước khi lưu đề thi');
+            return;
+        }
 
         try {
             const success = await saveIoeQuiz(generatedQuiz);

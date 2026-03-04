@@ -212,6 +212,11 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             }
         }
 
+        if (!classLevel || !classLevel.trim()) {
+            setError('Vui lòng chọn Khối lớp cho đề thi');
+            return;
+        }
+
         const enabledTypes = Object.entries(selectedTypes)
             .filter(([_, enabled]) => enabled)
             .map(([type]) => type as QuestionType);
@@ -348,6 +353,11 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
     // Handle save quiz
     const handleSaveQuiz = async () => {
         if (!generatedQuiz || isSaving) return;
+
+        if (!classLevel || !classLevel.trim()) {
+            setError('Vui lòng chọn Khối lớp trước khi lưu đề thi');
+            return;
+        }
 
         setIsSaving(true);
         try {

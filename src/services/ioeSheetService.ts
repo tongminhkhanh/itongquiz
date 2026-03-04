@@ -2,14 +2,14 @@
 // Service riêng cho hệ thống IOE, tách biệt khỏi googleSheetService.ts
 
 import { Quiz, Question, QuestionType, StudentResult } from '../types';
-import { IOE_GOOGLE_SCRIPT_URL } from '../config/constants';
+import { IOE_GOOGLE_SCRIPT_URL, USE_D1 } from '../config/constants';
+import { callApi } from './apiAdapter';
 
-// Security: API token for IOE GAS authentication
 // Security: API token for IOE GAS authentication
 const IOE_API_SECRET_TOKEN = import.meta.env.VITE_IOE_API_SECRET_TOKEN;
 
-if (!IOE_API_SECRET_TOKEN) {
-    console.error("Critical Security Warning: VITE_IOE_API_SECRET_TOKEN is missing!");
+if (!USE_D1 && !IOE_API_SECRET_TOKEN) {
+    console.warn("Security Warning: VITE_IOE_API_SECRET_TOKEN is missing (only needed for GAS backend)!");
 }
 
 // Helper to fix "Reorder the words" questions
@@ -38,8 +38,25 @@ const fixReorderQuestion = (text: string): string => {
 
 // Helper to call IOE GAS API with timeout
 const callIoeGasApi = async (action: string, payload: any = {}, timeoutMs: number = 120000): Promise<any> => {
+    // 1. If using new D1 Workers backend, route through apiAdapter
+    if (USE_D1) {
+        console.log(`[IOE D1] Calling API: ${action}`);
+        try {
+            const data = await callApi(action, payload);
+            if (data && !Array.isArray(data) && (data as any).status === 'error') {
+                console.error(`[IOE D1] API Error [${action}]:`, (data as any).message);
+                return null;
+            }
+            return data;
+        } catch (error) {
+            console.error(`[IOE D1] Network Error [${action}]:`, error);
+            return null;
+        }
+    }
+
+    // 2. Legacy fallback: Google Apps Script
     if (!IOE_GOOGLE_SCRIPT_URL) {
-        console.error("[IOE] GOOGLE_SCRIPT_URL is not defined");
+        console.error("[IOE] IOE_GOOGLE_SCRIPT_URL is not defined");
         return null;
     }
 
@@ -179,25 +196,49 @@ const revalidateInBackground = async (onRefresh?: (quizzes: Quiz[]) => void): Pr
 
 // Helper to parse quizzes from API data
 const parseQuizzesFromData = (quizData: any[], questionData: any[]): Quiz[] => {
-    return quizData.map((row: any) => {
-        const quizId = row.id;
-        const quizQuestions = questionData
-            .filter((q: any) => q.quizId === quizId)
-            .map((q: any) => parseIoeQuestion(q));
-
+    // Helper to normalize snake_case (from D1) to camelCase (expected by frontend/GAS)
+    const normalizeRow = (row: any) => {
+        if (!row) return row;
         return {
-            id: quizId,
-            title: row.title,
-            classLevel: String(row.classLevel), // Ensure string for filtering
-            category: row.category || 'ioe',
-            examCode: row.examCode || undefined,
-            timeLimit: parseInt(row.timeLimit) || 15,
-            createdAt: row.createdAt,
-            accessCode: row.accessCode || undefined,
-            requireCode: row.requireCode === 'TRUE',
-            questions: quizQuestions,
+            ...row,
+            quizId: row.quizId || row.quiz_id,
+            classLevel: row.classLevel || row.class_level,
+            timeLimit: row.timeLimit || row.time_limit,
+            createdAt: row.createdAt || row.created_at,
+            createdBy: row.createdBy || row.created_by,
+            accessCode: row.accessCode || row.access_code,
+            requireCode: row.requireCode !== undefined ? row.requireCode : row.require_code,
+            showOnHome: row.showOnHome !== undefined ? row.showOnHome : row.show_on_home,
+            correctAnswer: row.correctAnswer || row.correct_answer,
+            text: row.text || row.text_field,
+            correctWordIndexes: row.correctWordIndexes || row.correct_word_indexes,
         };
-    });
+    };
+
+    const normalizedQuizData = quizData.map(normalizeRow);
+    const normalizedQuestionData = questionData.map(normalizeRow);
+
+    return normalizedQuizData
+        .filter((row: any) => !USE_D1 || row.category === 'ioe')
+        .map((row: any) => {
+            const quizId = row.id;
+            const quizQuestions = normalizedQuestionData
+                .filter((q: any) => q.quizId === quizId)
+                .map((q: any) => parseIoeQuestion(q));
+
+            return {
+                id: quizId,
+                title: row.title,
+                classLevel: String(row.classLevel), // Ensure string for filtering
+                category: row.category || 'ioe',
+                examCode: row.examCode || undefined,
+                timeLimit: parseInt(row.timeLimit) || 15,
+                createdAt: row.createdAt,
+                accessCode: row.accessCode || undefined,
+                requireCode: row.requireCode === 'TRUE' || row.requireCode === true,
+                questions: quizQuestions,
+            };
+        });
 };
 
 /**
@@ -279,9 +320,15 @@ const parseIoeQuestion = (row: any): Question => {
 
     switch (type) {
         case QuestionType.MCQ:
+            question.question = fixReorderQuestion(row.question);
+            question.options = row.options ? row.options.split('|') : [];
+            question.correctAnswer = row.correctAnswer;
+            break;
+
         case QuestionType.IMAGE_QUESTION:
             question.question = fixReorderQuestion(row.question);
             question.options = row.options ? row.options.split('|') : [];
+            try { question.optionImages = row.distractors ? JSON.parse(row.distractors) : []; } catch { question.optionImages = []; }
             question.correctAnswer = row.correctAnswer;
             break;
 
@@ -337,6 +384,10 @@ const parseIoeQuestion = (row: any): Question => {
 
         default:
             question.question = fixReorderQuestion(row.question);
+    }
+
+    if (row.image) {
+        question.image = row.image;
     }
 
     return question as Question;

@@ -118,6 +118,11 @@ const IoeManageTab: React.FC<IoeManageTabProps> = ({ onEdit }) => {
             return;
         }
 
+        if (!editForm.classLevel || !editForm.classLevel.trim()) {
+            setSaveError('Vui lòng chọn Khối lớp');
+            return;
+        }
+
         setIsSaving(true);
         setSaveError(null);
 

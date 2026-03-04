@@ -12,7 +12,7 @@ const API_SECRET_TOKEN = "[REDACTED-COMPROMISED-SHARED-TOKEN]";
 //
 // Quizzes Sheet Headers: id | title | classLevel | category | timeLimit | createdAt | accessCode | requireCode | createdBy
 //
-// Questions Sheet Headers: id | quizId | type | question | options | correctAnswer | items | text | blanks | distractors | image
+// Questions Sheet Headers: id | quizId | type | question | options | correctAnswer | items | text | blanks | distractors | sentence | words | correctWordIndexes | image
 //
 // ============ MAIN HANDLERS ============
 
@@ -291,7 +291,7 @@ function saveQuiz(sheet, data) {
             (q.type === 'UNDERLINE' || q.type === 'RIDDLE') ? (q.sentence || q.hint || "") : "",  // sentence column for UNDERLINE and RIDDLE (hint)
             q.type === 'UNDERLINE' ? JSON.stringify(q.words || []) : "",  // Placeholder for 'words' column
             q.type === 'UNDERLINE' ? JSON.stringify(q.correctWordIndexes || []) : "",  // Placeholder for 'correctWordIndexes' column
-            imageField  // 🖼️ Image URL for IMAGE_QUESTION type
+            imageField  // 🖼️ Image URL - column N (index 13)
         ];
     });
 

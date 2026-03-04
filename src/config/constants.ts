@@ -7,7 +7,11 @@ export const QUIZ_GID = '130202697'; // Quizzes sheet
 export const QUESTION_GID = '306226482'; // Questions sheet
 export const TEACHER_GID = '1020504406'; // Teachers sheet
 export const RESULTS_GID = '766571865'; // Results sheet
-export const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || '';
+
+// --- BACKEND ENDPOINTS ---
+export const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+export const WORKERS_API_URL = import.meta.env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+export const USE_D1 = import.meta.env.VITE_USE_D1 === 'true'; // Switch backend 
 
 // --- IOE SEPARATE SYSTEM ---
 export const IOE_GOOGLE_SHEET_ID = '1C9Ou0Z30-ayJlEPN29VnUOs52e4-7zh--Lv1egFo-lw';

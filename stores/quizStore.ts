@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Quiz, StudentResult } from '../src/types';
-import { fetchQuizzesFromSheets, fetchResultsFromSheets, saveQuizToSheet, saveResultToSheet, updateQuizInSheet, deleteQuizFromSheet } from '../src/services/googleSheetService';
+import { fetchQuizzesFromSheets, fetchResultsFromSheets, saveQuizToSheet, saveResultToSheet, updateQuizInSheet, deleteQuizFromSheet, deleteResultFromSheet } from '../src/services/googleSheetService';
 import { GOOGLE_SHEET_ID, QUIZ_GID, QUESTION_GID, RESULTS_GID, GOOGLE_SCRIPT_URL } from '../src/config/constants';
 
 type ViewType = 'home' | 'student' | 'teacher_login' | 'teacher_dash' | 'student_portal';
@@ -45,6 +45,7 @@ interface QuizState {
     modifyQuiz: (quiz: Quiz) => Promise<void>;
     removeQuiz: (id: string) => Promise<void>;
     submitResult: (result: StudentResult) => Promise<void>;
+    removeResult: (id: string) => Promise<void>;
 }
 
 export const useQuizStore = create<QuizState>()(
@@ -99,7 +100,18 @@ export const useQuizStore = create<QuizState>()(
                 set({ isLoading: true, error: null });
                 try {
                     const quizzes = await fetchQuizzesFromSheets(GOOGLE_SHEET_ID, QUIZ_GID, QUESTION_GID);
-                    set({ quizzes, isLoading: false });
+
+                    // 🔍 DEBUG: Check image fields in fetched quizzes
+                    const questionsWithImage = quizzes.flatMap(q => q.questions).filter(q => q.image && String(q.image).trim());
+                    console.log(`[quizStore] Loaded ${quizzes.length} quizzes, ${questionsWithImage.length} questions have image`);
+
+                    // 🖼️ FIX: Sync selectedQuiz with fresh data to prevent stale image references
+                    const currentSelectedQuiz = get().selectedQuiz;
+                    const updatedSelectedQuiz = currentSelectedQuiz
+                        ? quizzes.find(q => q.id === currentSelectedQuiz.id) || null
+                        : null;
+
+                    set({ quizzes, selectedQuiz: updatedSelectedQuiz, isLoading: false });
                 } catch (err: any) {
                     set({ error: err.message || 'Failed to load quizzes', isLoading: false });
                 }
@@ -186,6 +198,24 @@ export const useQuizStore = create<QuizState>()(
                     }
                 } catch (err) {
                     console.error('Failed to submit result:', err);
+                    throw err;
+                }
+            },
+
+            removeResult: async (id) => {
+                set({ isLoading: true, error: null });
+                try {
+                    const success = await deleteResultFromSheet(id, GOOGLE_SCRIPT_URL);
+                    if (success) {
+                        set((state) => ({
+                            results: state.results.filter(r => r.id !== id),
+                            isLoading: false
+                        }));
+                    } else {
+                        throw new Error('Failed to delete result from server');
+                    }
+                } catch (err: any) {
+                    set({ error: err.message, isLoading: false });
                     throw err;
                 }
             }

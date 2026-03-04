@@ -5,17 +5,8 @@
  * Reuses the same callGasApi pattern as classroomService.
  */
 
-import { GOOGLE_SCRIPT_URL } from '../config/constants';
-import {
-    PetData,
-    ShopItem,
-    GameStateResult,
-    PurchaseResult,
-    LeaderboardEntry,
-} from '../types/gamification.types';
-
-// Security: API token for GAS authentication
-const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
+import { UserPet, ShopItem, BuyItemResponse, LeaderboardEntry, GameStateResult } from '../types/gamification.types';
+import { callApi } from './apiAdapter';
 
 // Response type matching GAS API format
 interface GamificationApiResponse<T> {
@@ -27,52 +18,13 @@ interface GamificationApiResponse<T> {
 /**
  * Helper to call GAS API
  */
-const callGasApi = async <T = unknown>(
-    action: string,
-    payload: Record<string, unknown> = {}
-): Promise<GamificationApiResponse<T>> => {
-    if (!GOOGLE_SCRIPT_URL) {
-        console.error('[GamificationService] GOOGLE_SCRIPT_URL is not defined');
-        return { status: 'error', message: 'Script URL not configured' };
-    }
-
+const callGasApi = async <T = unknown>(action: string, payload: Record<string, unknown> = {}): Promise<GamificationApiResponse<T>> => {
     try {
-        console.log(`[GamificationService] Calling API [${action}] at ${GOOGLE_SCRIPT_URL}`);
-        console.log(`[GamificationService] Payload:`, JSON.stringify({ ...payload, action }));
-
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8',
-            },
-            body: JSON.stringify({
-                ...payload,
-                action,
-                token: API_SECRET_TOKEN,
-            }),
-        });
-
-        const text = await response.text();
-        console.log(`[GamificationService] Raw Response [${action}]:`, text);
-
-        let data;
-        try {
-            data = JSON.parse(text);
-        } catch (e) {
-            console.error(`[GamificationService] JSON Parse Error:`, e);
-            return { status: 'error', message: 'Máy chủ trả về dữ liệu lỗi.' };
-        }
-
-        if (data.status === 'error') {
-            console.error(`[GamificationService] API Error [${action}]:`, data.message);
-            return { status: 'error', message: data.message || 'Unknown API error' };
-        }
-
-        return { status: 'success', data: data.data ?? data };
-    } catch (error) {
-        console.error(`[GamificationService] Network Error [${action}]:`, error);
-        return { status: 'error', message: 'Lỗi mạng hoặc CORS. Vui lòng kiểm tra console.' };
+        const data = await callApi<GamificationApiResponse<T>>(action, payload);
+        return { status: 'success', data: data.data ?? (data as any) };
+    } catch (error: any) {
+        console.error(`[GamificationService] API Error [${action}]:`, error);
+        return { status: 'error', message: error.message || 'Unknown API error' };
     }
 };
 
@@ -88,8 +40,8 @@ export const getPetData = async (
     username: string,
     petId?: string,
     petName?: string
-): Promise<{ pet: PetData; coins: number; shopItems: ShopItem[] } | null> => {
-    const res = await callGasApi<{ pet: PetData; coins: number; shopItems: ShopItem[] }>(
+): Promise<{ pet: UserPet; coins: number; shopItems: ShopItem[] } | null> => {
+    const res = await callGasApi<{ pet: UserPet; coins: number; shopItems: ShopItem[] }>(
         'get_pet_data',
         { username, petId, petName }
     );
@@ -134,8 +86,8 @@ export const updateGameState = async (
 export const buyShopItem = async (
     username: string,
     itemId: string
-): Promise<PurchaseResult | null> => {
-    const res = await callGasApi<PurchaseResult>('buy_shop_item', {
+): Promise<BuyItemResponse | null> => {
+    const res = await callGasApi<BuyItemResponse>('buy_shop_item', {
         username,
         itemId,
     });

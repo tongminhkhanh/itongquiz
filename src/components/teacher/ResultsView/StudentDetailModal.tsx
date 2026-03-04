@@ -530,9 +530,40 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                             {/* MATCHING pairs render */}
                                             {questionType === 'MATCHING' && (
                                                 <div className="space-y-1 mb-2 text-sm">
-                                                    {typeof selectedAnswer === 'object' && selectedAnswer && Object.keys(selectedAnswer).length > 0 ? (
+                                                    {(pairs || []).length > 0 ? (
                                                         <div className="p-2 rounded-lg bg-blue-50 border border-blue-200">
-                                                            <p className="font-medium text-blue-800 mb-1">Cặp ghép của học sinh:</p>
+                                                            <p className="font-medium text-blue-800 mb-1">Chi tiết ghép nối:</p>
+                                                            {pairs.map((pair: any) => {
+                                                                const studentRight = (selectedAnswer || {})[pair.left];
+                                                                const isPairCorrect = studentRight === pair.right;
+
+                                                                return (
+                                                                    <div key={pair.left} className={`mb-2 p-2 rounded border bg-white ${isPairCorrect ? 'border-green-200' : 'border-red-200'}`}>
+                                                                        <div className="flex items-center gap-2 mb-1">
+                                                                            <span className="font-medium text-gray-700">{String(pair.left).replace(/^\$|\$$/g, '')}</span>
+                                                                            <span className="text-gray-400">→</span>
+                                                                            <span className={`font-bold ${isPairCorrect ? 'text-green-600' : 'text-red-600'}`}>
+                                                                                {studentRight ? String(studentRight).replace(/^\$|\$$/g, '') : '(Chưa nối)'}
+                                                                            </span>
+                                                                            {studentRight && (
+                                                                                <span className="ml-1">
+                                                                                    {isPairCorrect ? <CheckCircle className="w-3 h-3 text-green-600 inline" /> : <XCircle className="w-3 h-3 text-red-600 inline" />}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        {!isPairCorrect && (
+                                                                            <div className="text-xs text-green-700 bg-green-50 p-1 rounded">
+                                                                                <span className="font-medium">Đáp án đúng:</span> {String(pair.right).replace(/^\$|\$$/g, '')}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    ) : typeof selectedAnswer === 'object' && selectedAnswer && Object.keys(selectedAnswer).length > 0 ? (
+                                                        // Fallback for old data without pairs snapshot
+                                                        <div className="p-2 rounded-lg bg-blue-50 border border-blue-200">
+                                                            <p className="font-medium text-blue-800 mb-1">Cặp ghép của học sinh (Dữ liệu cũ):</p>
                                                             {Object.entries(selectedAnswer).map(([left, right]) => (
                                                                 <div key={left} className="text-gray-700">
                                                                     <span>{String(left).replace(/^\$|\$$/g, '')}</span>
@@ -541,7 +572,11 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                    ) : null}
+                                                    ) : (
+                                                        <div className="p-2 rounded-lg bg-gray-50 border border-gray-200 italic text-gray-500">
+                                                            Chưa có thông tin ghép nối.
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
 

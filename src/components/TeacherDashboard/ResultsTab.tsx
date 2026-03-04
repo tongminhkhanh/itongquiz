@@ -17,6 +17,7 @@ import {
     DateRange
 } from '../teacher/ResultsView';
 import { useResults } from '../../hooks';
+import { useQuizStore } from '../../../stores/quizStore';
 import { RefreshCw, Download, ChevronDown, Search, FileText, Users, BarChart } from 'lucide-react';
 import {
     calculateResultsStatistics,
@@ -356,6 +357,13 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                         }
                     }}
                     onRowClick={(result) => setSelectedStudent(result)}
+                    onDeleteClick={async (result) => {
+                        try {
+                            await useQuizStore.getState().removeResult(result.id);
+                        } catch (err: any) {
+                            alert('Lỗi: ' + err.message);
+                        }
+                    }}
                 />
             </Card>
 

@@ -5,16 +5,12 @@
  * Classes, Students, Assignments.
  */
 
-import { GOOGLE_SCRIPT_URL } from '../config/constants';
+// classroomService uses callApi from apiAdapter (supports both GAS and D1)
+import { callApi } from './apiAdapter';
 import {
-    Classroom,
-    CreateClassPayload,
-    Student,
-    CreateStudentPayload,
-    StudentLoginPayload,
-    StudentSession,
-    Assignment,
-    CreateAssignmentPayload,
+    Classroom, CreateClassPayload,
+    Student, CreateStudentPayload, StudentLoginPayload, StudentSession,
+    Assignment, CreateAssignmentPayload,
     ClassroomApiResponse,
 } from '../types/classroom.types';
 
@@ -25,42 +21,14 @@ const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
  * Helper to call GAS API (same pattern as googleSheetService)
  */
 const callGasApi = async <T = any>(action: string, payload: Record<string, any> = {}): Promise<ClassroomApiResponse<T>> => {
-    if (!GOOGLE_SCRIPT_URL) {
-        console.error('[ClassroomService] GOOGLE_SCRIPT_URL is not defined');
-        return { status: 'error', message: 'Script URL not configured' };
-    }
-
     try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8',
-            },
-            body: JSON.stringify({
-                ...payload,
-                action,
-                token: API_SECRET_TOKEN,
-            }),
-        });
-
-        const data = await response.json();
-
-        if (data.status === 'error') {
-            console.error(`[ClassroomService] API Error [${action}]:`, data.message);
-            return { status: 'error', message: data.message || 'Unknown API error' };
-        }
-
-        return { status: 'success', data: data.data ?? data };
-    } catch (error) {
-        console.error(`[ClassroomService] Network Error [${action}]:`, error);
-        return { status: 'error', message: 'Network error. Please check your connection.' };
+        const data = await callApi<ClassroomApiResponse<T>>(action, payload);
+        return data;
+    } catch (error: any) {
+        console.error(`[ClassroomService] API Error [${action}]:`, error);
+        return { status: 'error', message: error.message || 'Unknown API error' };
     }
 };
-
-// ==========================================
-// CLASS MANAGEMENT
-// ==========================================
 
 /**
  * Get all classes for a teacher

@@ -16,6 +16,9 @@ import { useGamificationStore } from '../../stores/useGamificationStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { LeaderboardEntry } from '../../types/gamification.types';
 import { getAvatarUrl } from '../../config/avatars';
+import { fetchResultsFromSheets } from '../../services/googleSheetService';
+import { GOOGLE_SHEET_ID, RESULTS_GID } from '../../config/constants';
+import { StudentResult } from '../../types';
 
 // Fluent 3D Emoji CDN
 const FLUENT_CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
@@ -29,9 +32,34 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
     const { studentSession } = useClassroomStore();
     const [showConfetti, setShowConfetti] = useState(true);
     const confettiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [resultsMap, setResultsMap] = useState<Map<string, { correct: number; wrong: number }>>(new Map());
 
     useEffect(() => {
         fetchLeaderboard();
+        // Fetch quiz results to get correct/wrong counts
+        const loadResults = async () => {
+            try {
+                const results = await fetchResultsFromSheets(GOOGLE_SHEET_ID, RESULTS_GID);
+                // Aggregate by student name
+                const map = new Map<string, { correct: number; wrong: number }>();
+                results.forEach((r: StudentResult) => {
+                    const key = r.studentName;
+                    const existing = map.get(key);
+                    const correct = r.correctCount || 0;
+                    const total = r.totalQuestions || 0;
+                    if (existing) {
+                        existing.correct += correct;
+                        existing.wrong += (total - correct);
+                    } else {
+                        map.set(key, { correct, wrong: total - correct });
+                    }
+                });
+                setResultsMap(map);
+            } catch (err) {
+                console.error('[Leaderboard] Failed to fetch results:', err);
+            }
+        };
+        loadResults();
         // Auto-hide confetti after 3 seconds
         confettiTimerRef.current = setTimeout(() => setShowConfetti(false), 3000);
         return () => {
@@ -131,6 +159,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
                                 rank={2}
                                 getPetEmoji={getStudentAvatar}
                                 isCurrentUser={isCurrentUser(top3[1].username)}
+                                correctWrong={resultsMap.get(top3[1].fullName)}
                             />
                         )}
 
@@ -141,6 +170,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
                                 rank={1}
                                 getPetEmoji={getStudentAvatar}
                                 isCurrentUser={isCurrentUser(top3[0].username)}
+                                correctWrong={resultsMap.get(top3[0].fullName)}
                             />
                         )}
 
@@ -151,6 +181,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
                                 rank={3}
                                 getPetEmoji={getStudentAvatar}
                                 isCurrentUser={isCurrentUser(top3[2].username)}
+                                correctWrong={resultsMap.get(top3[2].fullName)}
                             />
                         )}
                     </div>
@@ -186,10 +217,16 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
                                     <span className="lb-row__petname">{entry.petName}</span>
                                 </div>
 
-                                {/* Level + EXP */}
+                                {/* Level + EXP + Correct/Wrong */}
                                 <div className="lb-row__stats">
                                     <span className="lb-row__level" style={{ color: badge.color }}>Lv.{entry.level}</span>
                                     <span className="lb-row__exp">{entry.exp} EXP</span>
+                                    {resultsMap.has(entry.fullName) && (
+                                        <div style={{ display: 'flex', gap: '6px', fontSize: '10px', marginTop: '2px' }}>
+                                            <span style={{ color: '#16a34a' }}>✅ {resultsMap.get(entry.fullName)!.correct}</span>
+                                            <span style={{ color: '#dc2626' }}>❌ {resultsMap.get(entry.fullName)!.wrong}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );
@@ -229,11 +266,12 @@ interface PodiumCardProps {
     rank: number;
     getPetEmoji: (entry: LeaderboardEntry) => string;
     isCurrentUser: boolean;
+    correctWrong?: { correct: number; wrong: number };
 }
 
 const FLUENT = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
 
-const PodiumCard: React.FC<PodiumCardProps> = ({ entry, rank, getPetEmoji, isCurrentUser }) => {
+const PodiumCard: React.FC<PodiumCardProps> = ({ entry, rank, getPetEmoji, isCurrentUser, correctWrong }) => {
     const config = {
         1: {
             medal: `${FLUENT}/Crown/3D/crown_3d.png`,
@@ -281,6 +319,12 @@ const PodiumCard: React.FC<PodiumCardProps> = ({ entry, rank, getPetEmoji, isCur
                 Lv.{entry.level}
             </div>
             <span className="lb-podium-card__exp">{entry.exp} EXP</span>
+            {correctWrong && (
+                <div style={{ display: 'flex', gap: '4px', fontSize: '9px', marginTop: '2px' }}>
+                    <span style={{ color: '#16a34a' }}>✅{correctWrong.correct}</span>
+                    <span style={{ color: '#dc2626' }}>❌{correctWrong.wrong}</span>
+                </div>
+            )}
 
             {/* Pedestal */}
             <div
@@ -683,7 +727,46 @@ const leaderboardStyles = `
 }
 .lb-footer strong { color: #64748B; }
 
-/* --- Responsive --- */
+/* --- Mobile Responsive (phones) --- */
+@media (max-width: 480px) {
+    .lb-header { padding: 12px 12px; }
+    .lb-header__trophy { width: 32px; height: 32px; }
+    .lb-header__title h1 { font-size: 1rem; }
+    .lb-header__title p { font-size: 0.7rem; }
+    .lb-header__back { width: 32px; height: 32px; }
+
+    .lb-podium { padding: 16px 8px 0; }
+    .lb-podium__stage { gap: 4px; max-width: 320px; }
+
+    .lb-podium-card { width: 90px; padding: 6px 6px 0; border-radius: 14px 14px 0 0; }
+    .lb-podium-card--gold { width: 105px; }
+    .lb-podium-card__medal { width: 28px; height: 28px; top: -14px; }
+    .lb-podium-card--gold .lb-podium-card__medal { width: 34px; height: 34px; top: -17px; }
+    .lb-podium-card__avatar { width: 40px; height: 40px; margin-top: 12px; border-width: 2px; }
+    .lb-podium-card--gold .lb-podium-card__avatar { width: 50px; height: 50px; }
+    .lb-podium-card__name { font-size: 0.65rem; margin-top: 4px; }
+    .lb-podium-card__you { font-size: 0.55rem; }
+    .lb-podium-card__petname { font-size: 0.55rem; }
+    .lb-podium-card__score { font-size: 0.65rem; margin-top: 2px; gap: 2px; }
+    .lb-podium-card__star { width: 12px; height: 12px; }
+    .lb-podium-card__exp { font-size: 0.5rem; margin-bottom: 4px; }
+    .lb-podium-card__pedestal { font-size: 1rem; font-weight: 900; }
+    .lb-podium-card--gold .lb-podium-card__pedestal { font-size: 1.15rem; }
+
+    .lb-list { padding: 12px 8px; gap: 6px; }
+    .lb-row { padding: 10px 10px; gap: 8px; border-radius: 12px; }
+    .lb-row__rank { width: 30px; height: 30px; font-size: 0.75rem; border-radius: 10px; }
+    .lb-row__avatar-img { width: 34px; height: 34px; }
+    .lb-row__name { font-size: 0.78rem; }
+    .lb-row__you { font-size: 0.6rem; }
+    .lb-row__petname { font-size: 0.6rem; }
+    .lb-row__level { font-size: 0.78rem; }
+    .lb-row__exp { font-size: 0.6rem; }
+
+    .lb-footer { padding: 12px 10px 0; font-size: 0.7rem; }
+}
+
+/* --- Desktop Responsive --- */
 @media (min-width: 640px) {
     .lb-podium-card { width: 140px; padding: 12px 16px 0; }
     .lb-podium-card--gold { width: 160px; }

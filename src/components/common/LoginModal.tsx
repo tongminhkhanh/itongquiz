@@ -43,28 +43,32 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
     };
 
     const handleTeacherLogin = async () => {
-        // Teacher login logic (using existing authStore actions logic but triggering here)
-        // Typically authStore handles the actual fetch, but here we might need to call a function.
-        // Looking at App.tsx, the logic was inline. We should ideally move it to store actions or a service.
-        // For now, I will use the logic from App.tsx but adapted. 
-        // WAIT: App.tsx calls fetchTeachersFromSheets directly. 
-        // I should probably move that logic here or into a store action. 
-        // Given constraints, I will replicate the logic or ideally refactor.
-        // Let's assume we can import fetchTeachersFromSheets.
-
         authStore.loginStart();
         try {
-            const { fetchTeachersFromSheets } = await import('../../services/googleSheetService');
-            const { GOOGLE_SHEET_ID, TEACHER_GID } = await import('../../config/constants');
+            const { callApi } = await import('../../services/apiAdapter');
 
-            const teachers = await fetchTeachersFromSheets(GOOGLE_SHEET_ID, TEACHER_GID);
-            const teacher = teachers.find(t => t.username === username && t.password === password);
+            // Use callApi which routes through apiAdapter (D1 Workers or GAS based on USE_D1 flag)
+            const teachers = await callApi<any[]>('get_teachers');
+
+            if (!teachers || !Array.isArray(teachers)) {
+                authStore.loginFailure();
+                setLocalError('Không thể lấy danh sách giáo viên. Vui lòng thử lại!');
+                return;
+            }
+
+            const teacher = teachers.find((t: any) => {
+                const tUsername = String(t.username || t.id || '').trim();
+                const tPassword = String(t.password || '').trim();
+                return tUsername === username && tPassword === password;
+            });
 
             if (teacher) {
+                const tUsername = String(teacher.username || teacher.id || '').trim();
+                const tFullName = teacher.fullName || teacher.fullname || teacher.name || '';
                 const isTeacherAdmin = teacher.role === 'admin';
-                authStore.loginSuccess(teacher.username, teacher.fullName, isTeacherAdmin, teacher.class);
+                const tClass = teacher.class ? String(teacher.class).trim() : undefined;
+                authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass);
                 onClose();
-                // Optional: Show welcome toast
             } else {
                 authStore.loginFailure();
                 setLocalError('Tên đăng nhập hoặc mật khẩu không đúng!');

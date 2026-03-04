@@ -1,11 +1,9 @@
 /**
  * Announcement Service
- * Handles marquee announcement API calls
+ * Handles marquee announcement API calls via apiAdapter (supports both GAS and D1)
  */
 
-import { GOOGLE_SCRIPT_URL } from '../config/constants';
-
-const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
+import { callApi } from './apiAdapter';
 
 export interface Announcement {
     id: string;
@@ -18,34 +16,21 @@ export interface Announcement {
  * Get current announcement
  */
 export const getAnnouncement = async (): Promise<Announcement | null> => {
-    if (!GOOGLE_SCRIPT_URL) {
-        console.error("GOOGLE_SCRIPT_URL is not defined");
-        return null;
-    }
-
     try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8',
-            },
-            body: JSON.stringify({
-                action: 'get_announcement',
-                token: API_SECRET_TOKEN
-            }),
-        });
+        const data = await callApi<any>('get_announcement');
 
-        const data = await response.json();
-
-        if (data.status === 'success') {
+        if (data && data.status === 'success') {
             return data.announcement || null;
         }
 
-        console.error('Get announcement error:', data.message);
+        // If data is the announcement directly (D1 format)
+        if (data && data.content !== undefined) {
+            return data as Announcement;
+        }
+
         return null;
     } catch (error) {
-        console.error('Network error getting announcement:', error);
+        console.error('Error getting announcement:', error);
         return null;
     }
 };
@@ -54,36 +39,17 @@ export const getAnnouncement = async (): Promise<Announcement | null> => {
  * Save announcement (admin only)
  */
 export const saveAnnouncement = async (content: string, isActive: boolean): Promise<boolean> => {
-    if (!GOOGLE_SCRIPT_URL) {
-        console.error("GOOGLE_SCRIPT_URL is not defined");
-        return false;
-    }
-
     try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8',
-            },
-            body: JSON.stringify({
-                action: 'save_announcement',
-                token: API_SECRET_TOKEN,
-                content,
-                isActive
-            }),
-        });
+        const data = await callApi<any>('save_announcement', { content, isActive });
 
-        const data = await response.json();
-
-        if (data.status === 'success') {
+        if (data && data.status === 'success') {
             return true;
         }
 
-        console.error('Save announcement error:', data.message);
+        console.error('Save announcement error:', data?.message);
         return false;
     } catch (error) {
-        console.error('Network error saving announcement:', error);
+        console.error('Error saving announcement:', error);
         return false;
     }
 };

@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { StudentResult, Quiz } from '../../../types';
-import { ArrowUpDown, Eye } from 'lucide-react';
+import { ArrowUpDown, Eye, Trash2 } from 'lucide-react';
 
 export interface ResultsTableProps {
     results: StudentResult[];
@@ -15,6 +15,7 @@ export interface ResultsTableProps {
     sortOrder: 'asc' | 'desc';
     onSortChange: (field: 'score' | 'submittedAt') => void;
     onRowClick?: (result: StudentResult) => void;
+    onDeleteClick?: (result: StudentResult) => void;
 }
 
 export const ResultsTable: React.FC<ResultsTableProps> = ({
@@ -24,6 +25,7 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
     sortOrder,
     onSortChange,
     onRowClick,
+    onDeleteClick,
 }) => {
     // Get quiz title by ID, prioritize quizTitle from result if available
     const getQuizTitle = (result: StudentResult) => {
@@ -138,16 +140,32 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                             </td>
                             {onRowClick && (
                                 <td className="px-4 py-3 text-center">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onRowClick(result);
-                                        }}
-                                        className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
-                                        title="Xem chi tiết"
-                                    >
-                                        <Eye className="w-4 h-4" />
-                                    </button>
+                                    <div className="flex items-center justify-center gap-2">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onRowClick(result);
+                                            }}
+                                            className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
+                                            title="Xem chi tiết"
+                                        >
+                                            <Eye className="w-4 h-4" />
+                                        </button>
+                                        {onDeleteClick && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm(`Bạn có chắc muốn xóa kết quả của học sinh ${result.studentName}?`)) {
+                                                        onDeleteClick(result);
+                                                    }
+                                                }}
+                                                className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                                                title="Xóa kết quả"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </td>
                             )}
                         </tr>

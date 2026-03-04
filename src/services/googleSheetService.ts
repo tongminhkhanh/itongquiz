@@ -1,6 +1,8 @@
 import { Quiz, Question, QuestionType, MCQQuestion, TrueFalseQuestion, ShortAnswerQuestion, Teacher, StudentResult } from '../types';
 import { cacheService, CacheKeys, CacheTTL } from './CacheService';
-import { GOOGLE_SCRIPT_URL } from '../config/constants';
+// GOOGLE_SCRIPT_URL no longer needed - callGasApi routes through apiAdapter
+import { USE_D1 } from '../config/constants';
+import { callApi } from './apiAdapter';
 
 // Security: API token for GAS authentication
 const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
@@ -9,32 +11,12 @@ if (!API_SECRET_TOKEN) {
     console.warn("Security Warning: VITE_API_SECRET_TOKEN is missing. API calls may fail.");
 }
 
-// Helper to call GAS API
+// Helper to call API (routes through apiAdapter for both GAS and D1 backends)
 const callGasApi = async (action: string, payload: any = {}): Promise<any> => {
-    if (!GOOGLE_SCRIPT_URL) {
-        console.error("GOOGLE_SCRIPT_URL is not defined");
-        return null;
-    }
-
     try {
-        // Use POST for all requests to ensure token security in body (avoid URL logging)
-        // GAS doPost handles both read and write actions now
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'cors', // Changed to cors to read response
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8', // GAS requires text/plain to avoid preflight issues
-            },
-            body: JSON.stringify({
-                ...payload,
-                action,
-                token: API_SECRET_TOKEN
-            }),
-        });
-
-        const data = await response.json();
-        if (data.status === 'error') {
-            console.error(`GAS API Error [${action}]:`, data.message);
+        const data = await callApi(action, payload);
+        if (data && typeof data === 'object' && (data as any).status === 'error') {
+            console.error(`API Error [${action}]:`, (data as any).message);
             return null;
         }
         return data;
@@ -45,63 +27,25 @@ const callGasApi = async (action: string, payload: any = {}): Promise<any> => {
 };
 
 export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Promise<Teacher[]> => {
-    // DEBUG: Bypass cache temporarily to diagnose issue
-    console.log('[fetchTeachersFromSheets] Calling API...');
-
     try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8',
-            },
-            body: JSON.stringify({
-                action: 'get_teachers',
-                token: API_SECRET_TOKEN
-            }),
-        });
+        const data = await callApi<any[]>('get_teachers');
 
-        console.log('[fetchTeachersFromSheets] Response status:', response.status);
-        const rawText = await response.text();
-
-        // Try to parse as JSON
-        let data;
-        try {
-            data = JSON.parse(rawText);
-        } catch (e) {
-            console.error('[fetchTeachersFromSheets] JSON parse error:', e);
-            console.error('[fetchTeachersFromSheets] Raw response snippet:', rawText.substring(0, 100) + '...');
-            alert('Lỗi: Server trả về dữ liệu không hợp lệ. Vui lòng thử lại sau.');
-            return [];
-        }
-
-        if (data.status === 'error') {
-            console.error('[fetchTeachersFromSheets] API returned error:', data.message);
-            alert('Lỗi: ' + (data.message || 'Không thể lấy danh sách giáo viên.'));
-            return [];
-        }
-
-        if (!Array.isArray(data)) {
+        if (!data || !Array.isArray(data)) {
             console.error('[fetchTeachersFromSheets] Data is not an array:', typeof data);
-            alert('Lỗi: Dữ liệu giáo viên không đúng định dạng.');
             return [];
         }
 
         const teachers = data.map((row: any) => ({
-            // Hỗ trợ cả 2 format: 'id' hoặc 'username' làm username đăng nhập
             username: String(row.username || row.id || '').trim(),
-            password: String(row.password || '').trim(), // Note: Password hashing should be done on server side ideally
-            // Hỗ trợ nhiều format: 'fullName', 'fullname', 'name' làm tên hiển thị
+            password: String(row.password || '').trim(),
             fullName: row.fullName || row.fullname || row.name || '',
             role: row.role || 'teacher',
             class: row.class ? String(row.class).trim() : undefined
         }));
 
         return teachers;
-
     } catch (error) {
         console.error('[fetchTeachersFromSheets] Fetch error:', error);
-        alert('Lỗi kết nối đến máy chủ. Vui lòng kiểm tra mạng.');
         return [];
     }
 };
@@ -265,8 +209,29 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
             if (!quizData || !Array.isArray(quizData)) return [];
 
             // Temporary fix: If questionData is missing, we can't map questions.
-            // I will assume I'll fix GAS next.
-            const qData = Array.isArray(questionData) ? questionData : [];
+            const qDataArray = Array.isArray(questionData) ? questionData : [];
+
+            // Helper to normalize snake_case (from D1) to camelCase (expected by frontend/GAS)
+            const normalizeRow = (row: any) => {
+                if (!row) return row;
+                return {
+                    ...row,
+                    quizId: row.quizId || row.quiz_id,
+                    classLevel: row.classLevel || row.class_level,
+                    timeLimit: row.timeLimit || row.time_limit,
+                    createdAt: row.createdAt || row.created_at,
+                    createdBy: row.createdBy || row.created_by,
+                    accessCode: row.accessCode || row.access_code,
+                    requireCode: row.requireCode !== undefined ? row.requireCode : row.require_code,
+                    showOnHome: row.showOnHome !== undefined ? row.showOnHome : row.show_on_home,
+                    correctAnswer: row.correctAnswer || row.correct_answer,
+                    text: row.text || row.text_field,
+                    correctWordIndexes: row.correctWordIndexes || row.correct_word_indexes,
+                };
+            };
+
+            const normalizedQuizData = quizData.map(normalizeRow);
+            const qData = qDataArray.map(normalizeRow);
 
             // Map Questions
             const questionsByQuizId: Record<string, Question[]> = {};
@@ -407,6 +372,11 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                 }
 
                 if (question) {
+                    // Restore image for all question types if exists
+                    if (row.image) {
+                        question.image = row.image;
+                    }
+
                     // 🔐 ANTI-CHEAT: Strip answers if enabled (for student views)
                     const finalQuestion = _stripAnswersEnabled ? stripAnswerFields(question) : question;
                     questionsByQuizId[qId].push(finalQuestion);
@@ -414,25 +384,27 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
             });
 
             // Map Quizzes
-            const quizzes: Quiz[] = quizData.map((row: any) => ({
-                id: row.id,
-                title: row.title,
-                classLevel: String(row.classLevel), // Ensure it's a string for comparison
-                category: row.category || '', // Danh mục quiz
-                timeLimit: (() => {
-                    const parsed = parseInt(row.timeLimit, 10);
-                    // Validate: timeLimit should be between 1-180 minutes
-                    // If invalid (e.g., year 2026 stored by mistake), default to 60
-                    if (isNaN(parsed) || parsed < 1 || parsed > 180) return 60;
-                    return parsed;
-                })(),
-                createdAt: row.createdAt || new Date().toISOString(),
-                createdBy: row.createdBy || undefined, // Tên giáo viên tạo đề
-                questions: questionsByQuizId[row.id] || [],
-                accessCode: row.accessCode || "",
-                requireCode: row.requireCode === "TRUE" || row.requireCode === true,
-                showOnHome: row.showOnHome !== "FALSE" && row.showOnHome !== false // Map explicitly
-            }));
+            const quizzes: Quiz[] = normalizedQuizData
+                .filter((row: any) => !USE_D1 || row.category !== 'ioe')
+                .map((row: any) => ({
+                    id: row.id,
+                    title: row.title,
+                    classLevel: String(row.classLevel), // Ensure it's a string for comparison
+                    category: row.category || '', // Danh mục quiz
+                    timeLimit: (() => {
+                        const parsed = parseInt(row.timeLimit, 10);
+                        // Validate: timeLimit should be between 1-180 minutes
+                        // If invalid (e.g., year 2026 stored by mistake), default to 60
+                        if (isNaN(parsed) || parsed < 1 || parsed > 180) return 60;
+                        return parsed;
+                    })(),
+                    createdAt: row.createdAt || new Date().toISOString(),
+                    createdBy: row.createdBy || undefined, // Tên giáo viên tạo đề
+                    questions: questionsByQuizId[row.id] || [],
+                    accessCode: row.accessCode || "",
+                    requireCode: row.requireCode === "TRUE" || row.requireCode === true,
+                    showOnHome: row.showOnHome !== "FALSE" && row.showOnHome !== false // Map explicitly
+                }));
 
             return quizzes;
         },
@@ -512,6 +484,15 @@ export const saveResultToSheet = async (result: any, scriptUrl: string): Promise
     };
     const res = await callGasApi('submit_result', resultToSave);
     if (res && res.status === 'success') {
+        cacheService.invalidatePrefix('results:');
+        return true;
+    }
+    return false;
+};
+
+export const deleteResultFromSheet = async (resultId: string, scriptUrl: string): Promise<boolean> => {
+    const result = await callGasApi('delete_result', { resultId });
+    if (result && result.status === 'success') {
         cacheService.invalidatePrefix('results:');
         return true;
     }

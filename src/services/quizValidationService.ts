@@ -1,12 +1,10 @@
 /**
  * Quiz Validation Service
- * Server-side answer validation via Google Apps Script
+ * Server-side answer validation via apiAdapter (supports both GAS and D1)
  * Prevents students from seeing answers in DevTools
  */
 
-import { GOOGLE_SCRIPT_URL } from '../config/constants';
-
-const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
+import { callApi } from './apiAdapter';
 
 interface ValidationResult {
     success: boolean;
@@ -36,37 +34,15 @@ interface SubmitAnswersPayload {
 export const validateAnswersOnServer = async (
     payload: SubmitAnswersPayload
 ): Promise<ValidationResult> => {
-    if (!GOOGLE_SCRIPT_URL) {
-        console.error("GOOGLE_SCRIPT_URL is not defined");
-        return {
-            success: false,
-            score: 0,
-            correctCount: 0,
-            total: 0,
-            error: "Server URL not configured"
-        };
-    }
-
     try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8',
-            },
-            body: JSON.stringify({
-                action: 'validate_answers',
-                token: API_SECRET_TOKEN,
-                quizId: payload.quizId,
-                answers: payload.answers,
-                studentName: payload.studentName,
-                studentClass: payload.studentClass
-            }),
+        const data = await callApi<any>('validate_answers', {
+            quizId: payload.quizId,
+            answers: payload.answers,
+            studentName: payload.studentName,
+            studentClass: payload.studentClass
         });
 
-        const data = await response.json();
-
-        if (data.status === 'error') {
+        if (data && data.status === 'error') {
             console.error('Validation API Error:', data.message);
             return {
                 success: false,
@@ -79,10 +55,10 @@ export const validateAnswersOnServer = async (
 
         return {
             success: true,
-            score: data.score || 0,
-            correctCount: data.correctCount || 0,
-            total: data.total || 0,
-            details: data.details || []
+            score: data?.score || 0,
+            correctCount: data?.correctCount || 0,
+            total: data?.total || 0,
+            details: data?.details || []
         };
 
     } catch (error) {
@@ -99,35 +75,18 @@ export const validateAnswersOnServer = async (
 
 /**
  * Get quiz data WITHOUT correct answers (safe for client)
- * Correct answers are stored only on server (Google Sheet)
+ * Correct answers are stored only on server
  */
 export const getQuizWithoutAnswers = async (quizId: string): Promise<any> => {
-    if (!GOOGLE_SCRIPT_URL) {
-        return null;
-    }
-
     try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8',
-            },
-            body: JSON.stringify({
-                action: 'get_quiz_safe',
-                token: API_SECRET_TOKEN,
-                quizId
-            }),
-        });
+        const data = await callApi<any>('get_quiz_safe', { quizId });
 
-        const data = await response.json();
-
-        if (data.status === 'error') {
+        if (data && data.status === 'error') {
             console.error('Get Quiz Safe Error:', data.message);
             return null;
         }
 
-        return data.quiz || null;
+        return data?.quiz || data || null;
 
     } catch (error) {
         console.error('Network Error:', error);

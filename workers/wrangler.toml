@@ -1,0 +1,12 @@
+name = "itongquiz-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "itongquiz-db"
+database_id = "c9482e3c-ff73-4f14-84af-52e7b6a580f4"
+
+[vars]
+API_SECRET_TOKEN = "[REDACTED-COMPROMISED-SHARED-TOKEN]"

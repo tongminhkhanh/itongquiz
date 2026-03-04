@@ -105,14 +105,12 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
             <div className="mb-4">
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Câu hỏi {index + 1}</h3>
                 <div className="text-gray-700 font-medium">
-                    {q.type === QuestionType.TRUE_FALSE ? (
-                        <MathSpan content={(q as any).mainQuestion || ""} className="whitespace-pre-wrap" />
-                    ) : (
-                        <MathSpan content={(q as any).question || ""} className="whitespace-pre-wrap" />
-                    )}
+                    <MathSpan content={(q as any).mainQuestion || (q as any).question || ""} className="whitespace-pre-wrap" />
                 </div>
 
                 {/* Image in header - exclude IMAGE_QUESTION and DROPDOWN since they have their own sections */}
+                {/* 🔍 DEBUG: Log image field */}
+                {(() => { if (q.image) console.log(`[QuestionRenderer] 🖼️ Question ${q.id} has image:`, q.image.substring(0, 80)); return null; })()}
                 {q.image && q.type !== QuestionType.IMAGE_QUESTION && q.type !== QuestionType.DROPDOWN && (
                     <div className="mt-3">
                         <img
