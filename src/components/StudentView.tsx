@@ -682,14 +682,14 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
   // Check if question is answered (for sidebar)
   const isQuestionAnswered = (q: Question) => {
     if (q.type === QuestionType.TRUE_FALSE) {
-      return q.items.every((item, idx) => {
+      return (q.items ?? []).every((item, idx) => {
         const itemKey = item.id || `item-${idx}`;
         return answers[q.id]?.[itemKey] !== undefined;
       });
     } else if (q.type === QuestionType.MATCHING) {
       const userPairs = answers[q.id] || {};
       const pairedCount = Object.keys(userPairs).filter(k => k !== 'selectedLeft').length;
-      return pairedCount === q.pairs.length;
+      return pairedCount === (q.pairs?.length ?? 0);
     } else if (q.type === QuestionType.MULTIPLE_SELECT) {
       return (answers[q.id] as string[])?.length > 0;
     } else if (q.type === QuestionType.DRAG_DROP) {
