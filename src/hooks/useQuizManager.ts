@@ -65,7 +65,7 @@ export const useQuizManager = ({ quizzes, onDelete }: UseQuizManagerProps): UseQ
             } else {
                 // Normal title search
                 filtered = filtered.filter(q =>
-                    q.title.toLowerCase().includes(search)
+                    String(q.title || '').toLowerCase().includes(search)
                 );
             }
         }

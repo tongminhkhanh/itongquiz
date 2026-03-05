@@ -333,6 +333,6 @@ export const searchResultsByName = (
     if (!searchTerm.trim()) return results;
     const term = searchTerm.toLowerCase();
     return results.filter(r =>
-        r.studentName.toLowerCase().includes(term)
+        String(r.studentName || '').toLowerCase().includes(term)
     );
 };

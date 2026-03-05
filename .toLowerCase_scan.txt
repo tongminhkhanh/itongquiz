@@ -1,0 +1,42 @@
+﻿
+crash_scan_filtered.txt:4:'').toString().trim().toLowerCase();
+crash_scan_filtered.txt:6:'').toString().trim().toLowerCase();
+crash_scan_filtered.txt:17:crash_scan.txt:14:src\hooks\useQuizManager.ts:56:            const search = 
+searchTerm.toLowerCase().trim();
+crash_scan_filtered.txt:21:crash_scan.txt:17:src\hooks\useQuizManager.ts:68:                    
+q.title.toLowerCase().includes(search)
+crash_scan_filtered.txt:34:crash_scan.txt:28:src\services\aiTutorService.ts:296:            isCorrect = 
+String(answer).toLowerCase().trim() === 
+crash_scan_filtered.txt:35:crash_scan.txt:29:String(q.correctAnswer).toLowerCase().trim();
+crash_scan_filtered.txt:113:crash_scan.txt:92:src\services\pdfExportService.ts:256:            return 
+String(answer).toLowerCase().trim() === 
+crash_scan_filtered.txt:114:crash_scan.txt:93:String(question.correctAnswer).toLowerCase().trim();
+crash_scan_filtered.txt:126:crash_scan.txt:102:src\services\smartDistractorService.ts:156:        .filter(d => 
+d.toLowerCase().trim() !== 
+crash_scan_filtered.txt:127:crash_scan.txt:103:correctAnswer.toLowerCase().trim())
+crash_scan_filtered.txt:173:crash_scan.txt:146:src\utils\statisticsUtils.ts:163:        return 
+String(selectedAnswer).trim().toLowerCase() === 
+crash_scan_filtered.txt:174:crash_scan.txt:147:String(correctAnswer).trim().toLowerCase();
+crash_scan_filtered.txt:176:String(studentBlanks[key]).trim().toLowerCase();
+crash_scan_filtered.txt:178:String(blanks[idx]).trim().toLowerCase();
+crash_scan_filtered.txt:188:crash_scan.txt:157:src\utils\statisticsUtils.ts:334:    const term = 
+searchTerm.toLowerCase();
+crash_scan_filtered.txt:190:crash_scan.txt:159:src\utils\statisticsUtils.ts:336:        
+r.studentName.toLowerCase().includes(term)
+crash_scan_filtered.txt:206:crash_scan.txt:172:'').toString().trim().toLowerCase();
+crash_scan_filtered.txt:207:crash_scan.txt:174:'').toString().trim().toLowerCase();
+crash_scan_filtered.txt:215:crash_scan.txt:182:(v.name.toLowerCase().includes('female') ||
+crash_scan_filtered.txt:237:crash_scan.txt:203:"").toString().trim().toLowerCase();
+crash_scan_filtered.txt:239:correctAnswers[i].toString().trim().toLowerCase();
+crash_scan_filtered.txt:243:"").toString().trim().toLowerCase();
+crash_scan_filtered.txt:245:q.correctAnswer.toString().trim().toLowerCase();
+crash_scan_filtered.txt:254:crash_scan.txt:217:'').toLowerCase().replace(/\s+/g, '');
+crash_scan_filtered.txt:257:crash_scan.txt:219:letters[idx]).join('').toLowerCase();
+crash_scan_filtered.txt:259:'').toLowerCase().trim();
+crash_scan_filtered.txt:261:'').toString().toLowerCase().trim();
+crash_scan_filtered.txt:264:'').trim().toLowerCase();
+crash_scan_filtered.txt:266:'').trim().toLowerCase();
+crash_scan_filtered.txt:268:String(ecWrongWord).trim().toLowerCase();
+crash_scan_filtered.txt:270:String(ecCorrectWord).trim().toLowerCase();
+
+
