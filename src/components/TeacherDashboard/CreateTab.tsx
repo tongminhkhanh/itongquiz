@@ -11,6 +11,55 @@ import { QUIZ_CATEGORIES } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 
+// === Section component defined OUTSIDE CreateTab to prevent focus loss on re-render ===
+interface SectionProps {
+    id: string;
+    icon: React.ReactNode;
+    title: string;
+    subtitle?: string;
+    badge?: string;
+    children: React.ReactNode;
+    expandedSections: Record<string, boolean>;
+    toggleSection: (id: string) => void;
+}
+
+const Section: React.FC<SectionProps> = ({ id, icon, title, subtitle, badge, children, expandedSections, toggleSection }) => {
+    const isOpen = expandedSections[id] ?? false;
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden transition-all hover:border-gray-300 shadow-sm">
+            <button
+                onClick={() => toggleSection(id)}
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50/50 transition-colors"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-100 to-amber-50 flex items-center justify-center text-orange-600 shrink-0">
+                        {icon}
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-800 text-sm">{title}</span>
+                            {badge && (
+                                <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                                    {badge}
+                                </span>
+                            )}
+                        </div>
+                        {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+                    </div>
+                </div>
+                <div className={`transition-transform duration-200 text-gray-400 ${isOpen ? 'rotate-180' : ''}`}>
+                    <ChevronDown className="w-4 h-4" />
+                </div>
+            </button>
+            {isOpen && (
+                <div className="px-4 pb-4 pt-1 border-t border-gray-100 animate-fade-in">
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+};
+
 interface CreateTabProps {
     editingQuiz: Quiz | null;
     onSaveQuiz: (quiz: Quiz) => Promise<void>;
@@ -446,51 +495,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
 
     const questionCount = difficultyLevels.level1 + difficultyLevels.level2 + difficultyLevels.level3;
 
-    // Collapsible Section component
-    const Section: React.FC<{
-        id: string;
-        icon: React.ReactNode;
-        title: string;
-        subtitle?: string;
-        badge?: string;
-        children: React.ReactNode;
-        defaultOpen?: boolean;
-    }> = ({ id, icon, title, subtitle, badge, children }) => {
-        const isOpen = expandedSections[id] ?? false;
-        return (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden transition-all hover:border-gray-300 shadow-sm">
-                <button
-                    onClick={() => toggleSection(id)}
-                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50/50 transition-colors"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-100 to-amber-50 flex items-center justify-center text-orange-600 shrink-0">
-                            {icon}
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-semibold text-gray-800 text-sm">{title}</span>
-                                {badge && (
-                                    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
-                                        {badge}
-                                    </span>
-                                )}
-                            </div>
-                            {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
-                        </div>
-                    </div>
-                    <div className={`transition-transform duration-200 text-gray-400 ${isOpen ? 'rotate-180' : ''}`}>
-                        <ChevronDown className="w-4 h-4" />
-                    </div>
-                </button>
-                {isOpen && (
-                    <div className="px-4 pb-4 pt-1 border-t border-gray-100 animate-fade-in">
-                        {children}
-                    </div>
-                )}
-            </div>
-        );
-    };
+    // Section is now defined OUTSIDE this component (above) to prevent re-creation on every render
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -523,6 +528,8 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     icon={<FileText className="w-4 h-4" />}
                     title="Thông tin cơ bản"
                     subtitle="Chủ đề, khối lớp, thời gian"
+                    expandedSections={expandedSections}
+                    toggleSection={toggleSection}
                 >
                     <div className="space-y-3">
                         {/* Topic - Required */}
@@ -612,6 +619,8 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     icon={<BookOpen className="w-4 h-4" />}
                     title="Dạng câu hỏi"
                     badge={`${Object.values(selectedTypes).filter(Boolean).length} đã chọn`}
+                    expandedSections={expandedSections}
+                    toggleSection={toggleSection}
                 >
                     <QuestionTypeSelector
                         selectedTypes={selectedTypes}
@@ -625,6 +634,8 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     icon={<Sparkles className="w-4 h-4" />}
                     title="Độ khó & Số lượng"
                     badge={`${questionCount} câu`}
+                    expandedSections={expandedSections}
+                    toggleSection={toggleSection}
                 >
                     <DifficultyLevelSelector
                         levels={difficultyLevels}
@@ -638,6 +649,8 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     icon={<FileText className="w-4 h-4" />}
                     title="Nội dung bổ sung"
                     subtitle="Tài liệu PDF, yêu cầu đặc biệt"
+                    expandedSections={expandedSections}
+                    toggleSection={toggleSection}
                 >
                     <div className="space-y-3">
                         {/* Reference Content */}
@@ -726,6 +739,8 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     icon={<Settings className="w-4 h-4" />}
                     title="Tùy chọn nâng cao"
                     subtitle="Mã làm bài, hiển thị, AI provider"
+                    expandedSections={expandedSections}
+                    toggleSection={toggleSection}
                 >
                     <div className="space-y-4">
                         {/* Access Code Toggle */}
@@ -804,6 +819,8 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     icon={<Calendar className="w-4 h-4" />}
                     title="Giao bài ngay"
                     subtitle="Tùy chọn giao bài cho lớp học"
+                    expandedSections={expandedSections}
+                    toggleSection={toggleSection}
                 >
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
