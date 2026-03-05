@@ -78,7 +78,7 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
         // Filter by grade
         if (selectedGrade !== 'all') {
             filtered = filtered.filter(r => {
-                const cls = r.studentClass.toLowerCase();
+                const cls = (r.studentClass || '').toLowerCase();
                 return cls.startsWith(selectedGrade);
             });
         }
