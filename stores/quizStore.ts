@@ -141,6 +141,22 @@ export const useQuizStore = create<QuizState>()(
                         parsed.mainQuestion = parsed.mainQuestion || parsed.main_question || parsed.question;
                         parsed.correctWord = parsed.correctWord || parsed.correct_word;
                         parsed.correctWordIndexes = parsed.correctWordIndexes || parsed.correct_word_indexes;
+                        parsed.correctWordIndexes = parsed.correctWordIndexes || parsed.correct_word_indexes;
+
+                        // BẢO ĐẢM CÁC TRƯỜNG ARRAY KHÔNG BAO GIỜ UNDEFINED ĐỂ TRÁNH CRASH GIAO DIỆN
+                        parsed.options = Array.isArray(parsed.options) ? parsed.options : [];
+                        parsed.items = Array.isArray(parsed.items) ? parsed.items : [];
+                        parsed.pairs = Array.isArray(parsed.pairs) ? parsed.pairs : [];
+                        parsed.categories = Array.isArray(parsed.categories) ? parsed.categories : [];
+                        parsed.blanks = Array.isArray(parsed.blanks) ? parsed.blanks : [];
+                        parsed.distractors = Array.isArray(parsed.distractors) ? parsed.distractors : [];
+                        parsed.letters = Array.isArray(parsed.letters) ? parsed.letters : [];
+                        parsed.riddleLines = Array.isArray(parsed.riddleLines) ? parsed.riddleLines : [];
+                        parsed.words = Array.isArray(parsed.words) ? parsed.words : [];
+                        parsed.correctWordIndexes = Array.isArray(parsed.correctWordIndexes) ? parsed.correctWordIndexes : [];
+                        parsed.correctOrder = Array.isArray(parsed.correctOrder) ? parsed.correctOrder : [];
+                        parsed.optionImages = Array.isArray(parsed.optionImages) ? parsed.optionImages : [];
+
                         questionsByQuizId[qId].push(parsed);
                     });
 

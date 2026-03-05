@@ -1,0 +1,242 @@
+﻿
+src\hooks\useIoeQuiz.ts:147:        questions.forEach(q => {
+src\hooks\useIoeQuiz.ts:151:                const studentAns = (answers[q.id] || '').toString().trim().toLowerCase();
+src\hooks\useIoeQuiz.ts:152:                const correctAns = (q.correctAnswer || '').toString().trim().toLowerCase();
+src\hooks\useIoeQuiz.ts:153:                const correctOptions = correctAns.split('|').map(s => s.trim());
+src\hooks\useIoeQuiz.ts:157:                q.items.forEach((item, idx) => {
+src\hooks\useQuizCreator.ts:132:            questions: generatedQuiz.questions.map(q =>
+src\hooks\useQuizCreator.ts:162:            .filter(([_, selected]) => selected)
+src\hooks\useQuizCreator.ts:163:            .map(([type]) => type as QuestionType);
+src\hooks\useQuizCreator.ts:183:                imageLibrary: imageLibrary.map(img => ({
+src\hooks\useQuizCreator.ts:206:                questions: (result.questions || []).map((q: any, idx: number) => ({
+src\hooks\useQuizManager.ts:51:            filtered = filtered.filter(q => String(q.classLevel) === 
+String(filterLevel));
+src\hooks\useQuizManager.ts:56:            const search = searchTerm.toLowerCase().trim();
+src\hooks\useQuizManager.ts:64:                filtered = filtered.filter(q => String(q.classLevel) === targetLevel);
+src\hooks\useQuizManager.ts:67:                filtered = filtered.filter(q =>
+src\hooks\useQuizManager.ts:68:                    q.title.toLowerCase().includes(search)
+src\hooks\useResults.ts:56:        const classes = new Set(results.map(r => r.studentClass));
+src\hooks\useResults.ts:66:            filtered = filtered.filter(r => r.studentClass === filterClass);
+src\hooks\useResults.ts:100:        const scores = filteredResults.map(r => r.score);
+src\hooks\useResults.ts:102:        const passCount = scores.filter(s => s >= 5).length;
+src\services\aiChatService.ts:44:    const historyParts = history.map((msg) => ({
+src\services\aiChatService.ts:81:        ...history.map((msg) => ({ role: msg.role, content: msg.content })),
+src\services\aiTutorService.ts:90:        const optionsText = q.options ? `Các đáp án:\n${q.options.map((opt: string, 
+i: number) => `${String.fromCharCode(65 + i)}. ${opt}`).join('\n')}` : '';
+src\services\aiTutorService.ts:213:        const questionsText = wrongQuestions.map((wq, i) => {
+src\services\aiTutorService.ts:288:    quiz.questions.forEach((q: any, idx: number) => {
+src\services\aiTutorService.ts:296:            isCorrect = String(answer).toLowerCase().trim() === 
+String(q.correctAnswer).toLowerCase().trim();
+src\services\aiTutorService.ts:348:        const wrongQuestionsText = wrongAnswers.map((wq, i) =>
+src\services\CacheService.ts:75:            const keys = Object.keys(localStorage).filter(key =>
+src\services\CacheService.ts:233:            const keysToRemove = Object.keys(localStorage).filter(key =>
+src\services\CacheService.ts:236:            keysToRemove.forEach(key => localStorage.removeItem(key));
+src\services\CacheService.ts:249:            const keysToRemove = Object.keys(localStorage).filter(key =>
+src\services\CacheService.ts:252:            keysToRemove.forEach(key => localStorage.removeItem(key));
+src\services\geminiService.ts:97:  const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');
+src\services\geminiService.ts:157:    const imageList = images.map((img, idx) => `${idx + 1}. "${img.name}" (ID: 
+${img.id})`).join('\n    ');
+src\services\geminiService.ts:472:    fixedQ.options = fixedQ.options.map((opt: string) => fixLatexInText(opt));
+src\services\geminiService.ts:482:    fixedQ.correctAnswers = fixedQ.correctAnswers.map((ans: string) => 
+fixLatexInText(ans));
+src\services\geminiService.ts:492:    fixedQ.items = fixedQ.items.map((item: any) => {
+src\services\geminiService.ts:508:    fixedQ.pairs = fixedQ.pairs.map((pair: any) => ({
+src\services\geminiService.ts:536:  quiz.questions = quiz.questions.map((q: any, index: number) => {
+src\services\geminiService.ts:556:        items.forEach((item: any, i: number) => {
+src\services\geminiService.ts:570:      categories.forEach((cat: any, i: number) => {
+src\services\geminiService.ts:590:      quiz.questions.map((q: any, i: number) => `Q${i + 1}: Level 
+${q.difficultyLevel || '?'}`).join(', ')
+src\services\geminiService.ts:833:                const availableModels = listData.models.map((m: any) => 
+m.name.replace('models/', '')).join(', ');
+src\services\geminiService.ts:1010:      parsedQuiz.questions = parsedQuiz.questions.map((q: any) => {
+src\services\geminiService.ts:1055:  if (!apiKey && provider !== 'llm-mux') throw new Error(`Vui lòng nhập API Key cho 
+${provider.toUpperCase()} trong phần Cấu hình.`);
+src\services\geminiService.ts:1084:    const imageQuestions = result.questions.filter((q: any) =>
+src\services\geminiService.ts:1120:        result.questions.forEach((q: any) => {
+src\services\geminiService.ts:1390:        const base64Data = base64String.split(',')[1];
+src\services\geminiService.ts:1408:      const base64Data = base64String.split(',')[1];
+src\services\googleSheetService.ts:38:        const teachers = data.map((row: any) => ({
+src\services\googleSheetService.ts:62:            return data.map((row: any) => {
+src\services\googleSheetService.ts:82:                            parsed.forEach((item: any, index: number) => {
+src\services\googleSheetService.ts:109:            }).filter((r: StudentResult) => r.studentName); // Filter out 
+invalid rows
+src\services\googleSheetService.ts:150:        stripped.items = stripped.items.map((item: any) => {
+src\services\googleSheetService.ts:162:            stripped.blanks = stripped.blanks.map((blank: any) => {
+src\services\googleSheetService.ts:172:        stripped.items = stripped.items.map((item: any) => {
+src\services\googleSheetService.ts:233:            const normalizedQuizData = quizData.map(normalizeRow);
+src\services\googleSheetService.ts:234:            const qData = qDataArray.map(normalizeRow);
+src\services\googleSheetService.ts:239:            qData.forEach((row: any) => {
+src\services\googleSheetService.ts:248:                    optStr ? optStr.split('|').map(o => 
+unescapeSheetValue(o.trim())) : [];
+src\services\googleSheetService.ts:388:                .filter((row: any) => !USE_D1 || row.category !== 'ioe')
+src\services\googleSheetService.ts:389:                .map((row: any) => ({
+src\services\googleSheetService.ts:420:    const escapedQuestions = quiz.questions.map(q => {
+src\services\googleSheetService.ts:431:            eq.options = eq.options.map(escapeSheetValue);
+src\services\ioeSheetService.ts:153:    const normalizedQuizData = quizData.map(normalizeRow);
+src\services\ioeSheetService.ts:154:    const normalizedQuestionData = questionData.map(normalizeRow);
+src\services\ioeSheetService.ts:157:        .filter((row: any) => row.category === 'ioe')
+src\services\ioeSheetService.ts:158:        .map((row: any) => {
+src\services\ioeSheetService.ts:161:                .filter((q: any) => q.quizId === quizId)
+src\services\ioeSheetService.ts:162:                .map((q: any) => parseIoeQuestion(q));
+src\services\ioeSheetService.ts:233:        console.log(`[IOE] Fetched ${quizzes.length} quizzes:`, quizzes.map(q => 
+({ id: q.id, title: q.title, classLevel: q.classLevel })));
+src\services\ioeSheetService.ts:259:            question.options = row.options ? row.options.split('|') : [];
+src\services\ioeSheetService.ts:265:            question.options = row.options ? row.options.split('|') : [];
+src\services\ioeSheetService.ts:296:                const itemTexts = question.items.map(getItemText);
+src\services\ioeSheetService.ts:297:                correctOrder = correctOrder.map((str: string) => {
+src\services\ioeSheetService.ts:305:                }).filter((idx: number) => idx !== -1);
+src\services\ioeSheetService.ts:316:            question.options = row.options ? row.options.split('|') : [];
+src\services\ioeSheetService.ts:425:        return data.map((row: any) => ({
+src\services\logger.ts:26:        const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+src\services\pdfExportService.ts:160:    quiz.questions.forEach((q, index) => {
+src\services\pdfExportService.ts:256:            return String(answer).toLowerCase().trim() === 
+String(question.correctAnswer).toLowerCase().trim();
+src\services\pdfExportService.ts:309:                .map(([k, v]) => `${v ? 'Đúng' : 'Sai'}`)
+src\services\pdfExportService.ts:313:                .map(([left, right]) => `${left} → ${right}`)
+src\services\pdfExportService.ts:333:                .map((item: any) => item.isCorrect ? 'Đúng' : 'Sai')
+src\services\pdfExportService.ts:337:                .map((p: any) => `${p.left} → ${p.right}`)
+src\services\smartDistractorService.ts:76:            return parsed.map(String).filter(s => s.trim().length > 0);
+src\services\smartDistractorService.ts:79:            return parsed.distractors.map(String).filter((s: string) => 
+s.trim().length > 0);
+src\services\smartDistractorService.ts:91:                    return arr.map(String).filter(s => s.trim().length > 0);
+src\services\smartDistractorService.ts:156:        .filter(d => d.toLowerCase().trim() !== 
+correctAnswer.toLowerCase().trim())
+src\services\trangNguyenGeminiService.ts:143:        .map(type => QUESTION_TYPE_PROMPTS[type] || '')
+src\services\trangNguyenGeminiService.ts:144:        .filter(Boolean)
+src\services\trangNguyenGeminiService.ts:277:            const pairs = (tnQuestion.correct_answer as unknown as 
+string[][]).map(([left, right]) => ({
+src\services\trangNguyenGeminiService.ts:291:            const categories = Object.keys(groupAnswer).map((name, idx) 
+=> ({
+src\services\trangNguyenGeminiService.ts:296:                words.map((word, wordIdx) => ({
+src\services\trangNguyenGeminiService.ts:316:                correctOrder: (tnQuestion.correct_answer as 
+string).split(' ').map((word, idx) => idx)
+src\services\trangNguyenGeminiService.ts:325:                items: (tnQuestion.sub_questions || []).map((sq, sqIdx) 
+=> ({
+src\services\trangNguyenGeminiService.ts:452:    const questions = tnResult.questions.map((q, idx) => 
+convertToAppFormat(q, idx));
+src\stores\useClassroomStore.ts:115:                    classes: s.classes.filter((c) => c.id !== classId),
+src\stores\useClassroomStore.ts:176:                        [classId]: (s.students[classId] || []).filter((st) => 
+st.id !== studentId),
+src\stores\useClassroomStore.ts:246:                    assignments: s.assignments.filter((a) => a.id !== 
+assignmentId),
+src\stores\useClassroomStore.ts:265:                    assignments: s.assignments.map((a) =>
+src\stores\useClassroomStore.ts:288:                    assignments: s.assignments.map((a) =>
+src\utils\docxGenerator.ts:136:                items.forEach((item: any) => {
+src\utils\docxGenerator.ts:167:                pairs.forEach((pair: any) => {
+src\utils\docxGenerator.ts:238:                dropBlanks.forEach((blank: any, idx: number) => {
+src\utils\docxGenerator.ts:254:                orderItems.forEach((item: string, idx: number) => {
+src\utils\docxGenerator.ts:295:                            new TextRun({ text: categories.map((c: any) => 
+c.name).join(" | ") }),
+src\utils\docxGenerator.ts:311:                catItems.forEach((item: any, idx: number) => {
+src\utils\docxGenerator.ts:345:                riddleLines.forEach((line: string) => {
+src\utils\formatters.ts:35:    const dollarSplit = result.split('$');
+src\utils\formatters.ts:80:            return text.map((item: any) => typeof item === 'string' ? item : 
+formatMathText(item)).join(', ');
+src\utils\formatters.ts:90:                const maxIdx = Math.max(...keys.map(Number));
+src\utils\formatters.ts:115:    const parts = sanitized.split(latexPattern);
+src\utils\formatters.ts:117:    const processedParts = parts.map(part => {
+src\utils\formatters.ts:252:    allowedTags.forEach(tag => {
+src\utils\statisticsUtils.ts:35:    const squareDiffs = values.map(value => Math.pow(value - mean, 2));
+src\utils\statisticsUtils.ts:71:    const scores = results.map(r => r.score);
+src\utils\statisticsUtils.ts:72:    const passCount = scores.filter(s => s >= 5).length;
+src\utils\statisticsUtils.ts:84:    const scoreDistribution = ranges.map(range => {
+src\utils\statisticsUtils.ts:85:        const count = scores.filter(s => s >= range.min && s <= range.max).length;
+src\utils\statisticsUtils.ts:152:        const studentVal = String(selectedAnswer).trim().toUpperCase();
+src\utils\statisticsUtils.ts:153:        let correctVal = String(correctAnswer).trim().toUpperCase();
+src\utils\statisticsUtils.ts:163:        return String(selectedAnswer).trim().toLowerCase() === 
+String(correctAnswer).trim().toLowerCase();
+src\utils\statisticsUtils.ts:203:            const studentWord = String(studentBlanks[key]).trim().toLowerCase();
+src\utils\statisticsUtils.ts:204:            const correctWord = String(blanks[idx]).trim().toLowerCase();
+src\utils\statisticsUtils.ts:227:    const questionMap = new Map(questions.map(q => [q.id, q]));
+src\utils\statisticsUtils.ts:230:    questions.forEach(q => {
+src\utils\statisticsUtils.ts:235:    results.forEach(result => {
+src\utils\statisticsUtils.ts:237:            Object.entries(result.answers).forEach(([questionId, answer]) => {
+src\utils\statisticsUtils.ts:266:    return questions.map(q => {
+src\utils\statisticsUtils.ts:307:    return results.filter(r => {
+src\utils\statisticsUtils.ts:323:    return results.filter(r => r.score >= minScore && r.score <= maxScore);
+src\utils\statisticsUtils.ts:334:    const term = searchTerm.toLowerCase();
+src\utils\statisticsUtils.ts:335:    return results.filter(r =>
+src\utils\statisticsUtils.ts:336:        r.studentName.toLowerCase().includes(term)
+src\components\CategorySelector.tsx:30:                {QUIZ_CATEGORIES.map((cat) => {
+src\components\CategorySelector.tsx:31:                    const quizCount = quizzes.filter(
+src\components\ExplanationModal.tsx:178:                                    {similarQuestions.map((sq, index) => (
+src\components\ExplanationModal.tsx:184:                                                {sq.options?.map((opt, 
+optIndex) => {
+src\components\IoeStudentView.tsx:129:        if (enteredCode.toUpperCase() === quiz.accessCode?.toUpperCase()) {
+src\components\IoeStudentView.tsx:142:            const level1 = questions.filter((q: any) => q.difficultyLevel === 1);
+src\components\IoeStudentView.tsx:143:            const level2 = questions.filter((q: any) => q.difficultyLevel === 2);
+src\components\IoeStudentView.tsx:144:            const level3 = questions.filter((q: any) => q.difficultyLevel === 3);
+src\components\IoeStudentView.tsx:145:            const noLevel = questions.filter((q: any) => !q.difficultyLevel);
+src\components\IoeStudentView.tsx:173:        shuffledQuestions.forEach(q => {
+src\components\IoeStudentView.tsx:178:                const studentAns = (answers[q.id] || 
+'').toString().trim().toLowerCase();
+src\components\IoeStudentView.tsx:179:                const correctAns = (q.correctAnswer || 
+'').toString().trim().toLowerCase();
+src\components\IoeStudentView.tsx:180:                const correctOptions = correctAns.split('|').map(s => s.trim());
+src\components\IoeStudentView.tsx:184:                q.items.forEach((item, idx) => {
+src\components\IoeStudentView.tsx:277:            const newAns = currentAns.filter(i => i !== itemIndex);
+src\components\IoeStudentView.tsx:416:                        {shuffledQuestions.map((q, idx) => {
+src\components\IoeStudentView.tsx:471:                                        {((currentQuestion as any).options || 
+[]).map((opt: string, idx: number) => {
+src\components\IoeStudentView.tsx:549:                                                                
+(v.name.toLowerCase().includes('female') ||
+src\components\IoeStudentView.tsx:586:                                                    const parts = 
+cleanQuestion.split(SPLIT_PLACEHOLDER_REGEX);
+src\components\IoeStudentView.tsx:588:                                                    return parts.map((part: 
+string, idx: number) => {
+src\components\IoeStudentView.tsx:653:                                        {currentQuestion.items.map((item, i) => {
+src\components\IoeStudentView.tsx:710:                                            {((currentQuestion as any).items || 
+[]).map((_: string, idx: number) => {
+src\components\IoeStudentView.tsx:720:                                                                const newAns = 
+selectedItems.filter((_, i) => i !== idx);
+src\components\IoeStudentView.tsx:738:                                            {((currentQuestion as any).items || 
+[]).map((item: string, idx: number) => {
+src\components\QuizListByCategory.tsx:22:    const filteredQuizzes = quizzes.filter(
+src\components\QuizListByCategory.tsx:49:                    filteredQuizzes.map((q, index) => (
+src\components\StudentView.tsx:154:      const level1 = questions.filter((q: any) => q.difficultyLevel === 1);
+src\components\StudentView.tsx:155:      const level2 = questions.filter((q: any) => q.difficultyLevel === 2);
+src\components\StudentView.tsx:156:      const level3 = questions.filter((q: any) => q.difficultyLevel === 3);
+src\components\StudentView.tsx:157:      const noLevel = questions.filter((q: any) => !q.difficultyLevel);
+src\components\StudentView.tsx:176:    if (enteredCode.toUpperCase() === quiz.accessCode?.toUpperCase()) {
+src\components\StudentView.tsx:229:    quiz.questions.forEach(q => {
+src\components\StudentView.tsx:245:            const studentVal = (studentAns[i] || 
+"").toString().trim().toLowerCase();
+src\components\StudentView.tsx:246:            const correctVal = correctAnswers[i].toString().trim().toLowerCase();
+src\components\StudentView.tsx:248:            const correctOptions = correctVal.split('|').map((s: string) => 
+s.trim());
+src\components\StudentView.tsx:258:          const studentAns = (answers[q.id] || "").toString().trim().toLowerCase();
+src\components\StudentView.tsx:259:          const correctAns = q.correctAnswer.toString().trim().toLowerCase();
+src\components\StudentView.tsx:261:          const correctOptions = correctAns.split('|').map((s: string) => s.trim());
+src\components\StudentView.tsx:267:        q.items.forEach((item, idx) => {
+src\components\StudentView.tsx:280:        const actualUserPairsCount = Object.keys(userPairs).filter(key => key !== 
+'selectedLeft').length;
+src\components\StudentView.tsx:304:        const parts = text.split(/(\[.*?\])/g);
+src\components\StudentView.tsx:306:        parts.forEach((part, idx) => {
+src\components\StudentView.tsx:313:        blanks.forEach((blankIdx, i) => {
+src\components\StudentView.tsx:404:        const correctWord = ((q as any).correctWord || 
+'').toLowerCase().replace(/\s+/g, '');
+src\components\StudentView.tsx:408:        const studentWord = studentSelection.map((idx: number) => 
+letters[idx]).join('').toLowerCase();
+src\components\StudentView.tsx:414:        const correctAns = ((q as any).correctAnswer || '').toLowerCase().trim();
+src\components\StudentView.tsx:415:        const studentAns = (answers[q.id] || '').toString().toLowerCase().trim();
+src\components\StudentView.tsx:457:      quiz.questions.forEach(q => {
+src\components\StudentView.tsx:521:          const sWrong = String(ecStudent.wrongWord || '').trim().toLowerCase();
+src\components\StudentView.tsx:522:          const sCorrect = String(ecStudent.correctWord || '').trim().toLowerCase();
+src\components\StudentView.tsx:523:          const eWrong = String(ecWrongWord).trim().toLowerCase();
+src\components\StudentView.tsx:524:          const eCorrect = String(ecCorrectWord).trim().toLowerCase();
+src\components\StudentView.tsx:595:      quiz.questions.forEach(q => {
+src\components\StudentView.tsx:691:      const pairedCount = Object.keys(userPairs).filter(k => k !== 
+'selectedLeft').length;
+src\components\StudentView.tsx:697:      const parts = text.split(/(\[.*?\])/g);
+src\components\StudentView.tsx:699:      parts.forEach((part: string, idx: number) => {
+src\components\StudentView.tsx:723:        const parts = questionText.split(/(\[blank\]|\[_+\]|_{3,}|\[\d+\])/g);
+src\components\StudentView.tsx:724:        const blankCount = parts.filter((p: string) => 
+/^\[blank\]$|\[_+\]$|^_{3,}$|^\[\d+\]$/.test(p)).length;
+src\components\StudentView.tsx:726:        const filledCount = Object.values(currentAnswers).filter(v => v).length;
+src\components\StudentView.tsx:734:      const placedCount = Object.keys(currentAnswers).filter(k => k !== 
+'_selected').length;
+src\components\StudentView.tsx:819:          {questionsOnCurrentPage.map((q, index) => (
+src\components\StudentView.tsx:848:                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+src\components\StudentView.tsx:904:                {shuffledQuestions.map((q, index) => {
+
+

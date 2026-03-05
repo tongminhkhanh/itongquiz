@@ -1,0 +1,288 @@
+﻿
+crash_scan.txt:2:src\hooks\useIoeQuiz.ts:147:        questions.forEach(q => {
+crash_scan.txt:3:src\hooks\useIoeQuiz.ts:151:                const studentAns = (answers[q.id] || 
+'').toString().trim().toLowerCase();
+crash_scan.txt:4:src\hooks\useIoeQuiz.ts:152:                const correctAns = (q.correctAnswer || 
+'').toString().trim().toLowerCase();
+crash_scan.txt:5:src\hooks\useIoeQuiz.ts:153:                const correctOptions = correctAns.split('|').map(s => 
+s.trim());
+crash_scan.txt:6:src\hooks\useIoeQuiz.ts:157:                q.items.forEach((item, idx) => {
+crash_scan.txt:7:src\hooks\useQuizCreator.ts:132:            questions: generatedQuiz.questions.map(q =>
+crash_scan.txt:8:src\hooks\useQuizCreator.ts:162:            .filter(([_, selected]) => selected)
+crash_scan.txt:9:src\hooks\useQuizCreator.ts:163:            .map(([type]) => type as QuestionType);
+crash_scan.txt:10:src\hooks\useQuizCreator.ts:183:                imageLibrary: imageLibrary.map(img => ({
+crash_scan.txt:11:src\hooks\useQuizCreator.ts:206:                questions: (result.questions || []).map((q: any, 
+idx: number) => ({
+crash_scan.txt:12:src\hooks\useQuizManager.ts:51:            filtered = filtered.filter(q => String(q.classLevel) === 
+crash_scan.txt:14:src\hooks\useQuizManager.ts:56:            const search = searchTerm.toLowerCase().trim();
+crash_scan.txt:15:src\hooks\useQuizManager.ts:64:                filtered = filtered.filter(q => String(q.classLevel) 
+=== targetLevel);
+crash_scan.txt:16:src\hooks\useQuizManager.ts:67:                filtered = filtered.filter(q =>
+crash_scan.txt:17:src\hooks\useQuizManager.ts:68:                    q.title.toLowerCase().includes(search)
+crash_scan.txt:18:src\hooks\useResults.ts:56:        const classes = new Set(results.map(r => r.studentClass));
+crash_scan.txt:19:src\hooks\useResults.ts:66:            filtered = filtered.filter(r => r.studentClass === 
+filterClass);
+crash_scan.txt:20:src\hooks\useResults.ts:100:        const scores = filteredResults.map(r => r.score);
+crash_scan.txt:21:src\hooks\useResults.ts:102:        const passCount = scores.filter(s => s >= 5).length;
+crash_scan.txt:22:src\services\aiChatService.ts:44:    const historyParts = history.map((msg) => ({
+crash_scan.txt:23:src\services\aiChatService.ts:81:        ...history.map((msg) => ({ role: msg.role, content: 
+msg.content })),
+crash_scan.txt:24:src\services\aiTutorService.ts:90:        const optionsText = q.options ? `Các đáp 
+án:\n${q.options.map((opt: string, 
+crash_scan.txt:26:src\services\aiTutorService.ts:213:        const questionsText = wrongQuestions.map((wq, i) => {
+crash_scan.txt:27:src\services\aiTutorService.ts:288:    quiz.questions.forEach((q: any, idx: number) => {
+crash_scan.txt:28:src\services\aiTutorService.ts:296:            isCorrect = String(answer).toLowerCase().trim() === 
+crash_scan.txt:29:String(q.correctAnswer).toLowerCase().trim();
+crash_scan.txt:30:src\services\aiTutorService.ts:348:        const wrongQuestionsText = wrongAnswers.map((wq, i) =>
+crash_scan.txt:31:src\services\CacheService.ts:75:            const keys = Object.keys(localStorage).filter(key =>
+crash_scan.txt:32:src\services\CacheService.ts:233:            const keysToRemove = 
+Object.keys(localStorage).filter(key =>
+crash_scan.txt:33:src\services\CacheService.ts:236:            keysToRemove.forEach(key => 
+localStorage.removeItem(key));
+crash_scan.txt:34:src\services\CacheService.ts:249:            const keysToRemove = 
+Object.keys(localStorage).filter(key =>
+crash_scan.txt:35:src\services\CacheService.ts:252:            keysToRemove.forEach(key => 
+localStorage.removeItem(key));
+crash_scan.txt:36:src\services\geminiService.ts:97:  const typesDescription = types.map(t => typeDescriptions[t] || 
+t).join('\n    - ');
+crash_scan.txt:37:src\services\geminiService.ts:157:    const imageList = images.map((img, idx) => `${idx + 1}. 
+"${img.name}" (ID: 
+crash_scan.txt:39:src\services\geminiService.ts:472:    fixedQ.options = fixedQ.options.map((opt: string) => 
+fixLatexInText(opt));
+crash_scan.txt:40:src\services\geminiService.ts:482:    fixedQ.correctAnswers = fixedQ.correctAnswers.map((ans: 
+string) => 
+crash_scan.txt:42:src\services\geminiService.ts:492:    fixedQ.items = fixedQ.items.map((item: any) => {
+crash_scan.txt:43:src\services\geminiService.ts:508:    fixedQ.pairs = fixedQ.pairs.map((pair: any) => ({
+crash_scan.txt:44:src\services\geminiService.ts:536:  quiz.questions = quiz.questions.map((q: any, index: number) => {
+crash_scan.txt:45:src\services\geminiService.ts:556:        items.forEach((item: any, i: number) => {
+crash_scan.txt:46:src\services\geminiService.ts:570:      categories.forEach((cat: any, i: number) => {
+crash_scan.txt:47:src\services\geminiService.ts:590:      quiz.questions.map((q: any, i: number) => `Q${i + 1}: Level 
+crash_scan.txt:49:src\services\geminiService.ts:833:                const availableModels = listData.models.map((m: 
+any) => 
+crash_scan.txt:51:src\services\geminiService.ts:1010:      parsedQuiz.questions = parsedQuiz.questions.map((q: any) => 
+{
+crash_scan.txt:53:${provider.toUpperCase()} trong phần Cấu hình.`);
+crash_scan.txt:54:src\services\geminiService.ts:1084:    const imageQuestions = result.questions.filter((q: any) =>
+crash_scan.txt:55:src\services\geminiService.ts:1120:        result.questions.forEach((q: any) => {
+crash_scan.txt:56:src\services\geminiService.ts:1390:        const base64Data = base64String.split(',')[1];
+crash_scan.txt:57:src\services\geminiService.ts:1408:      const base64Data = base64String.split(',')[1];
+crash_scan.txt:58:src\services\googleSheetService.ts:38:        const teachers = data.map((row: any) => ({
+crash_scan.txt:59:src\services\googleSheetService.ts:62:            return data.map((row: any) => {
+crash_scan.txt:60:src\services\googleSheetService.ts:82:                            parsed.forEach((item: any, index: 
+number) => {
+crash_scan.txt:61:src\services\googleSheetService.ts:109:            }).filter((r: StudentResult) => r.studentName); 
+// Filter out 
+crash_scan.txt:63:src\services\googleSheetService.ts:150:        stripped.items = stripped.items.map((item: any) => {
+crash_scan.txt:64:src\services\googleSheetService.ts:162:            stripped.blanks = stripped.blanks.map((blank: 
+any) => {
+crash_scan.txt:65:src\services\googleSheetService.ts:172:        stripped.items = stripped.items.map((item: any) => {
+crash_scan.txt:66:src\services\googleSheetService.ts:233:            const normalizedQuizData = 
+quizData.map(normalizeRow);
+crash_scan.txt:67:src\services\googleSheetService.ts:234:            const qData = qDataArray.map(normalizeRow);
+crash_scan.txt:68:src\services\googleSheetService.ts:239:            qData.forEach((row: any) => {
+crash_scan.txt:69:src\services\googleSheetService.ts:248:                    optStr ? optStr.split('|').map(o => 
+crash_scan.txt:71:src\services\googleSheetService.ts:388:                .filter((row: any) => !USE_D1 || row.category 
+!== 'ioe')
+crash_scan.txt:72:src\services\googleSheetService.ts:389:                .map((row: any) => ({
+crash_scan.txt:73:src\services\googleSheetService.ts:420:    const escapedQuestions = quiz.questions.map(q => {
+crash_scan.txt:74:src\services\googleSheetService.ts:431:            eq.options = eq.options.map(escapeSheetValue);
+crash_scan.txt:75:src\services\ioeSheetService.ts:153:    const normalizedQuizData = quizData.map(normalizeRow);
+crash_scan.txt:76:src\services\ioeSheetService.ts:154:    const normalizedQuestionData = 
+questionData.map(normalizeRow);
+crash_scan.txt:77:src\services\ioeSheetService.ts:157:        .filter((row: any) => row.category === 'ioe')
+crash_scan.txt:78:src\services\ioeSheetService.ts:158:        .map((row: any) => {
+crash_scan.txt:79:src\services\ioeSheetService.ts:161:                .filter((q: any) => q.quizId === quizId)
+crash_scan.txt:80:src\services\ioeSheetService.ts:162:                .map((q: any) => parseIoeQuestion(q));
+crash_scan.txt:81:src\services\ioeSheetService.ts:233:        console.log(`[IOE] Fetched ${quizzes.length} quizzes:`, 
+quizzes.map(q => 
+crash_scan.txt:83:src\services\ioeSheetService.ts:259:            question.options = row.options ? 
+row.options.split('|') : [];
+crash_scan.txt:84:src\services\ioeSheetService.ts:265:            question.options = row.options ? 
+row.options.split('|') : [];
+crash_scan.txt:85:src\services\ioeSheetService.ts:296:                const itemTexts = 
+question.items.map(getItemText);
+crash_scan.txt:86:src\services\ioeSheetService.ts:297:                correctOrder = correctOrder.map((str: string) => 
+{
+crash_scan.txt:87:src\services\ioeSheetService.ts:305:                }).filter((idx: number) => idx !== -1);
+crash_scan.txt:88:src\services\ioeSheetService.ts:316:            question.options = row.options ? 
+row.options.split('|') : [];
+crash_scan.txt:89:src\services\ioeSheetService.ts:425:        return data.map((row: any) => ({
+crash_scan.txt:90:src\services\logger.ts:26:        const timestamp = new 
+Date().toISOString().split('T')[1].split('.')[0];
+crash_scan.txt:91:src\services\pdfExportService.ts:160:    quiz.questions.forEach((q, index) => {
+crash_scan.txt:92:src\services\pdfExportService.ts:256:            return String(answer).toLowerCase().trim() === 
+crash_scan.txt:93:String(question.correctAnswer).toLowerCase().trim();
+crash_scan.txt:94:src\services\pdfExportService.ts:309:                .map(([k, v]) => `${v ? 'Đúng' : 'Sai'}`)
+crash_scan.txt:95:src\services\pdfExportService.ts:313:                .map(([left, right]) => `${left} → ${right}`)
+crash_scan.txt:96:src\services\pdfExportService.ts:333:                .map((item: any) => item.isCorrect ? 'Đúng' : 
+'Sai')
+crash_scan.txt:97:src\services\pdfExportService.ts:337:                .map((p: any) => `${p.left} → ${p.right}`)
+crash_scan.txt:98:src\services\smartDistractorService.ts:76:            return parsed.map(String).filter(s => 
+s.trim().length > 0);
+crash_scan.txt:99:src\services\smartDistractorService.ts:79:            return 
+parsed.distractors.map(String).filter((s: string) => 
+crash_scan.txt:101:src\services\smartDistractorService.ts:91:                    return arr.map(String).filter(s => 
+s.trim().length > 0);
+crash_scan.txt:102:src\services\smartDistractorService.ts:156:        .filter(d => d.toLowerCase().trim() !== 
+crash_scan.txt:103:correctAnswer.toLowerCase().trim())
+crash_scan.txt:104:src\services\trangNguyenGeminiService.ts:143:        .map(type => QUESTION_TYPE_PROMPTS[type] || '')
+crash_scan.txt:105:src\services\trangNguyenGeminiService.ts:144:        .filter(Boolean)
+crash_scan.txt:107:string[][]).map(([left, right]) => ({
+crash_scan.txt:108:src\services\trangNguyenGeminiService.ts:291:            const categories = 
+Object.keys(groupAnswer).map((name, idx) 
+crash_scan.txt:110:src\services\trangNguyenGeminiService.ts:296:                words.map((word, wordIdx) => ({
+crash_scan.txt:112:string).split(' ').map((word, idx) => idx)
+crash_scan.txt:113:src\services\trangNguyenGeminiService.ts:325:                items: (tnQuestion.sub_questions || 
+[]).map((sq, sqIdx) 
+crash_scan.txt:115:src\services\trangNguyenGeminiService.ts:452:    const questions = tnResult.questions.map((q, idx) 
+=> 
+crash_scan.txt:117:src\stores\useClassroomStore.ts:115:                    classes: s.classes.filter((c) => c.id !== 
+classId),
+crash_scan.txt:118:src\stores\useClassroomStore.ts:176:                        [classId]: (s.students[classId] || 
+[]).filter((st) => 
+crash_scan.txt:120:src\stores\useClassroomStore.ts:246:                    assignments: s.assignments.filter((a) => 
+a.id !== 
+crash_scan.txt:122:src\stores\useClassroomStore.ts:265:                    assignments: s.assignments.map((a) =>
+crash_scan.txt:123:src\stores\useClassroomStore.ts:288:                    assignments: s.assignments.map((a) =>
+crash_scan.txt:124:src\utils\docxGenerator.ts:136:                items.forEach((item: any) => {
+crash_scan.txt:125:src\utils\docxGenerator.ts:167:                pairs.forEach((pair: any) => {
+crash_scan.txt:126:src\utils\docxGenerator.ts:238:                dropBlanks.forEach((blank: any, idx: number) => {
+crash_scan.txt:127:src\utils\docxGenerator.ts:254:                orderItems.forEach((item: string, idx: number) => {
+crash_scan.txt:128:src\utils\docxGenerator.ts:295:                            new TextRun({ text: categories.map((c: 
+any) => 
+crash_scan.txt:130:src\utils\docxGenerator.ts:311:                catItems.forEach((item: any, idx: number) => {
+crash_scan.txt:131:src\utils\docxGenerator.ts:345:                riddleLines.forEach((line: string) => {
+crash_scan.txt:132:src\utils\formatters.ts:35:    const dollarSplit = result.split('$');
+crash_scan.txt:133:src\utils\formatters.ts:80:            return text.map((item: any) => typeof item === 'string' ? 
+item : 
+crash_scan.txt:135:src\utils\formatters.ts:90:                const maxIdx = Math.max(...keys.map(Number));
+crash_scan.txt:136:src\utils\formatters.ts:115:    const parts = sanitized.split(latexPattern);
+crash_scan.txt:137:src\utils\formatters.ts:117:    const processedParts = parts.map(part => {
+crash_scan.txt:138:src\utils\formatters.ts:252:    allowedTags.forEach(tag => {
+crash_scan.txt:139:src\utils\statisticsUtils.ts:35:    const squareDiffs = values.map(value => Math.pow(value - mean, 
+2));
+crash_scan.txt:140:src\utils\statisticsUtils.ts:71:    const scores = results.map(r => r.score);
+crash_scan.txt:141:src\utils\statisticsUtils.ts:72:    const passCount = scores.filter(s => s >= 5).length;
+crash_scan.txt:142:src\utils\statisticsUtils.ts:84:    const scoreDistribution = ranges.map(range => {
+crash_scan.txt:143:src\utils\statisticsUtils.ts:85:        const count = scores.filter(s => s >= range.min && s <= 
+range.max).length;
+crash_scan.txt:144:src\utils\statisticsUtils.ts:152:        const studentVal = 
+String(selectedAnswer).trim().toUpperCase();
+crash_scan.txt:145:src\utils\statisticsUtils.ts:153:        let correctVal = 
+String(correctAnswer).trim().toUpperCase();
+crash_scan.txt:146:src\utils\statisticsUtils.ts:163:        return String(selectedAnswer).trim().toLowerCase() === 
+crash_scan.txt:147:String(correctAnswer).trim().toLowerCase();
+crash_scan.txt:148:src\utils\statisticsUtils.ts:203:            const studentWord = 
+String(studentBlanks[key]).trim().toLowerCase();
+crash_scan.txt:149:src\utils\statisticsUtils.ts:204:            const correctWord = 
+String(blanks[idx]).trim().toLowerCase();
+crash_scan.txt:150:src\utils\statisticsUtils.ts:227:    const questionMap = new Map(questions.map(q => [q.id, q]));
+crash_scan.txt:151:src\utils\statisticsUtils.ts:230:    questions.forEach(q => {
+crash_scan.txt:152:src\utils\statisticsUtils.ts:235:    results.forEach(result => {
+crash_scan.txt:153:src\utils\statisticsUtils.ts:237:            Object.entries(result.answers).forEach(([questionId, 
+answer]) => {
+crash_scan.txt:154:src\utils\statisticsUtils.ts:266:    return questions.map(q => {
+crash_scan.txt:155:src\utils\statisticsUtils.ts:307:    return results.filter(r => {
+crash_scan.txt:156:src\utils\statisticsUtils.ts:323:    return results.filter(r => r.score >= minScore && r.score <= 
+maxScore);
+crash_scan.txt:157:src\utils\statisticsUtils.ts:334:    const term = searchTerm.toLowerCase();
+crash_scan.txt:158:src\utils\statisticsUtils.ts:335:    return results.filter(r =>
+crash_scan.txt:159:src\utils\statisticsUtils.ts:336:        r.studentName.toLowerCase().includes(term)
+crash_scan.txt:160:src\components\CategorySelector.tsx:30:                {QUIZ_CATEGORIES.map((cat) => {
+crash_scan.txt:161:src\components\CategorySelector.tsx:31:                    const quizCount = quizzes.filter(
+crash_scan.txt:162:src\components\ExplanationModal.tsx:178:                                    
+{similarQuestions.map((sq, index) => (
+crash_scan.txt:165:src\components\IoeStudentView.tsx:129:        if (enteredCode.toUpperCase() === 
+quiz.accessCode?.toUpperCase()) {
+crash_scan.txt:166:src\components\IoeStudentView.tsx:142:            const level1 = questions.filter((q: any) => 
+q.difficultyLevel === 1);
+crash_scan.txt:167:src\components\IoeStudentView.tsx:143:            const level2 = questions.filter((q: any) => 
+q.difficultyLevel === 2);
+crash_scan.txt:168:src\components\IoeStudentView.tsx:144:            const level3 = questions.filter((q: any) => 
+q.difficultyLevel === 3);
+crash_scan.txt:169:src\components\IoeStudentView.tsx:145:            const noLevel = questions.filter((q: any) => 
+!q.difficultyLevel);
+crash_scan.txt:170:src\components\IoeStudentView.tsx:173:        shuffledQuestions.forEach(q => {
+crash_scan.txt:172:'').toString().trim().toLowerCase();
+crash_scan.txt:174:'').toString().trim().toLowerCase();
+crash_scan.txt:175:src\components\IoeStudentView.tsx:180:                const correctOptions = 
+correctAns.split('|').map(s => s.trim());
+crash_scan.txt:176:src\components\IoeStudentView.tsx:184:                q.items.forEach((item, idx) => {
+crash_scan.txt:177:src\components\IoeStudentView.tsx:277:            const newAns = currentAns.filter(i => i !== 
+itemIndex);
+crash_scan.txt:178:src\components\IoeStudentView.tsx:416:                        {shuffledQuestions.map((q, idx) => {
+crash_scan.txt:180:[]).map((opt: string, idx: number) => {
+crash_scan.txt:182:(v.name.toLowerCase().includes('female') ||
+crash_scan.txt:184:cleanQuestion.split(SPLIT_PLACEHOLDER_REGEX);
+crash_scan.txt:185:src\components\IoeStudentView.tsx:588:                                                    return 
+parts.map((part: 
+crash_scan.txt:187:src\components\IoeStudentView.tsx:653:                                        
+{currentQuestion.items.map((item, i) => {
+crash_scan.txt:189:[]).map((_: string, idx: number) => {
+crash_scan.txt:191:selectedItems.filter((_, i) => i !== idx);
+crash_scan.txt:193:[]).map((item: string, idx: number) => {
+crash_scan.txt:194:src\components\QuizListByCategory.tsx:22:    const filteredQuizzes = quizzes.filter(
+crash_scan.txt:195:src\components\QuizListByCategory.tsx:49:                    filteredQuizzes.map((q, index) => (
+crash_scan.txt:196:src\components\StudentView.tsx:154:      const level1 = questions.filter((q: any) => 
+q.difficultyLevel === 1);
+crash_scan.txt:197:src\components\StudentView.tsx:155:      const level2 = questions.filter((q: any) => 
+q.difficultyLevel === 2);
+crash_scan.txt:198:src\components\StudentView.tsx:156:      const level3 = questions.filter((q: any) => 
+q.difficultyLevel === 3);
+crash_scan.txt:199:src\components\StudentView.tsx:157:      const noLevel = questions.filter((q: any) => 
+!q.difficultyLevel);
+crash_scan.txt:200:src\components\StudentView.tsx:176:    if (enteredCode.toUpperCase() === 
+quiz.accessCode?.toUpperCase()) {
+crash_scan.txt:201:src\components\StudentView.tsx:229:    quiz.questions.forEach(q => {
+crash_scan.txt:203:"").toString().trim().toLowerCase();
+crash_scan.txt:204:src\components\StudentView.tsx:246:            const correctVal = 
+correctAnswers[i].toString().trim().toLowerCase();
+crash_scan.txt:205:src\components\StudentView.tsx:248:            const correctOptions = correctVal.split('|').map((s: 
+string) => 
+crash_scan.txt:207:src\components\StudentView.tsx:258:          const studentAns = (answers[q.id] || 
+"").toString().trim().toLowerCase();
+crash_scan.txt:208:src\components\StudentView.tsx:259:          const correctAns = 
+q.correctAnswer.toString().trim().toLowerCase();
+crash_scan.txt:209:src\components\StudentView.tsx:261:          const correctOptions = correctAns.split('|').map((s: 
+string) => s.trim());
+crash_scan.txt:210:src\components\StudentView.tsx:267:        q.items.forEach((item, idx) => {
+crash_scan.txt:211:src\components\StudentView.tsx:280:        const actualUserPairsCount = 
+Object.keys(userPairs).filter(key => key !== 
+crash_scan.txt:213:src\components\StudentView.tsx:304:        const parts = text.split(/(\[.*?\])/g);
+crash_scan.txt:214:src\components\StudentView.tsx:306:        parts.forEach((part, idx) => {
+crash_scan.txt:215:src\components\StudentView.tsx:313:        blanks.forEach((blankIdx, i) => {
+crash_scan.txt:217:'').toLowerCase().replace(/\s+/g, '');
+crash_scan.txt:218:src\components\StudentView.tsx:408:        const studentWord = studentSelection.map((idx: number) 
+=> 
+crash_scan.txt:219:letters[idx]).join('').toLowerCase();
+crash_scan.txt:220:src\components\StudentView.tsx:414:        const correctAns = ((q as any).correctAnswer || 
+'').toLowerCase().trim();
+crash_scan.txt:221:src\components\StudentView.tsx:415:        const studentAns = (answers[q.id] || 
+'').toString().toLowerCase().trim();
+crash_scan.txt:222:src\components\StudentView.tsx:457:      quiz.questions.forEach(q => {
+crash_scan.txt:223:src\components\StudentView.tsx:521:          const sWrong = String(ecStudent.wrongWord || 
+'').trim().toLowerCase();
+crash_scan.txt:224:src\components\StudentView.tsx:522:          const sCorrect = String(ecStudent.correctWord || 
+'').trim().toLowerCase();
+crash_scan.txt:225:src\components\StudentView.tsx:523:          const eWrong = 
+String(ecWrongWord).trim().toLowerCase();
+crash_scan.txt:226:src\components\StudentView.tsx:524:          const eCorrect = 
+String(ecCorrectWord).trim().toLowerCase();
+crash_scan.txt:227:src\components\StudentView.tsx:595:      quiz.questions.forEach(q => {
+crash_scan.txt:228:src\components\StudentView.tsx:691:      const pairedCount = Object.keys(userPairs).filter(k => k 
+!== 
+crash_scan.txt:230:src\components\StudentView.tsx:697:      const parts = text.split(/(\[.*?\])/g);
+crash_scan.txt:231:src\components\StudentView.tsx:699:      parts.forEach((part: string, idx: number) => {
+crash_scan.txt:232:src\components\StudentView.tsx:723:        const parts = 
+questionText.split(/(\[blank\]|\[_+\]|_{3,}|\[\d+\])/g);
+crash_scan.txt:233:src\components\StudentView.tsx:724:        const blankCount = parts.filter((p: string) => 
+crash_scan.txt:235:src\components\StudentView.tsx:726:        const filledCount = 
+Object.values(currentAnswers).filter(v => v).length;
+crash_scan.txt:236:src\components\StudentView.tsx:734:      const placedCount = Object.keys(currentAnswers).filter(k 
+=> k !== 
+crash_scan.txt:238:src\components\StudentView.tsx:819:          {questionsOnCurrentPage.map((q, index) => (
+crash_scan.txt:239:src\components\StudentView.tsx:848:                {Array.from({ length: totalPages }, (_, i) => i 
++ 1).map(page => (
+crash_scan.txt:240:src\components\StudentView.tsx:904:                {shuffledQuestions.map((q, index) => {
+
+
