@@ -137,7 +137,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 {/* MCQ */}
                 {q.type === QuestionType.MCQ && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {q.options.map((opt, idx) => {
+                        {(q.options ?? []).map((opt, idx) => {
                             const label = String.fromCharCode(65 + idx);
                             const isSelected = answers[q.id] === label;
                             return (
@@ -234,7 +234,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 {/* True/False */}
                 {q.type === QuestionType.TRUE_FALSE && (
                     <div className="space-y-2">
-                        {q.items.map((item, i) => {
+                        {(q.items ?? []).map((item, i) => {
                             const itemKey = item.id || `item-${i}`;
                             const val = answers[q.id]?.[itemKey];
                             return (
@@ -273,7 +273,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                             <div className="grid grid-cols-2 gap-8">
                                 <div className="space-y-3">
                                     <p className="font-bold text-blue-600 text-center">Cột A</p>
-                                    {q.pairs.map((pair) => {
+                                    {(q.pairs ?? []).map((pair) => {
                                         const isSelectedLeft = currentAnswers.selectedLeft === pair.left;
                                         const isPaired = currentAnswers[pair.left] !== undefined;
                                         const colorIdx = leftToColorIndex[pair.left];
@@ -298,7 +298,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                 </div>
                                 <div className="space-y-3">
                                     <p className="font-bold text-orange-600 text-center">Cột B</p>
-                                    {Array.from(new Set(q.pairs.map(p => p.right)))
+                                    {Array.from(new Set((q.pairs ?? []).map(p => p.right)))
                                         .sort((a, b) => (a as string).localeCompare(b as string))
                                         .map((rightItem) => {
                                             const pairedLefts = Object.keys(currentAnswers).filter(key => currentAnswers[key] === rightItem && key !== 'selectedLeft');
