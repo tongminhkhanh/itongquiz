@@ -3,7 +3,7 @@ import { useClassroomStore } from '../../stores/useClassroomStore';
 import StudentLogin from './StudentLogin';
 import AssignmentsView from './AssignmentsView';
 import StudentDashboard from '../student/StudentDashboard';
-import Leaderboard from '../gamification/Leaderboard';
+import LeaderboardPage from '../HomePage/LeaderboardPage';
 
 type PortalView = 'dashboard' | 'study' | 'leaderboard';
 
@@ -26,7 +26,7 @@ const StudentPortal: React.FC = () => {
         case 'study':
             return <AssignmentsView />;
         case 'leaderboard':
-            return <Leaderboard onBack={() => setView('dashboard')} />;
+            return <LeaderboardPage onBack={() => setView('dashboard')} />;
         case 'dashboard':
         default:
             return (

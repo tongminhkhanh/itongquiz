@@ -1,16 +1,8 @@
 // ============ IOE SHEET SERVICE ============
-// Service riêng cho hệ thống IOE, tách biệt khỏi googleSheetService.ts
+// Service for IOE system - now routes through Cloudflare Workers D1
 
 import { Quiz, Question, QuestionType, StudentResult } from '../types';
-import { IOE_GOOGLE_SCRIPT_URL, USE_D1 } from '../config/constants';
 import { callApi } from './apiAdapter';
-
-// Security: API token for IOE GAS authentication
-const IOE_API_SECRET_TOKEN = import.meta.env.VITE_IOE_API_SECRET_TOKEN;
-
-if (!USE_D1 && !IOE_API_SECRET_TOKEN) {
-    console.warn("Security Warning: VITE_IOE_API_SECRET_TOKEN is missing (only needed for GAS backend)!");
-}
 
 // Helper to fix "Reorder the words" questions
 // Normalizes ALL separators (colons and slashes) to format: "word1 /word2 /word3"
@@ -36,75 +28,18 @@ const fixReorderQuestion = (text: string): string => {
     return text;
 };
 
-// Helper to call IOE GAS API with timeout
-const callIoeGasApi = async (action: string, payload: any = {}, timeoutMs: number = 120000): Promise<any> => {
-    // 1. If using new D1 Workers backend, route through apiAdapter
-    if (USE_D1) {
-        console.log(`[IOE D1] Calling API: ${action}`);
-        try {
-            const data = await callApi(action, payload);
-            if (data && !Array.isArray(data) && (data as any).status === 'error') {
-                console.error(`[IOE D1] API Error [${action}]:`, (data as any).message);
-                return null;
-            }
-            return data;
-        } catch (error) {
-            console.error(`[IOE D1] Network Error [${action}]:`, error);
-            return null;
-        }
-    }
-
-    // 2. Legacy fallback: Google Apps Script
-    if (!IOE_GOOGLE_SCRIPT_URL) {
-        console.error("[IOE] IOE_GOOGLE_SCRIPT_URL is not defined");
-        return null;
-    }
-
-    console.log(`[IOE] Calling API: ${action} (timeout: ${timeoutMs / 1000}s)`);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
+// Helper to call IOE API through Cloudflare Workers
+const callIoeGasApi = async (action: string, payload: any = {}, _timeoutMs: number = 120000): Promise<any> => {
+    console.log(`[IOE D1] Calling API: ${action}`);
     try {
-        const bodyData = {
-            ...payload,
-            action,
-            token: IOE_API_SECRET_TOKEN
-        };
-
-        // Log payload size for debugging large requests
-        const payloadSize = JSON.stringify(bodyData).length;
-        console.log(`[IOE] Payload size: ${(payloadSize / 1024).toFixed(2)} KB`);
-
-        const response = await fetch(IOE_GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8',
-            },
-            body: JSON.stringify(bodyData),
-            signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        const data = await response.json();
-
-        // Check if response is an error object (not an array)
-        if (data && !Array.isArray(data) && data.status === 'error') {
-            console.error(`[IOE] GAS API Error [${action}]:`, data.message);
+        const data = await callApi(action, payload);
+        if (data && !Array.isArray(data) && (data as any).status === 'error') {
+            console.error(`[IOE D1] API Error [${action}]:`, (data as any).message);
             return null;
         }
-
-        console.log(`[IOE] API ${action} success, got:`, Array.isArray(data) ? `${data.length} items` : data);
         return data;
-    } catch (error: any) {
-        clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-            console.error(`[IOE] API ${action} timeout after ${timeoutMs / 1000}s`);
-        } else {
-            console.error(`[IOE] Network Error [${action}]:`, error);
-        }
+    } catch (error) {
+        console.error(`[IOE D1] Network Error [${action}]:`, error);
         return null;
     }
 };
@@ -219,7 +154,7 @@ const parseQuizzesFromData = (quizData: any[], questionData: any[]): Quiz[] => {
     const normalizedQuestionData = questionData.map(normalizeRow);
 
     return normalizedQuizData
-        .filter((row: any) => !USE_D1 || row.category === 'ioe')
+        .filter((row: any) => row.category === 'ioe')
         .map((row: any) => {
             const quizId = row.id;
             const quizQuestions = normalizedQuestionData
@@ -408,7 +343,7 @@ export const saveIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
             examCode: quiz.examCode || '',
             timeLimit: quiz.timeLimit,
             createdAt: quiz.createdAt,
-            accessCode: quiz.accessCode || '',
+            accessCode: quiz.accessCode || undefined,
             requireCode: quiz.requireCode || false,
             questions: quiz.questions,
         }, 180000); // 3 minute timeout for 100 questions
@@ -445,7 +380,7 @@ export const updateIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
             examCode: quiz.examCode || '',
             timeLimit: quiz.timeLimit,
             createdAt: quiz.createdAt,
-            accessCode: quiz.accessCode || '',
+            accessCode: quiz.accessCode || undefined,
             requireCode: quiz.requireCode || false,
             questions: quiz.questions,
         });

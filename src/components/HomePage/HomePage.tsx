@@ -9,6 +9,7 @@ import LoginModal from '../common/LoginModal';
 import AnnouncementMarquee from '../common/AnnouncementMarquee';
 import QuizListPage from './QuizListPage';
 import LeaderboardPage from './LeaderboardPage';
+import StudentDashboard from '../student/StudentDashboard';
 import { getAllAssignments } from '../../services/classroomService';
 import { Assignment } from '../../types/classroom.types';
 
@@ -387,8 +388,20 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
     }, [quizStore.quizzes, ioeQuizzes, myAssignmentQuizzes, assignmentQuizzes, isStudentLoggedIn]);
 
     // =====================================================
-    // RENDER — STICKER LAND
+    // RENDER — STUDENT DASHBOARD OR STICKER LAND
     // =====================================================
+    if (isStudentLoggedIn && view === 'home') {
+        return (
+            <StudentDashboard
+                onStartStudy={() => {
+                    setActiveTab('class');
+                    setView('quiz-list');
+                }}
+                onViewLeaderboard={() => setView('leaderboard')}
+            />
+        );
+    }
+
     return (
         <div className="sticker-land">
             <AnnouncementMarquee />

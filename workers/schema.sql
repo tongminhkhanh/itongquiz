@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS results (
   score REAL DEFAULT 0,
   correct_count INTEGER DEFAULT 0,
   total_questions INTEGER DEFAULT 0,
+  time_taken INTEGER DEFAULT 0,
   submitted_at TEXT NOT NULL,
   answers TEXT DEFAULT '{}'
 );

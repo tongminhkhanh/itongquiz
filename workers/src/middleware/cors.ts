@@ -5,6 +5,8 @@ const ALLOWED_ORIGINS = [
     'http://localhost:4173',
     'http://localhost:3000',
     'http://103.47.224.66:3000',
+    'http://103.47.224.66:3001',
+    'http://localhost:3001',
     'https://thitong.site',
     'https://www.thitong.site',
     'https://itongquiz1.vercel.app',

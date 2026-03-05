@@ -401,7 +401,7 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                     createdAt: row.createdAt || new Date().toISOString(),
                     createdBy: row.createdBy || undefined, // Tên giáo viên tạo đề
                     questions: questionsByQuizId[row.id] || [],
-                    accessCode: row.accessCode || "",
+                    accessCode: row.accessCode || undefined,
                     requireCode: row.requireCode === "TRUE" || row.requireCode === true,
                     showOnHome: row.showOnHome !== "FALSE" && row.showOnHome !== false // Map explicitly
                 }));
@@ -413,7 +413,7 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
 };
 
 // PREPARE QUIZ FOR SAVING
-const prepareQuizForSave = (quiz: Quiz) => {
+export const prepareQuizForSave = (quiz: Quiz) => {
     // Clone logic handled by serializer in GAS usually, but we need to modify values
     // actually, we are sending the whole object to GAS.
     // We should iterate and escape fields in the questions.

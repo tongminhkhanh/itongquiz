@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Quiz, StudentResult } from '../src/types';
-import { fetchQuizzesFromSheets, fetchResultsFromSheets, saveQuizToSheet, saveResultToSheet, updateQuizInSheet, deleteQuizFromSheet, deleteResultFromSheet } from '../src/services/googleSheetService';
-import { GOOGLE_SHEET_ID, QUIZ_GID, QUESTION_GID, RESULTS_GID, GOOGLE_SCRIPT_URL } from '../src/config/constants';
+import { callApi } from '../src/services/apiAdapter';
+import { prepareQuizForSave } from '../src/services/googleSheetService';
+import { cacheService } from '../src/services/CacheService';
 
 type ViewType = 'home' | 'student' | 'teacher_login' | 'teacher_dash' | 'student_portal';
 
@@ -95,22 +96,76 @@ export const useQuizStore = create<QuizState>()(
             setLoading: (isLoading) => set({ isLoading }),
             setError: (error) => set({ error }),
 
-            // Async Actions
+            // Async Actions - All routes through Cloudflare Workers D1
             loadQuizzes: async () => {
                 set({ isLoading: true, error: null });
                 try {
-                    const quizzes = await fetchQuizzesFromSheets(GOOGLE_SHEET_ID, QUIZ_GID, QUESTION_GID);
+                    // Fetch quizzes and questions from D1 via Workers API
+                    const [quizData, questionData] = await Promise.all([
+                        callApi<any[]>('get_quizzes'),
+                        callApi<any[]>('get_questions')
+                    ]);
 
-                    // 🔍 DEBUG: Check image fields in fetched quizzes
-                    const questionsWithImage = quizzes.flatMap(q => q.questions).filter(q => q.image && String(q.image).trim());
-                    console.log(`[quizStore] Loaded ${quizzes.length} quizzes, ${questionsWithImage.length} questions have image`);
+                    if (!quizData || !Array.isArray(quizData)) {
+                        set({ quizzes: [], isLoading: false });
+                        return;
+                    }
 
-                    // 🖼️ FIX: Sync selectedQuiz with fresh data to prevent stale image references
+                    const qDataArray = Array.isArray(questionData) ? questionData : [];
+
+                    // Group questions by quizId
+                    const questionsByQuizId: Record<string, any[]> = {};
+                    qDataArray.forEach((q: any) => {
+                        const qId = q.quizId || q.quiz_id;
+                        if (!questionsByQuizId[qId]) questionsByQuizId[qId] = [];
+                        // Parse JSON fields if they come as strings from D1
+                        let parsed = { ...q };
+                        if (typeof q.items === 'string') try { parsed.items = JSON.parse(q.items); } catch { }
+                        if (typeof q.pairs === 'string') try { parsed.pairs = JSON.parse(q.pairs); } catch { }
+                        if (typeof q.categories === 'string') try { parsed.categories = JSON.parse(q.categories); } catch { }
+                        if (typeof q.blanks === 'string') try { parsed.blanks = JSON.parse(q.blanks); } catch { }
+                        if (typeof q.distractors === 'string') try { parsed.distractors = JSON.parse(q.distractors); } catch { }
+                        if (typeof q.options === 'string') parsed.options = q.options.split('|');
+                        if (typeof q.correctAnswers === 'string') try { parsed.correctAnswers = JSON.parse(q.correctAnswers); } catch { }
+                        if (typeof q.letters === 'string') try { parsed.letters = JSON.parse(q.letters); } catch { }
+                        if (typeof q.riddleLines === 'string') try { parsed.riddleLines = JSON.parse(q.riddleLines); } catch { }
+                        // UNDERLINE question fields
+                        if (typeof q.words === 'string') try { parsed.words = JSON.parse(q.words); } catch { }
+                        if (typeof q.correctWordIndexes === 'string') try { parsed.correctWordIndexes = JSON.parse(q.correctWordIndexes); } catch { }
+                        // ORDERING / IMAGE_QUESTION fields
+                        if (typeof q.correctOrder === 'string') try { parsed.correctOrder = JSON.parse(q.correctOrder); } catch { }
+                        if (typeof q.optionImages === 'string') try { parsed.optionImages = JSON.parse(q.optionImages); } catch { }
+                        // Normalize snake_case to camelCase
+                        parsed.quizId = parsed.quizId || parsed.quiz_id;
+                        parsed.correctAnswer = parsed.correctAnswer || parsed.correct_answer;
+                        parsed.mainQuestion = parsed.mainQuestion || parsed.main_question || parsed.question;
+                        parsed.correctWord = parsed.correctWord || parsed.correct_word;
+                        parsed.correctWordIndexes = parsed.correctWordIndexes || parsed.correct_word_indexes;
+                        questionsByQuizId[qId].push(parsed);
+                    });
+
+                    // Build Quiz objects
+                    const quizzes: Quiz[] = quizData.map((row: any) => ({
+                        id: row.id,
+                        title: row.title || '',
+                        classLevel: row.classLevel || row.class_level || '',
+                        category: row.category || '',
+                        timeLimit: parseInt(row.timeLimit || row.time_limit) || 30,
+                        createdAt: row.createdAt || row.created_at || new Date().toISOString(),
+                        createdBy: row.createdBy || row.created_by || '',
+                        accessCode: row.accessCode || row.access_code || undefined,
+                        requireCode: row.requireCode === true || row.requireCode === 'TRUE' || row.requireCode === 1 || row.require_code === true || row.require_code === 'TRUE' || row.require_code === 1,
+                        showOnHome: !(row.showOnHome === false || row.showOnHome === 'FALSE' || row.showOnHome === 0 || row.show_on_home === false || row.show_on_home === 'FALSE' || row.show_on_home === 0),
+                        questions: questionsByQuizId[row.id] || []
+                    }));
+
+                    // Sync selectedQuiz with fresh data
                     const currentSelectedQuiz = get().selectedQuiz;
                     const updatedSelectedQuiz = currentSelectedQuiz
                         ? quizzes.find(q => q.id === currentSelectedQuiz.id) || null
                         : null;
 
+                    console.log(`[quizStore] Loaded ${quizzes.length} quizzes from D1`);
                     set({ quizzes, selectedQuiz: updatedSelectedQuiz, isLoading: false });
                 } catch (err: any) {
                     set({ error: err.message || 'Failed to load quizzes', isLoading: false });
@@ -118,29 +173,44 @@ export const useQuizStore = create<QuizState>()(
             },
 
             loadResults: async () => {
-                // Don't set global loading for results to avoid blocking UI if not necessary, or separate loading state?
-                // For now, let's just fetch silently or set loading if needed.
-                // But TeacherDashboard uses it.
                 try {
-                    const results = await fetchResultsFromSheets(GOOGLE_SHEET_ID, RESULTS_GID);
+                    const data = await callApi<any[]>('get_results');
+                    if (!data || !Array.isArray(data)) {
+                        set({ results: [] });
+                        return;
+                    }
+                    const results: StudentResult[] = data.map((row: any) => ({
+                        id: row.id || `result-${Date.now()}`,
+                        studentName: row.studentName || row.name || '',
+                        studentClass: row.studentClass || row.className || '',
+                        quizId: row.quizId || row.quiz_id || '',
+                        quizTitle: row.quizTitle || row.quiz_title || '',
+                        score: parseFloat(String(row.score || 0).replace(',', '.')) || 0,
+                        correctCount: parseInt(row.correctCount || row.correct_count) || 0,
+                        totalQuestions: parseInt(row.totalQuestions || row.total_questions) || 0,
+                        submittedAt: row.submittedAt || row.submitted_at || new Date().toISOString(),
+                        timeTaken: parseInt(row.timeTaken || row.time_taken) || 0,
+                        answers: typeof row.answers === 'string' ? JSON.parse(row.answers || '{}') : (row.answers || {})
+                    })).filter(r => r.studentName);
                     set({ results });
                 } catch (err: any) {
                     console.error('Failed to load results:', err);
-                    // set({ error: 'Failed to load results' }); // Optional
                 }
             },
 
             createQuiz: async (quiz) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const success = await saveQuizToSheet(quiz, GOOGLE_SCRIPT_URL);
-                    if (success) {
+                    const prepared = prepareQuizForSave(quiz);
+                    const result = await callApi('create_quiz', prepared);
+                    if (result && result.status === 'success') {
+                        cacheService.invalidatePrefix('quizzes:');
                         set((state) => ({
                             quizzes: [...state.quizzes, quiz],
                             isLoading: false
                         }));
                     } else {
-                        throw new Error('Failed to save quiz to Google Sheets');
+                        throw new Error(result?.message || 'Failed to save quiz');
                     }
                 } catch (err: any) {
                     set({ error: err.message, isLoading: false });
@@ -151,14 +221,16 @@ export const useQuizStore = create<QuizState>()(
             modifyQuiz: async (quiz) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const success = await updateQuizInSheet(quiz, GOOGLE_SCRIPT_URL);
-                    if (success) {
+                    const prepared = prepareQuizForSave(quiz);
+                    const result = await callApi('update_quiz', { ...prepared, id: quiz.id });
+                    if (result && result.status === 'success') {
+                        cacheService.invalidatePrefix('quizzes:');
                         set((state) => ({
                             quizzes: state.quizzes.map(q => q.id === quiz.id ? quiz : q),
                             isLoading: false
                         }));
                     } else {
-                        throw new Error('Failed to update quiz in Google Sheets');
+                        throw new Error(result?.message || 'Failed to update quiz');
                     }
                 } catch (err: any) {
                     set({ error: err.message, isLoading: false });
@@ -169,14 +241,15 @@ export const useQuizStore = create<QuizState>()(
             removeQuiz: async (id) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const success = await deleteQuizFromSheet(id, GOOGLE_SCRIPT_URL);
-                    if (success) {
+                    const result = await callApi('delete_quiz', { id });
+                    if (result && result.status === 'success') {
+                        cacheService.invalidatePrefix('quizzes:');
                         set((state) => ({
                             quizzes: state.quizzes.filter(q => q.id !== id),
                             isLoading: false
                         }));
                     } else {
-                        throw new Error('Failed to delete quiz from Google Sheets');
+                        throw new Error(result?.message || 'Failed to delete quiz');
                     }
                 } catch (err: any) {
                     set({ error: err.message, isLoading: false });
@@ -185,15 +258,18 @@ export const useQuizStore = create<QuizState>()(
             },
 
             submitResult: async (result) => {
-                // This might be called by student view
                 try {
-                    const success = await saveResultToSheet(result, GOOGLE_SCRIPT_URL);
-                    if (success) {
+                    const res = await callApi('submit_result', {
+                        ...result,
+                        className: result.studentClass,
+                        quizTitle: result.quizTitle || 'Unknown Quiz'
+                    });
+                    if (res && res.status === 'success') {
+                        cacheService.invalidatePrefix('results:');
                         set((state) => ({
                             results: [...state.results, result]
                         }));
                     } else {
-                        // Throw error if save failed so caller can handle it
                         throw new Error('Không thể lưu kết quả. Vui lòng thử lại!');
                     }
                 } catch (err) {
@@ -205,14 +281,15 @@ export const useQuizStore = create<QuizState>()(
             removeResult: async (id) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const success = await deleteResultFromSheet(id, GOOGLE_SCRIPT_URL);
-                    if (success) {
+                    const result = await callApi('delete_result', { resultId: id });
+                    if (result && result.status === 'success') {
+                        cacheService.invalidatePrefix('results:');
                         set((state) => ({
                             results: state.results.filter(r => r.id !== id),
                             isLoading: false
                         }));
                     } else {
-                        throw new Error('Failed to delete result from server');
+                        throw new Error('Failed to delete result');
                     }
                 } catch (err: any) {
                     set({ error: err.message, isLoading: false });
@@ -226,8 +303,7 @@ export const useQuizStore = create<QuizState>()(
             // Only persist selected fields to avoid stale data
             // NOTE: Do NOT persist selectedClassLevel - it should reset when returning home
             partialize: (state) => ({
-                // Persist quizzes to ensure complex question types (UNDERLINE, etc.) are preserved
-                // Google Sheets doesn't properly store all fields for new question types
+                // Persist quizzes locally for offline access
                 quizzes: state.quizzes,
                 // Persist view state so teacher dashboard stays after F5 refresh
                 view: state.view,

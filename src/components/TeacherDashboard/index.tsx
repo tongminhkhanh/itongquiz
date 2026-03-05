@@ -1,14 +1,15 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Quiz } from '../../types';
-import { Tabs, TabItem, Button, ErrorBoundary } from '../common';
-import { LogOut, FileText, List, Settings, Bot, Key, X, Save, Loader2, Globe, Megaphone, GraduationCap, ClipboardList } from 'lucide-react';
-import { SCHOOL_NAME, GOOGLE_SHEET_ID, TEACHER_GID, QUIZ_CATEGORIES } from '../../config/constants';
+import { Button, ErrorBoundary } from '../common';
+import { Key, X, Save, Loader2, Bell, Search } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import { setStripAnswersEnabled } from '../../services/googleSheetService';
 import { cacheService } from '../../services/CacheService';
+import Sidebar from './Sidebar';
 
 // Lazy load tab components
+const OverviewTab = React.lazy(() => import('./OverviewTab'));
 const ResultsTab = React.lazy(() => import('./ResultsTab'));
 const ManageTab = React.lazy(() => import('./ManageTab'));
 const CreateTab = React.lazy(() => import('./CreateTab'));
@@ -18,7 +19,7 @@ const IoeResultsTab = React.lazy(() => import('./IoeResultsTab'));
 const AnnouncementSettings = React.lazy(() => import('./AnnouncementSettings'));
 const ClassManagementTab = React.lazy(() => import('./ClassManagementTab'));
 const AssignmentTab = React.lazy(() => import('./AssignmentTab'));
-
+const TeacherManagementTab = React.lazy(() => import('./TeacherManagementTab'));
 
 const TeacherDashboard: React.FC = () => {
     // --- STORES ---
@@ -40,8 +41,8 @@ const TeacherDashboard: React.FC = () => {
         };
     }, []);
 
-    // Tab state
-    const [activeTab, setActiveTab] = useState<string>('results');
+    // Tab state (Default to 'overview' now instead of 'results')
+    const [activeTab, setActiveTab] = useState<string>('overview');
 
     // Editing state
     const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
@@ -55,38 +56,23 @@ const TeacherDashboard: React.FC = () => {
         ? quizStore.results
         : quizStore.results.filter(r => r.studentClass === authStore.teacherClass);
 
-    // Tab configuration
-    const allTabs: TabItem[] = [
-        { id: 'results', label: 'Kết quả', icon: <FileText className="w-4 h-4" /> },
-        { id: 'manage', label: 'Quản lý đề', icon: <List className="w-4 h-4" /> },
-        { id: 'create', label: 'Tạo đề mới', icon: <Settings className="w-4 h-4" /> },
-        { id: 'classes', label: 'Lớp học', icon: <GraduationCap className="w-4 h-4" /> },
-        { id: 'assignments', label: 'Giao bài', icon: <ClipboardList className="w-4 h-4" /> },
-        { id: 'ioe', label: 'Tạo đề IOE', icon: <Globe className="w-4 h-4" /> },
-        { id: 'ioe-manage', label: 'IOE Quản lý', icon: <Globe className="w-4 h-4" /> },
-        { id: 'ioe-results', label: 'IOE Kết quả', icon: <Globe className="w-4 h-4" /> },
-        { id: 'announcements', label: 'Thông báo', icon: <Megaphone className="w-4 h-4" /> },
-    ];
-
-    // Filter tabs based on role and allowed users
-    // - Giáo viên bộ môn: Kết quả, Quản lý đề, Tạo đề mới (đề ôn tập)
-    // - Admin: Tất cả + IOE tabs
-    const tabs = allTabs.filter(tab => {
-        // Results tab - luôn hiển thị cho tất cả
-        if (tab.id === 'results') return true;
-
-        // Manage, Create, Classes - cho phép cả Teacher và Admin
-        if (tab.id === 'manage' || tab.id === 'create' || tab.id === 'classes' || tab.id === 'assignments') {
-            return true;
+    // Dynamic title logic based on activeTab
+    const getPageTitle = () => {
+        switch (activeTab) {
+            case 'overview': return 'Tổng quan';
+            case 'manage': return 'Đề kiểm tra';
+            case 'results': return 'Kết quả học tập';
+            case 'classes': return 'Quản lý Lớp học';
+            case 'assignments': return 'Giao bài tập';
+            case 'create': return 'Tạo đề mới';
+            case 'ioe': return 'Tạo đề IOE';
+            case 'ioe-manage': return 'Quản lý IOE';
+            case 'ioe-results': return 'Kết quả IOE';
+            case 'announcements': return 'Cài đặt & Thông báo';
+            case 'teachers': return 'Quản lý Giáo viên';
+            default: return 'Bảng điều khiển';
         }
-
-        // IOE Tabs & Announcements - CHỈ Admin được phép (tất cả admin đều có quyền)
-        if (tab.id === 'ioe' || tab.id === 'ioe-manage' || tab.id === 'ioe-results' || tab.id === 'announcements') {
-            return authStore.isAdmin;
-        }
-
-        return false;
-    });
+    };
 
     // Handle update access code
     const handleUpdateAccessCode = async () => {
@@ -118,127 +104,147 @@ const TeacherDashboard: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
-            {/* Header */}
-            <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-orange-100 rounded-xl">
-                            <Bot className="w-6 h-6 text-orange-600" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold text-gray-800">
-                                {authStore.teacherName || 'Giáo viên'} - Trường TH Ít Ong
-                            </h1>
-                            <p className="text-sm text-gray-500">Quản lý đề kiểm tra</p>
-                        </div>
+        <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+
+            {/* Lệch Sidebar */}
+            <Sidebar
+                activeTab={activeTab}
+                setActiveTab={(tab) => {
+                    if (tab === 'create') setEditingQuiz(null); // Clear editing state when creating new
+                    setActiveTab(tab);
+                }}
+                onLogout={handleLogout}
+            />
+
+            {/* Main Content wrapper */}
+            <div className="flex-1 lg:ml-64 flex flex-col min-h-screen transition-all duration-300">
+
+                {/* Top Header / Top Bar */}
+                <header className="h-16 bg-white border-b border-gray-200 sticky top-0 z-30 flex items-center justify-between px-4 lg:px-8 mt-16 lg:mt-0 shadow-sm">
+                    {/* Page Title */}
+                    <div className="flex items-center">
+                        <h1 className="text-xl font-bold text-slate-800 tracking-tight hidden lg:block">
+                            {getPageTitle()}
+                        </h1>
                     </div>
 
-                    <Button
-                        onClick={handleLogout}
-                        variant="ghost"
-                        icon={<LogOut className="w-4 h-4" />}
-                    >
-                        Đăng xuất
-                    </Button>
-                </div>
-            </header>
-
-            {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-4 py-6">
-                <div className="mb-6">
-                    <Tabs
-                        tabs={tabs}
-                        activeTab={activeTab}
-                        onChange={setActiveTab}
-                        variant="pills"
-                    />
-                </div>
-
-                <ErrorBoundary onReset={() => setActiveTab('manage')}>
-                    <Suspense fallback={
-                        <div className="flex items-center justify-center py-12">
-                            <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+                    {/* Right side: Search, Notifications, Profile */}
+                    <div className="flex items-center gap-4">
+                        <div className="hidden md:flex relative">
+                            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                                type="text"
+                                placeholder="Tìm kiếm..."
+                                className="pl-9 pr-4 py-2 bg-slate-100 border-none rounded-full text-sm focus:ring-2 focus:ring-orange-500 w-48 lg:w-64 outline-none transition-all"
+                            />
                         </div>
-                    }>
-                        {activeTab === 'results' && (
-                            <ResultsTab
-                                results={filteredResultsByClass}
-                                quizzes={quizStore.quizzes}
-                                onRefresh={async () => {
-                                    await quizStore.loadResults();
-                                    return quizStore.results;
-                                }}
-                            />
-                        )}
 
-                        {activeTab === 'manage' && (
-                            <ManageTab
-                                quizzes={quizStore.quizzes}
-                                onDelete={quizStore.removeQuiz}
-                                onEdit={(quiz) => {
-                                    setEditingQuiz(quiz);
-                                    setActiveTab('create');
-                                }}
-                                onManageCode={(quizId, currentCode) => {
-                                    setEditingAccessCode({ quizId, currentCode });
-                                    setNewAccessCode(currentCode);
-                                }}
-                            />
-                        )}
+                        <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full relative transition-colors">
+                            <Bell className="w-5 h-5" />
+                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full border-2 border-white"></span>
+                        </button>
 
-                        {activeTab === 'create' && (
-                            <CreateTab
-                                editingQuiz={editingQuiz}
-                                onSaveQuiz={quizStore.createQuiz}
-                                onUpdateQuiz={quizStore.modifyQuiz}
-                                onSuccess={() => {
-                                    setEditingQuiz(null);
-                                    setActiveTab('manage');
-                                }}
-                            />
-                        )}
+                        {/* User Avatar Mini */}
+                        <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 font-bold flex items-center justify-center border border-orange-200">
+                            {authStore.teacherName?.charAt(0)?.toUpperCase()}
+                        </div>
+                    </div>
+                </header>
 
-                        {activeTab === 'ioe' && (
-                            <IoeTab
-                                onSaveQuiz={quizStore.createQuiz}
-                                onSuccess={() => {
-                                    setActiveTab('ioe-manage');
-                                }}
-                            />
-                        )}
-
-                        {activeTab === 'ioe-manage' && (
-                            <IoeManageTab />
-                        )}
-
-                        {activeTab === 'ioe-results' && (
-                            <IoeResultsTab />
-                        )}
-
-                        {activeTab === 'announcements' && (
-                            <div className="max-w-2xl mx-auto">
-                                <AnnouncementSettings />
+                {/* Content View */}
+                <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
+                    <ErrorBoundary onReset={() => setActiveTab('overview')}>
+                        <Suspense fallback={
+                            <div className="flex items-center justify-center py-20 h-full">
+                                <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
                             </div>
-                        )}
+                        }>
+                            {activeTab === 'overview' && (
+                                <OverviewTab />
+                            )}
 
-                        {activeTab === 'classes' && (
-                            <ClassManagementTab />
-                        )}
+                            {activeTab === 'results' && (
+                                <ResultsTab
+                                    results={filteredResultsByClass}
+                                    quizzes={quizStore.quizzes}
+                                    onRefresh={async () => {
+                                        await quizStore.loadResults();
+                                        return quizStore.results;
+                                    }}
+                                />
+                            )}
 
-                        {activeTab === 'assignments' && (
-                            <AssignmentTab />
-                        )}
+                            {activeTab === 'manage' && (
+                                <ManageTab
+                                    quizzes={quizStore.quizzes}
+                                    onDelete={quizStore.removeQuiz}
+                                    onEdit={(quiz) => {
+                                        setEditingQuiz(quiz);
+                                        setActiveTab('create');
+                                    }}
+                                    onManageCode={(quizId, currentCode) => {
+                                        setEditingAccessCode({ quizId, currentCode });
+                                        setNewAccessCode(currentCode);
+                                    }}
+                                />
+                            )}
 
+                            {activeTab === 'create' && (
+                                <CreateTab
+                                    editingQuiz={editingQuiz}
+                                    onSaveQuiz={quizStore.createQuiz}
+                                    onUpdateQuiz={quizStore.modifyQuiz}
+                                    onSuccess={() => {
+                                        setEditingQuiz(null);
+                                        setActiveTab('manage');
+                                    }}
+                                />
+                            )}
 
-                    </Suspense>
-                </ErrorBoundary>
-            </main>
+                            {activeTab === 'ioe' && (
+                                <IoeTab
+                                    onSaveQuiz={quizStore.createQuiz}
+                                    onSuccess={() => {
+                                        setActiveTab('ioe-manage');
+                                    }}
+                                />
+                            )}
+
+                            {activeTab === 'ioe-manage' && (
+                                <IoeManageTab />
+                            )}
+
+                            {activeTab === 'ioe-results' && (
+                                <IoeResultsTab />
+                            )}
+
+                            {activeTab === 'announcements' && (
+                                <div className="max-w-4xl mx-auto">
+                                    <AnnouncementSettings />
+                                </div>
+                            )}
+
+                            {activeTab === 'classes' && (
+                                <ClassManagementTab />
+                            )}
+
+                            {activeTab === 'assignments' && (
+                                <AssignmentTab />
+                            )}
+
+                            {activeTab === 'teachers' && (
+                                <TeacherManagementTab />
+                            )}
+
+                        </Suspense>
+                    </ErrorBoundary>
+                </main>
+            </div>
 
             {/* Access Code Edit Modal */}
             {editingAccessCode && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 mx-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-purple-100 rounded-xl">
@@ -259,7 +265,7 @@ const TeacherDashboard: React.FC = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Mã hiện tại
                                 </label>
-                                <div className="px-3 py-2 bg-gray-100 rounded-lg text-gray-600">
+                                <div className="px-3 py-2 bg-gray-100 rounded-lg text-gray-600 font-mono">
                                     {editingAccessCode.currentCode || '(Chưa có mã)'}
                                 </div>
                             </div>
@@ -273,15 +279,15 @@ const TeacherDashboard: React.FC = () => {
                                     value={newAccessCode}
                                     onChange={(e) => setNewAccessCode(e.target.value.toUpperCase())}
                                     placeholder="Nhập mã mới (VD: TOAN3A)"
-                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 uppercase"
+                                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none uppercase font-mono transition-all"
                                     maxLength={10}
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-gray-500 mt-2">
                                     Để trống nếu muốn xóa mã. Học sinh cần nhập đúng mã này để làm bài.
                                 </p>
                             </div>
 
-                            <div className="flex gap-3 pt-2">
+                            <div className="flex gap-3 pt-4">
                                 <Button
                                     onClick={() => setEditingAccessCode(null)}
                                     variant="secondary"

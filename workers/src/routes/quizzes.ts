@@ -35,29 +35,40 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        await db.prepare(
-            `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(
-            body.id, body.title, body.classLevel, body.category || '',
-            body.timeLimit, body.createdAt, body.accessCode || '',
-            body.requireCode ? 'TRUE' : 'FALSE', body.createdBy || '',
-            body.showOnHome === false ? 'FALSE' : 'TRUE'
-        ).run();
-
-        // Insert questions (batch)
-        if (body.questions && Array.isArray(body.questions)) {
-            const stmt = db.prepare(
-                `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        try {
+            const batch = [];
+            batch.push(
+                db.prepare(
+                    `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                ).bind(
+                    body.id, body.title, body.classLevel, body.category || '',
+                    body.timeLimit, body.createdAt, body.accessCode || '',
+                    body.requireCode ? 'TRUE' : 'FALSE', body.createdBy || '',
+                    body.showOnHome === false ? 'FALSE' : 'TRUE'
+                )
             );
-            const batch = body.questions.map((q: any) => {
-                const mapped = mapQuestionForSave(q, body.id);
-                return stmt.bind(...mapped);
-            });
+
+            // Insert questions (batch)
+            if (body.questions && Array.isArray(body.questions) && body.questions.length > 0) {
+                const stmt = db.prepare(
+                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                );
+                body.questions.forEach((q: any) => {
+                    const mapped = mapQuestionForSave(q, body.id);
+                    batch.push(stmt.bind(...mapped));
+                });
+            }
+
+            // Excute all inside one transaction to ensure atomicity
             await db.batch(batch);
+
+            return jsonResponse({ status: 'success' });
+        } catch (err: any) {
+            console.error('[POST /api/quizzes] Error:', err.message, err.stack);
+            return errorResponse(`Failed to create quiz: ${err.message}`, 500);
         }
-        return jsonResponse({ status: 'success' });
     }
 
     // PUT /api/quizzes/:id - Update quiz (delete + re-insert)
@@ -71,44 +82,53 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         // Use body.id or path id
         const id = body.id || quizId;
 
-        // Delete old data then re-insert
-        await db.prepare('DELETE FROM questions WHERE quiz_id = ?').bind(id).run();
-        await db.prepare('DELETE FROM quizzes WHERE id = ?').bind(id).run();
+        try {
+            const batch = [];
+            // Delete old data then re-insert
+            batch.push(db.prepare('DELETE FROM questions WHERE quiz_id = ?').bind(id));
+            batch.push(db.prepare('DELETE FROM quizzes WHERE id = ?').bind(id));
 
-        // Re-insert quiz
-        await db.prepare(
-            `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(
-            id, body.title, body.classLevel, body.category || '',
-            body.timeLimit, body.createdAt, body.accessCode || '',
-            body.requireCode ? 'TRUE' : 'FALSE', body.createdBy || '',
-            body.showOnHome === false ? 'FALSE' : 'TRUE'
-        ).run();
-
-        // Re-insert questions
-        if (body.questions && Array.isArray(body.questions)) {
-            const stmt = db.prepare(
-                `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            // Re-insert quiz
+            batch.push(
+                db.prepare(
+                    `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                ).bind(
+                    id, body.title, body.classLevel, body.category || '',
+                    body.timeLimit, body.createdAt, body.accessCode || '',
+                    body.requireCode ? 'TRUE' : 'FALSE', body.createdBy || '',
+                    body.showOnHome === false ? 'FALSE' : 'TRUE'
+                )
             );
-            const batch = body.questions.map((q: any) => {
-                const mapped = mapQuestionForSave(q, id);
-                return stmt.bind(...mapped);
-            });
+
+            // Re-insert questions
+            if (body.questions && Array.isArray(body.questions) && body.questions.length > 0) {
+                const stmt = db.prepare(
+                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                );
+                body.questions.forEach((q: any) => {
+                    const mapped = mapQuestionForSave(q, id);
+                    batch.push(stmt.bind(...mapped));
+                });
+            }
+
             await db.batch(batch);
+
+            // Verify count
+            const countResult = await db.prepare('SELECT COUNT(*) as cnt FROM questions WHERE quiz_id = ?').bind(id).first<{ cnt: number }>();
+            const actualCount = countResult?.cnt || 0;
+            const expectedCount = body.questions?.length || 0;
+
+            if (actualCount !== expectedCount) {
+                return jsonResponse({ status: 'error', message: `Save verification failed: expected ${expectedCount} questions, but ${actualCount} were saved` });
+            }
+
+            return jsonResponse({ status: 'success', questionCount: actualCount });
+        } catch (err: any) {
+            console.error('[PUT /api/quizzes] Error:', err.message, err.stack);
+            return errorResponse(`Failed to update quiz: ${err.message}`, 500);
         }
-
-        // Verify count
-        const countResult = await db.prepare('SELECT COUNT(*) as cnt FROM questions WHERE quiz_id = ?').bind(id).first<{ cnt: number }>();
-        const actualCount = countResult?.cnt || 0;
-        const expectedCount = body.questions?.length || 0;
-
-        if (actualCount !== expectedCount) {
-            return jsonResponse({ status: 'error', message: `Save verification failed: expected ${expectedCount} questions, but ${actualCount} were saved` });
-        }
-
-        return jsonResponse({ status: 'success', questionCount: actualCount });
     }
 
     // DELETE /api/quizzes/:id

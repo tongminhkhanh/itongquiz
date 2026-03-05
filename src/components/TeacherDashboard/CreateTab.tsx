@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, QuestionType, ImageLibraryItem } from '../../types';
 import { Card, Button } from '../common';
-import { FileText, Sparkles, Upload, X, FileCheck, Copy, Check, Link2, BookOpen, Search, Zap, Users, Calendar, Hash } from 'lucide-react';
+import { FileText, Sparkles, Upload, X, FileCheck, Copy, Check, Link2, BookOpen, Search, Zap, Users, Calendar, Hash, ChevronDown, ChevronUp, Settings, Clock, Wand2, Eye, EyeOff, Lock, Unlock, Edit3 } from 'lucide-react';
 import { AIProvider, generateQuiz, QuizGenerationOptions } from '../../services/geminiService';
 import { generateTrangNguyenQuiz, TRANG_NGUYEN_TOPICS } from '../../services/trangNguyenGeminiService';
 import { searchTrangNguyenQuestions, enrichPromptWithSearchResults } from '../../services/trangNguyenSearchService';
@@ -71,6 +71,20 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     const [showLinkModal, setShowLinkModal] = useState(false);
     const [savedQuizLink, setSavedQuizLink] = useState('');
     const [linkCopied, setLinkCopied] = useState(false);
+
+    // Collapsible section states
+    const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+        basic: true,       // Always open by default
+        questionTypes: true,
+        difficulty: true,
+        content: false,     // Collapsed by default
+        advanced: false,    // Collapsed by default
+        assign: false,      // Collapsed by default
+    });
+
+    const toggleSection = (section: string) => {
+        setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    };
 
     // Image library
     const [imageLibrary, setImageLibrary] = useState<ImageLibraryItem[]>(() => {
@@ -159,8 +173,11 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             if (requireCode !== generatedQuiz.requireCode) {
                 updates.requireCode = requireCode;
             }
-            if (accessCode !== generatedQuiz.accessCode) {
-                updates.accessCode = accessCode.toUpperCase() || undefined;
+            // Normalize both sides to avoid '' !== undefined infinite loop
+            const normalizedAccessCode = requireCode ? (accessCode.toUpperCase() || undefined) : undefined;
+            const currentAccessCode = generatedQuiz.accessCode || undefined;
+            if (normalizedAccessCode !== currentAccessCode) {
+                updates.accessCode = normalizedAccessCode;
             }
             if (showOnHome !== generatedQuiz.showOnHome) {
                 updates.showOnHome = showOnHome;
@@ -429,32 +446,130 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
 
     const questionCount = difficultyLevels.level1 + difficultyLevels.level2 + difficultyLevels.level3;
 
+    // Collapsible Section component
+    const Section: React.FC<{
+        id: string;
+        icon: React.ReactNode;
+        title: string;
+        subtitle?: string;
+        badge?: string;
+        children: React.ReactNode;
+        defaultOpen?: boolean;
+    }> = ({ id, icon, title, subtitle, badge, children }) => {
+        const isOpen = expandedSections[id] ?? false;
+        return (
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden transition-all hover:border-gray-300 shadow-sm">
+                <button
+                    onClick={() => toggleSection(id)}
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50/50 transition-colors"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-100 to-amber-50 flex items-center justify-center text-orange-600 shrink-0">
+                            {icon}
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-800 text-sm">{title}</span>
+                                {badge && (
+                                    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                                        {badge}
+                                    </span>
+                                )}
+                            </div>
+                            {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+                        </div>
+                    </div>
+                    <div className={`transition-transform duration-200 text-gray-400 ${isOpen ? 'rotate-180' : ''}`}>
+                        <ChevronDown className="w-4 h-4" />
+                    </div>
+                </button>
+                {isOpen && (
+                    <div className="px-4 pb-4 pt-1 border-t border-gray-100 animate-fade-in">
+                        {children}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column - Form */}
-            <div className="space-y-4">
-                <Card title={editingQuiz ? '📝 Chỉnh sửa đề' : '✨ Tạo đề kiểm tra mới'}>
-                    <div className="space-y-4">
-                        {/* Basic Info */}
-                        <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+                {/* ====== GRADIENT HEADER ====== */}
+                <div className={`rounded-2xl p-5 ${editingQuiz
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600'
+                    : 'bg-gradient-to-r from-orange-500 to-amber-500'
+                    } text-white shadow-lg`}
+                >
+                    <div className="flex items-center gap-3 mb-1">
+                        <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                            {editingQuiz ? <Edit3 className="w-5 h-5" /> : <Wand2 className="w-5 h-5" />}
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold">
+                                {editingQuiz ? 'Chỉnh sửa đề thi' : 'Tạo đề kiểm tra mới'}
+                            </h2>
+                            <p className="text-sm text-white/80">
+                                {editingQuiz ? `Đang sửa: ${editingQuiz.title}` : 'AI sẽ giúp bạn tạo đề nhanh chóng'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ====== SECTION 1: THÔNG TIN CƠ BẢN ====== */}
+                <Section
+                    id="basic"
+                    icon={<FileText className="w-4 h-4" />}
+                    title="Thông tin cơ bản"
+                    subtitle="Chủ đề, khối lớp, thời gian"
+                >
+                    <div className="space-y-3">
+                        {/* Topic - Required */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                Chủ đề bài học <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={topic}
+                                onChange={e => setTopic(e.target.value)}
+                                placeholder="VD: Động vật rừng xanh, Phép cộng có nhớ..."
+                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all text-sm"
+                            />
+                        </div>
+
+                        {/* Title */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Tên bài kiểm tra</label>
+                            <input
+                                type="text"
+                                value={quizTitle}
+                                onChange={e => setQuizTitle(e.target.value)}
+                                placeholder="VD: Kiểm tra 15 phút - Chương 3..."
+                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all text-sm"
+                            />
+                        </div>
+
+                        {/* Class + Time + Category row */}
+                        <div className="grid grid-cols-3 gap-3">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">
-                                    Khối Lớp {isClassLocked && <span className="text-orange-500 text-xs">(Đã khóa)</span>}
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                    Khối lớp {isClassLocked && <Lock className="w-3 h-3 inline text-orange-500" />}
                                 </label>
                                 <select
                                     value={classLevel}
                                     onChange={e => setClassLevel(e.target.value)}
                                     disabled={isClassLocked}
-                                    className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${isClassLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40 ${isClassLocked ? 'bg-gray-50 cursor-not-allowed text-gray-500' : 'border-gray-200'}`}
                                 >
                                     {[1, 2, 3, 4, 5].map(l => <option key={l} value={l}>Lớp {l}</option>)}
                                 </select>
-                                {isClassLocked && (
-                                    <p className="text-xs text-gray-500 mt-1">Bạn chỉ có thể tạo đề cho lớp {lockedClass}</p>
-                                )}
                             </div>
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Thời gian (phút)</label>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                    <Clock className="w-3 h-3 inline mr-1" />Thời gian
+                                </label>
                                 <input
                                     type="number"
                                     min={1}
@@ -472,69 +587,76 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                         }
                                     }}
                                     placeholder="Tự động"
-                                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40"
                                 />
                             </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Danh mục</label>
+                                <select
+                                    value={category}
+                                    onChange={e => setCategory(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40"
+                                >
+                                    {QUIZ_CATEGORIES.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
+                    </div>
+                </Section>
 
-                        {/* Category Selector */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Danh mục</label>
-                            <select
-                                value={category}
-                                onChange={e => setCategory(e.target.value)}
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
-                            >
-                                {QUIZ_CATEGORIES.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                {/* ====== SECTION 2: DẠNG CÂU HỎI ====== */}
+                <Section
+                    id="questionTypes"
+                    icon={<BookOpen className="w-4 h-4" />}
+                    title="Dạng câu hỏi"
+                    badge={`${Object.values(selectedTypes).filter(Boolean).length} đã chọn`}
+                >
+                    <QuestionTypeSelector
+                        selectedTypes={selectedTypes}
+                        onChange={setSelectedTypes}
+                    />
+                </Section>
 
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">
-                                Chủ đề bài học <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={topic}
-                                onChange={e => setTopic(e.target.value)}
-                                placeholder="Ví dụ: Động vật rừng xanh"
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
-                            />
-                        </div>
+                {/* ====== SECTION 3: ĐỘ KHÓ & SỐ LƯỢNG ====== */}
+                <Section
+                    id="difficulty"
+                    icon={<Sparkles className="w-4 h-4" />}
+                    title="Độ khó & Số lượng"
+                    badge={`${questionCount} câu`}
+                >
+                    <DifficultyLevelSelector
+                        levels={difficultyLevels}
+                        onChange={setDifficultyLevels}
+                    />
+                </Section>
 
+                {/* ====== SECTION 4: NỘI DUNG BỔ SUNG ====== */}
+                <Section
+                    id="content"
+                    icon={<FileText className="w-4 h-4" />}
+                    title="Nội dung bổ sung"
+                    subtitle="Tài liệu PDF, yêu cầu đặc biệt"
+                >
+                    <div className="space-y-3">
+                        {/* Reference Content */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Tên bài kiểm tra</label>
-                            <input
-                                type="text"
-                                value={quizTitle}
-                                onChange={e => setQuizTitle(e.target.value)}
-                                placeholder="Ví dụ: Kiểm tra 15 phút..."
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Nội dung tham khảo</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Nội dung tham khảo</label>
                             <textarea
                                 value={content}
                                 onChange={e => setContent(e.target.value)}
                                 placeholder="Nhập nội dung bài học hoặc để trống để AI tự tạo..."
                                 rows={3}
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40"
                             />
                         </div>
 
-                        {/* PDF/Document Upload - HIGH PRIORITY */}
+                        {/* PDF Upload */}
                         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-dashed border-blue-300 rounded-xl p-4">
                             <label className="block text-sm font-bold text-blue-800 mb-2">
-                                📄 Tải tài liệu bài học (PDF/Ảnh) - <span className="text-red-500">ƯU TIÊN CAO NHẤT</span>
+                                📄 Tải tài liệu bài học (PDF/Ảnh)
                             </label>
-                            <p className="text-xs text-blue-600 mb-3">
-                                AI sẽ đọc nội dung từ file này và ưu tiên tạo câu hỏi dựa trên tài liệu đã tải lên.
-                            </p>
-
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -545,7 +667,6 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                 }}
                                 className="hidden"
                             />
-
                             {uploadedFile ? (
                                 <div className="flex items-center justify-between bg-white rounded-lg p-3 border border-blue-200">
                                     <div className="flex items-center gap-3">
@@ -557,7 +678,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                                 {uploadedFile.name}
                                             </p>
                                             <p className="text-xs text-gray-500">
-                                                {(uploadedFile.size / 1024).toFixed(1)} KB • {uploadedFile.type.split('/')[1]?.toUpperCase()}
+                                                {(uploadedFile.size / 1024).toFixed(1)} KB
                                             </p>
                                         </div>
                                     </div>
@@ -574,139 +695,121 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                             ) : (
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="w-full flex flex-col items-center justify-center py-6 hover:bg-blue-100/50 rounded-lg transition-colors cursor-pointer"
+                                    className="w-full flex flex-col items-center justify-center py-4 hover:bg-blue-100/50 rounded-lg transition-colors cursor-pointer"
                                 >
-                                    <Upload className="w-8 h-8 text-blue-500 mb-2" />
-                                    <span className="font-medium text-blue-700">Nhấn để tải file</span>
-                                    <span className="text-xs text-gray-500 mt-1">PDF, PNG, JPG (tối đa 20MB)</span>
+                                    <Upload className="w-6 h-6 text-blue-500 mb-1" />
+                                    <span className="font-medium text-blue-700 text-sm">Nhấn để tải file</span>
+                                    <span className="text-xs text-gray-500 mt-0.5">PDF, PNG, JPG (tối đa 20MB)</span>
                                 </button>
-                            )}
-
-                            {uploadedFile && (
-                                <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
-                                    <p className="text-xs text-green-700 flex items-center gap-1">
-                                        ✅ <strong>AI sẽ ưu tiên đọc file này</strong> để tạo câu hỏi phù hợp với nội dung bài học.
-                                    </p>
-                                </div>
                             )}
                         </div>
 
                         {/* Custom Prompt */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">
-                                ✨ Yêu cầu đặc biệt cho AI <span className="text-xs font-normal text-gray-500">(Ưu tiên cao nhất)</span>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                ✨ Yêu cầu đặc biệt cho AI
                             </label>
                             <textarea
                                 value={customPrompt}
                                 onChange={e => setCustomPrompt(e.target.value)}
-                                placeholder="Ví dụ: Tập trung vào phép cộng có nhớ, tạo nhiều câu hỏi thực tế, không dùng số âm..."
+                                placeholder="VD: Tập trung vào phép cộng có nhớ, tạo nhiều câu hỏi thực tế..."
                                 rows={2}
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 border-purple-200 bg-purple-50"
+                                className="w-full px-3 py-2 border border-purple-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/40 bg-purple-50/50"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
-                                💡 Ghi yêu cầu đặc biệt để AI ưu tiên khi tạo đề (VD: kiểu câu hỏi, nội dung cần tránh, độ khó...)
-                            </p>
                         </div>
                     </div>
-                </Card>
+                </Section>
 
-                {/* Access Code Section */}
-                <Card title="🔐 Mã làm bài">
+                {/* ====== SECTION 5: TÙY CHỌN NÂNG CAO ====== */}
+                <Section
+                    id="advanced"
+                    icon={<Settings className="w-4 h-4" />}
+                    title="Tùy chọn nâng cao"
+                    subtitle="Mã làm bài, hiển thị, AI provider"
+                >
                     <div className="space-y-4">
+                        {/* Access Code Toggle */}
                         <div className="flex items-center justify-between">
-                            <div>
-                                <p className="font-medium text-gray-700">Yêu cầu mã để làm bài</p>
-                                <p className="text-sm text-gray-500">Học sinh phải nhập đúng mã mới được làm bài</p>
+                            <div className="flex items-center gap-2">
+                                {requireCode ? <Lock className="w-4 h-4 text-green-600" /> : <Unlock className="w-4 h-4 text-gray-400" />}
+                                <div>
+                                    <p className="font-medium text-gray-700 text-sm">Yêu cầu mã để làm bài</p>
+                                    <p className="text-xs text-gray-500">Học sinh phải nhập mã mới được làm bài</p>
+                                </div>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => {
                                     setRequireCode(!requireCode);
-                                    if (!requireCode && !accessCode) {
-                                        generateRandomCode();
-                                    }
+                                    if (!requireCode && !accessCode) generateRandomCode();
                                 }}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${requireCode ? 'bg-green-500' : 'bg-gray-300'
-                                    }`}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${requireCode ? 'bg-green-500' : 'bg-gray-300'}`}
                             >
-                                <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${requireCode ? 'translate-x-6' : 'translate-x-1'
-                                        }`}
-                                />
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${requireCode ? 'translate-x-6' : 'translate-x-1'}`} />
                             </button>
                         </div>
 
                         {requireCode && (
-                            <div className="flex items-center gap-3">
-                                <div className="flex-1">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Mã truy cập</label>
-                                    <input
-                                        type="text"
-                                        value={accessCode}
-                                        onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-                                        placeholder="Nhập mã (VD: TOAN3A)"
-                                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 uppercase font-mono text-lg tracking-wider"
-                                        maxLength={10}
-                                    />
-                                </div>
+                            <div className="flex items-center gap-3 pl-6 animate-fade-in">
+                                <input
+                                    type="text"
+                                    value={accessCode}
+                                    onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                                    placeholder="VD: TOAN3A"
+                                    className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 uppercase font-mono text-lg tracking-wider text-sm"
+                                    maxLength={10}
+                                />
                                 <button
                                     type="button"
                                     onClick={generateRandomCode}
-                                    className="px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg font-medium transition-colors mt-6"
+                                    className="px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg font-medium transition-colors text-sm"
                                 >
                                     🎲 Tạo mã
                                 </button>
                             </div>
                         )}
 
-                        <div className="pt-2 border-t border-gray-100"></div>
-
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="font-medium text-gray-700">Hiển thị bài trên trang chủ</p>
-                                <p className="text-sm text-gray-500">Tắt đi nếu muốn làm đề thi riêng, chống lộ đề</p>
+                        {/* Visibility Toggle */}
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                            <div className="flex items-center gap-2">
+                                {showOnHome ? <Eye className="w-4 h-4 text-blue-600" /> : <EyeOff className="w-4 h-4 text-gray-400" />}
+                                <div>
+                                    <p className="font-medium text-gray-700 text-sm">Hiển thị trên trang chủ</p>
+                                    <p className="text-xs text-gray-500">Tắt nếu muốn chống lộ đề</p>
+                                </div>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setShowOnHome(!showOnHome)}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showOnHome ? 'bg-blue-500' : 'bg-gray-300'
-                                    }`}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showOnHome ? 'bg-blue-500' : 'bg-gray-300'}`}
                             >
-                                <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showOnHome ? 'translate-x-6' : 'translate-x-1'
-                                        }`}
-                                />
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showOnHome ? 'translate-x-6' : 'translate-x-1'}`} />
                             </button>
                         </div>
+
+                        {/* AI Provider */}
+                        <div className="pt-2 border-t border-gray-100">
+                            <AIProviderSelector
+                                value={aiProvider}
+                                onChange={setAiProvider}
+                                isAdmin={authStore.isAdmin}
+                            />
+                        </div>
                     </div>
-                </Card>
+                </Section>
 
-                {/* Question Types */}
-                <QuestionTypeSelector
-                    selectedTypes={selectedTypes}
-                    onChange={setSelectedTypes}
-                />
-
-                {/* Difficulty Levels */}
-                <DifficultyLevelSelector
-                    levels={difficultyLevels}
-                    onChange={setDifficultyLevels}
-                />
-
-                {/* AI Provider - Perplexity only for admin */}
-                <AIProviderSelector
-                    value={aiProvider}
-                    onChange={setAiProvider}
-                    isAdmin={authStore.isAdmin}
-                />
-
-                {/* Auto-Assign Section */}
-                <Card title="📅 Giao bài ngay (Tùy chọn)">
+                {/* ====== SECTION 6: GIAO BÀI ====== */}
+                <Section
+                    id="assign"
+                    icon={<Calendar className="w-4 h-4" />}
+                    title="Giao bài ngay"
+                    subtitle="Tùy chọn giao bài cho lớp học"
+                >
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="font-medium text-gray-700">Giao ngay cho lớp học</p>
-                                <p className="text-sm text-gray-500">Học sinh sẽ thấy bài tập ngay sau khi lưu đề</p>
+                                <p className="font-medium text-gray-700 text-sm">Giao ngay cho lớp</p>
+                                <p className="text-xs text-gray-500">Học sinh thấy bài tập ngay sau khi lưu</p>
                             </div>
                             <button
                                 type="button"
@@ -718,9 +821,9 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                         </div>
 
                         {assignToClass && (
-                            <div className="space-y-3 pt-2 animate-fade-in">
+                            <div className="space-y-3 animate-fade-in">
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">
                                         Chọn lớp <span className="text-red-500">*</span>
                                     </label>
                                     <div className="relative">
@@ -728,33 +831,30 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                         <select
                                             value={selectedClassId}
                                             onChange={(e) => setSelectedClassId(e.target.value)}
-                                            className="w-full pl-10 p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                                            className="w-full pl-10 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40"
                                         >
                                             <option value="">-- Chọn lớp học --</option>
                                             {classroomStore.classes.map((cls) => (
-                                                <option key={cls.id} value={cls.id}>
-                                                    {cls.name} (Lớp {cls.gradeLevel})
-                                                </option>
+                                                <option key={cls.id} value={cls.id}>{cls.name}</option>
                                             ))}
                                         </select>
                                     </div>
                                 </div>
-
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-1">Hạn nộp</label>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">Hạn nộp</label>
                                         <div className="relative">
                                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <input
                                                 type="date"
                                                 value={deadline}
                                                 onChange={(e) => setDeadline(e.target.value)}
-                                                className="w-full pl-10 p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                                                className="w-full pl-10 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40"
                                             />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-1">Số lượt làm</label>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">Số lượt làm</label>
                                         <div className="relative">
                                             <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <input
@@ -763,7 +863,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                                 max={10}
                                                 value={maxAttempts}
                                                 onChange={(e) => setMaxAttempts(parseInt(e.target.value))}
-                                                className="w-full pl-10 p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                                                className="w-full pl-10 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40"
                                             />
                                         </div>
                                     </div>
@@ -771,68 +871,54 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                             </div>
                         )}
                     </div>
-                </Card>
+                </Section>
 
-                {/* Image Library section has been removed as per user request */}
-
-                {/* Error */}
+                {/* ====== ERROR ====== */}
                 {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                        {error}
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                        <span>⚠️</span> {error}
                     </div>
                 )}
 
-                {/* Generate Buttons */}
-                <div className="space-y-3">
+                {/* ====== GENERATE BUTTONS ====== */}
+                <div className="space-y-3 sticky bottom-0 bg-gradient-to-t from-gray-50 via-gray-50 to-transparent pt-4 pb-2">
                     {/* TRẠNG NGUYÊN SPECIFIC BUTTONS */}
                     {category === 'trang-nguyen' && (
-                        <div className="space-y-3">
-                            {/* Search + Generate Button */}
+                        <div className="space-y-2">
                             <button
                                 onClick={() => { setTnSearchMode('search'); setQuizMode('practice'); handleGenerate(); }}
                                 disabled={!topic.trim() || questionCount === 0 || isGenerating}
-                                className={`w-full py-4 px-6 rounded-xl font-bold text-white text-lg flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${isGenerating && tnSearchMode === 'search'
+                                className={`w-full py-3.5 px-6 rounded-xl font-bold text-white text-base flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${isGenerating && tnSearchMode === 'search'
                                     ? 'bg-gradient-to-r from-purple-400 to-pink-400 animate-pulse'
                                     : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
                                     }`}
                             >
                                 <Search className="w-5 h-5" />
-                                <span>🔍</span>
                                 {isGenerating && tnSearchMode === 'search'
-                                    ? 'Đang tìm kiếm đề thật...'
-                                    : `Tạo đề (Perplexity + Search) - ${questionCount} câu`
+                                    ? '🔍 Đang tìm kiếm đề thật...'
+                                    : `🔍 Tạo đề (Search) - ${questionCount} câu`
                                 }
                             </button>
-                            <p className="text-xs text-gray-500 text-center">
-                                Tìm kiếm đề Trạng Nguyên thật trên mạng trước khi sinh • Chất lượng cao hơn • Chậm hơn
-                            </p>
-
-                            {/* Quick AI Generate Button */}
                             <button
                                 onClick={() => { setTnSearchMode('quick'); setQuizMode('practice'); handleGenerate(); }}
                                 disabled={!topic.trim() || questionCount === 0 || isGenerating}
-                                className={`w-full py-4 px-6 rounded-xl font-bold text-white text-lg flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${isGenerating && tnSearchMode === 'quick'
+                                className={`w-full py-3.5 px-6 rounded-xl font-bold text-white text-base flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${isGenerating && tnSearchMode === 'quick'
                                     ? 'bg-gradient-to-r from-blue-400 to-cyan-400 animate-pulse'
                                     : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
                                     }`}
                             >
                                 <Zap className="w-5 h-5" />
-                                <span>⚡</span>
                                 {isGenerating && tnSearchMode === 'quick'
-                                    ? 'Đang sinh đề...'
-                                    : `Tạo đề nhanh (AI) - ${questionCount} câu`
+                                    ? '⚡ Đang sinh đề...'
+                                    : `⚡ Tạo đề nhanh (AI) - ${questionCount} câu`
                                 }
                             </button>
-                            <p className="text-xs text-gray-500 text-center">
-                                Sinh trực tiếp bằng AI • Nhanh hơn • Không cần Perplexity API
-                            </p>
                         </div>
                     )}
 
-                    {/* STANDARD BUTTONS (for other categories) */}
+                    {/* STANDARD BUTTONS */}
                     {category !== 'trang-nguyen' && (
                         <>
-                            {/* PDF-based generation button */}
                             {uploadedFile && (
                                 <Button
                                     onClick={() => { setQuizMode('pdf' as any); handleGenerate(); }}
@@ -846,33 +932,32 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                     {isGenerating && (quizMode as any) === 'pdf' ? 'Đang đọc PDF...' : `📄 TẠO ĐỀ TỪ FILE: ${uploadedFile.name.substring(0, 20)}...`}
                                 </Button>
                             )}
-
                             <div className="grid grid-cols-2 gap-3">
-                                <Button
+                                <button
                                     onClick={() => { setQuizMode('exam'); handleGenerate(); }}
-                                    loading={isGenerating && quizMode === 'exam'}
-                                    disabled={!topic.trim() || questionCount === 0 || !customPrompt.trim()}
-                                    className="w-full"
-                                    size="lg"
-                                    variant="primary"
-                                    icon={<FileText className="w-5 h-5" />}
+                                    disabled={!topic.trim() || questionCount === 0 || !customPrompt.trim() || isGenerating}
+                                    className={`py-3.5 px-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm ${isGenerating && quizMode === 'exam'
+                                        ? 'bg-gradient-to-r from-orange-400 to-red-400 animate-pulse'
+                                        : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600'
+                                        }`}
                                 >
+                                    <FileText className="w-4 h-4" />
                                     {isGenerating && quizMode === 'exam' ? 'Đang tạo...' : '📝 Ra đề THI'}
-                                </Button>
-                                <Button
+                                </button>
+                                <button
                                     onClick={() => { setQuizMode('practice'); handleGenerate(); }}
-                                    loading={isGenerating && quizMode === 'practice'}
-                                    disabled={!topic.trim() || questionCount === 0}
-                                    className="w-full"
-                                    size="lg"
-                                    variant="secondary"
-                                    icon={<Sparkles className="w-5 h-5" />}
+                                    disabled={!topic.trim() || questionCount === 0 || isGenerating}
+                                    className={`py-3.5 px-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm ${isGenerating && quizMode === 'practice'
+                                        ? 'bg-gradient-to-r from-emerald-400 to-teal-400 animate-pulse'
+                                        : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600'
+                                        }`}
                                 >
+                                    <Sparkles className="w-4 h-4" />
                                     {isGenerating && quizMode === 'practice' ? 'Đang tạo...' : '📚 Ra đề ÔN TẬP'}
-                                </Button>
+                                </button>
                             </div>
-                            <p className="text-xs text-gray-500 text-center">
-                                💡 <strong>Đề từ PDF:</strong> AI đọc file và lấy nguyên văn câu hỏi | <strong>Đề thi:</strong> Theo yêu cầu GV | <strong>Ôn tập:</strong> AI tự tạo
+                            <p className="text-xs text-gray-400 text-center">
+                                💡 <strong>Đề thi:</strong> Theo yêu cầu GV | <strong>Ôn tập:</strong> AI tự tạo | <strong>PDF:</strong> Lấy nguyên văn
                             </p>
                         </>
                     )}
@@ -953,4 +1038,3 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
 };
 
 export default CreateTab;
-

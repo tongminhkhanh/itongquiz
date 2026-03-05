@@ -1,24 +1,9 @@
 export const SCHOOL_NAME = "Trường Tiểu học Ít Ong";
 
-// --- CONFIGURATION ---
-// Replace these with your actual Google Sheet ID and GIDs
-export const GOOGLE_SHEET_ID = '1mrqbJ3Xzj4CBF_B2vyI7-ANLaVPAfWCe_TdmCd9_gx4';
-export const QUIZ_GID = '130202697'; // Quizzes sheet
-export const QUESTION_GID = '306226482'; // Questions sheet
-export const TEACHER_GID = '1020504406'; // Teachers sheet
-export const RESULTS_GID = '766571865'; // Results sheet
-
 // --- BACKEND ENDPOINTS ---
-export const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+// All data now goes through Cloudflare Workers + D1
 export const WORKERS_API_URL = import.meta.env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
-export const USE_D1 = import.meta.env.VITE_USE_D1 === 'true'; // Switch backend 
-
-// --- IOE SEPARATE SYSTEM ---
-export const IOE_GOOGLE_SHEET_ID = '1C9Ou0Z30-ayJlEPN29VnUOs52e4-7zh--Lv1egFo-lw';
-export const IOE_QUIZ_GID = '51945496'; // IoeQuizzes sheet
-export const IOE_QUESTION_GID = '1563920370'; // IoeQuestions sheet
-export const IOE_RESULTS_GID = '974092705'; // IoeResults sheet
-export const IOE_GOOGLE_SCRIPT_URL = import.meta.env.VITE_IOE_GOOGLE_SCRIPT_URL || '';
+export const USE_D1 = true; // Always use D1 - Google Sheets removed
 
 // Danh mục quiz cho học sinh
 export const QUIZ_CATEGORIES = [

@@ -1,206 +1,52 @@
 {
-    "updated_at": "2026-02-23T02:26:00Z",
+    "updated_at": "2026-03-05T12:30:00+07:00",
     "working_on": {
-        "feature": "Gamification - 3D Pet System",
-        "task": "CSS 3D Chibi Pet Design (Cat/Dog/Rabbit)",
+        "feature": "Teacher Dashboard Redesign",
+        "task": "Complete UI implementation based on Stitch mockups",
         "status": "completed",
         "files": [
-            "src/components/gamification/Css3dChibiPet.tsx",
-            "src/components/gamification/PetDisplay.tsx"
-        ],
-        "notes": "Created CSS 3D chibi pets for all 3 types (cat/dog/rabbit). Image PNG generation quota exhausted, CSS fallback fully functional. Each pet has unique ears, tail, animations and mood expressions."
+            "src/components/TeacherDashboard/index.tsx",
+            "src/components/TeacherDashboard/Sidebar.tsx",
+            "src/components/TeacherDashboard/OverviewTab.tsx"
+        ]
     },
     "recent_changes": [
         {
-            "timestamp": "2026-02-23",
+            "timestamp": "2026-03-05T12:00:00+07:00",
             "type": "feature",
-            "description": "Created Css3dChibiPet component - pure CSS 3D chibi pets for Cat/Dog/Rabbit with mood-reactive expressions, unique tail/ear animations, and click bounce. Updated PetDisplay to use chibi for all pet types.",
+            "description": "Generated 10 Stitch Mockups for Teacher Dashboard (Desktop + Mobile)",
             "files": [
-                "src/components/gamification/Css3dChibiPet.tsx",
-                "src/components/gamification/PetDisplay.tsx"
+                "design-specs.md"
             ]
         },
         {
-            "timestamp": "2026-02-16",
-            "type": "fix",
-            "description": "Fixed Dropdown Question: Added image field support in Editor and Google Sheet service (mapped to 'image' column)",
-            "files": [
-                "src/components/TeacherDashboard/QuizPreview.tsx",
-                "src/services/googleSheetService.ts"
-            ]
-        },
-        {
-            "timestamp": "2026-02-16",
-            "type": "fix",
-            "description": "Fixed Riddle Question: Mapped riddleLines (items), answerLabel (text), hint (sentence) to generic Sheet columns to prevent data loss",
-            "files": [
-                "src/services/googleSheetService.ts",
-                "src/components/TeacherDashboard/QuizPreview.tsx"
-            ]
-        },
-        {
-            "timestamp": "2026-02-16",
-            "type": "fix",
-            "description": "Fixed Image Question Editor: Added missing text input fields for answer options",
-            "files": [
-                "src/components/TeacherDashboard/QuizPreview.tsx"
-            ]
-        },
-        {
-            "timestamp": "2026-02-15",
+            "timestamp": "2026-03-05T12:20:00+07:00",
             "type": "feature",
-            "description": "Added 'Home' button to Student Portal Assignments View for easier navigation",
+            "description": "Implemented Sidebar layout with Mobile Responsive menu",
             "files": [
-                "src/components/StudentPortal/AssignmentsView.tsx"
+                "src/components/TeacherDashboard/Sidebar.tsx",
+                "src/components/TeacherDashboard/index.tsx"
             ]
         },
         {
-            "timestamp": "2026-02-15",
-            "type": "fix",
-            "description": "Fixed Guest Visibility: Guests now see a 'Login Required' prompt instead of 'No quizzes found' in Class Assignments tab",
-            "files": [
-                "src/components/HomePage/HomePage.tsx"
-            ]
-        },
-        {
-            "timestamp": "2026-02-15",
-            "type": "fix",
-            "description": "Fixed Assignment Details: Fetching Title, Time Limit, and Max Score correctly from Quiz Store instead of using fallback defaults",
-            "files": [
-                "src/components/HomePage/HomePage.tsx"
-            ]
-        },
-        {
-            "timestamp": "2026-02-15",
-            "type": "ui",
-            "description": "Implemented 'Coming Soon' Modal with 3D Rocket icon for Science/History categories",
-            "files": [
-                "src/components/HomePage/HomePage.tsx"
-            ]
-        },
-        {
-            "timestamp": "2026-02-15",
-            "type": "ui",
-            "description": "Adjusted UI: Increased Subject Card Label font size (0.95rem), icon size (60px), and refined scroll margins",
-            "files": [
-                "styles/sticker-theme.css"
-            ]
-        },
-        {
-            "timestamp": "2026-02-11",
-            "type": "backup",
-            "description": "Backed up entire source code to backups/20260211_pre_virtual_classroom before starting Virtual Classroom features",
-            "files": []
-        },
-        {
-            "timestamp": "2026-02-11",
-            "type": "doc",
-            "description": "Created detailed implementation plan and specs for Virtual Classroom (Classes, Students, Assignments)",
-            "files": [
-                "implementation_plan.md",
-                "task.md"
-            ]
-        },
-        {
-            "timestamp": "2026-02-11",
+            "timestamp": "2026-03-05T12:25:00+07:00",
             "type": "feature",
-            "description": "Added difficulty dropdown UI to QuizPreview Edit/Add modals + colored badge in preview list (green/yellow/red for levels 1/2/3)",
+            "description": "Implemented new OverviewTab with real-time stats",
             "files": [
-                "src/components/TeacherDashboard/QuizPreview.tsx"
+                "src/components/TeacherDashboard/OverviewTab.tsx"
             ]
-        },
-        {
-            "timestamp": "2026-02-10",
-            "type": "fix",
-            "description": "Fixed AI distractor generation failing - improved parseJSONResponse regex for markdown code blocks, updated system prompt, added debug logging",
-            "files": [
-                "src/services/smartDistractorService.ts"
-            ]
-        },
-        {
-            "timestamp": "2026-02-10",
-            "type": "fix",
-            "description": "Fixed UNDERLINE word chips rendering - added resolveCorrectWordIndexes helper with 4-level fallback (quiz -> correctAnswer -> snapshot -> validationDetails)",
-            "files": [
-                "src/components/student/ResultScreen/tabs/DetailedAnswersTab.tsx",
-                "src/components/student/ResultScreen/index.tsx"
-            ]
-        },
-        {
-            "timestamp": "2026-02-09",
-            "type": "fix",
-            "description": "Fixed QuestionAnalysis TỶ LỆ ĐÚNG = 0% - added correctAnswers field for MULTIPLE_SELECT",
-            "files": [
-                "src/utils/statisticsUtils.ts",
-                "src/components/TeacherDashboard/ResultsTab.tsx"
-            ]
-        },
-        {
-            "timestamp": "2026-02-06",
-            "type": "fix",
-            "description": "Fixed LaTeX not rendering in QuestionAnalysisTable - replaced dangerouslySetInnerHTML with MathSpan",
-            "files": [
-                "src/components/teacher/ResultsView/QuestionAnalysisTable.tsx"
-            ]
-        }
-    ],
-    "decisions_made": [
-        {
-            "decision": "CSS 3D chibi as primary pet display (not PNG images)",
-            "reason": "Image generation quota exhausted. CSS 3D is lightweight, no file dependencies, mood-reactive, and looks great. Images can be added later as premium option."
-        },
-        {
-            "decision": "Map Riddle fields to generic Sheet columns",
-            "reason": "Avoid modifying external GAS script or Sheet structure. items->riddleLines, text->answerLabel, sentence->hint."
-        },
-        {
-            "decision": "Choose 'Virtual Classroom' approach over simple link sharing",
-            "reason": "Better long-term tracking and student management capabilities"
-        },
-        {
-            "decision": "Difficulty dropdown uses select element with green focus ring, consistent with existing design",
-            "reason": "Matches DifficultyLevelSelector green theme, simple and familiar UI pattern"
-        },
-        {
-            "decision": "Difficulty badge uses star emojis with colored backgrounds (green/yellow/red)",
-            "reason": "Visual distinction by color for quick scanning, matches common education UI patterns"
-        },
-        {
-            "decision": "Use non-greedy regex for AI response markdown stripping",
-            "reason": "Old regex ^```json only matched start of string. AI wraps response in ```json...``` with leading whitespace, causing parse failure"
-        },
-        {
-            "decision": "4-level fallback for correctWordIndexes resolution",
-            "reason": "Anti-cheat stripAnswerFields removes correctWordIndexes. Need multiple data sources: quiz object → correctAnswer → snapshot → validationDetails"
         }
     ],
     "errors_encountered": [
         {
-            "error": "Dropdown Question images not saving (User Reported)",
-            "solution": "Frontend: Added image state to Edit Modal. Backend: Mapped 'image' column in googleSheetService.",
+            "error": "Property 'gradeLevel' does not exist on type 'Classroom'",
+            "solution": "Removed the unneeded gradeLevel interpolation to match Classroom type",
             "resolved": true
         },
         {
-            "error": "Riddle Question data lost on save (User Reported)",
-            "solution": "Backend: Mapped riddleLines->items, answerLabel->text, hint->sentence in googleSheetService to use existing columns.",
-            "resolved": true
-        },
-        {
-            "error": "AI distractor generation fails: 'AI không thể tạo đáp án nhiễu'",
-            "solution": "parseJSONResponse regex couldn't strip markdown code blocks. Fixed with non-greedy regex /```(?:json)?\\\\s*([\\\\s\\\\S]*?)```/ and updated system prompt",
-            "resolved": true
-        },
-        {
-            "error": "UNDERLINE word chips all show red (Gạch sai) even when answer is correct",
-            "solution": "correctWordIndexes stripped by anti-cheat. Added resolveCorrectWordIndexes helper with 4-level fallback in both DetailedAnswersTab and ResultScreen",
+            "error": "Property 'timestamp' does not exist on type 'StudentResult'",
+            "solution": "Changed property call to 'submittedAt'",
             "resolved": true
         }
-    ],
-    "pending_tasks": [
-        "Phase 1: Database & Backend (GAS)",
-        "Phase 2: Teacher UI - Class Management",
-        "Phase 3: Teacher UI - Assignment Management",
-        "Phase 4: Student Portal",
-        "Phase 5: Testing & Polish"
     ]
 }

@@ -8,8 +8,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Trophy, ArrowLeft, TrendingUp, TrendingDown, Minus, Star, Users, Filter } from 'lucide-react';
 import { StudentResult } from '../../types';
-import { fetchResultsFromSheets } from '../../services/googleSheetService';
-import { GOOGLE_SHEET_ID, RESULTS_GID } from '../../config/constants';
+import { callApi } from '../../services/apiAdapter';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { getAvatarUrl } from '../../config/avatars';
 
@@ -43,8 +42,8 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
         const loadResults = async () => {
             setIsLoading(true);
             try {
-                const data = await fetchResultsFromSheets(GOOGLE_SHEET_ID, RESULTS_GID);
-                setResults(data);
+                const data = await callApi<StudentResult[]>('get_results');
+                setResults(data || []);
             } catch (err) {
                 console.error('Failed to fetch results for leaderboard:', err);
             } finally {
@@ -84,9 +83,9 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
             });
         }
 
-        // Aggregate by student name + class
+        // Aggregate by student name + class (filter empty names to prevent crash)
         const studentMap = new Map<string, { name: string; cls: string; totalScore: number; count: number; totalCorrect: number; totalQuestions: number }>();
-        filtered.forEach(r => {
+        filtered.filter(r => r.studentName && r.studentName.trim()).forEach(r => {
             const key = `${r.studentName}__${r.studentClass}`;
             const existing = studentMap.get(key);
             if (existing) {
@@ -140,11 +139,13 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
     ];
 
     const getAvatarColor = (name: string) => {
+        if (!name) return avatarColors[0];
         const idx = name.charCodeAt(0) % avatarColors.length;
         return avatarColors[idx];
     };
 
     const getInitial = (name: string) => {
+        if (!name) return '?';
         return name.charAt(0).toUpperCase();
     };
 

@@ -21,9 +21,9 @@ export function mapQuestionForSave(q: any, quizId: string): any[] {
         options = (q.options || []).join('|');
         distractorsField = JSON.stringify(q.optionImages || []);
     } else if (q.type === 'TRUE_FALSE') {
-        items = JSON.stringify(q.items);
+        items = JSON.stringify(q.items || []);
     } else if (q.type === 'MATCHING') {
-        items = JSON.stringify(q.pairs);
+        items = JSON.stringify(q.pairs || []);
     } else if (q.type === 'MULTIPLE_SELECT') {
         options = (q.options || []).join('|');
     } else if (q.type === 'DRAG_DROP' || q.type === 'DROPDOWN') {
@@ -57,16 +57,19 @@ export function mapQuestionForSave(q: any, quizId: string): any[] {
     }
 
     const correctAnswer = q.type === 'MULTIPLE_SELECT'
-        ? JSON.stringify(q.correctAnswers)
+        ? JSON.stringify(q.correctAnswers || [])
         : (q.correctAnswer || '');
 
     const questionText = q.type === 'TRUE_FALSE' ? q.mainQuestion : q.question;
 
-    return [
+    const result = [
         q.id, quizId, q.type, questionText || '', options, correctAnswer,
         items, textField, blanksField, distractorsField, sentenceField,
         wordsField, correctWordIndexesField, imageField,
     ];
+
+    // Ensure no undefined/null values are sent to D1 bind, which causes silent drops/throws
+    return result.map(v => (v === undefined || v === null) ? '' : String(v));
 }
 
 // ============ Map assignment from DB row ============

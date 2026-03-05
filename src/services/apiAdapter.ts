@@ -1,35 +1,12 @@
-import { GOOGLE_SCRIPT_URL, WORKERS_API_URL, USE_D1 } from '../config/constants';
+import { WORKERS_API_URL } from '../config/constants';
 
-// Lấy API Token từ env (dùng chung cho cả 2 backend)
+// API Token for authentication
 const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
 
 /**
- * The API Adapter that switches between Google Apps Script and Cloudflare Workers (D1)
- * Currently, the Workers API mirrors the GAS POST endpoint interface (legacy compatibility mode).
- * Meaning the request payload format remains identical.
+ * The API Adapter - routes all requests to Cloudflare Workers (D1)
  */
 export const callApi = async <T = any>(action: string, payload: Record<string, any> = {}): Promise<T> => {
-    // 1. Nếu dùng GAS (Legacy MODE)
-    if (!USE_D1) {
-        try {
-            const response = await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ ...payload, action, token: API_SECRET_TOKEN }),
-            });
-            if (!response.ok) {
-                if (response.status === 401) throw new Error('Không có quyền truy cập API (Authentication failed)');
-                throw new Error(`Lỗi kết nối Server: ${response.statusText}`);
-            }
-            return (await response.json()) as T;
-        } catch (error: any) {
-            if (error.name === 'TypeError' && error.message === 'Failed to fetch') throw new Error('Không thể kết nối mạng (GAS).');
-            throw error;
-        }
-    }
-
-    // 2. Nếu dùng D1 (RESTful MODE)
-    // Tự động map từ "action" sang REST method & URL
     let method = 'POST';
     let path = '/';
     let urlParams = new URLSearchParams();
@@ -37,6 +14,9 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
     switch (action) {
         // --- Teachers ---
         case 'get_teachers': method = 'GET'; path = '/api/teachers'; break;
+        case 'create_teacher': method = 'POST'; path = '/api/teachers'; break;
+        case 'update_teacher': method = 'PUT'; path = `/api/teachers/${encodeURIComponent(payload.username)}`; break;
+        case 'delete_teacher': method = 'DELETE'; path = `/api/teachers/${encodeURIComponent(payload.username)}`; break;
         case 'login': method = 'POST'; path = '/api/login'; break;
 
         // --- Quizzes ---
@@ -106,8 +86,19 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         const response = await fetch(urlStr, fetchOptions);
 
         if (!response.ok) {
+            let errorMessage = `Lỗi kết nối Server: ${response.statusText}`;
+            try {
+                // Thử parse body JSON để lấy lỗi chi tiết từ Workers
+                const errData = await response.json();
+                if (errData && (errData as any).message) {
+                    errorMessage = (errData as any).message;
+                }
+            } catch (e) {
+                const text = await response.text().catch(() => '');
+                if (text) errorMessage += ` - ${text.substring(0, 100)}`;
+            }
             if (response.status === 401) throw new Error('Không có quyền truy cập API (Authentication failed)');
-            throw new Error(`Lỗi kết nối Server: ${response.statusText}`);
+            throw new Error(errorMessage);
         }
 
         return (await response.json()) as T;

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>iTongQuiz SaaS Landing Page</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3B82F6",
+                        "secondary": "#22C55E",
+                        "background-light": "#F8FAFC",
+                        "background-dark": "#101722",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased">
+<!-- Sticky Header -->
+<header class="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md">
+<div class="max-w-[1200px] mx-auto px-6 h-20 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-2xl">quiz</span>
+</div>
+<h2 class="text-2xl font-bold tracking-tight text-primary">iTongQuiz</h2>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-sm font-semibold hover:text-primary transition-colors" href="#">Luyện tập</a>
+<a class="text-sm font-semibold hover:text-primary transition-colors" href="#">Chủ đề học</a>
+<a class="text-sm font-semibold hover:text-primary transition-colors" href="#">Bảng xếp hạng</a>
+<a class="text-sm font-semibold hover:text-primary transition-colors" href="#">Giới thiệu</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-primary px-4 py-2 transition-colors">Đăng nhập</button>
+<button class="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm">
+                    Bắt đầu luyện tập
+                </button>
+</div>
+</div>
+</header>
+<main class="max-w-[1200px] mx-auto px-6">
+<!-- Hero Section -->
+<section class="py-20 flex flex-col lg:flex-row items-center gap-12">
+<div class="flex-1 space-y-8">
+<div class="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-bold">
+<span class="material-symbols-outlined text-sm">stars</span>
+                    Nền tảng học tập 4.0
+                </div>
+<h1 class="text-5xl lg:text-6xl font-black leading-[1.1] tracking-tight">
+                    Ôn bài và luyện tập <span class="text-primary">kiến thức</span> mỗi ngày
+                </h1>
+<p class="text-lg text-slate-600 dark:text-slate-400 max-w-[540px]">
+                    Nền tảng học tập thông minh giúp học sinh nắm vững kiến thức, rèn luyện kỹ năng và chinh phục mọi kỳ thi với kho đề thi đa dạng.
+                </p>
+<div class="flex flex-wrap gap-4">
+<button class="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl text-lg font-bold shadow-lg shadow-primary/25 transition-all">
+                        Bắt đầu ngay
+                    </button>
+<button class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 px-8 py-4 rounded-xl text-lg font-bold transition-all">
+                        Tìm hiểu thêm
+                    </button>
+</div>
+</div>
+<div class="flex-1 w-full max-w-[500px] lg:max-w-none">
+<div class="relative rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-primary/20 to-secondary/20 aspect-square flex items-center justify-center p-8">
+<img alt="Interactive Learning" class="rounded-xl object-cover w-full h-full shadow-lg" data-alt="Digital illustration of a happy student using a tablet for interactive learning" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDltyeeIxMQoimE4cXvdRa6Xcv6YM7kwsWIvnyt0GYH2LEVNZYmrR0_qR2e27o8n4vcea3ouNIM7z5UAr3hl9Iae37QzQUYXGTkUKZodUjWgbXq-e28titYxvy3epBGZZOssfeMWiThKhOEpd_zA8xkJ3njuqLg6sxCvJvxyR8mpHQRtquSlWKcPWmIJVPivIC8JxFcQ6LcOJ5ms87W6NRs22cW7cU8dNuBwEl3KsIdIVKjbcgdZtxjFQZvBv6lpvCINkfp-DIf0cQ"/>
+</div>
+</div>
+</section>
+<!-- Quick Practice Widget -->
+<section class="py-12">
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 max-w-2xl mx-auto shadow-xl shadow-slate-200/50 dark:shadow-none">
+<div class="flex items-center justify-between mb-6">
+<span class="text-sm font-bold text-primary uppercase tracking-wider">Thử thách nhanh</span>
+<span class="text-xs font-medium text-slate-400">Câu 1/10</span>
+</div>
+<h3 class="text-xl font-bold mb-8">What is the meaning of "<span class="text-primary underline decoration-2 underline-offset-4">apple</span>"?</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<button class="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 dark:border-slate-800 hover:border-primary hover:bg-primary/5 transition-all text-left group">
+<span class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold group-hover:bg-primary group-hover:text-white">A</span>
+<span class="font-medium">Quả táo</span>
+</button>
+<button class="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 dark:border-slate-800 hover:border-primary hover:bg-primary/5 transition-all text-left group">
+<span class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold group-hover:bg-primary group-hover:text-white">B</span>
+<span class="font-medium">Quả cam</span>
+</button>
+<button class="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 dark:border-slate-800 hover:border-primary hover:bg-primary/5 transition-all text-left group">
+<span class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold group-hover:bg-primary group-hover:text-white">C</span>
+<span class="font-medium">Quả chuối</span>
+</button>
+<button class="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 dark:border-slate-800 hover:border-primary hover:bg-primary/5 transition-all text-left group">
+<span class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold group-hover:bg-primary group-hover:text-white">D</span>
+<span class="font-medium">Quả xoài</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Features Grid -->
+<section class="py-24">
+<div class="text-center mb-16">
+<h2 class="text-4xl font-black mb-4">Tính năng nổi bật</h2>
+<p class="text-slate-600 dark:text-slate-400">Khám phá các công cụ hỗ trợ học tập toàn diện nhất hiện nay</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+<div class="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl">auto_stories</span>
+</div>
+<h3 class="text-lg font-bold mb-2">Ôn bài theo chủ đề</h3>
+<p class="text-sm text-slate-500">Hệ thống bài học phân loại rõ ràng theo chương trình của Bộ GD&amp;ĐT.</p>
+</div>
+<div class="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+<div class="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mb-6 text-secondary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl">lightbulb</span>
+</div>
+<h3 class="text-lg font-bold mb-2">Luyện tập qua câu hỏi</h3>
+<p class="text-sm text-slate-500">Hàng ngàn câu hỏi trắc nghiệm đa dạng được cập nhật liên tục.</p>
+</div>
+<div class="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+<div class="w-14 h-14 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center mb-6 text-purple-600 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl">translate</span>
+</div>
+<h3 class="text-lg font-bold mb-2">Kết hợp tiếng Anh</h3>
+<p class="text-sm text-slate-500">Nâng cao vốn từ vựng chuyên ngành thông qua các bài tập song ngữ.</p>
+</div>
+<div class="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+<div class="w-14 h-14 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mb-6 text-orange-600 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl">leaderboard</span>
+</div>
+<h3 class="text-lg font-bold mb-2">Xem kết quả ngay</h3>
+<p class="text-sm text-slate-500">Phản hồi kết quả tức thì với lời giải chi tiết giúp nắm vững kiến thức.</p>
+</div>
+</div>
+</section>
+<!-- Product Demo -->
+<section class="py-24 border-t border-slate-200 dark:border-slate-800">
+<div class="flex flex-col lg:flex-row items-center gap-16">
+<div class="flex-1 order-2 lg:order-1">
+<div class="bg-slate-900 rounded-2xl p-4 shadow-2xl ring-1 ring-slate-700">
+<div class="flex items-center gap-2 mb-4 px-2">
+<div class="flex gap-1.5">
+<div class="w-3 h-3 rounded-full bg-red-500"></div>
+<div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+<div class="w-3 h-3 rounded-full bg-green-500"></div>
+</div>
+<div class="bg-slate-800 h-6 flex-1 rounded text-[10px] flex items-center px-3 text-slate-400 overflow-hidden">
+                                app.itongquiz.vn/practice/quiz-id-293
+                            </div>
+</div>
+<img alt="Dashboard Mockup" class="rounded-lg w-full aspect-video object-cover" data-alt="User interface mockup showing an online quiz with timer and score tracker" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeZnPv25wu3zx8Wu1lLERDsiXxClaMW0WiZl6JCeqx5nU8g8HIXwhhIpKjfuTSADVyl_LqCRIpFC-RfBKtYKA8F1TWdPe3HqvsRbGACK23rP3PslgRpEuEKnqynOCLO1nGf68T-VRhmRWFi5X-6x4s-5bv7Hq4Vo5aHvsaKBPpAzrKWtgchHmXjbzHN__0w98FOXHt14i_ySeCpGmVr11Nk2hI5PrWIkOf-n65E6O41CwwCJJDkeq0DT3PJGAE3y1nZ-2Axa12BTM"/>
+</div>
+</div>
+<div class="flex-1 order-1 lg:order-2 space-y-6">
+<h2 class="text-4xl font-black leading-tight">Giao diện làm bài <span class="text-primary">trực quan</span> và hiện đại</h2>
+<p class="text-lg text-slate-600 dark:text-slate-400">
+                        Hệ thống được thiết kế tối giản, giúp học sinh tập trung tối đa vào việc giải bài tập mà không bị xao nhãng bởi các yếu tố bên ngoài.
+                    </p>
+<ul class="space-y-4">
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary">check_circle</span>
+<span class="font-medium">Đồng hồ đếm ngược thời gian thực</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary">check_circle</span>
+<span class="font-medium">Chấm điểm tự động và lời giải tức thì</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary">check_circle</span>
+<span class="font-medium">Lưu trữ lịch sử và tiến độ học tập</span>
+</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- Learning Flow -->
+<section class="py-24">
+<div class="text-center mb-16">
+<h2 class="text-4xl font-black mb-4">Quy trình 3 bước đơn giản</h2>
+</div>
+<div class="relative">
+<div class="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 dark:bg-slate-800 -translate-y-1/2 -z-10"></div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+<div class="bg-background-light dark:bg-background-dark flex flex-col items-center text-center">
+<div class="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center font-black text-2xl mb-6 shadow-xl shadow-primary/20">1</div>
+<h4 class="text-xl font-bold mb-2">Chọn chủ đề</h4>
+<p class="text-slate-500 px-8">Lựa chọn môn học và chương bạn muốn ôn luyện.</p>
+</div>
+<div class="bg-background-light dark:bg-background-dark flex flex-col items-center text-center">
+<div class="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center font-black text-2xl mb-6 shadow-xl shadow-primary/20">2</div>
+<h4 class="text-xl font-bold mb-2">Làm bài tập</h4>
+<p class="text-slate-500 px-8">Trả lời các câu hỏi trắc nghiệm thông minh.</p>
+</div>
+<div class="bg-background-light dark:bg-background-dark flex flex-col items-center text-center">
+<div class="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center font-black text-2xl mb-6 shadow-xl shadow-primary/20">3</div>
+<h4 class="text-xl font-bold mb-2">Xem kết quả</h4>
+<p class="text-slate-500 px-8">Phân tích kết quả và xem hướng dẫn chi tiết.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Motivation Stats -->
+<section class="py-16 bg-primary rounded-3xl mb-24 overflow-hidden relative">
+<div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent)]"></div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative px-8">
+<div class="text-center text-white">
+<div class="text-5xl font-black mb-2">2,000+</div>
+<div class="text-primary-foreground/80 font-medium">Bài luyện tập</div>
+</div>
+<div class="text-center text-white">
+<div class="text-5xl font-black mb-2">20,000+</div>
+<div class="text-primary-foreground/80 font-medium">Câu hỏi đa dạng</div>
+</div>
+<div class="text-center text-white">
+<div class="text-5xl font-black mb-2">15,000+</div>
+<div class="text-primary-foreground/80 font-medium">Học sinh đăng ký</div>
+</div>
+<div class="text-center text-white">
+<div class="text-5xl font-black mb-2">98%</div>
+<div class="text-primary-foreground/80 font-medium">Hài lòng</div>
+</div>
+</div>
+</section>
+<!-- Benefits -->
+<section class="py-24">
+<div class="text-center mb-16">
+<h2 class="text-4xl font-black mb-4">Giải pháp cho mọi người</h2>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-3xl text-center">
+<div class="text-primary mb-6">
+<span class="material-symbols-outlined text-5xl">school</span>
+</div>
+<h4 class="text-2xl font-bold mb-4">Học sinh</h4>
+<p class="text-slate-500">Tự tin ôn luyện, nắm chắc kiến thức và cải thiện điểm số vượt trội.</p>
+</div>
+<div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-3xl text-center">
+<div class="text-secondary mb-6">
+<span class="material-symbols-outlined text-5xl">person_search</span>
+</div>
+<h4 class="text-2xl font-bold mb-4">Giáo viên</h4>
+<p class="text-slate-500">Dễ dàng giao bài, theo dõi tiến độ và đánh giá năng lực học sinh.</p>
+</div>
+<div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-3xl text-center">
+<div class="text-orange-500 mb-6">
+<span class="material-symbols-outlined text-5xl">family_restroom</span>
+</div>
+<h4 class="text-2xl font-bold mb-4">Phụ huynh</h4>
+<p class="text-slate-500">Đồng hành cùng con, nhận báo cáo học tập định kỳ và chi tiết.</p>
+</div>
+</div>
+</section>
+<!-- Final CTA -->
+<section class="mb-24">
+<div class="bg-primary rounded-[2.5rem] p-12 md:p-24 text-center text-white overflow-hidden relative">
+<div class="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
+<div class="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-64 h-64 bg-secondary/20 rounded-full blur-3xl"></div>
+<div class="relative z-10 max-w-2xl mx-auto space-y-8">
+<h2 class="text-4xl md:text-5xl font-black leading-tight">Bắt đầu luyện tập ngay hôm nay!</h2>
+<p class="text-xl text-blue-100">Gia nhập cộng đồng hơn 15,000 học sinh đang tiến bộ mỗi ngày cùng iTongQuiz.</p>
+<button class="bg-white text-primary hover:bg-slate-100 px-12 py-5 rounded-2xl text-xl font-black shadow-2xl transition-all transform hover:scale-105 active:scale-95">
+                        DÙNG THỬ MIỄN PHÍ
+                    </button>
+<p class="text-sm text-blue-200">Không cần thẻ tín dụng • Đăng ký chỉ trong 30 giây</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-background-dark text-slate-400 py-16">
+<div class="max-w-[1200px] mx-auto px-6">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+<div class="space-y-6">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-xl">quiz</span>
+</div>
+<h2 class="text-xl font-bold text-white tracking-tight">iTongQuiz</h2>
+</div>
+<p class="text-sm leading-relaxed">
+                        Nền tảng giáo dục số hàng đầu Việt Nam, giúp cá nhân hóa lộ trình học tập của mọi học sinh.
+                    </p>
+<div class="flex gap-4">
+<a class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-primary hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">social_leaderboard</span>
+</a>
+<a class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-primary hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">alternate_email</span>
+</a>
+<a class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-primary hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">smart_display</span>
+</a>
+</div>
+</div>
+<div>
+<h5 class="text-white font-bold mb-6">Liên kết</h5>
+<ul class="space-y-4 text-sm">
+<li><a class="hover:text-primary" href="#">Trang chủ</a></li>
+<li><a class="hover:text-primary" href="#">Về chúng tôi</a></li>
+<li><a class="hover:text-primary" href="#">Bảng giá</a></li>
+<li><a class="hover:text-primary" href="#">Tin tức</a></li>
+</ul>
+</div>
+<div>
+<h5 class="text-white font-bold mb-6">Hỗ trợ</h5>
+<ul class="space-y-4 text-sm">
+<li><a class="hover:text-primary" href="#">Trung tâm trợ giúp</a></li>
+<li><a class="hover:text-primary" href="#">Hướng dẫn sử dụng</a></li>
+<li><a class="hover:text-primary" href="#">Chính sách bảo mật</a></li>
+<li><a class="hover:text-primary" href="#">Điều khoản dịch vụ</a></li>
+</ul>
+</div>
+<div>
+<h5 class="text-white font-bold mb-6">Liên hệ</h5>
+<ul class="space-y-4 text-sm">
+<li class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-primary">mail</span>
+                            contact@itongquiz.vn
+                        </li>
+<li class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-primary">phone</span>
+                            1900 1234
+                        </li>
+<li class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-primary">location_on</span>
+                            TP. Hồ Chí Minh, Việt Nam
+                        </li>
+</ul>
+</div>
+</div>
+<div class="pt-8 border-t border-slate-800 text-center text-xs">
+                © 2024 iTongQuiz Platform. Tất cả quyền được bảo lưu.
+            </div>
+</div>
+</footer>
+</body></html>

@@ -23,6 +23,7 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
             'Score': r.score,
             'correctCount': r.correct_count,
             'Total Questions': r.total_questions,
+            'Time Taken': r.time_taken || 0,
             'Submitted At': r.submitted_at,
             'answers': r.answers,
         }));
@@ -35,12 +36,13 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
         if (!body) return errorResponse('Invalid JSON body');
 
         await db.prepare(
-            `INSERT INTO results (student_name, class_name, quiz_id, quiz_title, score, correct_count, total_questions, submitted_at, answers)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO results (student_name, class_name, quiz_id, quiz_title, score, correct_count, total_questions, time_taken, submitted_at, answers)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             body.studentName || '', body.className || '', body.quizId || '',
             body.quizTitle || '', body.score || 0, body.correctCount || 0,
-            body.totalQuestions || 0, body.submittedAt || new Date().toISOString(),
+            body.totalQuestions || 0, body.timeTaken || 0,
+            body.submittedAt || new Date().toISOString(),
             JSON.stringify(body.answers || {})
         ).run();
         return jsonResponse({ status: 'success' });

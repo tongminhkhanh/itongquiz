@@ -59,7 +59,8 @@
         "Public Library Privacy (Hidden assignments for guests)",
         "Custom 'Coming Soon' Modal for locked features",
         "Improved Student Portal UI (Home button, better visibility)",
-        "Gamification Pet System (3D Chibi CSS pets: Cat/Dog/Rabbit with mood-reactive expressions)"
+        "Gamification Pet System (3D Chibi CSS pets: Cat/Dog/Rabbit with mood-reactive expressions)",
+        "Teacher Dashboard Redesign (Sidebar + Overview, Desktop + Mobile Responsive)"
     ],
     "knowledge_items": {
         "patterns": [
