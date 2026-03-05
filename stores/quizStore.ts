@@ -206,8 +206,13 @@ export const useQuizStore = create<QuizState>()(
                         totalQuestions: parseInt(row.totalQuestions || row.total_questions) || 0,
                         submittedAt: row.submittedAt || row.submitted_at || new Date().toISOString(),
                         timeTaken: parseInt(row.timeTaken || row.time_taken) || 0,
-                        answers: typeof row.answers === 'string' ? JSON.parse(row.answers || '{}') : (row.answers || {})
-                    })).filter(r => r.studentName);
+                        answers: (() => {
+                            if (typeof row.answers === 'string') {
+                                try { return JSON.parse(row.answers || '{}'); } catch { return {}; }
+                            }
+                            return row.answers || {};
+                        })()
+                    })).filter(r => !!r.studentName);
                     set({ results });
                 } catch (err: any) {
                     console.error('Failed to load results:', err);
