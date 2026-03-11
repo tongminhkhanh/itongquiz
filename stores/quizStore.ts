@@ -141,6 +141,7 @@ export const useQuizStore = create<QuizState>()(
                         parsed.mainQuestion = parsed.mainQuestion || parsed.main_question || parsed.question;
                         parsed.correctWord = parsed.correctWord || parsed.correct_word;
                         parsed.correctWordIndexes = parsed.correctWordIndexes || parsed.correct_word_indexes;
+                        parsed.text = parsed.text || parsed.text_field;
 
                         // DATA UNMAPPING: Reconstruct specific question types from generic DB columns
                         const qType = parsed.type;
@@ -225,15 +226,15 @@ export const useQuizStore = create<QuizState>()(
                     }
                     const results: StudentResult[] = data.map((row: any) => ({
                         id: row.id || `result-${Date.now()}`,
-                        studentName: row.studentName || row.name || '',
-                        studentClass: row.studentClass || row.className || '',
-                        quizId: row.quizId || row.quiz_id || '',
-                        quizTitle: row.quizTitle || row.quiz_title || '',
-                        score: parseFloat(String(row.score || 0).replace(',', '.')) || 0,
+                        studentName: row.studentName || row.name || row['Student Name'] || '',
+                        studentClass: row.studentClass || row.className || row['Class'] || '',
+                        quizId: row.quizId || row.quiz_id || row['Quiz ID'] || '',
+                        quizTitle: row.quizTitle || row.quiz_title || row['Quiz Title'] || '',
+                        score: parseFloat(String(row.score || row['Score'] || 0).replace(',', '.')) || 0,
                         correctCount: parseInt(row.correctCount || row.correct_count) || 0,
-                        totalQuestions: parseInt(row.totalQuestions || row.total_questions) || 0,
-                        submittedAt: row.submittedAt || row.submitted_at || new Date().toISOString(),
-                        timeTaken: parseInt(row.timeTaken || row.time_taken) || 0,
+                        totalQuestions: parseInt(row.totalQuestions || row.total_questions || row['Total Questions']) || 0,
+                        submittedAt: row.submittedAt || row.submitted_at || row['Submitted At'] || new Date().toISOString(),
+                        timeTaken: parseInt(row.timeTaken || row.time_taken || row['Time Taken']) || 0,
                         answers: (() => {
                             if (typeof row.answers === 'string') {
                                 try { return JSON.parse(row.answers || '{}'); } catch { return {}; }

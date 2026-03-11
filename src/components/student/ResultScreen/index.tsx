@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Quiz, StudentResult, Question } from '../../../types';
 import { renderMathJax } from '../../../hooks/useMathJax';
-import { exportResultToPDF, shareResult } from '../../../services/pdfExportService';
+
+import { Home } from 'lucide-react';
 
 // Components
-import ResultHeader from './ResultHeader';
 import ResultTabs from './ResultTabs';
 
 // Tabs
@@ -38,27 +38,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
         }
     }, [quiz, answers, activeTab]);
 
-    // Handle PDF export
-    const handleExportPDF = useCallback(async () => {
-        await exportResultToPDF({
-            quiz,
-            result,
-            answers,
-            studentName,
-            studentClass
-        });
-    }, [quiz, result, answers, studentName, studentClass]);
-
-    // Handle share
-    const handleShare = useCallback(async () => {
-        return await shareResult({
-            quizTitle: quiz.title,
-            score: result.score,
-            correctCount: result.correctCount,
-            totalQuestions: result.totalQuestions,
-            studentName
-        });
-    }, [quiz.title, result, studentName]);
+    // Trigger MathJax rendering when component mounts or tab changes
 
     // Helper function to check if answer is correct 
     // PRIORITY: Use server validationDetails if available, fallback to local calculation
@@ -84,33 +64,40 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
         if (!answer && answer !== false && answer !== 0) return 'skipped';
 
         switch (question.type) {
-            case 'MCQ':
+            case 'MCQ': {
                 return answer === (question as any).correctAnswer ? 'correct' : 'wrong';
-            case 'SHORT_ANSWER':
+            }
+            case 'SHORT_ANSWER': {
                 return String(answer).toLowerCase().trim() === String((question as any).correctAnswer).toLowerCase().trim() ? 'correct' : 'wrong';
-            case 'TRUE_FALSE':
+            }
+            case 'TRUE_FALSE': {
                 const items = (question as any).items || [];
                 const allCorrect = items.every((item: any, idx: number) => {
                     const itemKey = item.id || `item-${idx}`;
                     return answer?.[itemKey] === item.isCorrect;
                 });
                 return allCorrect ? 'correct' : 'wrong';
-            case 'MATCHING':
+            }
+            case 'MATCHING': {
                 const pairs = (question as any).pairs || [];
                 const matchingCorrect = pairs.every((p: any) => answer?.[p.left] === p.right);
                 return matchingCorrect ? 'correct' : 'wrong';
-            case 'MULTIPLE_SELECT':
+            }
+            case 'MULTIPLE_SELECT': {
                 const studentAns = (answer as string[]) || [];
                 const correctAns = (question as any).correctAnswers || [];
                 const msCorrect = studentAns.length === correctAns.length && studentAns.every((v: string) => correctAns.includes(v));
                 return msCorrect ? 'correct' : 'wrong';
-            case 'WORD_SCRAMBLE':
+            }
+            case 'WORD_SCRAMBLE': {
                 const letters = (question as any).letters || [];
                 const studentWord = ((answer as number[]) || []).map((i: number) => letters[i]).join('');
                 return studentWord.toLowerCase().replace(/\s+/g, '') === ((question as any).correctWord || '').toLowerCase().replace(/\s+/g, '') ? 'correct' : 'wrong';
-            case 'RIDDLE':
+            }
+            case 'RIDDLE': {
                 return String(answer).toLowerCase().trim() === String((question as any).correctAnswer).toLowerCase().trim() ? 'correct' : 'wrong';
-            case 'DRAG_DROP':
+            }
+            case 'DRAG_DROP': {
                 const ddText = (question as any).text || "";
                 const ddParts = ddText.split(/(\[.*?\])/g);
                 let ddBlankIndex = 0;
@@ -124,11 +111,13 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                     }
                 });
                 return isDDCorrect ? 'correct' : 'wrong';
-            case 'DROPDOWN':
+            }
+            case 'DROPDOWN': {
                 const dropdownBlanks = (question as any).blanks || [];
                 const isDropdownCorrect = dropdownBlanks.every((b: any) => answer?.[b.id] === b.correctAnswer);
                 return isDropdownCorrect ? 'correct' : 'wrong';
-            case 'ORDERING':
+            }
+            case 'ORDERING': {
                 let studentIndices: number[] = [];
                 const rawAnswer = answer;
 
@@ -175,7 +164,8 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                     return Number(val) === Number(correctOrder[idx]);
                 });
                 return isOrderCorrect ? 'correct' : 'wrong';
-            case 'CATEGORIZATION':
+            }
+            case 'CATEGORIZATION': {
                 const catItems = (question as any).items || [];
                 const isCatCorrect = catItems.every((item: any) => {
                     const studentCatId = answer?.[item.id];
@@ -187,7 +177,8 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                     }
                 });
                 return isCatCorrect ? 'correct' : 'wrong';
-            case 'UNDERLINE':
+            }
+            case 'UNDERLINE': {
                 const studentIdxs = (answer as number[]) || [];
                 // Resolve correctWordIndexes: quiz object → snapshot → validationDetails
                 let correctIdxs = (question as any).correctWordIndexes || [];
@@ -217,13 +208,15 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                 const cSorted = [...correctIdxs].sort((a, b) => a - b);
                 const isUnderlineCorrect = sSorted.every((val, idx) => val === cSorted[idx]);
                 return isUnderlineCorrect ? 'correct' : 'wrong';
-            case 'ERROR_CORRECTION':
+            }
+            case 'ERROR_CORRECTION': {
                 const ecAns = answer as { wrongWord?: string; correctWord?: string } || {};
                 const ecWrong = String(ecAns.wrongWord || '').toLowerCase().trim();
                 const ecCorrect = String(ecAns.correctWord || '').toLowerCase().trim();
                 const ecExpWrong = String((question as any).wrongWord || (question as any).distractors || '').toLowerCase().trim();
                 const ecExpCorrect = String((question as any).correctWord || (question as any).correctAnswer || '').toLowerCase().trim();
                 return (ecWrong && ecCorrect && ecWrong === ecExpWrong && ecCorrect === ecExpCorrect) ? 'correct' : 'wrong';
+            }
             default:
                 return 'wrong';
         }
@@ -290,14 +283,16 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
             ref={containerRef}
             className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50"
         >
-            {/* Header with Score */}
-            <ResultHeader
-                result={displayResult}
-                quizTitle={quiz.title}
-                onExit={onExit}
-                onExportPDF={handleExportPDF}
-                onShare={handleShare}
-            />
+            {/* Minimal Top Navigation */}
+            <div className="max-w-5xl mx-auto px-4 pt-6 pb-2 flex justify-between items-center">
+                <button
+                    onClick={onExit}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white text-indigo-600 hover:bg-indigo-50 hover:shadow-md rounded-full transition-all shadow-sm border border-indigo-100 font-medium"
+                >
+                    <Home className="w-5 h-5" />
+                    <span>Về trang chủ</span>
+                </button>
+            </div>
 
             {/* Tab Navigation */}
             <ResultTabs

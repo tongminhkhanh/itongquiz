@@ -7,7 +7,7 @@
 
 import React, { useRef, useEffect, useMemo } from 'react';
 import { StudentResult, Question, QuestionSnapshot, QuestionType, Quiz } from '../../../types';
-import { Clock, CheckCircle2, XCircle, AlertCircle, RefreshCcw } from 'lucide-react';
+import { Clock, CheckCircle, CheckCircle2, XCircle, AlertCircle, RefreshCcw } from 'lucide-react';
 import MathSpan from '../../common/MathSpan';
 import { formatHtmlText } from '../../../utils/formatters';
 import { renderMathJax } from '../../../hooks/useMathJax';
@@ -235,22 +235,22 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 const questionType = snapshot?.type || fromQuiz?.type;
                 // Additional fields for special question types
                 const items = snapshot?.items || (fromQuiz as any)?.items;
-                const text = snapshot?.text || (fromQuiz as any)?.text;
-                const blanks = snapshot?.blanks || (fromQuiz as any)?.blanks;
-                const pairs = snapshot?.pairs || (fromQuiz as any)?.pairs;
+                const text = (snapshot as any)?.text || (fromQuiz as any)?.text;
+                const blanks = (snapshot as any)?.blanks || (fromQuiz as any)?.blanks;
+                const pairs = (snapshot as any)?.pairs || (fromQuiz as any)?.pairs;
                 // UNDERLINE specific fields
-                const words = snapshot?.words || (fromQuiz as any)?.words;
-                const correctWordIndexes = snapshot?.correctWordIndexes || (fromQuiz as any)?.correctWordIndexes;
+                const words = (snapshot as any)?.words || (fromQuiz as any)?.words;
+                const correctWordIndexes = (snapshot as any)?.correctWordIndexes || (fromQuiz as any)?.correctWordIndexes;
                 // WORD_SCRAMBLE specific fields
-                const letters = snapshot?.letters || (fromQuiz as any)?.letters;
-                const correctWord = snapshot?.correctWord || (fromQuiz as any)?.correctWord;
+                const letters = (snapshot as any)?.letters || (fromQuiz as any)?.letters;
+                const correctWord = (snapshot as any)?.correctWord || (fromQuiz as any)?.correctWord;
                 // RIDDLE specific fields
-                const riddleLines = snapshot?.riddleLines || (fromQuiz as any)?.riddleLines;
-                const answerLabel = snapshot?.answerLabel || (fromQuiz as any)?.answerLabel;
+                const riddleLines = (snapshot as any)?.riddleLines || (fromQuiz as any)?.riddleLines;
+                const answerLabel = (snapshot as any)?.answerLabel || (fromQuiz as any)?.answerLabel;
                 // ORDERING specific fields
-                const correctOrder = snapshot?.correctOrder || (fromQuiz as any)?.correctOrder;
+                const correctOrder = (snapshot as any)?.correctOrder || (fromQuiz as any)?.correctOrder;
                 // CATEGORIZATION specific fields
-                const categories = snapshot?.categories || (fromQuiz as any)?.categories;
+                const categories = (snapshot as any)?.categories || (fromQuiz as any)?.categories;
 
                 // 🔧 FALLBACK: If isCorrect is false but we have data to recalculate
                 let finalIsCorrect = normalized.isCorrect;
@@ -476,9 +476,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                                     }`}
                                                             >
                                                                 <span className="font-bold">{optionLetter}.</span>
-                                                                <div className="flex-1">
-                                                                    <span dangerouslySetInnerHTML={{ __html: formatHtmlText(opt) }} />
-                                                                </div>
+                                                                <MathSpan className="flex-1" content={opt} />
                                                                 {isCorrectOption && (
                                                                     <CheckCircle2 className="w-4 h-4 ml-auto text-green-600" />
                                                                 )}
@@ -500,7 +498,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                         const isItemCorrect = studentAnswer === correctVal;
                                                         return (
                                                             <div key={itmIdx} className={`p-2 rounded-lg text-sm ${isItemCorrect ? 'bg-green-100' : 'bg-red-100'}`}>
-                                                                <span dangerouslySetInnerHTML={{ __html: itm.statement || itm.text || '' }} />
+                                                                <MathSpan className="flex-1" content={itm.statement || itm.text || ''} />
                                                                 <span className="ml-2 font-medium">
                                                                     - HS: {studentAnswer === true ? 'Đúng' : studentAnswer === false ? 'Sai' : '(chưa trả lời)'}
                                                                     {!isItemCorrect && <span className="text-green-700 ml-2">(Đáp án: {correctVal ? 'Đúng' : 'Sai'})</span>}
@@ -518,14 +516,14 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                         <div className="p-2 rounded-lg bg-yellow-50 border border-yellow-200">
                                                             <p className="font-medium text-yellow-800 mb-1">Câu trả lời của học sinh:</p>
                                                             {Object.entries(selectedAnswer).map(([key, value]) => (
-                                                                <div key={key} className="text-gray-700">
-                                                                    <span className="font-medium">Ô {key}:</span> {String(value)}
+                                                                <div key={key} className="flex items-center gap-1 text-gray-700 flex-wrap">
+                                                                    <span className="font-medium flex-shrink-0">Ô {key}:</span> <MathSpan content={String(value)} />
                                                                 </div>
                                                             ))}
                                                         </div>
                                                     ) : typeof selectedAnswer === 'string' ? (
-                                                        <div className="p-2 rounded-lg bg-yellow-50 border border-yellow-200">
-                                                            <p className="font-medium text-yellow-800">Câu trả lời: {selectedAnswer}</p>
+                                                        <div className="flex items-center gap-1 flex-wrap p-2 rounded-lg bg-yellow-50 border border-yellow-200">
+                                                            <span className="font-medium text-yellow-800 flex-shrink-0">Câu trả lời:</span> <MathSpan content={String(selectedAnswer)} />
                                                         </div>
                                                     ) : null}
                                                 </div>
@@ -544,10 +542,10 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                                 return (
                                                                     <div key={pair.left} className={`mb-2 p-2 rounded border bg-white ${isPairCorrect ? 'border-green-200' : 'border-red-200'}`}>
                                                                         <div className="flex items-center gap-2 mb-1">
-                                                                            <span className="font-medium text-gray-700">{String(pair.left).replace(/^\$|\$$/g, '')}</span>
+                                                                            <MathSpan className="font-medium text-gray-700" content={String(pair.left)} />
                                                                             <span className="text-gray-400">→</span>
                                                                             <span className={`font-bold ${isPairCorrect ? 'text-green-600' : 'text-red-600'}`}>
-                                                                                {studentRight ? String(studentRight).replace(/^\$|\$$/g, '') : '(Chưa nối)'}
+                                                                                {studentRight ? <MathSpan content={String(studentRight)} /> : '(Chưa nối)'}
                                                                             </span>
                                                                             {studentRight && (
                                                                                 <span className="ml-1">
@@ -556,8 +554,8 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                                             )}
                                                                         </div>
                                                                         {!isPairCorrect && (
-                                                                            <div className="text-xs text-green-700 bg-green-50 p-1 rounded">
-                                                                                <span className="font-medium">Đáp án đúng:</span> {String(pair.right).replace(/^\$|\$$/g, '')}
+                                                                            <div className="flex items-center gap-1 text-xs text-green-700 bg-green-50 p-1 rounded flex-wrap">
+                                                                                <span className="font-medium">Đáp án đúng:</span> <MathSpan content={String(pair.right)} />
                                                                             </div>
                                                                         )}
                                                                     </div>
@@ -569,10 +567,10 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                         <div className="p-2 rounded-lg bg-blue-50 border border-blue-200">
                                                             <p className="font-medium text-blue-800 mb-1">Cặp ghép của học sinh (Dữ liệu cũ):</p>
                                                             {Object.entries(selectedAnswer).map(([left, right]) => (
-                                                                <div key={left} className="text-gray-700">
-                                                                    <span>{String(left).replace(/^\$|\$$/g, '')}</span>
-                                                                    <span className="mx-2">→</span>
-                                                                    <span>{String(right).replace(/^\$|\$$/g, '')}</span>
+                                                                <div key={left} className="flex items-center gap-2 text-gray-700">
+                                                                    <MathSpan content={String(left)} />
+                                                                    <span className="text-gray-400">→</span>
+                                                                    <MathSpan content={String(right)} />
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -689,7 +687,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                             return (
                                                                 <div key={idx} className="flex items-center gap-2 p-1.5 rounded bg-gray-100">
                                                                     <span className="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold">{idx + 1}</span>
-                                                                    <span>{label}</span>
+                                                                    <MathSpan content={label} />
                                                                 </div>
                                                             );
                                                         })}
@@ -697,7 +695,9 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                             <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
                                                                 <p className="text-green-700 font-medium">Thứ tự đúng:</p>
                                                                 {correctOrd.map((itemIdx: number, i: number) => (
-                                                                    <p key={i} className="text-green-600">{i + 1}. {items[itemIdx] ? getItemText(items[itemIdx]) : ''}</p>
+                                                                    <div key={i} className="text-green-600 flex items-center gap-1">
+                                                                        <span>{i + 1}.</span> <MathSpan content={items[itemIdx] ? getItemText(items[itemIdx]) : ''} />
+                                                                    </div>
                                                                 ))}
                                                             </div>
                                                         )}
@@ -714,14 +714,14 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                     <div className="space-y-2 mb-2 text-sm">
                                                         {categories.map((cat: any) => (
                                                             <div key={cat.id} className="p-2 rounded-lg bg-gray-50 border border-gray-200">
-                                                                <p className="font-medium text-gray-700 mb-1">{cat.name}</p>
+                                                                <MathSpan className="font-medium text-gray-700 mb-1" content={cat.name} />
                                                                 <div className="flex flex-wrap gap-1">
                                                                     {catItems.filter((ci: any) => studentAns[ci.id] === cat.id || ci.categoryId === cat.id).map((ci: any) => {
                                                                         const isItemCorrect = studentAns[ci.id] === ci.categoryId;
                                                                         return (
-                                                                            <span key={ci.id} className={`px-2 py-0.5 rounded text-xs ${isItemCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                                                {ci.content} {isItemCorrect ? '✓' : '✗'}
-                                                                            </span>
+                                                                            <div key={ci.id} className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs ${isItemCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                                                <MathSpan content={ci.content} /> <span>{isItemCorrect ? '✓' : '✗'}</span>
+                                                                            </div>
                                                                         );
                                                                     })}
                                                                 </div>

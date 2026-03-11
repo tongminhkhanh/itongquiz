@@ -1,0 +1,59 @@
+# API Endpoints Documentation
+
+**Ngày cập nhật**: 2026-03-11
+**Base URL**: `WORKERS_API_URL` (Cloudflare Workers)
+
+---
+
+## 📝 Quizzes (Đề thi)
+
+### GET /api/quizzes
+Lấy danh sách tất cả các đề thi.
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "quiz-123",
+    "title": "Toán lớp 3 - Ôn tập",
+    "category": "toan",
+    "tags": "[\"kiểm tra\", \"giữa kỳ\"]",
+    "class_level": "3",
+    "time_limit": 40
+  }
+]
+```
+
+### POST /api/quizzes
+Tạo đề thi mới kèm danh sách câu hỏi.
+
+---
+
+## ❓ Questions (Câu hỏi)
+
+### GET /api/questions?quizId={id}
+Lấy danh sách câu hỏi của một đề thi cụ thể.
+
+**Đặc biệt lưu ý về Mapping (D1 -> FE):**
+| D1 Column | FE Question Object | Note |
+|-----------|--------------------|------|
+| `text_field` | `text` | Dùng cho DROPDOWN, DRAG_DROP, ERROR_CORRECTION |
+| `correct_answer` | `correctAnswer` | |
+| `question` | `mainQuestion` | (Trong một số context) |
+
+---
+
+## 📊 Results & Validation
+
+### POST /api/validate
+Xác thực đáp án phía Server (Anti-cheat). Trả về điểm số và chi tiết đúng/sai.
+
+---
+
+## 🏫 Classroom & Assignments
+
+### GET /api/assignments?classId={id}
+Lấy danh sách bài tập của lớp.
+
+### GET /api/assignments?studentId={id}
+Lấy danh sách bài tập được giao cho học sinh cụ thể.

@@ -77,22 +77,28 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         // Convert raw assignments to Quiz format, filter by assigned ids
         return assignments
             .filter(a => assignedQuizIds.has(a.quizId))
-            .map(assignment => ({
-                id: assignment.quizId,
-                title: assignment.quizTitle || 'Bài tập được giao',
-                category: 'class',
-                questions: [],
-                duration: 0,
-                timeLimit: 0,
-                requireCode: false,
-                allowReview: false,
-                classLevel: '',
-                subject: 'class',
-                createdAt: assignment.createdAt,
-                maxScore: 0,
-                _assignmentData: assignment
-            } as Quiz & { _assignmentData?: Assignment }));
-    }, [assignments, classroomStore.studentAssignments, studentSession]);
+            .map(assignment => {
+                const realQuiz = quizStore.quizzes.find(q => q.id === assignment.quizId) || ioeQuizzes.find(q => q.id === assignment.quizId);
+                if (realQuiz) {
+                    return { ...realQuiz, _assignmentData: assignment } as Quiz & { _assignmentData?: Assignment };
+                }
+                return {
+                    id: assignment.quizId,
+                    title: assignment.quizTitle || 'Bài tập được giao',
+                    category: 'class',
+                    questions: [],
+                    duration: 0,
+                    timeLimit: 0,
+                    requireCode: false,
+                    allowReview: false,
+                    classLevel: '',
+                    subject: 'class',
+                    createdAt: assignment.createdAt,
+                    maxScore: 0,
+                    _assignmentData: assignment
+                } as Quiz & { _assignmentData?: Assignment };
+            });
+    }, [assignments, classroomStore.studentAssignments, studentSession, quizStore.quizzes, ioeQuizzes]);
 
     // --- Derived Data: Public Categories ---
     const publicCategories = useMemo(() => {

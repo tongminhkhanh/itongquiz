@@ -2,9 +2,20 @@ import React, { useState } from 'react';
 import { Quiz } from '../../types';
 import { Card, Button } from '../common';
 import { useQuizManager } from '../../hooks';
-import { Search, Key, Edit, Trash2, RefreshCw, Lock } from 'lucide-react';
+import { Search, Key, Edit, Trash2, RefreshCw, Lock, Tag } from 'lucide-react';
 import { useQuizStore } from '../../../stores/quizStore';
 import { useAuthStore } from '../../../stores/authStore';
+import { SUBJECT_CONFIG } from '../HomePage/StudentDashboardUI';
+
+// Category tabs config for teacher filter
+const CATEGORY_TABS = [
+    { key: 'all', label: 'Tất cả', icon: '📚' },
+    ...Object.entries(SUBJECT_CONFIG).map(([key, config]) => ({
+        key,
+        label: config.title,
+        icon: config.icon,
+    })),
+];
 
 interface ManageTabProps {
     quizzes: Quiz[];
@@ -48,6 +59,27 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
 
     return (
         <div className="space-y-4">
+            {/* Category Filter Tabs */}
+            <div className="flex flex-wrap gap-2 pb-2 border-b border-gray-100">
+                {CATEGORY_TABS.map((tab) => (
+                    <button
+                        key={tab.key}
+                        onClick={() => { quizManagerHook.setFilterCategory(tab.key); quizManagerHook.setPage(1); }}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${quizManagerHook.filterCategory === tab.key
+                                ? 'bg-orange-500 text-white shadow-sm'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                    >
+                        {tab.key === 'all' ? (
+                            <span>{tab.icon}</span>
+                        ) : (
+                            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{tab.icon}</span>
+                        )}
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-4">
                 <div className="relative flex-1 max-w-md">
@@ -56,7 +88,7 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
                         type="text"
                         value={quizManagerHook.searchTerm}
                         onChange={(e) => quizManagerHook.setSearchTerm(e.target.value)}
-                        placeholder="Tìm kiếm bài kiểm tra..."
+                        placeholder="Tìm kiếm bài kiểm tra... (gõ #tag để tìm theo nhãn)"
                         className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
                     />
                 </div>
@@ -103,6 +135,22 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
                                     Lớp {quiz.classLevel} • {quiz.questions.length} câu • {quiz.timeLimit} phút
                                     {quiz.accessCode && ` • Mã: ${quiz.accessCode}`}
                                 </p>
+                                {/* Tags display */}
+                                {(() => {
+                                    const rawTags = (quiz as any).tags;
+                                    const tags: string[] = typeof rawTags === 'string' ? (rawTags ? JSON.parse(rawTags) : []) : (rawTags || []);
+                                    if (tags.length === 0) return null;
+                                    return (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {tags.map((tag: string, idx: number) => (
+                                                <span key={idx} className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">
+                                                    <Tag className="w-3 h-3" />
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
                                 <p className="text-xs text-gray-400 mt-1">
                                     Tạo: {new Date(quiz.createdAt).toLocaleString('vi-VN', {
                                         day: '2-digit',

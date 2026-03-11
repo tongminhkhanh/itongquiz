@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, QuestionType, ImageLibraryItem } from '../../types';
 import { Card, Button } from '../common';
-import { FileText, Sparkles, Upload, X, FileCheck, Copy, Check, Link2, BookOpen, Search, Zap, Users, Calendar, Hash, ChevronDown, ChevronUp, Settings, Clock, Wand2, Eye, EyeOff, Lock, Unlock, Edit3 } from 'lucide-react';
+import { FileText, Sparkles, Upload, X, FileCheck, Copy, Check, Link2, BookOpen, Search, Zap, Users, Calendar, Hash, ChevronDown, ChevronUp, Settings, Clock, Wand2, Eye, EyeOff, Lock, Unlock, Edit3, Tag } from 'lucide-react';
 import { AIProvider, generateQuiz, QuizGenerationOptions } from '../../services/geminiService';
 import { generateTrangNguyenQuiz, TRANG_NGUYEN_TOPICS } from '../../services/trangNguyenGeminiService';
 import { searchTrangNguyenQuestions, enrichPromptWithSearchResults } from '../../services/trangNguyenSearchService';
@@ -80,7 +80,9 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     const [topic, setTopic] = useState('');
     const [quizTitle, setQuizTitle] = useState('');
     const [classLevel, setClassLevel] = useState(isClassLocked ? lockedClass : '3');
-    const [category, setCategory] = useState('on-tap'); // Mặc định: Ôn tập theo chủ đề
+    const [category, setCategory] = useState('toan'); // Default: Toán Học
+    const [tags, setTags] = useState<string[]>([]);
+    const [tagInput, setTagInput] = useState('');
     const [content, setContent] = useState('');
     const [manualTimeLimit, setManualTimeLimit] = useState<number | ''>('');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -170,7 +172,12 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             setRequireCode(!!editingQuiz.requireCode);
             setAccessCode(editingQuiz.accessCode || '');
             setShowOnHome(editingQuiz.showOnHome !== false); // default to true
-            setCategory(editingQuiz.category || 'vioedu');
+            setCategory(editingQuiz.category || 'toan');
+            // Load tags from editingQuiz
+            const rawTags = (editingQuiz as any).tags;
+            const parsedTags: string[] = typeof rawTags === 'string' ? (rawTags ? JSON.parse(rawTags) : []) : (rawTags || []);
+            setTags(parsedTags);
+            setTagInput('');
             // We don't restore selectedTypes/difficultyLevels from quiz yet as it's complex to reverse engineer
         } else {
             // Reset form for new quiz
@@ -185,7 +192,9 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             setShowOnHome(true);
             setCustomPrompt('');
             setUploadedFile(null);
-            setCategory('on-tap'); // Mặc định: Ôn tập theo chủ đề
+            setCategory('toan'); // Default: Toán Học
+            setTags([]);
+            setTagInput('');
         }
     }, [editingQuiz, isClassLocked, lockedClass]);
 
@@ -248,6 +257,17 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             }
         }
     }, [manualTimeLimit, classLevel, category, requireCode, accessCode, showOnHome, quizTitle, authStore.teacherName]);
+
+    // Sync tags with generatedQuiz
+    useEffect(() => {
+        if (generatedQuiz) {
+            const currentTags = (generatedQuiz as any).tags;
+            const currentTagsArr: string[] = typeof currentTags === 'string' ? (currentTags ? JSON.parse(currentTags) : []) : (currentTags || []);
+            if (JSON.stringify(currentTagsArr) !== JSON.stringify(tags)) {
+                setGeneratedQuiz({ ...generatedQuiz, tags } as any);
+            }
+        }
+    }, [tags]);
 
 
     // Generate random access code
@@ -491,6 +511,8 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
             setShowOnHome(true);
             setUploadedFile(null);
             setGeneratedQuiz(null);
+            setTags([]);
+            setTagInput('');
 
             onSuccess();
         } catch (err: any) {
@@ -627,6 +649,40 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                     ))}
                                 </select>
                             </div>
+                        </div>
+
+                        {/* Tags Input */}
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                <Tag className="w-3 h-3 inline mr-1" />Nhãn (Tags)
+                            </label>
+                            <div className="flex flex-wrap gap-1 mb-1.5">
+                                {tags.map((tag, idx) => (
+                                    <span key={idx} className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">
+                                        {tag}
+                                        <button onClick={() => setTags(tags.filter((_, i) => i !== idx))} className="ml-0.5 hover:text-red-500">
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                            <input
+                                type="text"
+                                value={tagInput}
+                                onChange={e => setTagInput(e.target.value)}
+                                onKeyDown={e => {
+                                    if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
+                                        e.preventDefault();
+                                        const newTag = tagInput.trim().replace(/^#/, '');
+                                        if (newTag && !tags.includes(newTag)) {
+                                            setTags([...tags, newTag]);
+                                        }
+                                        setTagInput('');
+                                    }
+                                }}
+                                placeholder="Gõ tag rồi nhấn Enter (VD: GiuaKy, NangCao)"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40"
+                            />
                         </div>
                     </div>
                 </Section>

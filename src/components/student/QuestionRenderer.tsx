@@ -715,7 +715,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                 <select
                                                     key={idx}
                                                     value={currentAnswers[blank.id] || ''}
-                                                    onChange={(e) => onAnswerChange(q.id, e.target.value, blank.id)}
+                                                    onChange={(e) => onAnswerChange(q.id, { ...currentAnswers, [blank.id]: e.target.value })}
                                                     className={`mx-1 px-3 py-1.5 border-2 rounded-lg font-medium transition-all cursor-pointer ${currentAnswers[blank.id]
                                                         ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                                                         : 'border-gray-300 bg-gray-50 text-gray-600 hover:border-indigo-300'

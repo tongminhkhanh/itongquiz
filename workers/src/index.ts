@@ -117,13 +117,14 @@ async function handleLegacyGasRequest(request: Request, env: Env): Promise<Respo
 
         case 'create_quiz': {
             await db.prepare(
-                `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home, tags)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).bind(
                 body.id, body.title, body.classLevel, body.category || '',
                 body.timeLimit, body.createdAt, body.accessCode || '',
                 body.requireCode ? 'TRUE' : 'FALSE', body.createdBy || '',
-                body.showOnHome === false ? 'FALSE' : 'TRUE'
+                body.showOnHome === false ? 'FALSE' : 'TRUE',
+                JSON.stringify(body.tags || [])
             ).run();
 
             if (body.questions && Array.isArray(body.questions)) {
@@ -146,13 +147,14 @@ async function handleLegacyGasRequest(request: Request, env: Env): Promise<Respo
             await db.prepare('DELETE FROM quizzes WHERE id = ?').bind(body.id).run();
 
             await db.prepare(
-                `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home, tags)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).bind(
                 body.id, body.title, body.classLevel, body.category || '',
                 body.timeLimit, body.createdAt, body.accessCode || '',
                 body.requireCode ? 'TRUE' : 'FALSE', body.createdBy || '',
-                body.showOnHome === false ? 'FALSE' : 'TRUE'
+                body.showOnHome === false ? 'FALSE' : 'TRUE',
+                JSON.stringify(body.tags || [])
             ).run();
 
             if (body.questions && Array.isArray(body.questions)) {

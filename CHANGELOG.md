@@ -2,7 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [2026-03-11]
+### Added
+- **Subject Categories**: Bổ sung phân loại đề thi theo 6 môn học chuẩn (Toán, Tiếng Việt, Tiếng Anh, Tự nhiên & Xã hội, Tin học, IOE).
+- **Tagging System**: Hỗ trợ gắn nhãn (Tags) cho đề thi giúp tìm kiếm và quản lý kho đề hiệu quả hơn.
+- **Improved Result UI**: Tái thiết kế màn hình Kết Quả (ResultScreen) tinh gọn hơn, gỡ bỏ header điểm số lớn và thay bằng nút Navigation "Về trang chủ" rõ ràng.
+
+### Fixed
+- **Dropdown Rendering**: Sửa lỗi câu hỏi DROPDOWN bị trống nội dung do lệch field mapping từ Cloudflare D1 (field `text_field` vs component `text`).
+- **Answer Selection Fix**: Sửa lỗi callback `onAnswerChange` trong DROPDOWN không cập nhật được đáp án do sai tham số.
+- **D1 Data Mapping**: Bổ sung mapping tự động cho các field `text`, `mainQuestion`, `correctWord` trong Zustand store để tương thích với cấu trúc database D1.
 
 ## [2026-02-04]
 ### Added

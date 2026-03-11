@@ -20,6 +20,8 @@ export interface UseQuizManagerReturn {
     // Filters
     filterLevel: string;
     setFilterLevel: (level: string) => void;
+    filterCategory: string;
+    setFilterCategory: (category: string) => void;
     searchTerm: string;
     setSearchTerm: (term: string) => void;
 
@@ -38,6 +40,7 @@ const QUIZZES_PER_PAGE = 10;
 
 export const useQuizManager = ({ quizzes, onDelete }: UseQuizManagerProps): UseQuizManagerReturn => {
     const [filterLevel, setFilterLevel] = useState('All');
+    const [filterCategory, setFilterCategory] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [page, setPage] = useState(1);
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -46,12 +49,17 @@ export const useQuizManager = ({ quizzes, onDelete }: UseQuizManagerProps): UseQ
     const filteredQuizzes = useMemo(() => {
         let filtered = [...quizzes];
 
+        // Category filter (subject/mon hoc)
+        if (filterCategory !== 'all') {
+            filtered = filtered.filter(q => (q as any).category === filterCategory);
+        }
+
         // Level filter - use String() to handle both number and string classLevel
         if (filterLevel !== 'All') {
             filtered = filtered.filter(q => String(q.classLevel) === String(filterLevel));
         }
 
-        // Search filter - support searching by title or class level
+        // Search filter - support searching by title, class level, or tag
         if (searchTerm.trim()) {
             const search = searchTerm.toLowerCase().trim();
 
@@ -62,6 +70,13 @@ export const useQuizManager = ({ quizzes, onDelete }: UseQuizManagerProps): UseQ
                 // Filter by class level extracted from search
                 const targetLevel = classLevelMatch[1];
                 filtered = filtered.filter(q => String(q.classLevel) === targetLevel);
+            } else if (search.startsWith('#')) {
+                // Tag search - filter by tag
+                const tagSearch = search.substring(1);
+                filtered = filtered.filter(q => {
+                    const tags: string[] = typeof (q as any).tags === 'string' ? JSON.parse((q as any).tags || '[]') : ((q as any).tags || []);
+                    return tags.some(t => t.toLowerCase().includes(tagSearch));
+                });
             } else {
                 // Normal title search
                 filtered = filtered.filter(q =>
@@ -76,7 +91,7 @@ export const useQuizManager = ({ quizzes, onDelete }: UseQuizManagerProps): UseQ
         );
 
         return filtered;
-    }, [quizzes, filterLevel, searchTerm]);
+    }, [quizzes, filterLevel, filterCategory, searchTerm]);
 
     // Calculate pagination
     const totalPages = Math.ceil(filteredQuizzes.length / QUIZZES_PER_PAGE);
@@ -113,6 +128,8 @@ export const useQuizManager = ({ quizzes, onDelete }: UseQuizManagerProps): UseQ
         paginatedQuizzes,
         filterLevel,
         setFilterLevel,
+        filterCategory,
+        setFilterCategory,
         searchTerm,
         setSearchTerm,
         page,

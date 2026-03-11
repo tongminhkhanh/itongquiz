@@ -5,12 +5,14 @@ export const SCHOOL_NAME = "Trường Tiểu học Ít Ong";
 export const WORKERS_API_URL = import.meta.env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
 export const USE_D1 = true; // Always use D1 - Google Sheets removed
 
-// Danh mục quiz cho học sinh
+// Danh mục quiz theo môn học (đồng bộ với SUBJECT_CONFIG)
 export const QUIZ_CATEGORIES = [
-  { id: 'vioedu', name: 'VioEdu', color: 'from-green-400 to-emerald-500' },
-  { id: 'trang-nguyen', name: 'Trạng Nguyên Tiếng Việt', color: 'from-red-400 to-pink-500' },
-  { id: 'ioe', name: 'IOE - Olympic Tiếng Anh', color: 'from-sky-400 to-blue-500' },
-  { id: 'on-tap', name: 'Ôn tập theo chủ đề', color: 'from-emerald-400 to-green-500' }
+  { id: 'toan', name: '🧮 Toán Học', color: 'from-blue-400 to-blue-600' },
+  { id: 'tieng-viet', name: '📘 Tiếng Việt', color: 'from-amber-400 to-amber-600' },
+  { id: 'tu-nhien-xa-hoi', name: '🌍 Tự nhiên & Xã hội', color: 'from-emerald-400 to-emerald-600' },
+  { id: 'tieng-anh', name: '🇬🇧 Tiếng Anh', color: 'from-indigo-400 to-indigo-600' },
+  { id: 'tin-hoc', name: '💻 Tin học', color: 'from-slate-400 to-slate-600' },
+  { id: 'ioe', name: '🏆 Luyện thi IOE', color: 'from-yellow-400 to-orange-500' },
 ];
 
 // Danh sách tài khoản được phép truy cập tab IOE (username)

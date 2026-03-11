@@ -195,13 +195,14 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         // Get all assignments (for teacher dashboard)
         if (all === 'true') {
             const allRows = await db.prepare(`
-                SELECT a.*, c.name as class_name, q.title as quiz_title
+                SELECT a.*, c.name as class_name, q.title as quiz_title, s.full_name as student_name
                 FROM assignments a
                 LEFT JOIN classes c ON a.class_id = c.id
                 LEFT JOIN quizzes q ON a.quiz_id = q.id
+                LEFT JOIN students s ON a.student_id = s.id
             `).all();
             const mapped = allRows.results.map((a: any) => ({
-                ...mapAssignment(a), className: a.class_name || '', quizTitle: a.quiz_title || 'Bài tập',
+                ...mapAssignment(a), className: a.class_name || '', quizTitle: a.quiz_title || 'Bài tập', studentName: a.student_name || ''
             }));
             return jsonResponse({ status: 'success', data: mapped });
         }
@@ -215,11 +216,11 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
 
             const placeholders = classIds.map(() => '?').join(',');
             const assignments = await db.prepare(
-                `SELECT a.*, c.name as class_name FROM assignments a LEFT JOIN classes c ON a.class_id = c.id WHERE a.class_id IN (${placeholders})`
+                `SELECT a.*, c.name as class_name, s.full_name as student_name FROM assignments a LEFT JOIN classes c ON a.class_id = c.id LEFT JOIN students s ON a.student_id = s.id WHERE a.class_id IN (${placeholders})`
             ).bind(...classIds).all();
 
             const mapped = assignments.results.map((a: any) => ({
-                ...mapAssignment(a), className: a.class_name || '',
+                ...mapAssignment(a), className: a.class_name || '', studentName: a.student_name || ''
             }));
             return jsonResponse({ status: 'success', data: mapped });
         }
@@ -249,8 +250,16 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
 
         // Get assignments by classId
         if (classId) {
-            const rows = await db.prepare('SELECT * FROM assignments WHERE class_id = ?').bind(classId).all();
-            return jsonResponse({ status: 'success', data: mapAssignments(rows.results) });
+            const rows = await db.prepare(`
+                SELECT a.*, s.full_name as student_name 
+                FROM assignments a 
+                LEFT JOIN students s ON a.student_id = s.id 
+                WHERE a.class_id = ?
+            `).bind(classId).all();
+            const mapped = rows.results.map((a: any) => ({
+                ...mapAssignment(a), studentName: a.student_name || ''
+            }));
+            return jsonResponse({ status: 'success', data: mapped });
         }
 
         return errorResponse('Missing query parameter: classId, teacherUsername, studentId, or all=true');
