@@ -70,7 +70,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
         const assignedQuizIds = new Set(
             classroomStore.assignments
-                .filter(a => a.studentId === studentSession.studentId)
+                .filter(a => !a.studentId || a.studentId === '' || a.studentId === studentSession.studentId)
                 .map(a => a.quizId)
         );
 
