@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Quiz } from '../../types';
 import { Card, Button } from '../common';
 import { useQuizManager } from '../../hooks';
-import { Search, Key, Edit, Trash2, RefreshCw, Lock, Tag } from 'lucide-react';
+import { Search, Key, Edit, Trash2, RefreshCw, Lock, Tag, Copy, Send, MoreVertical, Eye, X, Loader2, CheckCircle2 } from 'lucide-react';
 import { useQuizStore } from '../../../stores/quizStore';
 import { useAuthStore } from '../../../stores/authStore';
+import { useClassroomStore } from '../../stores/useClassroomStore';
 import { SUBJECT_CONFIG } from '../HomePage/StudentDashboardUI';
 
 // Category tabs config for teacher filter
@@ -24,9 +25,211 @@ interface ManageTabProps {
     onManageCode: (quizId: string, currentCode: string) => void;
 }
 
+// ============ Dropdown Menu Component ============
+const DropdownMenu: React.FC<{
+    quiz: Quiz;
+    onManageCode: (quizId: string, currentCode: string) => void;
+    onEdit: (quiz: Quiz) => void;
+    onDelete: (quizId: string) => void;
+    isDeleting: boolean;
+}> = ({ quiz, onManageCode, onEdit, onDelete, isDeleting }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        if (isOpen) document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
+
+    return (
+        <div className="relative" ref={menuRef}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                title="Tùy chọn khác"
+            >
+                <MoreVertical className="w-4 h-4" />
+            </button>
+            {isOpen && (
+                <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-xl z-50 py-1 animate-in fade-in slide-in-from-top-2">
+                    <button
+                        onClick={() => { onManageCode(quiz.id, quiz.accessCode || ''); setIsOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                    >
+                        <Key className="w-4 h-4" /> Quản lý mã
+                    </button>
+                    <button
+                        onClick={() => {
+                            window.open(`${window.location.origin}?quizId=${quiz.id}`, '_blank');
+                            setIsOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                    >
+                        <Eye className="w-4 h-4" /> Xem trước
+                    </button>
+                    <button
+                        onClick={() => { onEdit(quiz); setIsOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-colors"
+                    >
+                        <Edit className="w-4 h-4" /> Sửa đề
+                    </button>
+                    <div className="my-1 border-t border-gray-100" />
+                    <button
+                        onClick={() => { onDelete(quiz.id); setIsOpen(false); }}
+                        disabled={isDeleting}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        {isDeleting ? 'Đang xóa...' : 'Xóa đề'}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ============ Quick Assign Modal Component ============
+const QuickAssignModal: React.FC<{
+    quiz: Quiz;
+    onClose: () => void;
+}> = ({ quiz, onClose }) => {
+    const authStore = useAuthStore();
+    const classroomStore = useClassroomStore();
+    const [selectedClassId, setSelectedClassId] = useState('');
+    const [deadline, setDeadline] = useState('');
+    const [maxAttempts, setMaxAttempts] = useState(1);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [success, setSuccess] = useState(false);
+
+    // Fetch classes on mount
+    useEffect(() => {
+        if (authStore.user?.username) {
+            classroomStore.fetchClasses(authStore.user.username);
+        }
+        // Set default deadline to tomorrow
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(23, 59, 0, 0);
+        setDeadline(tomorrow.toISOString().slice(0, 16));
+    }, []);
+
+    const handleSubmit = async () => {
+        if (!selectedClassId || !deadline) return;
+        setIsSubmitting(true);
+        try {
+            const result = await classroomStore.addAssignment({
+                quizId: quiz.id,
+                classId: selectedClassId,
+                deadline: new Date(deadline).toISOString(),
+                maxAttempts,
+            });
+            if (result) {
+                setSuccess(true);
+                setTimeout(onClose, 1500);
+            }
+        } catch (err) {
+            console.error('Quick assign error:', err);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <div
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4 flex items-center justify-between">
+                    <div>
+                        <h3 className="text-white font-bold text-lg">🚀 Giao bài nhanh</h3>
+                        <p className="text-orange-100 text-sm mt-0.5 truncate max-w-[280px]">{quiz.title}</p>
+                    </div>
+                    <button onClick={onClose} className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20 transition-colors">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {success ? (
+                    <div className="px-6 py-10 flex flex-col items-center gap-3">
+                        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                            <CheckCircle2 className="w-8 h-8 text-green-600" />
+                        </div>
+                        <p className="text-green-700 font-semibold text-lg">Giao bài thành công!</p>
+                    </div>
+                ) : (
+                    <div className="px-6 py-5 space-y-4">
+                        {/* Select Class */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Chọn lớp</label>
+                            <select
+                                value={selectedClassId}
+                                onChange={(e) => setSelectedClassId(e.target.value)}
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-50 transition-colors"
+                            >
+                                <option value="">-- Chọn lớp --</option>
+                                {classroomStore.classes.map((c) => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Deadline */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Hạn nộp</label>
+                            <input
+                                type="datetime-local"
+                                value={deadline}
+                                onChange={(e) => setDeadline(e.target.value)}
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-50 transition-colors"
+                            />
+                        </div>
+
+                        {/* Max Attempts */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Số lần làm bài tối đa</label>
+                            <select
+                                value={maxAttempts}
+                                onChange={(e) => setMaxAttempts(Number(e.target.value))}
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-50 transition-colors"
+                            >
+                                {[1, 2, 3, 5, 10].map(n => (
+                                    <option key={n} value={n}>{n} lần</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Submit Button */}
+                        <button
+                            onClick={handleSubmit}
+                            disabled={!selectedClassId || !deadline || isSubmitting}
+                            className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-200"
+                        >
+                            {isSubmitting ? (
+                                <><Loader2 className="w-5 h-5 animate-spin" /> Đang giao...</>
+                            ) : (
+                                <><Send className="w-5 h-5" /> Giao ngay</>
+                            )}
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// ============ Main ManageTab Component ============
 const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onManageCode }) => {
     // Auth store - to check class permissions
     const authStore = useAuthStore();
+    const quizStore = useQuizStore();
 
     // Check if teacher is locked to a specific class
     const isClassLocked = !authStore.isAdmin && !!authStore.teacherClass;
@@ -34,9 +237,9 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
 
     // Helper function to check if user can manage this quiz
     const canManageQuiz = (quiz: Quiz): boolean => {
-        if (authStore.isAdmin) return true; // Admin can manage all
-        if (!teacherClass) return true; // No class restriction
-        return quiz.classLevel === teacherClass; // Only manage own class
+        if (authStore.isAdmin) return true;
+        if (!teacherClass) return true;
+        return quiz.classLevel === teacherClass;
     };
 
     // Use custom hooks for quiz management
@@ -45,8 +248,9 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
         onDelete: onDelete,
     });
 
-    const quizStore = useQuizStore();
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+    const [assigningQuiz, setAssigningQuiz] = useState<Quiz | null>(null);
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
@@ -57,8 +261,28 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
         }
     };
 
+    const handleDuplicate = async (quiz: Quiz) => {
+        if (!confirm(`Nhân bản đề "${quiz.title}"?`)) return;
+        setDuplicatingId(quiz.id);
+        try {
+            const success = await quizStore.duplicateQuiz(quiz.id);
+            if (success) {
+                // Show brief feedback (quizzes already reloaded by store)
+            } else {
+                alert('Không thể nhân bản đề. Vui lòng thử lại.');
+            }
+        } finally {
+            setDuplicatingId(null);
+        }
+    };
+
     return (
         <div className="space-y-4">
+            {/* Quick Assign Modal */}
+            {assigningQuiz && (
+                <QuickAssignModal quiz={assigningQuiz} onClose={() => setAssigningQuiz(null)} />
+            )}
+
             {/* Category Filter Tabs */}
             <div className="flex flex-wrap gap-2 pb-2 border-b border-gray-100">
                 {CATEGORY_TABS.map((tab) => (
@@ -66,8 +290,8 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
                         key={tab.key}
                         onClick={() => { quizManagerHook.setFilterCategory(tab.key); quizManagerHook.setPage(1); }}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${quizManagerHook.filterCategory === tab.key
-                                ? 'bg-orange-500 text-white shadow-sm'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            ? 'bg-orange-500 text-white shadow-sm'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                     >
                         {tab.key === 'all' ? (
@@ -121,7 +345,7 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
                 {quizManagerHook.paginatedQuizzes.map((quiz) => (
                     <Card key={quiz.id} className="hover:shadow-md transition-shadow">
                         <div className="flex items-center justify-between">
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                                 <a
                                     href={`${window.location.origin}?quizId=${quiz.id}`}
                                     target="_blank"
@@ -163,36 +387,42 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 ml-3 flex-shrink-0">
                                 {canManageQuiz(quiz) ? (
                                     <>
-                                        <Button
-                                            onClick={() => onManageCode(quiz.id, quiz.accessCode || '')}
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-purple-600 hover:bg-purple-50"
-                                            icon={<Key className="w-4 h-4" />}
+                                        {/* Quick Assign Button - Primary Action */}
+                                        <button
+                                            onClick={() => setAssigningQuiz(quiz)}
+                                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-sm hover:shadow-md transition-all"
+                                            title="Giao bài nhanh"
                                         >
-                                            Mã
-                                        </Button>
-                                        <Button
-                                            onClick={() => onEdit(quiz)}
-                                            variant="ghost"
-                                            size="sm"
-                                            icon={<Edit className="w-4 h-4" />}
+                                            <Send className="w-3.5 h-3.5" />
+                                            <span className="hidden sm:inline">Giao bài</span>
+                                        </button>
+
+                                        {/* Duplicate Button */}
+                                        <button
+                                            onClick={() => handleDuplicate(quiz)}
+                                            disabled={duplicatingId === quiz.id}
+                                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-all disabled:opacity-50"
+                                            title="Nhân bản đề"
                                         >
-                                            Sửa
-                                        </Button>
-                                        <Button
-                                            onClick={() => quizManagerHook.handleDelete(quiz.id)}
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-red-600 hover:bg-red-50"
-                                            loading={quizManagerHook.deletingId === quiz.id}
-                                            icon={<Trash2 className="w-4 h-4" />}
-                                        >
-                                            {quizManagerHook.deletingId === quiz.id ? 'Đang xóa...' : 'Xóa'}
-                                        </Button>
+                                            {duplicatingId === quiz.id ? (
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                                <Copy className="w-3.5 h-3.5" />
+                                            )}
+                                            <span className="hidden sm:inline">{duplicatingId === quiz.id ? 'Đang sao...' : 'Nhân bản'}</span>
+                                        </button>
+
+                                        {/* More Options Dropdown */}
+                                        <DropdownMenu
+                                            quiz={quiz}
+                                            onManageCode={onManageCode}
+                                            onEdit={onEdit}
+                                            onDelete={quizManagerHook.handleDelete}
+                                            isDeleting={quizManagerHook.deletingId === quiz.id}
+                                        />
                                     </>
                                 ) : (
                                     <span className="flex items-center gap-1 text-xs text-gray-400 px-2 py-1 bg-gray-100 rounded-lg">

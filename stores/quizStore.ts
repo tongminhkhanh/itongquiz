@@ -45,6 +45,7 @@ interface QuizState {
     createQuiz: (quiz: Quiz) => Promise<void>;
     modifyQuiz: (quiz: Quiz) => Promise<void>;
     removeQuiz: (id: string) => Promise<void>;
+    duplicateQuiz: (quizId: string) => Promise<boolean>;
     submitResult: (result: StudentResult) => Promise<void>;
     removeResult: (id: string) => Promise<void>;
 }
@@ -95,6 +96,22 @@ export const useQuizStore = create<QuizState>()(
             // UI actions
             setLoading: (isLoading) => set({ isLoading }),
             setError: (error) => set({ error }),
+
+            // Duplicate quiz
+            duplicateQuiz: async (quizId: string) => {
+                try {
+                    const res = await callApi<any>('duplicate_quiz', { quizId });
+                    if (res?.status === 'success') {
+                        // Reload to get the new quiz with all questions
+                        await get().loadQuizzes();
+                        return true;
+                    }
+                    return false;
+                } catch (err) {
+                    console.error('[QuizStore] duplicateQuiz error:', err);
+                    return false;
+                }
+            },
 
             // Async Actions - All routes through Cloudflare Workers D1
             loadQuizzes: async () => {

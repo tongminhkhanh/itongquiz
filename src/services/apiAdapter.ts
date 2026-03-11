@@ -24,6 +24,7 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'create_quiz': method = 'POST'; path = '/api/quizzes'; break;
         case 'update_quiz': method = 'PUT'; path = `/api/quizzes/${payload.id || payload.quizId}`; break;
         case 'delete_quiz': method = 'DELETE'; path = `/api/quizzes/${payload.id || payload.quizId}`; break;
+        case 'duplicate_quiz': method = 'POST'; path = `/api/quizzes/${payload.quizId}/duplicate`; break;
         case 'get_questions': method = 'GET'; path = '/api/questions'; if (payload.quizId) urlParams.append('quizId', payload.quizId); break;
 
         // --- Results ---

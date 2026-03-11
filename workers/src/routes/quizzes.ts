@@ -6,7 +6,7 @@
 // GET /api/questions - List questions (optional ?quizId=X)
 
 import { Env } from '../types';
-import { jsonResponse, errorResponse } from '../utils/response';
+import { jsonResponse, errorResponse, generateId } from '../utils/response';
 import { mapQuestionForSave, parseBody, extractIdFromPath } from '../utils/helpers';
 
 export async function handleQuizRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
@@ -128,6 +128,76 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         } catch (err: any) {
             console.error('[PUT /api/quizzes] Error:', err.message, err.stack);
             return errorResponse(`Failed to update quiz: ${err.message}`, 500);
+        }
+    }
+
+    // POST /api/quizzes/:id/duplicate - Duplicate quiz with all questions
+    if (path.match(/^\/api\/quizzes\/[^/]+\/duplicate$/) && method === 'POST') {
+        const segments = path.split('/');
+        const quizId = segments[3]; // /api/quizzes/{id}/duplicate
+        if (!quizId) return errorResponse('Missing quiz ID');
+
+        try {
+            // Fetch original quiz
+            const originalQuiz = await db.prepare('SELECT * FROM quizzes WHERE id = ?').bind(quizId).first();
+            if (!originalQuiz) return errorResponse('Quiz not found', 404);
+
+            // Fetch original questions
+            const originalQuestions = await db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all();
+
+            // Generate new IDs
+            const newQuizId = generateId('quiz');
+            const createdAt = new Date().toISOString();
+            const newTitle = `Bản sao của ${originalQuiz.title}`;
+
+            const batch = [];
+
+            // Insert new quiz
+            batch.push(
+                db.prepare(
+                    `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                ).bind(
+                    newQuizId, newTitle, originalQuiz.class_level, originalQuiz.category || '',
+                    originalQuiz.time_limit, createdAt, '', // No access code for copy
+                    originalQuiz.require_code || 'FALSE', originalQuiz.created_by || '',
+                    'FALSE' // Don't show copies on home by default
+                )
+            );
+
+            // Insert copied questions
+            if (originalQuestions.results.length > 0) {
+                const stmt = db.prepare(
+                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                );
+                for (const q of originalQuestions.results as any[]) {
+                    const newQId = generateId('q');
+                    batch.push(stmt.bind(
+                        newQId, newQuizId, q.type, q.question || '', q.options || '', q.correct_answer || '',
+                        q.items || '', q.text_field || '', q.blanks || '', q.distractors || '',
+                        q.sentence || '', q.words || '', q.correct_word_indexes || '', q.image || ''
+                    ));
+                }
+            }
+
+            await db.batch(batch);
+
+            return jsonResponse({
+                status: 'success',
+                data: {
+                    id: newQuizId,
+                    title: newTitle,
+                    classLevel: originalQuiz.class_level,
+                    category: originalQuiz.category || '',
+                    timeLimit: originalQuiz.time_limit,
+                    createdAt,
+                    questionCount: originalQuestions.results.length,
+                },
+            });
+        } catch (err: any) {
+            console.error('[POST /api/quizzes/:id/duplicate] Error:', err.message, err.stack);
+            return errorResponse(`Failed to duplicate quiz: ${err.message}`, 500);
         }
     }
 
