@@ -94,18 +94,7 @@ const LoginLandingPage: React.FC = () => {
                     <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px] bg-teal-400"></div>
                 </div>
 
-                {/* Floating 3D Element */}
-                <motion.div
-                    animate={{ y: [0, -20, 0] }}
-                    transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-                    className="absolute top-1/4 right-10 md:right-20 opacity-80 pointer-events-none hidden lg:block"
-                >
-                    <img
-                        src={`${FLUENT_CDN}/Rocket/3D/rocket_3d.png`}
-                        alt="Rocket"
-                        className="w-48 h-48 filter drop-shadow-2xl"
-                    />
-                </motion.div>
+
 
                 <div className="relative z-10 max-w-2xl">
                     <div className="flex items-center gap-3 mb-8">
