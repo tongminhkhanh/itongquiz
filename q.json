@@ -1,0 +1,34 @@
+[
+  {
+    "id": "q-manual-1773130666529",
+    "quiz_id": "quiz-1773114884560",
+    "type": "CATEGORIZATION",
+    "question": "Hãy xếp các câu thơ sau vào nhóm thích hợp.\n(Lưu ý: Với câu thơ không thuộc nhóm nào, em không xếp.)",
+    "options": "",
+    "correct_answer": "",
+    "items": "[{\"id\":\"1\",\"content\":\"Quê ta đồng tháng Mười trĩu hạt / Như biển êm bất ngờ dậy sóng rầm.\",\"categoryId\":\"cat-auto-1\"},{\"id\":\"2\",\"content\":\"Bồng bềnh mây trắng êm trôi / Tiếng chim ríu rít gọi mời hân hoan.\",\"categoryId\":\"cat-auto-1\"},{\"id\":\"1773130585045\",\"content\":\"Con ong bé nhỏ chuyên cần / Mải mê bay khắp cánh đồng gần xa.\",\"categoryId\":\"cat-auto-2\"}]",
+    "text_field": "",
+    "blanks": "",
+    "distractors": "[{\"id\":\"cat-auto-1\",\"name\":\"so sánh\"},{\"id\":\"cat-auto-2\",\"name\":\"nhân hoá\"}]",
+    "sentence": "",
+    "words": "",
+    "correct_word_indexes": "",
+    "image": "https://res.cloudinary.com/dwv7hot9x/image/upload/v1773130654/2_bwx8kn.png"
+  },
+  {
+    "id": "q-manual-1773130865682",
+    "quiz_id": "quiz-1773114884560",
+    "type": "CATEGORIZATION",
+    "question": "Hãy xếp các câu sau vào nhóm thích hợp.",
+    "options": "",
+    "correct_answer": "",
+    "items": "[{\"id\":\"1\",\"content\":\"Cam sành Hàm Yên là đặc sản của tỉnh Tuyên Quang.\",\"categoryId\":\"cat-auto-1\"},{\"id\":\"2\",\"content\":\"Hồ Na Hang là thắng cảnh nổi tiếng của tỉnh Tuyên Quang.\",\"categoryId\":\"cat-auto-1\"},{\"id\":\"1773130750632\",\"content\":\"Người dân Tuyên Quang vừa thân thiện vừa mến khách.\",\"categoryId\":\"cat-auto-2\"},{\"id\":\"1773130765253\",\"content\":\"Hồ Na Hang trong xanh như tấm gương màu ngọc thạch.\",\"categoryId\":\"cat-auto-2\"},{\"id\":\"1773130779878\",\"content\":\"Chúng em tham quan hồ thuỷ điện Na Hang.\",\"categoryId\":\"cat-1773201314474\"},{\"id\":\"1773130791429\",\"content\":\"Gia đình em ghé thăm khu di tích Tân Trào.\",\"categoryId\":\"cat-1773201314474\"}]",
+    "text_field": "",
+    "blanks": "",
+    "distractors": "[{\"id\":\"cat-auto-1\",\"name\":\"giới thiệu\"},{\"id\":\"cat-auto-2\",\"name\":\"đặc điểm\"},{\"id\":\"cat-1773201314474\",\"name\":\"hoạt động\"}]",
+    "sentence": "",
+    "words": "",
+    "correct_word_indexes": "",
+    "image": "https://res.cloudinary.com/dwv7hot9x/image/upload/v1773130849/3_qi8oa2.png"
+  }
+]

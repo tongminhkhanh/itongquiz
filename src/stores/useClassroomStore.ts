@@ -19,6 +19,7 @@ import {
 import * as classroomService from '../services/classroomService';
 import { useGamificationStore, restoreGamificationData } from './useGamificationStore';
 import { PetData, ShopItem } from '../types/gamification.types';
+import { StorageKeys } from '../constants/storageKeys';
 
 // --- Store Interface ---
 
@@ -61,10 +62,6 @@ interface ClassroomStore {
     // Utilities
     clearError: () => void;
 }
-
-// --- Constants ---
-
-const STUDENT_SESSION_KEY = 'itongquiz_student_session';
 
 // --- Store ---
 
@@ -309,7 +306,7 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
         try {
             const session = await classroomService.studentLogin(payload);
             if (session) {
-                localStorage.setItem(STUDENT_SESSION_KEY, JSON.stringify(session));
+                localStorage.setItem(StorageKeys.STUDENT_SESSION, JSON.stringify(session));
                 set({ studentSession: session, isLoading: false });
 
                 // Initialize gamification data from login response
@@ -343,7 +340,7 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
     },
 
     logoutStudent: () => {
-        localStorage.removeItem(STUDENT_SESSION_KEY);
+        localStorage.removeItem(StorageKeys.STUDENT_SESSION);
         set({ studentSession: null, assignments: [] });
         // Clear gamification data on logout
         useGamificationStore.getState().clearGamification();
@@ -351,7 +348,7 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
 
     restoreStudentSession: () => {
         try {
-            const saved = localStorage.getItem(STUDENT_SESSION_KEY);
+            const saved = localStorage.getItem(StorageKeys.STUDENT_SESSION);
             if (saved) {
                 const session: StudentSession = JSON.parse(saved);
                 set({ studentSession: session });
@@ -359,7 +356,7 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
                 restoreGamificationData();
             }
         } catch {
-            localStorage.removeItem(STUDENT_SESSION_KEY);
+            localStorage.removeItem(StorageKeys.STUDENT_SESSION);
         }
     },
 
@@ -386,7 +383,7 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
                 const session = get().studentSession;
                 if (session) {
                     const updatedSession = { ...session, avatar };
-                    localStorage.setItem(STUDENT_SESSION_KEY, JSON.stringify(updatedSession));
+                    localStorage.setItem(StorageKeys.STUDENT_SESSION, JSON.stringify(updatedSession));
                     set({ studentSession: updatedSession });
                 }
                 return true;

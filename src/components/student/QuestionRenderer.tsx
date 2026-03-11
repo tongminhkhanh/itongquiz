@@ -13,7 +13,7 @@ interface QuestionRendererProps {
     onMatchingClick: (questionId: string, item: string, type: 'left' | 'right') => void;
 }
 
-import { formatMathText } from '../../utils/formatters';
+import { formatMathText, formatHtmlText } from '../../utils/formatters';
 
 // Helper function to render HTML content (supports <u>, <b>, <i> tags from PDF)
 // Also handles LaTeX math formulas with MathJax
@@ -22,7 +22,7 @@ const renderHtml = (text: string) => {
     const formatted = formatMathText(text);
     // Check if text contains HTML tags OR LaTeX math delimiters ($...$)
     if (/<[^>]+>/.test(formatted) || /\$[^$]+\$/.test(formatted)) {
-        return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
+        return <span dangerouslySetInnerHTML={{ __html: formatHtmlText(formatted) }} />;
     }
     return <>{formatted}</>;
 };
@@ -392,7 +392,20 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 {/* Drag & Drop */}
                 {q.type === QuestionType.DRAG_DROP && (() => {
                     const currentAnswers = (answers[q.id] as Record<number, string>) || {};
-                    const text = (q as any).text || "";
+                    let text = (q as any).text || "";
+
+                    const qBlanks = (q as any).blanks || [];
+                    const qDistractors = (q as any).distractors || [];
+                    // 🔐 Filter to ensure only strings (blanks might be objects in some cases)
+                    const words = [...qBlanks, ...qDistractors].filter((w): w is string => typeof w === 'string');
+
+                    // --- NEW FALLBACK LOGIC ---
+                    // If text is empty or has no blanks, but we have qBlanks, auto-generate drop zones
+                    if ((!text || !text.includes('[')) && qBlanks.length > 0) {
+                        text = qBlanks.map((_: any, i: number) => `[blank_${i}]`).join(" ");
+                    }
+                    // --------------------------
+
                     const parts = text.split(/(\[.*?\])/g);
                     const blanks: number[] = [];
                     parts.forEach((part: string, idx: number) => {
@@ -400,11 +413,6 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                             blanks.push(idx);
                         }
                     });
-
-                    const qBlanks = (q as any).blanks || [];
-                    const qDistractors = (q as any).distractors || [];
-                    // 🔐 Filter to ensure only strings (blanks might be objects in some cases)
-                    const words = [...qBlanks, ...qDistractors].filter((w): w is string => typeof w === 'string');
                     const seed = q.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
                     const allWords = words.sort((a, b) => {
                         const hashA = ((a || '').charCodeAt(0) * seed) % 100;
@@ -534,7 +542,8 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                             [itemsWithIndex[i], itemsWithIndex[j]] = [itemsWithIndex[j], itemsWithIndex[i]];
                         }
                         return itemsWithIndex;
-                    }, [items]); // Shuffle only when items change (or on mount)
+                        // eslint-disable-next-line react-hooks/exhaustive-deps
+                    }, [q.id]); // Use q.id for stable reference - prevents re-shuffle on re-render
 
                     const handleOrderChange = (originalIndex: number, orderValue: string) => {
                         const num = parseInt(orderValue, 10);

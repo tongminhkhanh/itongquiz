@@ -56,6 +56,7 @@ const StatisticsTab: React.FC<Props> = ({ quiz, result, answers }) => {
     function checkCorrectness(question: any, answer: any): boolean {
         switch (question.type) {
             case QuestionType.MCQ:
+            case QuestionType.IMAGE_QUESTION:
                 return answer === question.correctAnswer;
             case QuestionType.SHORT_ANSWER:
                 return String(answer).toLowerCase().trim() === String(question.correctAnswer).toLowerCase().trim();
@@ -76,20 +77,26 @@ const StatisticsTab: React.FC<Props> = ({ quiz, result, answers }) => {
                 return word.toLowerCase().replace(/\s+/g, '') === (question.correctWord || '').toLowerCase().replace(/\s+/g, '');
             case QuestionType.RIDDLE:
                 return String(answer).toLowerCase().trim() === String(question.correctAnswer).toLowerCase().trim();
-            case QuestionType.DRAG_DROP:
-                const ddText = (question as any).text || "";
+            case QuestionType.DRAG_DROP: {
+                let ddText = (question as any).text || "";
+                const ddBlanks = (question as any).blanks || [];
+                // Fallback: auto-generate text if empty (same as QuestionRenderer)
+                if ((!ddText || !ddText.includes('[')) && ddBlanks.length > 0) {
+                    ddText = ddBlanks.map((_: any, i: number) => `[blank_${i}]`).join(" ");
+                }
                 const ddParts = ddText.split(/(\[.*?\])/g);
                 let ddBlankIndex = 0;
                 let isDDCorrect = true;
                 ddParts.forEach((part: string, partIdx: number) => {
                     if (part.startsWith('[') && part.endsWith(']')) {
-                        const correctWord = (question as any).blanks?.[ddBlankIndex];
+                        const correctWord = ddBlanks[ddBlankIndex];
                         const studentWord = answer?.[partIdx];
                         if (studentWord !== correctWord) isDDCorrect = false;
                         ddBlankIndex++;
                     }
                 });
-                return isDDCorrect;
+                return isDDCorrect && ddBlanks.length > 0;
+            }
             case QuestionType.DROPDOWN:
                 const dropdownBlanks = (question as any).blanks || [];
                 return dropdownBlanks.every((b: any) => answer?.[b.id] === b.correctAnswer);
@@ -116,6 +123,14 @@ const StatisticsTab: React.FC<Props> = ({ quiz, result, answers }) => {
                 const sSorted = [...studentIdxs].sort((a, b) => a - b);
                 const cSorted = [...correctIdxs].sort((a, b) => a - b);
                 return sSorted.every((val, idx) => val === cSorted[idx]);
+            case QuestionType.ERROR_CORRECTION: {
+                const ecAnswer = answer as { wrongWord?: string; correctWord?: string } || {};
+                const sWrong = String(ecAnswer.wrongWord || '').toLowerCase().trim();
+                const sCorrect = String(ecAnswer.correctWord || '').toLowerCase().trim();
+                const eWrong = String((question as any).wrongWord || '').toLowerCase().trim();
+                const eCorrect = String((question as any).correctWord || '').toLowerCase().trim();
+                return sWrong !== '' && sCorrect !== '' && sWrong === eWrong && sCorrect === eCorrect;
+            }
             default:
                 return false;
         }

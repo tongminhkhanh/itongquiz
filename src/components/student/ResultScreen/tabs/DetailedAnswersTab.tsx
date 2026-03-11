@@ -86,6 +86,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
 
         switch (question.type) {
             case QuestionType.MCQ:
+            case QuestionType.IMAGE_QUESTION:
                 return answer === question.correctAnswer ? 'correct' : 'wrong';
             case QuestionType.SHORT_ANSWER:
                 return String(answer).toLowerCase().trim() === String(question.correctAnswer).toLowerCase().trim() ? 'correct' : 'wrong';
@@ -111,20 +112,26 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                 return studentWord.toLowerCase().replace(/\s+/g, '') === (question.correctWord || '').toLowerCase().replace(/\s+/g, '') ? 'correct' : 'wrong';
             case QuestionType.RIDDLE:
                 return String(answer).toLowerCase().trim() === String(question.correctAnswer).toLowerCase().trim() ? 'correct' : 'wrong';
-            case QuestionType.DRAG_DROP:
-                const ddText = (question as any).text || "";
+            case QuestionType.DRAG_DROP: {
+                let ddText = (question as any).text || "";
+                const ddBlanks = (question as any).blanks || [];
+                // Fallback: auto-generate text if empty (same as QuestionRenderer)
+                if ((!ddText || !ddText.includes('[')) && ddBlanks.length > 0) {
+                    ddText = ddBlanks.map((_: any, i: number) => `[blank_${i}]`).join(" ");
+                }
                 const ddParts = ddText.split(/(\[.*?\])/g);
                 let ddBlankIndex = 0;
                 let isDDCorrect = true;
                 ddParts.forEach((part: string, partIdx: number) => {
                     if (part.startsWith('[') && part.endsWith(']')) {
-                        const correctWord = (question as any).blanks?.[ddBlankIndex];
+                        const correctWord = ddBlanks[ddBlankIndex];
                         const studentWord = answer?.[partIdx];
                         if (studentWord !== correctWord) isDDCorrect = false;
                         ddBlankIndex++;
                     }
                 });
-                return isDDCorrect ? 'correct' : 'wrong';
+                return (isDDCorrect && ddBlanks.length > 0) ? 'correct' : 'wrong';
+            }
             case QuestionType.DROPDOWN:
                 const dropdownBlanks = (question as any).blanks || [];
                 const isDropdownCorrect = dropdownBlanks.every((b: any) => answer?.[b.id] === b.correctAnswer);
@@ -270,13 +277,14 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
 
                 {/* Answer details based on question type */}
                 <div className="space-y-3">
-                    {/* MCQ */}
-                    {q.type === QuestionType.MCQ && (
+                    {/* MCQ + IMAGE_QUESTION */}
+                    {(q.type === QuestionType.MCQ || q.type === QuestionType.IMAGE_QUESTION) && (
                         <div className="space-y-2">
                             {q.options.map((opt: string, idx: number) => {
                                 const letter = ['A', 'B', 'C', 'D'][idx];
                                 const isSelected = answer === letter;
                                 const isCorrectOption = q.correctAnswer === letter;
+                                const optImage = (q as any).optionImages?.[idx];
 
                                 return (
                                     <div
@@ -292,7 +300,12 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                             }`}>
                                             {letter}
                                         </span>
-                                        <MathSpan content={opt} className="flex-1" />
+                                        <div className="flex-1">
+                                            <MathSpan content={opt} className="" />
+                                            {optImage && (
+                                                <img src={optImage} alt={`Đáp án ${letter}`} className="max-h-24 rounded border border-gray-200 object-contain mt-1" />
+                                            )}
+                                        </div>
                                         {isSelected && <span className="text-sm font-medium">{isCorrectOption ? '✓ Em chọn (đúng)' : '✗ Em chọn'}</span>}
                                         {isCorrectOption && !isSelected && <span className="text-green-600 text-sm font-medium">✓ Đáp án đúng</span>}
                                     </div>

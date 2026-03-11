@@ -72,9 +72,10 @@ interface QuizPreviewProps {
     onSave: () => void;
     isSaving?: boolean;
     onUpdateQuestions?: (questions: Question[]) => void;
+    onCreateManual?: () => void;
 }
 
-const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = false, onUpdateQuestions }) => {
+const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = false, onUpdateQuestions, onCreateManual }) => {
     // Edit modal state
     const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
     const [editQuestionText, setEditQuestionText] = useState('');
@@ -353,7 +354,16 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
 
         // CATEGORIZATION specific
         if (question.type === QuestionType.CATEGORIZATION) {
-            setEditCategories((question as any).categories ? (question as any).categories.map((c: any) => ({ ...c })) : []);
+            const loadedCats = (question as any).categories ? (question as any).categories.map((c: any) => ({ ...c })) : [];
+            if (loadedCats.length === 0) {
+                // Auto-fix broken empty categories from previous bugs
+                setEditCategories([
+                    { id: `cat-auto-1`, name: 'Nhóm 1' },
+                    { id: `cat-auto-2`, name: 'Nhóm 2' }
+                ]);
+            } else {
+                setEditCategories(loadedCats);
+            }
             setEditCategorizationItems((question as any).items ? (question as any).items.map((i: any) => ({ ...i })) : []);
         }
 
@@ -469,8 +479,17 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
 
             // CATEGORIZATION specific - always save all fields
             if (updated.type === QuestionType.CATEGORIZATION) {
-                updated.categories = editCategories;
-                updated.items = editCategorizationItems;
+                const finalCategories = editCategories.map((c, i) => ({ ...c, name: c.name.trim() || `Nhóm ${i + 1}` }));
+                // Ensure all items are assigned to a valid category ID (fallback to first category if exist)
+                const validCategoryIds = new Set(finalCategories.map(c => c.id));
+                const finalItems = editCategorizationItems.filter(i => i.content.trim()).map(item => {
+                    if (!validCategoryIds.has(item.categoryId)) {
+                        return { ...item, categoryId: finalCategories[0]?.id || '' };
+                    }
+                    return item;
+                });
+                updated.categories = finalCategories;
+                updated.items = finalItems;
             }
 
             // ERROR_CORRECTION specific - always save all fields
@@ -652,7 +671,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                 newQuestion = {
                     id: newId,
                     type: QuestionType.MATCHING,
-                    mainQuestion: editQuestionText,
+                    question: editQuestionText,
                     pairs: editPairs.filter(p => p.left.trim() && p.right.trim()),
                 } as any;
                 break;
@@ -691,15 +710,24 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                     correctWord: editCorrectWord,
                 } as any;
                 break;
-            case QuestionType.CATEGORIZATION:
+            case QuestionType.CATEGORIZATION: {
+                const finalCategories = editCategories.map((c, i) => ({ ...c, name: c.name.trim() || `Nhóm ${i + 1}` }));
+                const validCategoryIds = new Set(finalCategories.map(c => c.id));
+                const finalItems = editCategorizationItems.filter(i => i.content.trim()).map(item => {
+                    if (!validCategoryIds.has(item.categoryId)) {
+                        return { ...item, categoryId: finalCategories[0]?.id || '' };
+                    }
+                    return item;
+                });
                 newQuestion = {
                     id: newId,
                     type: QuestionType.CATEGORIZATION,
                     question: editQuestionText,
-                    categories: editCategories.filter(c => c.name.trim()),
-                    items: editCategorizationItems.filter(i => i.content.trim()),
+                    categories: finalCategories,
+                    items: finalItems,
                 } as any;
                 break;
+            }
             case QuestionType.UNDERLINE:
                 newQuestion = {
                     id: newId,
@@ -1001,33 +1029,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                         </div>
                                     )}
 
-                                    {/* DRAG_DROP */}
-                                    {q.type === QuestionType.DRAG_DROP && (
-                                        <div className="ml-8 space-y-2">
-                                            <p className="text-sm text-gray-600">{formatMathText((q as any).text)}</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {((q as any).blanks || []).map((blank: string, i: number) => (
-                                                    <span key={i} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-medium">
-                                                        {formatMathText(blank)}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
 
-                                    {/* ORDERING */}
-                                    {q.type === QuestionType.ORDERING && (
-                                        <div className="ml-8 space-y-1">
-                                            {((q as any).correctOrder || (q as any).items || []).map((item: string, i: number) => (
-                                                <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg text-sm">
-                                                    <span className="w-6 h-6 flex items-center justify-center bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
-                                                        {i + 1}
-                                                    </span>
-                                                    <span className="text-gray-700">{formatMathText(item)}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
 
                                     {/* IMAGE_QUESTION */}
                                     {q.type === QuestionType.IMAGE_QUESTION && (
@@ -1072,7 +1074,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 {((q as any).blanks || []).map((blank: any, i: number) => (
                                                     <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg text-sm">
                                                         <span className="text-gray-500">Ô {i + 1}:</span>
-                                                        <span className="font-bold text-green-700"><span>blank.correctAnswer</span></span>
+                                                        <span className="font-bold text-green-700">{blank.correctAnswer}</span>
                                                         <span className="text-gray-400 text-xs">({(blank.options || []).join(', ')})</span>
                                                     </div>
                                                 ))}
@@ -1084,7 +1086,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                     {q.type === QuestionType.UNDERLINE && (
                                         <div className="ml-8 space-y-2">
                                             <p className="text-sm text-gray-600 mb-2">
-                                                <strong>Câu:</strong> <span>(q as any).sentence</span>
+                                                <strong>Câu:</strong> {(q as any).sentence}
                                             </p>
                                             <div className="flex flex-wrap gap-2">
                                                 {((q as any).words || []).map((word: string, i: number) => {
@@ -1097,7 +1099,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                                 : 'bg-gray-100 text-gray-600'
                                                                 }`}
                                                         >
-                                                            <span>word</span>
+                                                            {word}
                                                             {isCorrect && <span className="ml-1 text-green-600">✓</span>}
                                                         </span>
                                                     );
@@ -1111,7 +1113,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                         <div className="ml-8 space-y-3">
                                             {((q as any).instruction) && (
                                                 <p className="text-sm text-amber-700 italic bg-amber-50 p-2 rounded">
-                                                    <span>(q as any).instruction</span>
+                                                    {(q as any).instruction}
                                                 </p>
                                             )}
                                             {((q as any).categories || []).map((cat: any) => {
@@ -1119,7 +1121,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 return (
                                                     <div key={cat.id} className="border rounded-lg p-3 bg-gray-50">
                                                         <p className="font-bold text-indigo-700 text-sm mb-2">
-                                                            <span>cat.name</span>
+                                                            {cat.name}
                                                         </p>
                                                         <div className="flex flex-wrap gap-2">
                                                             {itemsInCat.length === 0 ? (
@@ -1127,7 +1129,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                             ) : (
                                                                 itemsInCat.map((item: any) => (
                                                                     <span key={item.id} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
-                                                                        <span>item.content</span>
+                                                                        {item.content}
                                                                     </span>
                                                                 ))
                                                             )}
@@ -1147,7 +1149,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                             <div className="flex flex-wrap gap-2">
                                                                 {itemsWithNoCategory.map((item: any) => (
                                                                     <span key={item.id} className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-medium">
-                                                                        <span>item.content</span>
+                                                                        {item.content}
                                                                     </span>
                                                                 ))}
                                                             </div>
@@ -1314,9 +1316,21 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center py-12 text-gray-400">
+                    <div className="text-center py-10 text-gray-400">
                         <PlusCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>Nhấn "Tạo câu hỏi với AI" để xem trước đề</p>
+                        <p className="mb-4">Nhấn "Tạo câu hỏi với AI" để xem trước đề</p>
+                        {onCreateManual && (
+                            <div className="border-t border-gray-100 pt-4 mt-4">
+                                <p className="text-xs text-gray-400 mb-3">Hoặc tạo đề thủ công</p>
+                                <button
+                                    onClick={onCreateManual}
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-semibold text-sm hover:from-indigo-600 hover:to-purple-600 transition-all shadow-md hover:shadow-lg"
+                                >
+                                    <Edit3 className="w-4 h-4" />
+                                    ✍️ Tạo đề thủ công
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </Card>

@@ -251,6 +251,7 @@ function checkAnswer(question: any, answer: any): boolean {
 
     switch (question.type) {
         case QuestionType.MCQ:
+        case QuestionType.IMAGE_QUESTION:
             return answer === question.correctAnswer;
         case QuestionType.SHORT_ANSWER:
             return String(answer).toLowerCase().trim() === String(question.correctAnswer).toLowerCase().trim();
@@ -267,6 +268,72 @@ function checkAnswer(question: any, answer: any): boolean {
             const studentAns = (answer as string[]) || [];
             const correctAns = question.correctAnswers || [];
             return studentAns.length === correctAns.length && studentAns.every((v: string) => correctAns.includes(v));
+        case QuestionType.DRAG_DROP: {
+            let ddText = question.text || "";
+            const ddBlanks = question.blanks || [];
+            if ((!ddText || !ddText.includes('[')) && ddBlanks.length > 0) {
+                ddText = ddBlanks.map((_: any, i: number) => `[blank_${i}]`).join(" ");
+            }
+            const ddParts = ddText.split(/(\[.*?\])/g);
+            let ddBlankIndex = 0;
+            let isDDCorrect = true;
+            ddParts.forEach((part: string, partIdx: number) => {
+                if (part.startsWith('[') && part.endsWith(']')) {
+                    const correctWord = ddBlanks[ddBlankIndex];
+                    const studentWord = answer?.[partIdx];
+                    if (studentWord !== correctWord) isDDCorrect = false;
+                    ddBlankIndex++;
+                }
+            });
+            return isDDCorrect && ddBlanks.length > 0;
+        }
+        case QuestionType.DROPDOWN:
+            const dropdownBlanks = question.blanks || [];
+            return dropdownBlanks.every((b: any) => answer?.[b.id] === b.correctAnswer);
+        case QuestionType.ORDERING: {
+            let oCorrect = question.correctOrder || [];
+            if (!Array.isArray(oCorrect) || oCorrect.length === 0) {
+                try { oCorrect = JSON.parse(question.correctAnswer); } catch { }
+            }
+            if (!Array.isArray(oCorrect)) return false;
+            if (Array.isArray(answer)) {
+                return answer.length === oCorrect.length && answer.every((val: number, idx: number) => Number(val) === Number(oCorrect[idx]));
+            } else if (typeof answer === 'object') {
+                for (let i = 0; i < oCorrect.length; i++) {
+                    if (Number(answer[oCorrect[i]]) !== i + 1) return false;
+                }
+                return oCorrect.length > 0;
+            }
+            return false;
+        }
+        case QuestionType.CATEGORIZATION:
+            return (question.items || []).every((item: any) => {
+                const studentCatId = answer?.[item.id];
+                return item.categoryId ? studentCatId === item.categoryId : !studentCatId;
+            });
+        case QuestionType.UNDERLINE: {
+            const sIdxs = (answer as number[]) || [];
+            const cIdxs = question.correctWordIndexes || [];
+            if (sIdxs.length !== cIdxs.length) return false;
+            const sS = [...sIdxs].sort((a, b) => a - b);
+            const cS = [...cIdxs].sort((a, b) => a - b);
+            return sS.every((val, idx) => val === cS[idx]);
+        }
+        case QuestionType.WORD_SCRAMBLE: {
+            const letters = question.letters || [];
+            const word = ((answer as number[]) || []).map((i: number) => letters[i]).join('');
+            return word.toLowerCase().replace(/\s+/g, '') === (question.correctWord || '').toLowerCase().replace(/\s+/g, '');
+        }
+        case QuestionType.RIDDLE:
+            return String(answer).toLowerCase().trim() === String(question.correctAnswer).toLowerCase().trim();
+        case QuestionType.ERROR_CORRECTION: {
+            const ecAnswer = answer as { wrongWord?: string; correctWord?: string } || {};
+            const sWrong = String(ecAnswer.wrongWord || '').toLowerCase().trim();
+            const sCorrect = String(ecAnswer.correctWord || '').toLowerCase().trim();
+            const eWrong = String(question.wrongWord || '').toLowerCase().trim();
+            const eCorrect = String(question.correctWord || '').toLowerCase().trim();
+            return sWrong !== '' && sCorrect !== '' && sWrong === eWrong && sCorrect === eCorrect;
+        }
         default:
             return false;
     }

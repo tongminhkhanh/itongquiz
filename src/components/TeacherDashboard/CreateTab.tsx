@@ -261,6 +261,24 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
         return code;
     };
 
+    // Handle manual quiz creation (no AI)
+    const handleCreateManual = () => {
+        const quiz: Quiz = {
+            id: editingQuiz?.id || `quiz-manual-${Date.now()}`,
+            title: quizTitle || 'Đề thi thủ công',
+            classLevel: classLevel || '3',
+            timeLimit: typeof manualTimeLimit === 'number' ? manualTimeLimit : 15,
+            questions: [],
+            createdAt: editingQuiz ? editingQuiz.createdAt : new Date().toISOString(),
+            createdBy: editingQuiz?.createdBy || authStore.teacherName || undefined,
+            accessCode: requireCode ? accessCode.toUpperCase() : undefined,
+            requireCode: requireCode,
+            showOnHome: showOnHome,
+            category: category,
+        };
+        setGeneratedQuiz(quiz);
+    };
+
     // Handle quiz generation
     const handleGenerate = async () => {
         const isPdfMode = (quizMode as any) === 'pdf';
@@ -992,6 +1010,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                             setGeneratedQuiz({ ...generatedQuiz, questions });
                         }
                     }}
+                    onCreateManual={handleCreateManual}
                 />
             </div>
 

@@ -285,41 +285,47 @@ const DraggableCategorization: React.FC<Props> = ({
                 </DroppableUnplaced>
 
                 {/* Category zones */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {categories.map((cat, catIdx) => {
-                        const color = getCategoryColor(catIdx);
-                        const itemsInCat = getItemsInCategory(cat.id);
-                        const isHighlighted = !!selectedItem && !currentAnswers[selectedItem];
-                        const isOver = overDroppableId === `category-${cat.id}` && !!activeId;
+                {categories.length === 0 ? (
+                    <div className="p-4 bg-red-50 text-red-600 rounded-lg text-sm text-center font-medium border border-red-200">
+                        ⚠️ Câu hỏi này bị lỗi (chưa thiết lập nhóm phân loại). Vui lòng báo lỗi cho giáo viên.
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {categories.map((cat, catIdx) => {
+                            const color = getCategoryColor(catIdx);
+                            const itemsInCat = getItemsInCategory(cat.id);
+                            const isHighlighted = !!selectedItem && !currentAnswers[selectedItem];
+                            const isOver = overDroppableId === `category-${cat.id}` && !!activeId;
 
-                        return (
-                            <div key={cat.id} onClick={() => handleCategoryClick(cat.id)}>
-                                <DroppableCategory
-                                    category={cat}
-                                    isHighlighted={isHighlighted}
-                                    isOver={isOver}
-                                    color={color}
-                                >
-                                    {itemsInCat.length === 0 ? (
-                                        <p className="text-gray-300 text-xs italic">
-                                            {isHighlighted || isOver ? '📥 Thả vào đây...' : 'Chưa có mục nào'}
-                                        </p>
-                                    ) : (
-                                        itemsInCat.map((item) => (
-                                            <DraggableItem
-                                                key={item.id}
-                                                item={item}
-                                                isSelected={false}
-                                                onClick={() => handleItemClick(item.id)}
-                                                color={color}
-                                            />
-                                        ))
-                                    )}
-                                </DroppableCategory>
-                            </div>
-                        );
-                    })}
-                </div>
+                            return (
+                                <div key={cat.id} onClick={() => handleCategoryClick(cat.id)}>
+                                    <DroppableCategory
+                                        category={cat}
+                                        isHighlighted={isHighlighted}
+                                        isOver={isOver}
+                                        color={color}
+                                    >
+                                        {itemsInCat.length === 0 ? (
+                                            <p className="text-gray-300 text-xs italic">
+                                                {isHighlighted || isOver ? '📥 Thả vào đây...' : 'Chưa có mục nào'}
+                                            </p>
+                                        ) : (
+                                            itemsInCat.map((item) => (
+                                                <DraggableItem
+                                                    key={item.id}
+                                                    item={item}
+                                                    isSelected={false}
+                                                    onClick={() => handleItemClick(item.id)}
+                                                    color={color}
+                                                />
+                                            ))
+                                        )}
+                                    </DroppableCategory>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* Status and Reset */}
                 <div className="flex justify-between items-center">

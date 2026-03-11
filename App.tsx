@@ -11,7 +11,6 @@ import { useQuizStore } from './stores/quizStore';
 const StudentView = React.lazy(() => import('./src/components/StudentView'));
 const IoeStudentView = React.lazy(() => import('./src/components/IoeStudentView'));
 const TeacherDashboard = React.lazy(() => import('./src/components/TeacherDashboard'));
-const StudentPortal = React.lazy(() => import('./src/components/StudentPortal'));
 const HomePage = React.lazy(() => import('./src/components/HomePage/HomePage'));
 
 const App: React.FC = () => {
@@ -89,18 +88,6 @@ const App: React.FC = () => {
                 </Suspense>
                 <Analytics />
             </>
-        );
-    }
-
-    if (quizStore.view === 'student_portal') {
-        return (
-            <Suspense fallback={
-                <div className="min-h-screen flex items-center justify-center bg-white">
-                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-                </div>
-            }>
-                <StudentPortal />
-            </Suspense>
         );
     }
 

@@ -9,9 +9,10 @@ import LoginModal from '../common/LoginModal';
 import AnnouncementMarquee from '../common/AnnouncementMarquee';
 import QuizListPage from './QuizListPage';
 import LeaderboardPage from './LeaderboardPage';
-import StudentDashboard from '../student/StudentDashboard';
 import { getAllAssignments } from '../../services/classroomService';
 import { Assignment } from '../../types/classroom.types';
+import LoginLandingPage from './LoginLandingPage';
+import StudentDashboardUI from './StudentDashboardUI';
 
 // --- Types ---
 interface HomePageProps {
@@ -388,18 +389,15 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
     }, [quizStore.quizzes, ioeQuizzes, myAssignmentQuizzes, assignmentQuizzes, isStudentLoggedIn]);
 
     // =====================================================
-    // RENDER — STUDENT DASHBOARD OR STICKER LAND
+    // RENDER — LOGGED IN DASHBOARD OR LOGIN LANDING PAGE
     // =====================================================
+
+    if (!isLoggedIn) {
+        return <LoginLandingPage />;
+    }
+
     if (isStudentLoggedIn && view === 'home') {
-        return (
-            <StudentDashboard
-                onStartStudy={() => {
-                    setActiveTab('class');
-                    setView('quiz-list');
-                }}
-                onViewLeaderboard={() => setView('leaderboard')}
-            />
-        );
+        return <StudentDashboardUI ioeQuizzes={ioeQuizzes} />;
     }
 
     return (
@@ -468,7 +466,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                         </button>
                     ) : (
                         <button
-                            onClick={() => isTeacherLoggedIn ? quizStore.setView('teacher_dash') : quizStore.setView('student_portal')}
+                            onClick={() => isTeacherLoggedIn ? quizStore.setView('teacher_dash') : quizStore.setView('home')}
                             className="sticker-nav__cta"
                         >
                             {isTeacherLoggedIn ? 'Vào Quản Lý' : 'Vào Học'}

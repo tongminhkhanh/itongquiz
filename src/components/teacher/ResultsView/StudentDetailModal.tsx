@@ -6,8 +6,10 @@
  */
 
 import React, { useRef, useEffect, useMemo } from 'react';
-import { StudentResult, Question, QuestionSnapshot, QuestionType } from '../../../types';
-import { X, CheckCircle, XCircle, Clock, Award, AlertTriangle } from 'lucide-react';
+import { StudentResult, Question, QuestionSnapshot, QuestionType, Quiz } from '../../../types';
+import { Clock, CheckCircle2, XCircle, AlertCircle, RefreshCcw } from 'lucide-react';
+import MathSpan from '../../common/MathSpan';
+import { formatHtmlText } from '../../../utils/formatters';
 import { renderMathJax } from '../../../hooks/useMathJax';
 
 interface StudentDetailModalProps {
@@ -366,19 +368,19 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                             onClick={onClose}
                             className="p-2 hover:bg-white/20 rounded-full transition-colors"
                         >
-                            <X className="w-6 h-6" />
+                            <XCircle className="w-6 h-6" />
                         </button>
                     </div>
 
                     {/* Stats Row */}
                     <div className="flex items-center gap-6 mt-4">
                         <div className="flex items-center gap-2">
-                            <Award className="w-5 h-5 text-yellow-300" />
+                            <RefreshCcw className="w-5 h-5 text-yellow-300" />
                             <span className="text-2xl font-bold">{result.score}</span>
                             <span className="text-orange-200">/10 điểm</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <CheckCircle className="w-5 h-5 text-green-300" />
+                            <CheckCircle2 className="w-5 h-5 text-green-300" />
                             <span>{result.correctCount}/{result.totalQuestions} câu đúng</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -395,7 +397,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                     {/* Warning if quiz was deleted and no snapshots */}
                     {!hasAnyData && (
                         <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl mb-4">
-                            <AlertTriangle className="w-6 h-6 text-yellow-600 flex-shrink-0" />
+                            <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0" />
                             <div>
                                 <p className="font-medium text-yellow-800">Không thể hiển thị chi tiết</p>
                                 <p className="text-sm text-yellow-700">
@@ -434,7 +436,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                 <p
                                                     className="font-medium text-gray-800 mb-2"
                                                     style={{ whiteSpace: 'pre-line' }}
-                                                    dangerouslySetInnerHTML={{ __html: questionText }}
+                                                    dangerouslySetInnerHTML={{ __html: formatHtmlText(questionText) }}
                                                 />
                                             ) : (
                                                 <p className="font-medium text-gray-400 italic mb-2">
@@ -474,9 +476,11 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                                     }`}
                                                             >
                                                                 <span className="font-bold">{optionLetter}.</span>
-                                                                <span dangerouslySetInnerHTML={{ __html: opt }} />
+                                                                <div className="flex-1">
+                                                                    <span dangerouslySetInnerHTML={{ __html: formatHtmlText(opt) }} />
+                                                                </div>
                                                                 {isCorrectOption && (
-                                                                    <CheckCircle className="w-4 h-4 ml-auto text-green-600" />
+                                                                    <CheckCircle2 className="w-4 h-4 ml-auto text-green-600" />
                                                                 )}
                                                                 {isSelected && !isCorrectOption && (
                                                                     <XCircle className="w-4 h-4 ml-auto text-red-600" />

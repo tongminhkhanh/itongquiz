@@ -8,8 +8,8 @@
  * - Stale-While-Revalidate pattern
  * - Cache invalidation by key or prefix
  */
-
 import { logger } from './logger';
+import { StorageKeys } from '../constants/storageKeys';
 
 // Cache entry structure
 interface CacheEntry<T> {
@@ -56,7 +56,7 @@ class CacheService {
      */
     private checkLocalStorageAvailability(): boolean {
         try {
-            const testKey = '__cache_test__';
+            const testKey = StorageKeys.CACHE_TEST;
             localStorage.setItem(testKey, 'test');
             localStorage.removeItem(testKey);
             return true;

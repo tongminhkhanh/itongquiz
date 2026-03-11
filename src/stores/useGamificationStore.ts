@@ -16,6 +16,7 @@ import {
     PetMood,
 } from '../types/gamification.types';
 import * as gamificationService from '../services/gamificationService';
+import { StorageKeys } from '../constants/storageKeys';
 
 // --- Store Interface ---
 
@@ -48,14 +49,10 @@ interface GamificationStore {
     clearError: () => void;
 }
 
-// --- Constants ---
-
-const GAMIFICATION_KEY = 'itongquiz_gamification';
-
 // --- Helper: save to localStorage ---
 const saveToStorage = (pet: PetData | null, coins: number, shopItems: ShopItem[]) => {
     try {
-        localStorage.setItem(GAMIFICATION_KEY, JSON.stringify({ pet, coins, shopItems }));
+        localStorage.setItem(StorageKeys.GAMIFICATION, JSON.stringify({ pet, coins, shopItems }));
     } catch {
         // localStorage quota exceeded - silently fail
     }
@@ -202,7 +199,7 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
      * Clear all gamification data (on logout)
      */
     clearGamification: () => {
-        localStorage.removeItem(GAMIFICATION_KEY);
+        localStorage.removeItem(StorageKeys.GAMIFICATION);
         set({
             pet: null,
             coins: 0,
@@ -224,12 +221,12 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
  */
 export const restoreGamificationData = () => {
     try {
-        const saved = localStorage.getItem(GAMIFICATION_KEY);
+        const saved = localStorage.getItem(StorageKeys.GAMIFICATION);
         if (saved) {
             const { pet, coins, shopItems } = JSON.parse(saved);
             useGamificationStore.setState({ pet, coins, shopItems });
         }
     } catch {
-        localStorage.removeItem(GAMIFICATION_KEY);
+        localStorage.removeItem(StorageKeys.GAMIFICATION);
     }
 };

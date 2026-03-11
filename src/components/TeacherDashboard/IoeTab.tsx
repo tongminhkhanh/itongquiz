@@ -7,6 +7,7 @@ import { saveIoeQuiz } from '../../services/ioeSheetService';
 import { searchIoeQuestions } from '../../services/ioeSearchService';
 import QuizPreview from './QuizPreview';
 import { useAuthStore } from '../../../stores/authStore';
+import { StorageKeys } from '../../constants/storageKeys';
 
 interface IoeTabProps {
     onSaveQuiz: (quiz: Quiz) => Promise<void>;
@@ -667,7 +668,7 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
 
     // AI Provider - lưu vào localStorage (default llm-mux để dùng AI Client Pro)
     const [aiProvider] = useState<AIProvider>(() =>
-        (localStorage.getItem('ai_provider') as AIProvider) || 'llm-mux'
+        (localStorage.getItem(StorageKeys.AI_PROVIDER) as AIProvider) || 'llm-mux'
     );
 
     // Quiz link modal
@@ -753,13 +754,12 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
     };
 
     // ===== QUESTION HISTORY SYSTEM (Anti-duplication across quizzes) =====
-    const HISTORY_KEY = 'ioe_question_history';
     const MAX_HISTORY_SIZE = 200; // Keep last 200 questions
 
     // Get question history from localStorage
     const getQuestionHistory = (): string[] => {
         try {
-            const history = localStorage.getItem(HISTORY_KEY);
+            const history = localStorage.getItem(StorageKeys.IOE_QUESTION_HISTORY);
             return history ? JSON.parse(history) : [];
         } catch {
             return [];
@@ -775,7 +775,7 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
             ).filter(Boolean);
 
             const updatedHistory = [...newQuestions, ...history].slice(0, MAX_HISTORY_SIZE);
-            localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
+            localStorage.setItem(StorageKeys.IOE_QUESTION_HISTORY, JSON.stringify(updatedHistory));
         } catch (e) {
             console.warn('[IOE] Failed to save question history:', e);
         }
@@ -783,7 +783,7 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
 
     // Clear history (for reset)
     const clearHistory = () => {
-        localStorage.removeItem(HISTORY_KEY);
+        localStorage.removeItem(StorageKeys.IOE_QUESTION_HISTORY);
     };
 
     // Generate IOE prompt with System Instruction

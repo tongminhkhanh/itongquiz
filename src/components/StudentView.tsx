@@ -300,8 +300,15 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       } else if (q.type === QuestionType.DRAG_DROP) {
         totalItems++;
         const studentAns = (answers[q.id] as Record<number, string>) || {};
-        const text = q.text || "";
-        const parts = text.split(/(\[.*?\])/g);
+        let ddText = q.text || "";
+        const ddBlanks = q.blanks || [];
+
+        // Fallback: auto-generate text if empty (same as QuestionRenderer)
+        if ((!ddText || !ddText.includes('[')) && ddBlanks.length > 0) {
+          ddText = ddBlanks.map((_: any, i: number) => `[blank_${i}]`).join(" ");
+        }
+
+        const parts = ddText.split(/(\[.*?\])/g);
         const blanks: number[] = [];
         parts.forEach((part, idx) => {
           if (part.startsWith('[') && part.endsWith(']')) {
@@ -311,7 +318,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
         let allCorrect = true;
         blanks.forEach((blankIdx, i) => {
-          const correctWord = q.blanks[i];
+          const correctWord = ddBlanks[i];
           const studentWord = studentAns[blankIdx];
           if (studentWord !== correctWord) {
             allCorrect = false;
@@ -415,6 +422,18 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         const studentAns = (answers[q.id] || '').toString().toLowerCase().trim();
 
         if (studentAns === correctAns) correctCount++;
+      } else if (q.type === QuestionType.ERROR_CORRECTION) {
+        // Tìm từ sai và sửa lại
+        totalItems++;
+        const ecStudent = (answers[q.id] as { wrongWord?: string; correctWord?: string }) || {};
+        const ecWrongWord = ((q as any).wrongWord || '').toString().trim().toLowerCase();
+        const ecCorrectWord = ((q as any).correctWord || '').toString().trim().toLowerCase();
+        const sWrong = (ecStudent.wrongWord || '').toString().trim().toLowerCase();
+        const sCorrect = (ecStudent.correctWord || '').toString().trim().toLowerCase();
+
+        if (sWrong && sCorrect && sWrong === ecWrongWord && sCorrect === ecCorrectWord) {
+          correctCount++;
+        }
       }
     });
 
@@ -693,8 +712,15 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     } else if (q.type === QuestionType.MULTIPLE_SELECT) {
       return (answers[q.id] as string[])?.length > 0;
     } else if (q.type === QuestionType.DRAG_DROP) {
-      const text = (q as any).text || "";
-      const parts = text.split(/(\[.*?\])/g);
+      let ddText = (q as any).text || "";
+      const ddBlanks = (q as any).blanks || [];
+
+      // Fallback: auto-generate text if empty (same as QuestionRenderer)
+      if ((!ddText || !ddText.includes('[')) && ddBlanks.length > 0) {
+        ddText = ddBlanks.map((_: any, i: number) => `[blank_${i}]`).join(" ");
+      }
+
+      const parts = ddText.split(/(\[.*?\])/g);
       const blanks: number[] = [];
       parts.forEach((part: string, idx: number) => {
         if (part.startsWith('[') && part.endsWith(']')) {
@@ -742,6 +768,10 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       // Kiểm tra đã nhập đáp án chưa
       const currentAnswer = (answers[q.id] || '').toString().trim();
       return currentAnswer.length > 0;
+    } else if (q.type === QuestionType.ERROR_CORRECTION) {
+      // Kiểm tra đã nhập cả từ sai và từ đúng chưa
+      const ecAnswer = (answers[q.id] as { wrongWord?: string; correctWord?: string }) || {};
+      return !!(ecAnswer.wrongWord?.trim() && ecAnswer.correctWord?.trim());
     }
     return !!answers[q.id];
   };

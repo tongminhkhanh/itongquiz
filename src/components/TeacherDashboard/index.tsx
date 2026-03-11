@@ -36,6 +36,9 @@ const TeacherDashboard: React.FC = () => {
         cacheService.invalidatePrefix('quizzes:');
         quizStore.loadQuizzes();
 
+        // AUTO-LOAD RESULTS for Teacher Dashboard so it's not empty
+        quizStore.loadResults();
+
         return () => {
             setStripAnswersEnabled(true);
         };
@@ -51,10 +54,15 @@ const TeacherDashboard: React.FC = () => {
     const [editingAccessCode, setEditingAccessCode] = useState<{ quizId: string; currentCode: string } | null>(null);
     const [newAccessCode, setNewAccessCode] = useState('');
 
-    // Filter results by teacherClass
+    // Filter results by teacherClass (Flexible matching: case-insensitive & partial)
     const filteredResultsByClass = authStore.isAdmin || !authStore.teacherClass
         ? quizStore.results
-        : quizStore.results.filter(r => r.studentClass === authStore.teacherClass);
+        : quizStore.results.filter(r => {
+            const stuClass = (r.studentClass || '').toLowerCase().replace(/\s+/g, '');
+            const teaClass = (authStore.teacherClass || '').toLowerCase().replace(/\s+/g, '');
+            // E.g., if teacher is "3A" and student inputs "3A " or "3a"
+            return stuClass.includes(teaClass) || teaClass.includes(stuClass);
+        });
 
     // Dynamic title logic based on activeTab
     const getPageTitle = () => {

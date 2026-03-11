@@ -420,8 +420,13 @@ export const prepareQuizForSave = (quiz: Quiz) => {
     const escapedQuestions = quiz.questions.map(q => {
         const eq = { ...q } as any;
 
-        // Escape common text fields
-        if (eq.question) eq.question = escapeSheetValue(eq.question);
+        // Common properties
+        if (eq.question) {
+            eq.question = escapeSheetValue(eq.question);
+        } else if (eq.mainQuestion) {
+            eq.question = escapeSheetValue(eq.mainQuestion); // TRUE_FALSE and MATCHING use mainQuestion
+        }
+
         if (eq.correctAnswer) eq.correctAnswer = escapeSheetValue(eq.correctAnswer);
         if (eq.text) eq.text = escapeSheetValue(eq.text);
         if (eq.sentence) eq.sentence = escapeSheetValue(eq.sentence);
@@ -431,30 +436,45 @@ export const prepareQuizForSave = (quiz: Quiz) => {
             eq.options = eq.options.map(escapeSheetValue);
         }
 
-        // RIDDLE mapping for save
-        if (eq.type === QuestionType.RIDDLE) {
-            if (eq.riddleLines) eq.items = eq.riddleLines; // Save riddleLines to items column
-            if (eq.answerLabel) eq.text = escapeSheetValue(eq.answerLabel); // Save answerLabel to text column
-            if (eq.hint) eq.sentence = escapeSheetValue(eq.hint); // Save hint to sentence column
-        }
+        // Specific Type Mappings for Backend Generics (items, distractors, correctAnswer)
 
-        // IMAGE_QUESTION mapping for save
-        if (eq.type === QuestionType.IMAGE_QUESTION) {
-            if (eq.optionImages) eq.distractors = eq.optionImages; // Save optionImages to distractors column (GAS handles JSON.stringify)
-        }
-
-        // WORD_SCRAMBLE mapping for save
-        if (eq.type === QuestionType.WORD_SCRAMBLE) {
-            if (eq.letters) eq.items = eq.letters; // Save letters to items column
-            if (eq.correctWord) eq.correctAnswer = escapeSheetValue(eq.correctWord); // Save correctWord to correctAnswer column
-            if (eq.hint) eq.text = escapeSheetValue(eq.hint); // Save hint to text column
-        }
-
-        // ERROR_CORRECTION mapping for save
-        if (eq.type === QuestionType.ERROR_CORRECTION) {
-            if (eq.passage) eq.text = escapeSheetValue(eq.passage); // Save passage to text column
-            if (eq.wrongWord) eq.distractors = eq.wrongWord; // Save wrongWord to distractors column
-            if (eq.correctWord) eq.correctAnswer = escapeSheetValue(eq.correctWord); // Save correctWord to correctAnswer column
+        switch (eq.type) {
+            case QuestionType.RIDDLE:
+                if (eq.riddleLines) eq.items = eq.riddleLines;
+                if (eq.answerLabel) eq.text = escapeSheetValue(eq.answerLabel);
+                if (eq.hint) eq.sentence = escapeSheetValue(eq.hint);
+                break;
+            case QuestionType.IMAGE_QUESTION:
+                if (eq.optionImages) eq.distractors = eq.optionImages;
+                break;
+            case QuestionType.WORD_SCRAMBLE:
+                if (eq.letters) eq.items = eq.letters;
+                if (eq.correctWord) eq.correctAnswer = escapeSheetValue(eq.correctWord);
+                if (eq.hint) eq.text = escapeSheetValue(eq.hint);
+                break;
+            case QuestionType.ERROR_CORRECTION:
+                if (eq.passage) eq.text = escapeSheetValue(eq.passage);
+                if (eq.wrongWord) eq.distractors = eq.wrongWord;
+                if (eq.correctWord) eq.correctAnswer = escapeSheetValue(eq.correctWord);
+                break;
+            case QuestionType.MATCHING:
+                if (eq.pairs) eq.items = eq.pairs;
+                break;
+            case QuestionType.CATEGORIZATION:
+                if (eq.categories) eq.distractors = eq.categories;
+                // items are already stored in eq.items
+                break;
+            case QuestionType.MULTIPLE_SELECT:
+                if (eq.correctAnswers) eq.correctAnswer = JSON.stringify(eq.correctAnswers);
+                break;
+            case QuestionType.ORDERING:
+                if (eq.correctOrder) eq.correctAnswer = JSON.stringify(eq.correctOrder);
+                // items are already stored in eq.items
+                break;
+            case QuestionType.UNDERLINE:
+                if (eq.words) eq.items = eq.words;
+                if (eq.correctWordIndexes) eq.correctAnswer = JSON.stringify(eq.correctWordIndexes);
+                break;
         }
 
         return eq;

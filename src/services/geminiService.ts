@@ -91,7 +91,12 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
         + correctAnswer: "sao", answerType: "transformed", answerLabel: "Từ bỏ sắc"
       - VÍ DỤ 2 (hỏi từ gốc):
         + riddleLines: ["Thêm huyền thành nơi thầy cô giảng bài,", "Để nguyên em đi ngoài đường mỗi ngày.", "Từ để nguyên là gì?"]
-        + correctAnswer: "ban", answerType: "original", answerLabel: "Từ để nguyên")`
+        + correctAnswer: "ban", answerType: "original", answerLabel: "Từ để nguyên")`,
+    'ERROR_CORRECTION': `ERROR_CORRECTION (Tìm từ sai và sửa lại. Format: {"type": "ERROR_CORRECTION", "question": "Tìm một từ viết sai chính tả trong đoạn văn sau và sửa lại cho đúng", "passage": "Hôm nay chời nắng đẹp, em đi đến trường.", "wrongWord": "chời", "correctWord": "trời", "explanation": "Từ 'chời' viết sai chính tả, phải sửa thành 'trời' mới đúng."}.
+      ⚠️ QUAN TRỌNG:
+      - passage: Đoạn văn ngắn (1-3 câu) CÓ CHỨA ĐÚNG 1 TỪ SAI (sai chính tả, sai ngữ pháp, hoặc sai ngữ nghĩa rõ ràng)
+      - wrongWord: Từ bị sai trong đoạn văn (phải trích xuất chính xác 100% từ trong passage)
+      - correctWord: Từ đúng để thay thế cho từ sai)`
   };
 
   const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');

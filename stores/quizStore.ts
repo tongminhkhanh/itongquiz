@@ -141,7 +141,35 @@ export const useQuizStore = create<QuizState>()(
                         parsed.mainQuestion = parsed.mainQuestion || parsed.main_question || parsed.question;
                         parsed.correctWord = parsed.correctWord || parsed.correct_word;
                         parsed.correctWordIndexes = parsed.correctWordIndexes || parsed.correct_word_indexes;
-                        parsed.correctWordIndexes = parsed.correctWordIndexes || parsed.correct_word_indexes;
+
+                        // DATA UNMAPPING: Reconstruct specific question types from generic DB columns
+                        const qType = parsed.type;
+                        if (qType === 'IMAGE_QUESTION') {
+                            parsed.optionImages = parsed.distractors || [];
+                        } else if (qType === 'UNDERLINE') {
+                            parsed.words = parsed.items || [];
+                            let parsedIndexes = [];
+                            try {
+                                parsedIndexes = typeof parsed.correctAnswer === 'string' ? JSON.parse(parsed.correctAnswer) : parsed.correctAnswer;
+                            } catch (e) { }
+                            parsed.correctWordIndexes = Array.isArray(parsedIndexes) ? parsedIndexes : [];
+                        } else if (qType === 'RIDDLE') {
+                            parsed.riddleLines = parsed.items || [];
+                            parsed.answerLabel = parsed.text || '';
+                            parsed.hint = parsed.sentence || '';
+                        } else if (qType === 'CATEGORIZATION') {
+                            parsed.categories = parsed.distractors || [];
+                        } else if (qType === 'WORD_SCRAMBLE') {
+                            parsed.letters = parsed.items || [];
+                            parsed.correctWord = parsed.correctAnswer || '';
+                            parsed.hint = parsed.text || '';
+                        } else if (qType === 'ERROR_CORRECTION') {
+                            parsed.passage = parsed.text || '';
+                            parsed.wrongWord = parsed.distractors || '';
+                            parsed.correctWord = parsed.correctAnswer || '';
+                        } else if (qType === 'MATCHING') {
+                            parsed.pairs = parsed.items || [];
+                        }
 
                         // BẢO ĐẢM CÁC TRƯỜNG ARRAY KHÔNG BAO GIỜ UNDEFINED ĐỂ TRÁNH CRASH GIAO DIỆN
                         parsed.options = Array.isArray(parsed.options) ? parsed.options : [];

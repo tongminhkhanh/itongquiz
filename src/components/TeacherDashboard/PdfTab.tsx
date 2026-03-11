@@ -5,6 +5,7 @@ import { Upload, FileText, Save, Loader2, X, FileCheck, Sparkles, CheckCircle, A
 import { AIProvider, generateQuiz, QuizGenerationOptions, extractTextFromPdf } from '../../services/geminiService';
 import { AIProviderSelector } from '../teacher/QuizCreator';
 import { QUIZ_CATEGORIES } from '../../config/constants';
+import { formatHtmlText } from '../../utils/formatters';
 
 interface PdfTabProps {
     onSaveQuiz: (quiz: Quiz) => Promise<void>;
@@ -898,11 +899,11 @@ ${editedText}
                                     <p
                                         className="text-gray-800 mb-3"
                                         dangerouslySetInnerHTML={{
-                                            __html: 'question' in q
+                                            __html: formatHtmlText('question' in q
                                                 ? (q as any).question
                                                 : 'mainQuestion' in q
                                                     ? (q as any).mainQuestion
-                                                    : ''
+                                                    : '')
                                         }}
                                     />
 
@@ -920,7 +921,7 @@ ${editedText}
                                                     <span className="font-bold mr-2">
                                                         {String.fromCharCode(65 + optIdx)}.
                                                     </span>
-                                                    <span dangerouslySetInnerHTML={{ __html: opt }} />
+                                                    <span dangerouslySetInnerHTML={{ __html: formatHtmlText(opt) }} />
                                                 </div>
                                             ))}
                                         </div>
@@ -938,7 +939,7 @@ ${editedText}
                                                         }`}
                                                 >
                                                     <span className="font-bold">{item.isCorrect ? 'Đ' : 'S'}</span>
-                                                    <span dangerouslySetInnerHTML={{ __html: item.statement }} />
+                                                    <span dangerouslySetInnerHTML={{ __html: formatHtmlText(item.statement) }} />
                                                 </div>
                                             ))}
                                         </div>
