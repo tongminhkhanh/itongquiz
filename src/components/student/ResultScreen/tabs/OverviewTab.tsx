@@ -1,18 +1,59 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Quiz, StudentResult } from '../../../../types';
-import { CheckCircle, XCircle, Clock, Trophy, Target } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Trophy, Target, Stethoscope } from 'lucide-react';
+import DrOwlModal from '../DrOwlModal';
+import { callApi } from '../../../../services/apiAdapter';
+import { motion } from 'framer-motion';
 
 interface Props {
     quiz: Quiz;
     result: StudentResult;
     answers: Record<string, any>;
+    studentUsername?: string;
 }
 
-const OverviewTab: React.FC<Props> = ({ quiz, result, answers }) => {
+const OverviewTab: React.FC<Props> = ({ quiz, result, answers, studentUsername }) => {
+    const [showDrOwl, setShowDrOwl] = useState(false);
+
     // Calculate additional stats
     const wrongCount = result.totalQuestions - result.correctCount;
     const unansweredCount = quiz.questions.filter(q => !answers[q.id]).length;
     const accuracy = Math.round((result.correctCount / result.totalQuestions) * 100);
+    const scorePct = (result.correctCount / result.totalQuestions) * 100;
+
+    // Compute wrong question IDs (only MCQ-type for now, AI works best with these)
+    const wrongQuestionIds = useMemo(() => {
+        return quiz.questions
+            .filter(q => {
+                const ans = answers[q.id];
+                if (!ans && ans !== false && ans !== 0) return true; // unanswered = wrong
+                if (q.type === 'MCQ') return ans !== (q as any).correctAnswer;
+                if (q.type === 'SHORT_ANSWER') return String(ans).toLowerCase().trim() !== String((q as any).correctAnswer).toLowerCase().trim();
+                if (q.type === 'RIDDLE') return String(ans).toLowerCase().trim() !== String((q as any).correctAnswer).toLowerCase().trim();
+                // For complex types, check validationDetails
+                if (result.validationDetails) {
+                    const detail = result.validationDetails.find(d => d.questionId === q.id);
+                    if (detail) return !detail.isCorrect;
+                }
+                return false;
+            })
+            .map(q => q.id)
+            .slice(0, 3);
+    }, [quiz.questions, answers, result.validationDetails]);
+
+    // Handle coin reward from DrOwl
+    const handleRewardCoins = async (coins: number) => {
+        if (!studentUsername) return;
+        try {
+            await callApi('update_game_state', {
+                username: studentUsername,
+                addCoins: coins,
+                addExp: 20,
+            });
+        } catch (err) {
+            console.error('[DrOwl] Failed to reward coins:', err);
+        }
+    };
 
     // Get teacher comment based on score
     const getTeacherComment = () => {
@@ -73,6 +114,22 @@ const OverviewTab: React.FC<Props> = ({ quiz, result, answers }) => {
                     <p className="text-white/90 leading-relaxed">{comment.message}</p>
                 </div>
             </div>
+
+            {/* 🆘 DR. OWL EMERGENCY BUTTON — only when score < 50% and has wrong questions */}
+            {scorePct < 50 && wrongQuestionIds.length >= 2 && (
+                <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowDrOwl(true)}
+                    className="w-full bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 hover:from-amber-500 hover:via-orange-500 hover:to-amber-600 text-white font-bold py-5 rounded-2xl shadow-lg shadow-amber-200 flex items-center justify-center gap-3 text-lg transition-colors relative overflow-hidden group"
+                >
+                    <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full group-hover:scale-150 transition-transform" />
+                    <Stethoscope className="w-6 h-6" />
+                    <span>🆘 Gọi Bác sĩ Cú Mèo hỗ trợ!</span>
+                </motion.button>
+            )}
 
             {/* Stats Grid - Bento style */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -188,8 +245,19 @@ const OverviewTab: React.FC<Props> = ({ quiz, result, answers }) => {
                     </p>
                 </div>
             )}
+
+            {/* Dr. Owl Modal */}
+            <DrOwlModal
+                isOpen={showDrOwl}
+                onClose={() => setShowDrOwl(false)}
+                quizId={quiz.id}
+                wrongQuestionIds={wrongQuestionIds}
+                studentUsername={studentUsername}
+                onRewardCoins={handleRewardCoins}
+            />
         </div>
     );
 };
 
 export default OverviewTab;
+

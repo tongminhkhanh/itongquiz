@@ -33,6 +33,9 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'delete_result': method = 'DELETE'; path = `/api/results/${payload.resultId}`; break;
         case 'validate_answers': method = 'POST'; path = '/api/validate'; break;
 
+        // --- AI Tutor ---
+        case 'ai_tutor_diagnose': method = 'POST'; path = '/api/ai-tutor/diagnose'; break;
+
         // --- Classroom ---
         case 'get_classes': method = 'GET'; path = '/api/classes'; if (payload.teacherUsername) urlParams.append('teacherUsername', payload.teacherUsername); break;
         case 'create_class': method = 'POST'; path = '/api/classes'; break;

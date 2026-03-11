@@ -10,6 +10,7 @@ import { handleResultRoutes } from './routes/results';
 import { handleClassroomRoutes } from './routes/classroom';
 import { handleGamificationRoutes } from './routes/gamification';
 import { handleAnnouncementRoutes } from './routes/announcements';
+import { handleAiTutorRoutes } from './routes/aiTutor';
 import { Env } from './types';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
 
@@ -50,6 +51,8 @@ export default {
                 response = await handleGamificationRoutes(request, env, path, method);
             } else if (path.startsWith('/api/announcements')) {
                 response = await handleAnnouncementRoutes(request, env, path, method);
+            } else if (path.startsWith('/api/ai-tutor')) {
+                response = await handleAiTutorRoutes(request, env, path, method);
             } else if (path === '/api/health') {
                 response = jsonResponse({ status: 'ok', timestamp: new Date().toISOString() });
             }

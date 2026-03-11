@@ -247,6 +247,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                         quiz={quiz}
                         result={result}
                         answers={answers}
+                        studentUsername={studentName}
                     />
                 );
             case 'details':
