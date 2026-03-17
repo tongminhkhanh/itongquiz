@@ -1,128 +1,54 @@
 {
     "meta": {
         "schema_version": "1.1.0",
-        "awf_version": "3.3.0"
+        "awf_version": "3.3.0",
+        "last_updated": "2026-03-15T02:30:00Z"
     },
     "project": {
-        "name": "itongquiz1",
-        "type": "Web App",
-        "status": "In Development"
+        "name": "iTongQuiz",
+        "type": "Next.js/Vite Edu App",
+        "status": "Production",
+        "url": "https://www.thitong.site"
     },
     "tech_stack": {
-        "frontend": {
-            "framework": "React + Vite",
-            "styling": "TailwindCSS + Vanilla CSS"
-        },
-        "backend": {
-            "service": "Cloudflare Workers",
-            "database": "Cloudflare D1 (SQLite)",
-            "ai": "Gemini + Perplexity (via LLM-Mux)"
-        }
+        "frontend": "Vite, React 19, TailwindCSS 4, Zustand, MathJax 3",
+        "backend": "Cloudflare Workers, D1 Database",
+        "ai_providers": "Google Gemini, Perplexity (via Cloudflare Proxy)",
+        "hosting": "Vercel (Frontend), Cloudflare (Backend)"
     },
     "database_schema": {
-        "summary": "Project uses Cloudflare D1 (SQLite) as main database.",
+        "summary": "Mô hình quan hệ lưu trữ: Giáo viên, Học sinh, Đề thi, Kết quả, Phân phối đề (Assignments), và Gamification.",
         "tables": [
             {
-                "name": "quizzes",
-                "description": "Stores quiz metadata. Columns: id, title, class_level, category, tags, time_limit, create_at, access_code, require_code, created_by, show_on_home."
-            },
-            {
-                "name": "questions",
-                "description": "Stores questions linked to quizzes. Columns: id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image."
-            },
-            {
-                "name": "results",
-                "description": "Stores student submission results with answers."
-            },
-            {
-                "name": "classes",
-                "description": "Stores class information and teacher assignment."
+                "name": "teachers",
+                "desc": "Giáo viên, lưu mật khẩu đã hash Bcrypt"
             },
             {
                 "name": "students",
-                "description": "Stores student accounts with coins and class mapping."
+                "desc": "Học sinh, phân theo lớp"
             },
             {
-                "name": "assignments",
-                "description": "Stores quiz assignments with deadlines and max attempts."
+                "name": "quizzes",
+                "desc": "Kho đề thi với 14+ định dạng câu hỏi"
+            },
+            {
+                "name": "results",
+                "desc": "Lịch sử làm bài và điểm số"
             }
-        ]
+        ],
+        "migration_notes": "Bcrypt migration implemented on 2026-03-15."
     },
-    "features": [
-        "AI Quiz Generation (Gemini)",
-        "IOE Quiz Support (Perplexity + Search)",
-        "PDF to Quiz (OCR)",
-        "Student Exam Interface",
-        "Teacher Dashboard (Create, Manage, Review)",
-        "AI Tutor - Giải thích đáp án sai",
-        "Subject Categories (Toán, Tiếng Việt, Tiếng Anh, TN&XH, Tin học, IOE)",
-        "Tagging System - Quản lý kho đề theo nhãn đa phương thức",
-        "Difficulty Levels (Mức 1/2/3) support in Questions & Word Export",
-        "Question Analysis with difficulty classification (Dễ/TB/Khó)",
-        "Smart Distractors - AI-generated wrong answers for MCQ/MULTIPLE_SELECT",
-        "Virtual Classroom Management (Classes, Students, Assignments)",
-        "Auto-Assign Quizzes to Class upon Creation",
-        "Gamification Pet System (Mood-reactive CSS 3D pets)",
-        "Teacher Dashboard Redesign (Sidebar navigation)",
-        "Simplified Result UI with Navigation Button"
+    "business_rules": [
+        "Giáo viên quản lý lớp và đề thi riêng",
+        "Học sinh làm bài theo assignment hoặc luyện tập tự do",
+        "LaTeX render chuẩn MathJax cho câu hỏi toán học",
+        "Hệ thống tiền ảo (coins) và thú cưng (pets) để tăng tương tác"
     ],
     "knowledge_items": {
-        "patterns": [
-            {
-                "name": "ExplanationContent Pattern",
-                "description": "Component riêng để render AI explanation với Markdown + LaTeX support",
-                "files": [
-                    "src/components/common/ExplanationContent.tsx"
-                ]
-            },
-            {
-                "name": "MathSpan Pattern",
-                "description": "Component để render LaTeX math formulas using MathJax",
-                "files": [
-                    "src/components/common/MathSpan.tsx"
-                ]
-            },
-            {
-                "name": "Zustand-API Mapping",
-                "description": "Logic deserialization data từ D1 API: map các field snake_case (text_field, correct_answer) về camelCase component-friendly (text, correctAnswer)",
-                "files": [
-                    "src/stores/quizStore.ts"
-                ]
-            },
-            {
-                "name": "resolveCorrectWordIndexes Fallback",
-                "description": "4-level fallback to resolve correctWordIndexes for UNDERLINE: quiz object → correctAnswer parse → snapshot → validationDetails",
-                "files": [
-                    "src/components/student/ResultScreen/tabs/DetailedAnswersTab.tsx",
-                    "src/components/student/ResultScreen/index.tsx"
-                ]
-            }
-        ],
         "gotchas": [
-            {
-                "issue": "D1 field naming conflict",
-                "issue_vi": "Cột D1 SQLite dùng text_field (do trùng keyword text), nhưng FE component dùng field 'text'",
-                "solution": "Luôn gán parsed.text = parsed.text_field trong logic loadQuizzes của store.",
-                "affected_types": [
-                    "DROPDOWN",
-                    "DRAG_DROP",
-                    "ERROR_CORRECTION"
-                ]
-            },
-            {
-                "issue": "Dropdown onAnswerChange callback",
-                "issue_vi": "Hàm onAnswerChange cho Dropdown yêu cầu object Record thay vì value đơn lẻ",
-                "solution": "Sử dụng { ...currentAnswers, [blank.id]: e.target.value } khi gọi callback."
-            },
-            {
-                "issue": "React escapes HTML by default",
-                "solution": "Use dangerouslySetInnerHTML to render HTML content."
-            }
-        ],
-        "conventions": [
-            "Dùng callApi helper trong services/apiAdapter.ts cho các request tới Cloudflare Worker.",
-            "Question types have different correct answer fields: correctAnswer, correctAnswers, items, pairs, blanks",
-            "Tất cả quiz mới phải được gán Subject Category tương ứng để phân loại trên Dashboard."
+            "Splitting LaTeX strings for inline components breaks MathJax parsing. Use block rendering if conflict detected.",
+            "CORS errors on Production handled via Cloudflare Worker Proxy.",
+            "D1 requires migration for password hashing rollout."
         ]
     }
 }

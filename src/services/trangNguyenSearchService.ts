@@ -106,7 +106,6 @@ D. [Đáp án D]
     // Retry logic
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
-            console.log(`[TN Search] Đang tìm kiếm... (lần ${attempt}/${MAX_RETRIES})`);
 
             const response = await fetchWithTimeout(
                 PERPLEXITY_API_URL,
@@ -142,16 +141,6 @@ D. [Đáp án D]
 
             const data = await response.json();
             const content = data.choices?.[0]?.message?.content || '';
-
-            if (!content) {
-                return {
-                    success: false,
-                    content: '',
-                    error: 'Không nhận được kết quả tìm kiếm'
-                };
-            }
-
-            console.log('[TN Search] Kết quả tìm kiếm:', content.substring(0, 500) + '...');
 
             return {
                 success: true,

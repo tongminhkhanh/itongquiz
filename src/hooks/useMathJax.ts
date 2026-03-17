@@ -1,12 +1,12 @@
 /**
- * MathJax Integration Hook
+ * MathJax & TikZJax Integration Hook (Lazy Loading v4)
  * 
- * Custom hook to trigger MathJax rendering when content changes.
- * Uses MathJax.typesetPromise() to render LaTeX formulas in specified elements.
+ * Custom hook to trigger MathJax/TikZJax rendering when content changes.
+ * Automatically loads required scripts if they are not already present.
  */
 import { useEffect, useRef, useCallback } from 'react';
 
-// Extend Window interface to include MathJax
+// Extend Window interface to include MathJax and TikZJax
 declare global {
     interface Window {
         MathJax?: {
@@ -15,18 +15,90 @@ declare global {
                 promise: Promise<void>;
             };
         };
+        tikzjax?: boolean;
     }
 }
 
 /**
+ * Ensures MathJax is loaded and configured.
+ * Moves configuration from index.html to here for better control.
+ */
+const ensureMathJaxLoaded = (): Promise<void> => {
+    return new Promise((resolve) => {
+        if (window.MathJax) {
+            resolve();
+            return;
+        }
+
+        // Configure MathJax
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            startup: {
+                typeset: false
+            }
+        };
+
+        // Create script tag
+        const script = document.createElement('script');
+        script.id = 'MathJax-script';
+        script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+        script.async = true;
+
+        script.onload = () => {
+            if (window.MathJax?.startup?.promise) {
+                window.MathJax.startup.promise.then(() => resolve());
+            } else {
+                resolve();
+            }
+        };
+
+        document.head.appendChild(script);
+    });
+};
+
+/**
+ * Ensures TikZJax is loaded.
+ */
+const ensureTikZJaxLoaded = (): Promise<void> => {
+    return new Promise((resolve) => {
+        if (window.tikzjax || document.getElementById('tikzjax-script')) {
+            resolve();
+            return;
+        }
+
+        // TikZJax requires fonts.css
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'https://tikzjax.com/v1/fonts.css';
+        document.head.appendChild(link);
+
+        // Create script tag
+        const script = document.createElement('script');
+        script.id = 'tikzjax-script';
+        script.src = 'https://tikzjax.com/v1/tikzjax.js';
+        script.async = true;
+
+        script.onload = () => {
+            window.tikzjax = true;
+            resolve();
+        };
+
+        document.head.appendChild(script);
+    });
+};
+
+/**
  * Hook to automatically render MathJax in a container when dependencies change.
- * 
- * @param dependencies - Array of values that trigger re-render when changed
- * @returns ref - Ref to attach to the container element
- * 
- * @example
- * const mathRef = useMathJax([question.text]);
- * return <div ref={mathRef}>{question.text}</div>;
+ * Now supports lazy loading.
  */
 export const useMathJax = <T extends HTMLElement = HTMLDivElement>(
     dependencies: any[] = []
@@ -35,7 +107,12 @@ export const useMathJax = <T extends HTMLElement = HTMLDivElement>(
 
     useEffect(() => {
         const renderMath = async () => {
-            if (!containerRef.current || !window.MathJax) return;
+            if (!containerRef.current) return;
+
+            // Ensure loaded
+            await ensureMathJaxLoaded();
+
+            if (!window.MathJax) return;
 
             try {
                 // Wait for MathJax to be ready
@@ -62,25 +139,13 @@ export const useMathJax = <T extends HTMLElement = HTMLDivElement>(
 /**
  * Function to manually trigger MathJax rendering on a specific element.
  * Useful for dynamic content or after API responses.
- * 
- * @param element - HTMLElement to render math in (optional - renders whole page if not provided)
- * @returns Promise that resolves when rendering is complete
- * 
- * @example
- * await renderMathJax(document.getElementById('answer-container'));
  */
 export const renderMathJax = async (element?: HTMLElement | null): Promise<void> => {
-    // Wait for MathJax to be available (poll up to 5 seconds)
-    let attempts = 0;
-    const maxAttempts = 50; // 50 * 100ms = 5 seconds
-
-    while (!window.MathJax && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
+    // Ensure MathJax is loaded
+    await ensureMathJaxLoaded();
 
     if (!window.MathJax) {
-        console.warn('[MathJax] Not loaded after waiting 5 seconds');
+        console.warn('[MathJax] Failed to load');
         return;
     }
 
@@ -102,17 +167,16 @@ export const renderMathJax = async (element?: HTMLElement | null): Promise<void>
 };
 
 /**
+ * Hook to handle TikZJax initialization.
+ */
+export const useTikZJax = () => {
+    useEffect(() => {
+        ensureTikZJaxLoaded();
+    }, []);
+};
+
+/**
  * Hook that provides a callback to manually trigger MathJax rendering.
- * Useful when you need to control when rendering happens.
- * 
- * @returns Object with ref and render function
- * 
- * @example
- * const { ref, render } = useMathJaxManual();
- * const handleDataLoad = async (data) => {
- *   setContent(data);
- *   await render();
- * };
  */
 export const useMathJaxManual = <T extends HTMLElement = HTMLDivElement>() => {
     const containerRef = useRef<T | null>(null);
@@ -126,3 +190,4 @@ export const useMathJaxManual = <T extends HTMLElement = HTMLDivElement>() => {
 };
 
 export default useMathJax;
+

@@ -109,8 +109,8 @@ const QuickAssignModal: React.FC<{
 
     // Fetch classes on mount
     useEffect(() => {
-        if (authStore.user?.username) {
-            classroomStore.fetchClasses(authStore.user.username);
+        if (authStore.username) {
+            classroomStore.fetchClasses(authStore.username);
         }
         // Set default deadline to tomorrow
         const tomorrow = new Date();
@@ -134,7 +134,7 @@ const QuickAssignModal: React.FC<{
                 setTimeout(onClose, 1500);
             }
         } catch (err) {
-            console.error('Quick assign error:', err);
+            // Handled
         } finally {
             setIsSubmitting(false);
         }

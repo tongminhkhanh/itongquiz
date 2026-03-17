@@ -273,6 +273,13 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
         // If it's a general library category (not class assignments and not IOE), hide quizzes with showOnHome === false
         if (activeTab !== 'class' && activeTab !== 'ioe') {
             quizzes = quizzes.filter(q => q.showOnHome !== false);
+
+            // 🛡️ SECURITY FIX: If student is logged in, hide quizzes that are currently assigned to them
+            // This prevents them from "practicing" an exam and bypassing attempt limits
+            if (isStudentLoggedIn) {
+                const assignedQuizIds = myAssignmentQuizzes.map(aq => aq.id);
+                quizzes = quizzes.filter(q => !assignedQuizIds.includes(q.id));
+            }
         }
 
         if (searchTerm) {
@@ -325,19 +332,28 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                 // 3. Refresh assignments again to reflect the NEW attempt count immediately
                 await classroomStore.fetchStudentAssignments(studentId);
             } else {
-                // If student clicks a non-assignment quiz (e.g. from library), we might want to allow it?
-                // But previous logic blocked it.
-                // "Bạn đã đăng nhập..." logic was for blocking library access?
-                // Re-reading previous code: "if (isStudentLoggedIn) alert..."
-                // The user requirement changed: "hiển thị tất cả các quiz đã tạo... trừ khi được giao".
-                // So if it's NOT in assignment list, they CAN take it?
-                // But `filteredQuizzes` ALREADY hides assigned quizzes from library.
-                // So if they see it in library, it's a value-add practice.
-                // Let's allow them to take practice quizzes?
-                // Or keep blocking?
-                // User said: "Nếu quiz nào được giao thì sẽ không hiển thị [ở library]".
-                // This implies library quizzes are free to take.
-                // So I will REMOVE the alert block for library quizzes.
+                // 🛡️ SECURITY FIX: Check if this quiz ID is actually an assignment for this student
+                // even if it was clicked from a practice/library tab.
+                const linkedAssignment = myAssignmentQuizzes.find(aq => aq.id === q.id);
+
+                if (linkedAssignment && linkedAssignment._assignmentData) {
+                    const assignmentId = linkedAssignment._assignmentData.id;
+                    const studentId = classroomStore.studentSession.studentId;
+                    const attemptCount = linkedAssignment._assignmentData.attemptCount || 0;
+                    const maxAttempts = linkedAssignment._assignmentData.maxAttempts || 1;
+
+                    if (attemptCount >= maxAttempts) {
+                        alert(`Bạn đã hết lượt làm bài tập này (${attemptCount}/${maxAttempts}).`);
+                        return;
+                    }
+
+                    const success = await classroomStore.startAssignmentAttempt(assignmentId, studentId);
+                    if (!success) {
+                        alert('Lỗi khi bắt đầu làm bài. Vui lòng thử lại.');
+                        return;
+                    }
+                    await classroomStore.fetchStudentAssignments(studentId);
+                }
             }
         }
 
@@ -532,18 +548,22 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                     </header>
 
                     {/* ===== SUBJECT CARDS ===== */}
-                    <main id="subject-cards" className="sticker-main">
+                    <section id="subject-cards" className="sticker-main">
                         <div className="sticker-cards">
                             {subjectCards.map((subject) => (
-                                <button
+                                <a
                                     key={subject.id}
+                                    href={`#${subject.id}`}
                                     className={`sticker-card ${activeTab === subject.id ? 'sticker-card--active' : ''} ${subject.highlight ? 'sticker-card--highlight' : ''}`}
-                                    onClick={() => handleCategoryClick(subject.id)}
-                                    style={{ '--card-color': subject.color } as React.CSSProperties}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleCategoryClick(subject.id);
+                                    }}
+                                    style={{ '--card-color': subject.color, textDecoration: 'none' } as React.CSSProperties}
                                 >
                                     {/* 3D Sticker Icon */}
                                     <div className="sticker-card__icon-wrap">
-                                        <img src={subject.icon} alt={subject.label} className="sticker-card__icon" />
+                                        <img src={subject.icon} alt={`Ảnh minh họa môn ${subject.label}`} className="sticker-card__icon" />
                                     </div>
 
                                     {/* Label */}
@@ -557,12 +577,12 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                                     </div>
 
                                     {/* Title & Description */}
-                                    <h3
+                                    <h2
                                         className="sticker-card__title"
                                         style={subject.id === 'science' ? { fontSize: '1.8rem' } : {}}
                                     >
                                         {subject.title}
-                                    </h3>
+                                    </h2>
                                     <p className="sticker-card__desc">{subject.desc}</p>
 
                                     {/* Action Button */}
@@ -572,7 +592,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                                     >
                                         {subject.btnLabel} ▶️
                                     </div>
-                                </button>
+                                </a>
                             ))}
                         </div>
 
@@ -609,7 +629,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                                             const catConfig = SUBJECT_CONFIG[quiz.category || 'class'] || SUBJECT_CONFIG['class'];
                                             return (
                                                 <button
-                                                    key={quiz.id}
+                                                    key={(quiz as any)._assignmentData?.id || quiz.id}
                                                     onClick={() => handleQuizClick(quiz)}
                                                     className="sticker-quiz-item"
                                                 >
@@ -648,7 +668,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                                 </div>
                             </section>
                         )}
-                    </main>
+                    </section>
 
                     {/* ===== COMING SOON MODAL ===== */}
                     <Modal

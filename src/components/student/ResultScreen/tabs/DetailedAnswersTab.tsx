@@ -14,6 +14,9 @@ interface Props {
     answers: Record<string, any>;
 }
 
+// Strip leading apostrophe from correctAnswer (Excel artifact, e.g. '3/5 → 3/5)
+const stripQuote = (v: any) => String(v ?? '').replace(/^'/, '');
+
 const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
     // Helper: resolve correctWordIndexes from multiple sources
     // Priority: quiz object → quiz.correctAnswer → snapshot → validationDetails
@@ -66,6 +69,10 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
         if (result.validationDetails && result.validationDetails.length > 0) {
             const serverResult = result.validationDetails.find(d => d.questionId === question.id);
             if (serverResult) {
+                // If server says it's correct, it's correct (prevents empty answers being correct but labeled skipped)
+                if (serverResult.isCorrect) return 'correct';
+
+                // If it's wrong, distinguish between 'skipped' and 'wrong'
                 if (!answer && answer !== false && answer !== 0) return 'skipped';
                 // 🔧 Override: Server has bugs for ORDERING and UNDERLINE.
                 // When server says wrong for these types, fall through to local comparison
@@ -89,7 +96,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
             case QuestionType.IMAGE_QUESTION:
                 return answer === question.correctAnswer ? 'correct' : 'wrong';
             case QuestionType.SHORT_ANSWER:
-                return String(answer).toLowerCase().trim() === String(question.correctAnswer).toLowerCase().trim() ? 'correct' : 'wrong';
+                return stripQuote(answer).toLowerCase().trim() === stripQuote(question.correctAnswer).toLowerCase().trim() ? 'correct' : 'wrong';
             case QuestionType.TRUE_FALSE:
                 const items = question.items || [];
                 const allCorrect = items.every((item: any, idx: number) => {
@@ -111,7 +118,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                 const studentWord = ((answer as number[]) || []).map((i: number) => letters[i]).join('');
                 return studentWord.toLowerCase().replace(/\s+/g, '') === (question.correctWord || '').toLowerCase().replace(/\s+/g, '') ? 'correct' : 'wrong';
             case QuestionType.RIDDLE:
-                return String(answer).toLowerCase().trim() === String(question.correctAnswer).toLowerCase().trim() ? 'correct' : 'wrong';
+                return stripQuote(answer).toLowerCase().trim() === stripQuote(question.correctAnswer).toLowerCase().trim() ? 'correct' : 'wrong';
             case QuestionType.DRAG_DROP: {
                 let ddText = (question as any).text || "";
                 const ddBlanks = (question as any).blanks || [];
@@ -208,7 +215,18 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
 
     // Filter and search questions
     const filteredQuestions = useMemo(() => {
-        return quiz.questions.filter(q => {
+        let questionList = quiz.questions;
+
+        // Khôi phục thứ tự ngẫu nhiên ban đầu lúc học sinh làm bài
+        const order = answers._questionOrder;
+        if (order && Array.isArray(order) && order.length === quiz.questions.length) {
+            const ordered = order.map(id => quiz.questions.find(q => q.id === id)).filter(Boolean) as Question[];
+            if (ordered.length === quiz.questions.length) {
+                questionList = ordered;
+            }
+        }
+
+        return questionList.filter(q => {
             const status = getAnswerStatus(q, answers[q.id]);
             if (filter !== 'all' && status !== filter) return false;
 
@@ -242,10 +260,16 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
     }, [selectedQuestionId]);
 
 
-    // Render detailed view for selected question
     const renderDetailedAnswer = (q: any) => {
         const answer = answers[q.id];
         const status = getAnswerStatus(q, answer);
+
+        // Resolve correct question index based on shuffled order
+        let displayIndex = quiz.questions.indexOf(q);
+        const order = answers._questionOrder;
+        if (order && Array.isArray(order) && order.length === quiz.questions.length) {
+            displayIndex = order.indexOf(q.id);
+        }
 
         return (
             <div className="p-6 space-y-4">
@@ -257,7 +281,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                 <HelpCircle className="w-5 h-5 text-gray-500" />}
                     </div>
                     <div>
-                        <h3 className="font-bold text-gray-800">Câu {quiz.questions.indexOf(q) + 1}</h3>
+                        <h3 className="font-bold text-gray-800">Câu {displayIndex + 1}</h3>
                         <span className={`text-sm px-2 py-0.5 rounded-full ${status === 'correct' ? 'bg-green-100 text-green-700' :
                             status === 'wrong' ? 'bg-red-100 text-red-700' :
                                 'bg-gray-100 text-gray-600'
@@ -289,12 +313,12 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                 return (
                                     <div
                                         key={idx}
-                                        className={`p-3 rounded-lg border-2 flex items-center gap-3 ${isCorrectOption ? 'border-green-500 bg-green-50' :
+                                        className={`p-3 rounded-lg border-2 flex items-center gap-3 ${isCorrectOption && status !== 'skipped' ? 'border-green-500 bg-green-50' :
                                             isSelected && !isCorrectOption ? 'border-red-500 bg-red-50' :
                                                 'border-gray-200 bg-white'
                                             }`}
                                     >
-                                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${isCorrectOption ? 'bg-green-500 text-white' :
+                                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${isCorrectOption && status !== 'skipped' ? 'bg-green-500 text-white' :
                                             isSelected ? 'bg-red-500 text-white' :
                                                 'bg-gray-100 text-gray-600'
                                             }`}>
@@ -307,7 +331,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                             )}
                                         </div>
                                         {isSelected && <span className="text-sm font-medium">{isCorrectOption ? '✓ Em chọn (đúng)' : '✗ Em chọn'}</span>}
-                                        {isCorrectOption && !isSelected && <span className="text-green-600 text-sm font-medium">✓ Đáp án đúng</span>}
+                                        {isCorrectOption && !isSelected && status !== 'skipped' && <span className="text-green-600 text-sm font-medium">✓ Đáp án đúng</span>}
                                     </div>
                                 );
                             })}
@@ -323,10 +347,10 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                     {answer || '(Không trả lời)'}
                                 </p>
                             </div>
-                            {status !== 'correct' && (
+                            {status === 'wrong' && (
                                 <div className="p-3 rounded-lg bg-green-50 border border-green-200">
                                     <p className="text-sm text-gray-600 mb-1">Đáp án đúng:</p>
-                                    <p className="font-bold text-green-700">{q.correctAnswer}</p>
+                                    <p className="font-bold text-green-700">{stripQuote(q.correctAnswer)}</p>
                                 </div>
                             )}
                         </div>
@@ -341,7 +365,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                 const isCorrect = studentVal === item.isCorrect;
 
                                 return (
-                                    <div key={itemKey} className={`p-3 rounded-lg border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                    <div key={itemKey} className={`p-3 rounded-lg border ${status === 'skipped' ? 'bg-white border-gray-200' : (isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200')}`}>
                                         <MathSpan content={item.statement} className="text-gray-800 mb-2" />
                                         <div className="flex gap-4 text-sm">
                                             <span className={studentVal === true ? (isCorrect ? 'font-bold text-green-600' : 'font-bold text-red-600') : 'text-gray-400'}>
@@ -350,7 +374,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                             <span className={studentVal === false ? (isCorrect ? 'font-bold text-green-600' : 'font-bold text-red-600') : 'text-gray-400'}>
                                                 ◉ Sai {studentVal === false && (isCorrect ? '✓' : '✗')}
                                             </span>
-                                            {!isCorrect && <span className="text-green-600 ml-auto">→ Đáp án: {item.isCorrect ? 'ĐÚNG' : 'SAI'}</span>}
+                                            {!isCorrect && status !== 'skipped' && <span className="text-green-600 ml-auto">→ Đáp án: {item.isCorrect ? 'ĐÚNG' : 'SAI'}</span>}
                                         </div>
                                     </div>
                                 );
@@ -366,11 +390,11 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                 const isCorrect = studentRight === pair.right;
 
                                 return (
-                                    <div key={pair.left} className={`p-3 rounded-lg border flex items-center ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                    <div key={pair.left} className={`p-3 rounded-lg border flex items-center ${status === 'skipped' ? 'bg-white border-gray-200' : (isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200')}`}>
                                         <MathSpan content={pair.left} className="font-medium flex-1" />
                                         <span className="mx-4 text-gray-400">→</span>
                                         <MathSpan content={studentRight || 'Chưa nối'} className={`font-bold flex-1 ${isCorrect ? 'text-green-700' : 'text-red-700'}`} />
-                                        {!isCorrect && <span className="text-green-600 text-sm ml-2">({pair.right})</span>}
+                                        {!isCorrect && status !== 'skipped' && <span className="text-green-600 text-sm ml-2">({pair.right})</span>}
                                     </div>
                                 );
                             })}
@@ -389,7 +413,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                 return (
                                     <div
                                         key={idx}
-                                        className={`p-3 rounded-lg border-2 flex items-center gap-3 ${shouldBeSelected ? 'border-green-500 bg-green-50' :
+                                        className={`p-3 rounded-lg border-2 flex items-center gap-3 ${shouldBeSelected && status !== 'skipped' ? 'border-green-500 bg-green-50' :
                                             isSelected && !shouldBeSelected ? 'border-red-500 bg-red-50' :
                                                 'border-gray-200 bg-white'
                                             }`}
@@ -421,7 +445,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                     {answer ? (typeof answer === 'object' ? Object.entries(answer).map(([k, v]) => `${v}`).join(', ') : answer) : '(Không trả lời)'}
                                 </p>
                             </div>
-                            {status !== 'correct' && q.blanks && (
+                            {status === 'wrong' && q.blanks && (
                                 <div className="p-3 rounded-lg bg-green-50 border border-green-200">
                                     <p className="text-sm text-gray-600 mb-1">Đáp án đúng:</p>
                                     <p className="font-bold text-green-700">{q.blanks.join(', ')}</p>
@@ -447,12 +471,12 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                 const studentVal = answer?.[blank.id];
                                 const isCorrect = studentVal === blank.correctAnswer;
                                 return (
-                                    <div key={blank.id || idx} className={`p-3 rounded-lg border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                    <div key={blank.id || idx} className={`p-3 rounded-lg border ${status === 'skipped' ? 'bg-white border-gray-200' : (isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200')}`}>
                                         <p className="text-sm text-gray-600 mb-1">Ô {idx + 1}:</p>
                                         <p className={`font-medium ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
                                             Em chọn: {studentVal || '(Chưa chọn)'}
                                         </p>
-                                        {!isCorrect && (
+                                        {!isCorrect && status !== 'skipped' && (
                                             <p className="text-green-600 text-sm mt-1">→ Đáp án: {blank.correctAnswer}</p>
                                         )}
                                     </div>
@@ -509,7 +533,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                     );
                                 });
                             })()}
-                            {status !== 'correct' && (() => {
+                            {status === 'wrong' && (() => {
                                 // Fallback: If correctOrder is missing but we have items, assume items are stored in correct order [0, 1, 2...]
                                 let correctOrder = q.correctOrder;
                                 if (!correctOrder || correctOrder.length === 0) {
@@ -555,12 +579,12 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                 <div key={cat.id} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
                                     <p className="font-medium text-gray-700 mb-2">{cat.name}</p>
                                     <div className="flex flex-wrap gap-2">
-                                        {(q.items || []).filter((item: any) => answer?.[item.id] === cat.id || item.categoryId === cat.id).map((item: any) => {
+                                        {(q.items || []).filter((item: any) => answer?.[item.id] === cat.id || (status !== 'skipped' && item.categoryId === cat.id)).map((item: any) => {
                                             const studentChoice = answer?.[item.id];
                                             const isCorrect = studentChoice === item.categoryId;
                                             return (
-                                                <span key={item.id} className={`px-2 py-1 rounded text-sm ${isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                    {item.content} {isCorrect ? '✓' : '✗'}
+                                                <span key={item.id} className={`px-2 py-1 rounded text-sm ${status === 'skipped' ? 'bg-gray-100 text-gray-600' : (isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}`}>
+                                                    {item.content} {status !== 'skipped' ? (isCorrect ? '✓' : '✗') : ''}
                                                 </span>
                                             );
                                         })}
@@ -608,7 +632,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                             // Wrong selection
                                             chipClass += 'bg-red-100 text-red-700 line-through decoration-2 decoration-red-400 border border-red-300';
                                             icon = ' ✗';
-                                        } else if (!isStudentSelected && isCorrectWord) {
+                                        } else if (!isStudentSelected && isCorrectWord && status !== 'skipped') {
                                             // Missed correct word
                                             chipClass += 'bg-amber-50 text-amber-700 underline decoration-dashed decoration-2 decoration-amber-400 border border-amber-300';
                                             icon = ' ⚠';
@@ -633,7 +657,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                 </div>
 
                                 {/* Summary: student answer vs correct answer */}
-                                {status !== 'correct' && (
+                                {status === 'wrong' && (
                                     <div className="space-y-2">
                                         <div className="p-3 rounded-lg bg-red-50 border border-red-200">
                                             <p className="text-sm text-gray-600 mb-1">Em gạch chân:</p>
@@ -671,10 +695,10 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                     {answer || '(Không trả lời)'}
                                 </p>
                             </div>
-                            {status !== 'correct' && (
+                            {status === 'wrong' && (
                                 <div className="p-3 rounded-lg bg-green-50 border border-green-200">
                                     <p className="text-sm text-gray-600 mb-1">Đáp án đúng:</p>
-                                    <p className="font-bold text-green-700">{q.correctAnswer}</p>
+                                    <p className="font-bold text-green-700">{stripQuote(q.correctAnswer)}</p>
                                 </div>
                             )}
                         </div>
@@ -699,7 +723,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                         : (answer || '(Không trả lời)')}
                                 </p>
                             </div>
-                            {status !== 'correct' && (
+                            {status === 'wrong' && (
                                 <div className="p-3 rounded-lg bg-green-50 border border-green-200">
                                     <p className="text-sm text-gray-600 mb-1">Đáp án đúng:</p>
                                     <p className="font-bold text-green-700">{q.correctWord}</p>
@@ -727,7 +751,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                                     </p>
                                 </div>
                             </div>
-                            {status !== 'correct' && (
+                            {status === 'wrong' && (
                                 <div className="p-3 rounded-lg bg-green-50 border border-green-200">
                                     <p className="text-sm text-gray-600 mb-1">Đáp án đúng:</p>
                                     <div className="flex gap-4">
@@ -739,8 +763,8 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                         </div>
                     )}
 
-                    {/* Explanation section */}
-                    {status !== 'correct' && (q as any).explanation && (
+                    {/* Explanation section - only for wrong answers */}
+                    {status === 'wrong' && (q as any).explanation && (
                         <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
                             <div className="flex items-center gap-2 mb-2">
                                 <Lightbulb className="w-5 h-5 text-blue-600" />
@@ -751,7 +775,7 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                     )}
 
                     {/* AI Tutor button - show for wrong answers */}
-                    {status !== 'correct' && (
+                    {status === 'wrong' && (
                         <button
                             onClick={() => {
                                 setAiTutorQuestion(q as Question);
@@ -787,17 +811,25 @@ const DetailedAnswersTab: React.FC<Props> = ({ quiz, result, answers }) => {
                             <p>Không tìm thấy câu hỏi nào</p>
                         </div>
                     ) : (
-                        filteredQuestions.map((q, idx) => (
-                            <AnswerCard
-                                key={q.id}
-                                question={q}
-                                questionNumber={quiz.questions.indexOf(q) + 1}
-                                status={getAnswerStatus(q, answers[q.id])}
-                                studentAnswer={answers[q.id]}
-                                onClick={() => setSelectedQuestionId(q.id)}
-                                isExpanded={selectedQuestionId === q.id}
-                            />
-                        ))
+                        filteredQuestions.map((q, idx) => {
+                            let displayIndex = quiz.questions.indexOf(q);
+                            const order = answers._questionOrder;
+                            if (order && Array.isArray(order) && order.length === quiz.questions.length) {
+                                displayIndex = order.indexOf(q.id);
+                            }
+
+                            return (
+                                <AnswerCard
+                                    key={q.id}
+                                    question={q}
+                                    questionNumber={displayIndex + 1}
+                                    status={getAnswerStatus(q, answers[q.id])}
+                                    studentAnswer={answers[q.id]}
+                                    onClick={() => setSelectedQuestionId(q.id)}
+                                    isExpanded={selectedQuestionId === q.id}
+                                />
+                            );
+                        })
                     )}
                 </div>
             </div>

@@ -135,8 +135,8 @@ async function main() {
         if (Array.isArray(results)) {
             appendSql('\n-- Table: results');
             for (const r of results) {
-                if (!r.id) continue;
-                appendSql(`INSERT OR REPLACE INTO results (id, quizId, studentName, score, totalQuestions, isPass, answers, completedAt) VALUES (${escapeSqlString(r.id)}, ${escapeSqlString(r.quizId)}, ${escapeSqlString(r['Student Name'] || r.studentName)}, ${Number(r.Score || r.score) || 0}, ${Number(r['Total Questions'] || r.totalQuestions) || 0}, ${(r['Passed'] === 'Yes' || r.isPass) ? 1 : 0}, ${escapeSqlString(r.answers)}, ${escapeSqlString(r.Timestamp || r.completedAt)});`);
+                if (!r.id && !r['Student Name']) continue;
+                appendSql(`INSERT OR REPLACE INTO results (id, quiz_id, quiz_title, student_name, class_name, score, total_questions, submitted_at, answers) VALUES (${escapeSqlString(r.id)}, ${escapeSqlString(r.quizId || r['Quiz ID'])}, ${escapeSqlString(r.quizTitle || r['Quiz Title'])}, ${escapeSqlString(r['Student Name'] || r.studentName)}, ${escapeSqlString(r['Class'] || r.className)}, ${Number(r.Score || r.score) || 0}, ${Number(r['Total Questions'] || r.totalQuestions) || 0}, ${escapeSqlString(r.Timestamp || r.submittedAt || r.completedAt)}, ${escapeSqlString(r.answers)});`);
             }
         }
     }

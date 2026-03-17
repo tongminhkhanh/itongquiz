@@ -30,6 +30,7 @@
 | `blanks` | TEXT | JSON array các đáp án của lỗ trống |
 | `distractors` | TEXT | JSON array các từ nhiễu |
 | `image` | TEXT | URL hình ảnh đính kèm |
+| `tags` | TEXT | Các nhãn chủ đề (VD: `#Toán, #Giaothông`). Phân cách bởi dấu phẩy. |
 
 ## 3. Bảng `results` (Kết quả học sinh)
 Lưu kết quả bài làm, điểm số, và `answers` dưới dạng JSON.

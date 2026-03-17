@@ -57,9 +57,11 @@ export const fetchResultsFromSheets = async (sheetId: string, resultsGid: string
         cacheKey,
         async () => {
             const data = await callGasApi('get_results');
-            if (!data || !Array.isArray(data)) return [];
+            // Handle both paginated response {data, meta} and flat array format
+            const resultArray = Array.isArray(data) ? data : (data?.data && Array.isArray(data.data) ? data.data : []);
+            if (!resultArray.length) return [];
 
-            return data.map((row: any) => {
+            return resultArray.map((row: any) => {
                 // Handle column names with spaces and different casing from Google Sheets
                 const studentName = row['Student Name'] || row.studentName || row.name || '';
                 const studentClass = row['Class'] || row.className || row.studentClass || '';
@@ -540,7 +542,6 @@ export const updateQuizInSheet = async (quiz: Quiz, scriptUrl: string): Promise<
             alert(`Cảnh báo: Số câu hỏi lưu (${result.questionCount}) không khớp với số câu trong đề (${expectedCount}). Vui lòng kiểm tra lại.`);
             return false;
         }
-        console.log(`[updateQuizInSheet] Successfully updated quiz with ${result.questionCount || expectedCount} questions`);
         cacheService.invalidatePrefix('quizzes:');
         return true;
     }

@@ -1,13 +1,14 @@
 // Response helpers for Workers API
 
-export function jsonResponse(data: any, status = 200): Response {
-    return new Response(JSON.stringify(data), {
-        status,
-        headers: { 'Content-Type': 'application/json' },
-    });
+export function jsonResponse<T>(data: T, status = 200, cacheSeconds = 0): Response {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (cacheSeconds > 0) {
+        headers['Cache-Control'] = `public, max-age=${cacheSeconds}`;
+    }
+    return new Response(JSON.stringify(data), { status, headers });
 }
 
-export function successResponse(data: any = null): Response {
+export function successResponse<T>(data: T | null = null): Response {
     return jsonResponse({ status: 'success', data });
 }
 
@@ -41,7 +42,7 @@ export function generateRandomPassword(): string {
 }
 
 // Sanitize input to prevent injection
-export function sanitizeInput(str: any): string {
+export function sanitizeInput(str: unknown): string {
     if (typeof str !== 'string') return String(str ?? '');
     if (/^[=+\-@]/.test(str)) return `'${str}`;
     return str;

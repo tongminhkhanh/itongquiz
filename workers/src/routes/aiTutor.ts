@@ -89,41 +89,71 @@ export async function handleAiTutorRoutes(
                 body: JSON.stringify({
                     model: 'gemini-2.0-flash',
                     messages: [
-                        { role: 'system', content: 'You are Dr. Owl, a friendly AI tutor for elementary school students. Always respond in valid JSON format only.' },
-                        { role: 'user', content: prompt }
+                        { role: 'user', content: prompt + '\nLƯU Ý QUAN TRỌNG: CÂU TRẢ LỜI PHẢI RẤT NGẮN GỌN (dưới 150 chữ tổng cộng) ĐỂ TRÁNH BỊ CẮT ĐỨT. Tối đa 2 câu hỏi thực hành thôi.' }
                     ],
                     temperature: 0.7,
-                    max_tokens: 2000,
+                    max_tokens: 4096,
+                    max_completion_tokens: 4096,
+                    maxOutputTokens: 4096,
+                    response_format: { type: 'json_object' },
                 }),
             });
 
             if (!aiResponse.ok) {
                 const errText = await aiResponse.text();
                 console.error('[AI Tutor] CLIProxy error:', aiResponse.status, errText);
-                return errorResponse('AI service temporarily unavailable', 503);
+                return errorResponse('AI service temporarily unavailable. Status: ' + aiResponse.status, 503);
             }
 
             const aiData = await aiResponse.json() as any;
             const rawContent = aiData?.choices?.[0]?.message?.content || '';
+            console.log('[AI Tutor] Raw AI response length:', rawContent.length, 'first 200 chars:', rawContent.substring(0, 200));
 
-            // Parse AI response - handle markdown code blocks
-            let parsed: any;
+            // Robust JSON extraction - multiple strategies
+            let parsed: any = null;
+
+            // Strategy 1: Direct JSON parse
             try {
-                // Strip markdown code block if present
-                let cleanContent = rawContent.trim();
-                if (cleanContent.startsWith('```')) {
-                    cleanContent = cleanContent.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
-                }
-                parsed = JSON.parse(cleanContent);
-            } catch (parseErr) {
-                console.error('[AI Tutor] Failed to parse AI response:', rawContent);
-                return errorResponse('AI response format error. Please try again.', 500);
+                parsed = JSON.parse(rawContent.trim());
+            } catch { /* not direct JSON */ }
+
+            // Strategy 2: Strip markdown code fences
+            if (!parsed) {
+                try {
+                    let cleaned = rawContent.trim();
+                    // Remove ```json ... ``` or ``` ... ```
+                    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+                    parsed = JSON.parse(cleaned.trim());
+                } catch { /* not code-fenced JSON */ }
+            }
+
+            // Strategy 3: Find first { ... } block via regex
+            if (!parsed) {
+                try {
+                    const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        parsed = JSON.parse(jsonMatch[0]);
+                    }
+                } catch { /* no valid JSON object found */ }
+            }
+
+            if (!parsed) {
+                console.error('[AI Tutor] All parse strategies failed. Raw:', rawContent.substring(0, 500));
+                return jsonResponse({
+                    status: 'error',
+                    message: 'JSON_PARSE_ERROR',
+                    raw: rawContent
+                });
             }
 
             // Validate the parsed response structure
             if (!parsed.diagnosis || !parsed.practiceQuestions || !Array.isArray(parsed.practiceQuestions)) {
-                console.error('[AI Tutor] Invalid AI response structure:', parsed);
-                return errorResponse('AI response missing required fields. Please try again.', 500);
+                console.error('[AI Tutor] Invalid AI response structure:', JSON.stringify(parsed).substring(0, 300));
+                return jsonResponse({
+                    status: 'error',
+                    message: 'INVALID_JSON_STRUCTURE',
+                    raw: parsed
+                });
             }
 
             return jsonResponse({

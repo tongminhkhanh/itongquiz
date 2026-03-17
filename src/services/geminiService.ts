@@ -1,6 +1,7 @@
 import { SYSTEM_INSTRUCTION } from "../config/constants";
 import { QuestionType } from "../types";
 import { generateImage, checkImageServiceAvailability } from "./imageGenerationService";
+import { callApi } from "./apiAdapter";
 
 export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux' | 'native-ocr';
 
@@ -523,19 +524,14 @@ const fixQuestionLatex = (q: any): any => {
 // Validate and fix quiz data, especially CATEGORIZATION questions
 // maxQuestions: Optional limit - if AI returns more questions than requested, slice to this limit
 const validateAndFixQuiz = (quiz: any, maxQuestions?: number): any => {
-  console.log('[validateAndFixQuiz] Called with quiz:', quiz?.title || 'No title');
   if (!quiz || !quiz.questions) {
-    console.log('[validateAndFixQuiz] No quiz or questions found');
     return quiz;
   }
-
-  console.log('[validateAndFixQuiz] Processing', quiz.questions.length, 'questions');
 
   // ⚠️ CRITICAL: Slice questions if AI returned more than requested
   if (maxQuestions && quiz.questions.length > maxQuestions) {
     console.warn(`[validateAndFixQuiz] ⚠️ AI returned ${quiz.questions.length} questions but only ${maxQuestions} requested. Slicing...`);
     quiz.questions = quiz.questions.slice(0, maxQuestions);
-    console.log(`[validateAndFixQuiz] After slicing: ${quiz.questions.length} questions`);
   }
 
   quiz.questions = quiz.questions.map((q: any, index: number) => {
@@ -544,13 +540,9 @@ const validateAndFixQuiz = (quiz: any, maxQuestions?: number): any => {
 
     // Fix CATEGORIZATION questions
     if (fixedQ.type === 'CATEGORIZATION') {
-      console.log(`[CATEGORIZATION] Câu ${index + 1}: Found CATEGORIZATION question`);
-      console.log(`[CATEGORIZATION] Câu ${index + 1}: Raw question data:`, JSON.stringify(fixedQ, null, 2));
 
       const categories = fixedQ.categories || [];
       const items = fixedQ.items || [];
-
-      console.log(`[CATEGORIZATION] Câu ${index + 1}: categories count = ${categories.length}, items count = ${items.length}`);
 
       // Log warning if items is empty
       if (items.length === 0) {
@@ -559,7 +551,6 @@ const validateAndFixQuiz = (quiz: any, maxQuestions?: number): any => {
       } else {
         // Log each item
         items.forEach((item: any, i: number) => {
-          console.log(`[CATEGORIZATION] Câu ${index + 1}, Item ${i}: id="${item.id}", content="${item.content}", categoryId="${item.categoryId}"`);
           if (!item.content || item.content.trim() === '') {
             console.error(`[CATEGORIZATION] ❌ Item ${i} has EMPTY content!`);
             item.content = item.content || `(Mục ${i + 1})`;
@@ -584,19 +575,41 @@ const validateAndFixQuiz = (quiz: any, maxQuestions?: number): any => {
 
   // 🔴 SẮP XẾP CÂU HỎI THEO MỨC ĐỘ: Mức 1 (đầu) → Mức 2 (giữa) → Mức 3 (cuối)
   // Nếu câu hỏi có trường difficultyLevel, sắp xếp theo thứ tự tăng dần
+  // Nếu câu hỏi có trường difficultyLevel, sắp xếp theo thứ tự tăng dần
   if (quiz.questions.some((q: any) => q.difficultyLevel)) {
-    console.log('[validateAndFixQuiz] Sorting questions by difficultyLevel...');
     quiz.questions.sort((a: any, b: any) => {
       const levelA = a.difficultyLevel || 2; // Default to level 2 if not specified
       const levelB = b.difficultyLevel || 2;
       return levelA - levelB;
     });
-    console.log('[validateAndFixQuiz] Questions sorted. Order:',
-      quiz.questions.map((q: any, i: number) => `Q${i + 1}: Level ${q.difficultyLevel || '?'}`).join(', ')
-    );
   }
 
   return quiz;
+};
+
+/**
+ * Helper to robustly extract content text from various AI response formats
+ * Handles both OpenAI (choices) and Gemini (candidates) formats
+ */
+const extractAIContent = (data: any): string => {
+  if (!data) return '';
+
+  // 1. OpenAI format
+  if (data.choices && data.choices[0]?.message?.content) {
+    return data.choices[0].message.content;
+  }
+
+  // 2. Gemini format
+  if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+    return data.candidates[0].content.parts[0].text;
+  }
+
+  // 3. Nested data (sometimes proxy wraps it)
+  if (data.data) {
+    return extractAIContent(data.data);
+  }
+
+  return '';
 };
 
 // Generate quiz using Perplexity API
@@ -604,10 +617,9 @@ const generateWithPerplexity = async (
   promptText: string,
   apiKey: string
 ): Promise<any> => {
-  const API_URL = 'https://api.perplexity.ai/chat/completions';
   const MODEL_NAME = 'sonar'; // or 'sonar-pro' for better quality
 
-  const requestBody = {
+  const data = await callApi('ai_chat', {
     model: MODEL_NAME,
     messages: [
       {
@@ -620,40 +632,11 @@ const generateWithPerplexity = async (
       }
     ],
     temperature: 0.4,
-    max_tokens: 8192 // Increased for larger quizzes
-  };
-
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey} `,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(requestBody)
+    max_tokens: 8192
   });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    console.error("Perplexity API Error:", errorData);
-
-    if (response.status === 401) {
-      throw new Error("API Key không hợp lệ. Vui lòng kiểm tra lại Perplexity API Key của bạn.");
-    }
-    if (response.status === 429) {
-      throw new Error("Đã vượt quá giới hạn request. Vui lòng đợi một chút rồi thử lại.");
-    }
-
-    throw new Error(`Lỗi Perplexity API(${response.status}): ${errorData.error?.message || response.statusText} `);
-  }
-
-  const data = await response.json();
-
-  if (!data.choices || data.choices.length === 0) {
-    throw new Error("AI không trả về kết quả nào.");
-  }
-
-  const text = data.choices[0].message.content;
-  if (!text) throw new Error("AI trả về dữ liệu rỗng.");
+  const text = extractAIContent(data);
+  if (!text) throw new Error("AI không trả về kết quả nào (Định dạng phản hồi không xác định).");
 
   return validateAndFixQuiz(parseAndRepairJSON(text));
 };
@@ -799,88 +782,43 @@ BƯỚC 3: FORMAT JSON CHUẨN
 
   while (attempt < maxRetries) {
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+      const data = await callApi('ai_chat', {
+        model: MODEL_NAME,
+        contents: contents,
+        system_instruction: {
+          parts: [{ text: SYSTEM_INSTRUCTION }]
         },
-        body: JSON.stringify(requestBody)
+        generation_config: {
+          temperature: 0.4,
+          response_mime_type: "application/json"
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+      const text = extractAIContent(data);
+      if (!text) throw new Error("AI không trả về kết quả nào (Định dạng Gemini không xác định).");
 
-        // Handle 429 (Too Many Requests) or 503 (Service Unavailable)
-        if (response.status === 429 || response.status === 503) {
-          attempt++;
-          if (attempt >= maxRetries) {
-            throw new Error("Hệ thống đang quá tải (429). Bạn đang dùng gói miễn phí của Google, hãy đợi 1-2 phút rồi thử lại nhé!");
-          }
-          const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-          console.log(`Rate limited. Đang chờ ${delay / 1000}s trước khi thử lại (lần ${attempt}/${maxRetries})...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-
-        console.error("Gemini API Error:", errorData);
-
-        let errorMessage = `Lỗi API (${response.status}): ${response.statusText}`;
-        if (errorData.error) {
-          errorMessage = `Lỗi từ Google: ${errorData.error.message}`;
-
-          if (errorData.error.code === 404 || errorData.error.status === 'NOT_FOUND') {
-            try {
-              const listModelsUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-              const listResponse = await fetch(listModelsUrl);
-              const listData = await listResponse.json();
-
-              if (listData.models) {
-                const availableModels = listData.models.map((m: any) => m.name.replace('models/', '')).join(', ');
-                errorMessage = `Không tìm thấy model '${MODEL_NAME}'. Key của bạn chỉ hỗ trợ các model: ${availableModels}`;
-              } else {
-                errorMessage = "Không tìm thấy model và không thể lấy danh sách model. Vui lòng kiểm tra lại API Key.";
-              }
-            } catch (e) {
-              errorMessage = "Không tìm thấy model. Vui lòng kiểm tra lại API Key.";
-            }
-          }
-        }
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-
-      if (!data.candidates || data.candidates.length === 0) {
-        throw new Error("AI không trả về kết quả nào.");
-      }
-
-      const text = data.candidates[0].content.parts[0].text;
-      if (!text) throw new Error("AI trả về dữ liệu rỗng.");
-
-      // Format multiplication signs: Replace ALL * with x in math contexts
-      // Format division signs: Replace / with : ONLY if surrounded by spaces (e.g., 5 / 3 -> 5 : 3). Keep fractions (1/2) as is.
+      // Format multiplication signs
       const formattedText = text
-        // Replace * when surrounded by spaces: " * " -> " x "
         .replace(/\s\*\s/g, ' x ')
-        // Replace * after parenthesis: ") * " -> ") x "
         .replace(/\)\s*\*\s*/g, ') x ')
-        // Replace * before parenthesis: " * (" -> " x ("
         .replace(/\s*\*\s*\(/g, ' x (')
-        // Replace * between alphanumeric: "a * b", "5 * 3" -> "a x b", "5 x 3"
         .replace(/([a-zA-Z0-9?])\s*\*\s*([a-zA-Z0-9?(])/g, '$1 x $2')
-        // Division with spaces
         .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
 
       return validateAndFixQuiz(parseAndRepairJSON(formattedText));
 
     } catch (error: any) {
+      attempt++;
       if (attempt >= maxRetries || !error.message.includes("429")) {
-        console.error("Generate Quiz Error:", error);
+        console.error("Generate Quiz Error (Gemini):", error);
         throw error;
       }
+      const delay = Math.pow(2, attempt) * 1000;
+      console.log(`Rate limited (Gemini). Đang chờ ${delay / 1000}s trước khi thử lại (lần ${attempt}/${maxRetries})...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
-};
+}
 
 // Generate quiz using OpenAI API (or compatible LLM-Mux)
 const generateWithOpenAI = async (
@@ -965,34 +903,16 @@ Tài liệu đính kèm:`
   const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 phút timeout cho 100 câu
 
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal
+    const data = await callApi('ai_chat', {
+      model: MODEL_NAME,
+      messages: messages,
+      temperature: 0.4,
+      response_format: { type: "json_object" }
     });
-    clearTimeout(timeoutId);
 
-    console.log(`[AIClient] Response status: ${response.status} ${response.statusText}`);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("OpenAI API Error:", errorData);
-
-      if (response.status === 429) {
-        throw new Error("Hết tiền trong tài khoản OpenAI (Quota Exceeded). Vui lòng nạp thêm tiền hoặc chuyển sang dùng Google Gemini (Miễn phí).");
-      }
-
-      throw new Error(`Lỗi OpenAI API (${response.status}): ${errorData.error?.message || response.statusText}`);
-    }
-
-    const data = await response.json();
-    console.log(`[AIClient] Received data from proxy`);
-    const text = data.choices[0].message.content;
-    if (!text) throw new Error("AI trả về dữ liệu rỗng.");
+    console.log(`[AIClient] Received data from proxy through callApi`);
+    const text = extractAIContent(data);
+    if (!text) throw new Error("AI không trả về kết quả nào (Định dạng OpenAI không xác định).");
 
     // Format multiplication signs: Replace ALL * with x in math contexts
     // Format division signs: Replace / with : ONLY if surrounded by spaces
@@ -1046,30 +966,44 @@ export const generateQuiz = async (
 ): Promise<any> => {
   // Determine API Key based on provider
   let envKey = '';
+  let actualProvider = provider;
+
   if (provider === 'perplexity') {
     envKey = (import.meta as any).env.VITE_PERPLEXITY_API_KEY || '';
   } else if (provider === 'openai') {
     envKey = (import.meta as any).env.VITE_OPENAI_API_KEY || '';
   } else if (provider === 'llm-mux') {
-    envKey = (import.meta as any).env.VITE_LLM_MUX_API_KEY || 'sk-dummy-key'; // LLM-Mux might not need a real key, but usually requires something
+    envKey = (import.meta as any).env.VITE_LLM_MUX_API_KEY || (import.meta as any).env.VITE_CLIPROXY_TOKEN || '';
   } else {
     envKey = (import.meta as any).env.VITE_GEMINI_API_KEY || (import.meta as any).env.VITE_API_KEY || '';
+
+    // 🧠 SMART FALLBACK: If user selected GEMINI but didn't provide a Google API Key,
+    // AND they provided a proxy key (CLIPROXY_TOKEN/LLM_MUX_API_KEY), route it through the proxy automatically!
+    if (!envKey && !customApiKey) {
+      const proxyKey = (import.meta as any).env.VITE_CLIPROXY_TOKEN || (import.meta as any).env.VITE_LLM_MUX_API_KEY;
+      if (proxyKey) {
+        envKey = proxyKey;
+        actualProvider = 'llm-mux';
+        console.log('[generateQuiz] 🔄 Auto-falling back from GEMINI to Proxy (LLM-MUX) because native key is missing.');
+      }
+    }
   }
 
   const apiKey = (customApiKey || envKey || '').trim();
-  if (!apiKey && provider !== 'llm-mux') throw new Error(`Vui lòng nhập API Key cho ${provider.toUpperCase()} trong phần Cấu hình.`);
+  if (!apiKey && actualProvider !== 'llm-mux') throw new Error(`Vui lòng nhập API Key cho ${provider.toUpperCase()} trong phần Cấu hình.`);
 
   const promptText = buildPrompt(topic, classLevel, content, options);
   const requestedCount = options?.questionCount || 10;
 
   let result: any;
 
-  if (provider === 'perplexity') {
+  if (actualProvider === 'perplexity') {
     result = await generateWithPerplexity(promptText, apiKey);
-  } else if (provider === 'openai') {
+  } else if (actualProvider === 'openai') {
     result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary);
-  } else if (provider === 'llm-mux') {
-    const baseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || 'http://localhost:8317/v1';
+  } else if (actualProvider === 'llm-mux') {
+    // Try LLM_MUX_BASE_URL first, then CLIPROXY_API, then fallback to localhost
+    const baseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || (import.meta as any).env.VITE_CLIPROXY_API || 'http://localhost:8317/v1';
     result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary, baseUrl);
   } else {
     result = await generateWithGemini(promptText, apiKey, file, options?.imageLibrary);
@@ -1228,10 +1162,24 @@ QUY TẮC QUAN TRỌNG:
 - Giữ nguyên cấu trúc đề thi: số thứ tự câu, đáp án A/B/C/D
 - Nếu có đoạn văn/thơ, giữ nguyên format với xuống dòng`;
 
+  // ========== FALLBACK LOGIC ==========
+  // If provider is gemini but we don't have a native key, check for proxy key
+  let actualProvider = provider;
+  if (provider === 'gemini') {
+    const geminiKey = (customApiKey || (import.meta as any).env.VITE_GEMINI_API_KEY || (import.meta as any).env.VITE_API_KEY || '').trim();
+    if (!geminiKey) {
+      const proxyKey = (import.meta as any).env.VITE_CLIPROXY_TOKEN || (import.meta as any).env.VITE_LLM_MUX_API_KEY;
+      if (proxyKey) {
+        actualProvider = 'llm-mux';
+        console.log('[extractTextFromPdf] 🔄 Auto-falling back from GEMINI to Proxy (LLM-MUX) because native key is missing.');
+      }
+    }
+  }
+
   // ========== LLM-MUX (OpenAI-compatible API) ==========
-  if (provider === 'llm-mux') {
-    const baseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || 'http://localhost:8317/v1';
-    const envKey = (import.meta as any).env.VITE_LLM_MUX_API_KEY || 'sk-dummy-key';
+  if (actualProvider === 'llm-mux') {
+    const baseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || (import.meta as any).env.VITE_CLIPROXY_API || 'http://localhost:8317/v1';
+    const envKey = (import.meta as any).env.VITE_LLM_MUX_API_KEY || (import.meta as any).env.VITE_CLIPROXY_TOKEN || '';
     const apiKey = (customApiKey || envKey || '').trim();
 
     const API_URL = `${baseUrl}/chat/completions`;
@@ -1294,12 +1242,10 @@ QUY TẮC QUAN TRỌNG:
     } catch (err: any) {
       console.error("LLM-Mux Fetch Error:", err);
       if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
-        throw new Error('Không thể kết nối đến LLM-Mux (localhost:8317). Vui lòng đảm bảo bạn đã chạy "llm-mux" trong terminal.');
+        throw new Error('Không thể kết nối đến Proxy Server. Vui lòng kiểm tra lại cấu hình.');
       }
       throw err;
     }
-
-
   }
 
   // ========== GEMINI (Direct API) ==========

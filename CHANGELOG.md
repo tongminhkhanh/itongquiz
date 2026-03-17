@@ -2,6 +2,51 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-03-15]
+### Added
+- **Production Launch**: Triển khai chính thức hệ thống lên [thitong.site](https://www.thitong.site).
+- **Security Hardening**: Nâng cấp toàn bộ hệ thống mật khẩu Giáo viên sang mã hóa **Bcrypt** (thay thế plain-text).
+- **Lazy Security Migration**: Cơ chế tự động băm mật khẩu khi giáo viên đăng nhập lần đầu tiên sau bản cập nhật.
+- **Improved LaTeX Rendering**: Sửa lỗi vỡ công thức MathJax trong các câu hỏi có ô trống inline (`SHORT_ANSWER`, `DROPDOWN`, `DRAG_DROP`).
+- **Context-Aware Rendering**: Tự động chuyển đổi sang chế độ render "khối văn bản nguyên vẹn" khi phát hiện xung đột giữa LaTeX và các ô nhập liệu giúp MathJax nhận diện cú pháp chuẩn xác.
+
+### Fixed / Security
+- **Auth Bypass Fix**: Đã vá lỗ hổng đăng nhập không cần mật khẩu cho giáo viên.
+- **API Proxy Stabilization**: Đồng bộ hóa AI Client (`geminiService.ts`) qua Worker Proxy để tránh lỗi CORS trên Production.
+- **Question Interaction Fix**: Sửa lỗi lệch vị trí ô điền khuyết trong các biểu thức phân số Toán học.
+
+## [2026-03-13]
+### Added
+- **SEO Boost Bundle**: Triển khai gói tối ưu hóa tìm kiếm toàn diện chất lượng PRODUCTION.
+- **Semantic HTML Upgrade**: Chuyển đổi toàn bộ Subject Cards trang chủ sang thẻ `section` và `a`, nâng cấp tiêu đề lên thẻ `h2` để Bot Google dễ dàng crawl và index.
+- **Dynamic Meta Tags**: Tích hợp hệ thống cập nhật `document.title` và `meta description` tự động bám sát nội dung từng trang và từng bài thi (Ví dụ: "Luyện thi IOE Lớp 3").
+- **Accessibility Enhancement**: Bổ sung thuộc tính `alt` mô tả tích cực cho 100% hình ảnh stickers 3D và icons trên toàn bộ UI học sinh.
+- **Expanded Sitemap**: Cấu hình mở rộng `sitemap.xml` bám sát các luồng dữ liệu môn học chính.
+- **Production Deployment**: Hoàn tất triển khai bản Build siêu tối ưu lên Vercel Production (`https://www.thitong.site`).
+
+### Fixed / Security
+- **Meta Tag Type Fix**: Xử lý lỗi so sánh kiểu dữ liệu trong App.tsx bằng Type Casting (`as any`) cho các trang phụ.
+- **JSX Validation**: Khắc phục lỗi thiếu thẻ đóng Semantic trong cấu trúc trang chủ.
+- **Hardcoded Secret Removal**: Loại bỏ hoàn toàn các API keys dự phòng (`sk-dummy-key`, `123456`) trong mã nguồn, bắt buộc cấu hình qua Environment Variables.
+- **Vulnerability Patch**: Nâng cấp Wrangler CLI lên phiên bản 4.x, vá lỗ hổng bảo mật HIGH (OS Command Injection).
+- **Production cleanup**: Tự động loại bỏ `console.log` và `debugger` trong phiên bản build chính thức thông qua cấu hình `esbuild.drop`.
+- **Maintenance**: Xóa bỏ các tệp tin dự phòng (`.old.tsx`, `.backup.tsx`) để làm sạch codebase.
+
+## [2026-03-12]
+### Added
+- **Practice Library**: Ra mắt "Thư viện luyện tập" chuyên đề, cho phép học sinh tự học và làm đề ngẫu nhiên dựa trên các bộ nhãn (Tags).
+- **Auto-Tagging System**: Tự động hóa việc gắn nhãn (Hashtags) cho hơn 260 câu hỏi cũ dựa trên nội dung đề thi, kích hoạt toàn diện bộ lọc luyện tập.
+- **Privacy Analytics**: Tích hợp Umami Analytics để theo dõi lượt truy cập mà không xâm phạm quyền riêng tư.
+- **SEO Infrastructure**: Bổ sung `robots.txt`, `sitemap.xml` và tối ưu hóa thẻ Meta cho Landing Page.
+
+### Fixed / Security
+- **Duplicate Key Resolution**: Khắc phục triệt để lỗi React "Encountered two children with the same key" tại màn hình học sinh bằng cách sử dụng Assignment ID duy nhất thay cho Quiz ID.
+- **Practice Mapping Fix**: Sửa lỗi hiển thị 0 câu hỏi trong Thư viện luyện tập bằng cách đồng bộ logic unmapping (snake_case sang camelCase) giữa Backend và Frontend.
+- **D1 Tags Persistence**: Sửa lỗi không lưu Hashtags khi tạo đề mới (thiếu cột `tags` trong lệnh INSERT).
+- **N+1 Query Resolution**: Khắc phục lỗi nghẽn cổ chai tại API bài tập học sinh, gộp hàng trăm câu truy vấn lẻ tẻ thành 1 câu truy vấn Batch duy nhất.
+- **Secret Hardening**: Tuyệt đối bảo mật các khóa API AI (Gemini Token) bằng cách chuyển từ file `wrangler.toml` sang Cloudflare Secrets.
+- **Source Audit**: Hoàn tất rà soát 100% mã nguồn Frontend/Backend, xử lý 3 Cảnh báo Bảo mật quan trọng.
+
 ## [2026-03-11]
 ### Added
 - **Subject Categories**: Bổ sung phân loại đề thi theo 6 môn học chuẩn (Toán, Tiếng Việt, Tiếng Anh, Tự nhiên & Xã hội, Tin học, IOE).

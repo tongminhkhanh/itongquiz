@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 import { useQuizStore } from '../../../stores/quizStore';
 import { useAuthStore } from '../../../stores/authStore';
-import { Users, FileText, CheckCircle, Clock, TrendingUp, Sparkles, Activity } from 'lucide-react';
+import { Users, FileText, CheckCircle, Clock, TrendingUp, Sparkles } from 'lucide-react';
+import { calculateResultsStatistics } from '../../utils/statisticsUtils';
+import { ResultsAnalytics } from '../teacher/ResultsView/ResultsAnalytics';
 
 const OverviewTab: React.FC = () => {
     const authStore = useAuthStore();
@@ -11,30 +13,27 @@ const OverviewTab: React.FC = () => {
     const filteredResults = useMemo(() => {
         return authStore.isAdmin || !authStore.teacherClass
             ? quizStore.results
-            : quizStore.results.filter(r => r.studentClass === authStore.teacherClass);
+            : quizStore.results.filter(r => {
+                const stuClass = (r.studentClass || '').toLowerCase().replace(/\s+/g, '');
+                const teaClass = (authStore.teacherClass || '').toLowerCase().replace(/\s+/g, '');
+                return stuClass.includes(teaClass) || teaClass.includes(stuClass);
+            });
     }, [quizStore.results, authStore.isAdmin, authStore.teacherClass]);
 
-    // Tính toán thống kê
+    // Tính toán thống kê chi tiết
+    const statistics = useMemo(() => {
+        return calculateResultsStatistics(filteredResults);
+    }, [filteredResults]);
+
+    // Thống kê tóm tắt cho StatCards
     const stats = useMemo(() => {
-        const totalQuizzes = quizStore.quizzes.length;
-        const totalResults = filteredResults.length;
-
-        // Tính điểm trung bình
-        const validScores = filteredResults.filter(r => r.score !== undefined && r.score !== null);
-        const avgScore = validScores.length > 0
-            ? (validScores.reduce((sum, r) => sum + Number(r.score), 0) / validScores.length).toFixed(1)
-            : '0.0';
-
-        // Đếm số học sinh duy nhất (dựa trên tên học sinh)
-        const uniqueStudents = new Set(filteredResults.map(r => r.studentName)).size;
-
         return {
-            totalQuizzes,
-            totalResults,
-            avgScore,
-            uniqueStudents
+            totalQuizzes: quizStore.quizzes.length,
+            totalResults: statistics.totalResults,
+            avgScore: statistics.mean.toFixed(1),
+            uniqueStudents: new Set(filteredResults.map(r => r.studentName)).size
         };
-    }, [quizStore.quizzes, filteredResults]);
+    }, [quizStore.quizzes, statistics, filteredResults]);
 
     const StatCard = ({ title, value, icon, colorClass, bgClass }: any) => (
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
@@ -67,15 +66,8 @@ const OverviewTab: React.FC = () => {
                 </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard
-                    title="Học sinh tương tác"
-                    value={stats.uniqueStudents}
-                    icon={<Users />}
-                    colorClass="text-blue-600"
-                    bgClass="bg-blue-100"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
                 <StatCard
                     title="Đề kiểm tra"
                     value={stats.totalQuizzes}
@@ -101,19 +93,9 @@ const OverviewTab: React.FC = () => {
 
             {/* Info Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-                {/* Left: TBD Chart placeholder */}
-                <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2 bg-indigo-100 rounded-lg">
-                            <Activity className="w-5 h-5 text-indigo-600" />
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-800">Biểu đồ kết quả</h3>
-                    </div>
-                    <div className="h-64 flex flex-col items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                        <TrendingUp className="w-8 h-8 text-gray-400 mb-2" />
-                        <p className="text-gray-500 font-medium text-sm">Chưa có đủ dữ liệu biểu đồ</p>
-                        <p className="text-gray-400 text-xs mt-1">Số liệu sẽ hiển thị khi có nhiều bài nộp hơn.</p>
-                    </div>
+                {/* Real Analytics Chart */}
+                <div className="lg:col-span-2">
+                    <ResultsAnalytics statistics={statistics} hideStats={true} />
                 </div>
 
                 {/* Right: Activity Feed */}

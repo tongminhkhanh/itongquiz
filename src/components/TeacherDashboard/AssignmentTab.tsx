@@ -464,114 +464,43 @@ const AssignmentRow: React.FC<{
             {/* Deadline */}
             <td className="py-3 px-4">
                 {isEditing ? (
-                    <div className="flex items-center gap-1.5">
-                        <input
-                            type="datetime-local"
-                            value={editDeadline}
-                            onChange={(e) => setEditDeadline(e.target.value)}
-                            className="px-2 py-1.5 border border-orange-300 rounded-lg bg-orange-50 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-xs w-44"
-                        />
-                        <button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
-                            title="Lưu"
-                        >
-                            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                        </button>
-                        <button
-                            onClick={handleCancel}
-                            className="p-1 text-gray-400 hover:bg-gray-100 rounded-md transition-colors"
-                            title="Hủy"
-                        >
-                            <X className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
+                    <DeadlineEditor
+                        editDeadline={editDeadline}
+                        setEditDeadline={setEditDeadline}
+                        onSave={handleSave}
+                        onCancel={handleCancel}
+                        isSaving={isSaving}
+                    />
                 ) : (
-                    <div className="flex items-center gap-1.5 group">
-                        <div>
-                            <div className="text-sm text-gray-700">
-                                {deadlineDate.toLocaleDateString('vi-VN', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                })}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                                {deadlineDate.toLocaleTimeString('vi-VN', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                })}
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleEditClick}
-                            className="p-1 text-gray-300 hover:text-orange-500 hover:bg-orange-50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
-                            title="Sửa hạn nộp"
-                        >
-                            <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
+                    <DeadlineDisplay
+                        deadlineDate={deadlineDate}
+                        onEdit={handleEditClick}
+                    />
                 )}
             </td>
 
             {/* Status - Clickable to toggle */}
             <td className="py-3 px-4">
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => {
-                            if (isOpen) {
-                                // Closing: just toggle
-                                onUpdateStatus(assignment.id, 'CLOSED');
-                            } else {
-                                // Re-opening: must extend deadline first
-                                handleReopenClick();
-                            }
-                        }}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition-all hover:shadow-sm ${isOpen
-                            ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
-                            : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'
-                            }`}
-                        title={isOpen ? 'Bấm để đóng bài' : 'Bấm để mở lại (cần gia hạn deadline)'}
-                    >
-                        {isOpen ? (
-                            <><Clock className="w-3 h-3" /> Đang mở</>
-                        ) : (
-                            <><CheckCircle2 className="w-3 h-3" /> Đã đóng</>
-                        )}
-                    </button>
-                    {isOpen && timeRemaining && (
-                        <span className={`text-xs ${timeRemaining.includes('giờ') ? 'text-amber-500' : 'text-gray-400'
-                            }`}>
-                            {timeRemaining}
-                        </span>
-                    )}
-                </div>
+                <AssignmentStatusBadge
+                    isOpen={isOpen}
+                    timeRemaining={timeRemaining}
+                    onToggle={() => {
+                        if (isOpen) {
+                            onUpdateStatus(assignment.id, 'CLOSED');
+                        } else {
+                            handleReopenClick();
+                        }
+                    }}
+                />
             </td>
 
             {/* Progress */}
             <td className="py-3 px-4">
-                {total > 0 ? (
-                    <div className="min-w-[120px]">
-                        <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-gray-600 font-medium">{submitted}/{total} nộp</span>
-                            <span className="text-gray-400">{progress}%</span>
-                        </div>
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                                className={`h-full rounded-full transition-all ${progress === 100
-                                    ? 'bg-green-500'
-                                    : progress > 50
-                                        ? 'bg-blue-500'
-                                        : 'bg-orange-400'
-                                    }`}
-                                style={{ width: `${progress}%` }}
-                            />
-                        </div>
-                    </div>
-                ) : (
-                    <span className="text-xs text-gray-300">—</span>
-                )}
+                <AssignmentProgress
+                    submitted={submitted}
+                    total={total}
+                    progress={progress}
+                />
             </td>
 
             {/* Actions */}
@@ -587,5 +516,130 @@ const AssignmentRow: React.FC<{
         </tr>
     );
 };
+
+// ==========================================
+// SUB-COMPONENTS
+// ==========================================
+
+const DeadlineEditor: React.FC<{
+    editDeadline: string;
+    setEditDeadline: (val: string) => void;
+    onSave: () => void;
+    onCancel: () => void;
+    isSaving: boolean;
+}> = ({ editDeadline, setEditDeadline, onSave, onCancel, isSaving }) => (
+    <div className="flex items-center gap-1.5">
+        <input
+            type="datetime-local"
+            value={editDeadline}
+            onChange={(e) => setEditDeadline(e.target.value)}
+            className="px-2 py-1.5 border border-orange-300 rounded-lg bg-orange-50 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-xs w-44"
+        />
+        <button
+            onClick={onSave}
+            disabled={isSaving}
+            className="p-1 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
+            title="Lưu"
+        >
+            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+        </button>
+        <button
+            onClick={onCancel}
+            className="p-1 text-gray-400 hover:bg-gray-100 rounded-md transition-colors"
+            title="Hủy"
+        >
+            <X className="w-3.5 h-3.5" />
+        </button>
+    </div>
+);
+
+const DeadlineDisplay: React.FC<{
+    deadlineDate: Date;
+    onEdit: () => void;
+}> = ({ deadlineDate, onEdit }) => (
+    <div className="flex items-center gap-1.5 group">
+        <div>
+            <div className="text-sm text-gray-700">
+                {deadlineDate.toLocaleDateString('vi-VN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                })}
+            </div>
+            <div className="text-xs text-gray-400">
+                {deadlineDate.toLocaleTimeString('vi-VN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                })}
+            </div>
+        </div>
+        <button
+            onClick={onEdit}
+            className="p-1 text-gray-300 hover:text-orange-500 hover:bg-orange-50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+            title="Sửa hạn nộp"
+        >
+            <Edit3 className="w-3.5 h-3.5" />
+        </button>
+    </div>
+);
+
+const AssignmentStatusBadge: React.FC<{
+    isOpen: boolean;
+    timeRemaining: string | null;
+    onToggle: () => void;
+}> = ({ isOpen, timeRemaining, onToggle }) => (
+    <div className="flex items-center gap-2">
+        <button
+            onClick={onToggle}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition-all hover:shadow-sm ${isOpen
+                ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+                : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'
+                }`}
+            title={isOpen ? 'Bấm để đóng bài' : 'Bấm để mở lại (cần gia hạn deadline)'}
+        >
+            {isOpen ? (
+                <><Clock className="w-3 h-3" /> Đang mở</>
+            ) : (
+                <><CheckCircle2 className="w-3 h-3" /> Đã đóng</>
+            )}
+        </button>
+        {isOpen && timeRemaining && (
+            <span className={`text-xs ${timeRemaining.includes('giờ') ? 'text-amber-500' : 'text-gray-400'
+                }`}>
+                {timeRemaining}
+            </span>
+        )}
+    </div>
+);
+
+const AssignmentProgress: React.FC<{
+    submitted: number;
+    total: number;
+    progress: number;
+}> = ({ submitted, total, progress }) => (
+    <>
+        {total > 0 ? (
+            <div className="min-w-[120px]">
+                <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-gray-600 font-medium">{submitted}/{total} nộp</span>
+                    <span className="text-gray-400">{progress}%</span>
+                </div>
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                        className={`h-full rounded-full transition-all ${progress === 100
+                            ? 'bg-green-500'
+                            : progress > 50
+                                ? 'bg-blue-500'
+                                : 'bg-orange-400'
+                            }`}
+                        style={{ width: `${progress}%` }}
+                    />
+                </div>
+            </div>
+        ) : (
+            <span className="text-xs text-gray-300">—</span>
+        )}
+    </>
+);
 
 export default AssignmentTab;

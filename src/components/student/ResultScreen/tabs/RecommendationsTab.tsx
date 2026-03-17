@@ -15,8 +15,8 @@ const RecommendationsTab: React.FC<Props> = ({ quiz, result, answers }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Extract wrong answers
-    const wrongAnswers = useMemo(() => extractWrongAnswers(quiz, answers), [quiz, answers]);
+    // Extract wrong answers using validationDetails from result
+    const wrongAnswers = useMemo(() => extractWrongAnswers(quiz, answers, result), [quiz, answers, result]);
 
     // Fetch AI recommendations
     const fetchRecommendations = async () => {

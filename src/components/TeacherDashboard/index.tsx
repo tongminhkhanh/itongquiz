@@ -1,12 +1,13 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Quiz } from '../../types';
-import { Button, ErrorBoundary } from '../common';
+import { Button, ErrorBoundary, Footer } from '../common';
 import { Key, X, Save, Loader2, Bell, Search } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import { setStripAnswersEnabled } from '../../services/googleSheetService';
 import { cacheService } from '../../services/CacheService';
 import Sidebar from './Sidebar';
+import BottomNavigation from './BottomNavigation';
 
 // Lazy load tab components
 const OverviewTab = React.lazy(() => import('./OverviewTab'));
@@ -46,6 +47,7 @@ const TeacherDashboard: React.FC = () => {
 
     // Tab state (Default to 'overview' now instead of 'results')
     const [activeTab, setActiveTab] = useState<string>('overview');
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Editing state
     const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
@@ -122,13 +124,15 @@ const TeacherDashboard: React.FC = () => {
                     setActiveTab(tab);
                 }}
                 onLogout={handleLogout}
+                isMobileOpen={isMobileMenuOpen}
+                setIsMobileOpen={setIsMobileMenuOpen}
             />
 
             {/* Main Content wrapper */}
-            <div className="flex-1 lg:ml-64 flex flex-col min-h-screen transition-all duration-300">
+            <div className="flex-1 lg:ml-64 flex flex-col min-h-screen transition-all duration-300 pb-20 lg:pb-0">
 
                 {/* Top Header / Top Bar */}
-                <header className="h-16 bg-white border-b border-gray-200 sticky top-0 z-30 flex items-center justify-between px-4 lg:px-8 mt-16 lg:mt-0 shadow-sm">
+                <header className="h-16 bg-white border-b border-gray-200 sticky top-0 z-30 flex items-center justify-between px-4 lg:px-8 shadow-sm">
                     {/* Page Title */}
                     <div className="flex items-center">
                         <h1 className="text-xl font-bold text-slate-800 tracking-tight hidden lg:block">
@@ -152,9 +156,36 @@ const TeacherDashboard: React.FC = () => {
                             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full border-2 border-white"></span>
                         </button>
 
-                        {/* User Avatar Mini */}
-                        <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 font-bold flex items-center justify-center border border-orange-200">
-                            {authStore.teacherName?.charAt(0)?.toUpperCase()}
+                        {/* User Profile Dropdown */}
+                        <div className="flex items-center gap-3 pl-4 border-l border-gray-100 group relative py-2 cursor-pointer">
+                            <div className="flex flex-col items-end hidden sm:flex">
+                                <span className="text-sm font-bold text-slate-700 leading-tight">
+                                    {authStore.teacherName || 'Giáo viên'}
+                                </span>
+                                <span className="text-[10px] text-orange-500 font-bold uppercase tracking-wider">
+                                    {authStore.isAdmin ? 'Quản trị viên' : 'Giáo viên'}
+                                </span>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 text-white font-bold flex items-center justify-center border-2 border-white shadow-sm transition-transform group-hover:scale-105">
+                                {authStore.teacherName?.charAt(0)?.toUpperCase()}
+                            </div>
+
+                            {/* Hover Menu */}
+                            <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50 overflow-hidden">
+                                <div className="p-4 border-b border-gray-50 bg-slate-50/50">
+                                    <p className="text-xs text-gray-400 mb-1">Tài khoản</p>
+                                    <p className="text-sm font-bold text-slate-800 truncate">{authStore.teacherName}</p>
+                                </div>
+                                <div className="p-2">
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors text-sm font-medium"
+                                    >
+                                        <X className="w-4 h-4" />
+                                        Đăng xuất
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </header>
@@ -247,7 +278,17 @@ const TeacherDashboard: React.FC = () => {
                         </Suspense>
                     </ErrorBoundary>
                 </main>
+                <Footer onNavigate={(v) => quizStore.setView(v as any)} />
             </div>
+
+            <BottomNavigation
+                activeTab={activeTab}
+                setActiveTab={(tab) => {
+                    if (tab === 'create') setEditingQuiz(null);
+                    setActiveTab(tab);
+                }}
+                onToggleMenu={() => setIsMobileMenuOpen(true)}
+            />
 
             {/* Access Code Edit Modal */}
             {editingAccessCode && (

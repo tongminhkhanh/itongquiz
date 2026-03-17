@@ -110,7 +110,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
                 {/* Image in header - exclude IMAGE_QUESTION and DROPDOWN since they have their own sections */}
                 {/* 🔍 DEBUG: Log image field */}
-                {(() => { if (q.image) console.log(`[QuestionRenderer] 🖼️ Question ${q.id} has image:`, q.image.substring(0, 80)); return null; })()}
+                {/* Image rendering handled below */}
                 {q.image && q.type !== QuestionType.IMAGE_QUESTION && q.type !== QuestionType.DROPDOWN && (
                     <div className="mt-3">
                         <img
@@ -165,13 +165,68 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                     const questionText = (q as any).question || "";
                     // Check if question has inline blanks: [blank], _____, [1], [2], etc.
                     const hasInlineBlanks = /\[blank\]|\[_+\]|_{3,}|\[\d+\]/.test(questionText);
+                    const hasLatex = /\$[^$]+\$/.test(questionText);
 
                     if (hasInlineBlanks) {
-                        // Mode 2: Inline blanks - render input boxes inline with text
+                        // Mode 2: Inline blanks
                         const parts = questionText.split(/(\[blank\]|\[_+\]|_{3,}|\[\d+\])/g);
                         let blankIndex = 0;
                         const currentAnswers = (answers[q.id] as Record<number, string>) || {};
 
+                        // ⚠️ Strategy: If text contains LaTeX, we CANNOT easily inject inputs inline
+                        // because splitting the string breaks MathJax.
+                        // In this case, we render the full text once and show inputs below (like teacher preview).
+                        if (hasLatex) {
+                            return (
+                                <div className="space-y-4">
+                                    <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                        <MathSpan content={questionText} />
+                                    </div>
+
+                                    {/* Vertical inputs list */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                        {parts.map((part, idx) => {
+                                            if (/^\[blank\]$|\[_+\]$|^_{3,}$|^\[\d+\]$/.test(part)) {
+                                                const currentIdx = blankIndex;
+                                                blankIndex++;
+                                                return (
+                                                    <div key={idx} className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-gray-500 w-12 flex-shrink-0">Ô số {currentIdx + 1}:</span>
+                                                        <input
+                                                            type="text"
+                                                            value={currentAnswers[currentIdx] || ''}
+                                                            onChange={(e) => {
+                                                                const newAnswers = { ...currentAnswers };
+                                                                newAnswers[currentIdx] = e.target.value;
+                                                                onAnswerChange(q.id, newAnswers);
+                                                            }}
+                                                            autoComplete="off"
+                                                            className="flex-1 px-3 py-1.5 border-2 border-gray-300 rounded-lg bg-white focus:border-orange-500 outline-none transition-all"
+                                                            placeholder="Nhập đáp án..."
+                                                        />
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })}
+                                    </div>
+
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-500">
+                                            Đã điền: {Object.values(currentAnswers).filter(v => v).length}/{blankIndex}
+                                        </span>
+                                        <button
+                                            onClick={() => onAnswerChange(q.id, {})}
+                                            className="text-red-500 hover:underline flex items-center gap-1"
+                                        >
+                                            <RefreshCcw className="w-3 h-3" /> Xóa tất cả
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        // Normal Inline rendering (for non-Latex text)
                         return (
                             <div className="space-y-4">
                                 <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -189,7 +244,10 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                         newAnswers[currentIdx] = e.target.value;
                                                         onAnswerChange(q.id, newAnswers);
                                                     }}
-                                                    className="inline-block w-28 mx-1 px-3 py-1.5 border-2 border-gray-300 rounded-lg bg-gray-50 text-center font-medium focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition-all"
+                                                    autoComplete="off"
+                                                    autoCorrect="off"
+                                                    spellCheck={false}
+                                                    className="inline-block w-28 mx-1 px-3 py-1.5 border-2 border-gray-300 rounded-lg bg-gray-50 text-center font-medium text-[16px] focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition-all"
                                                     placeholder="..."
                                                 />
                                             );
@@ -222,7 +280,10 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                         type="text"
                                         value={answers[q.id] || ''}
                                         onChange={(e) => onAnswerChange(q.id, e.target.value)}
-                                        className="flex-1 p-2 border-b-2 border-gray-400 bg-transparent focus:border-orange-500 outline-none font-mono text-lg"
+                                        autoComplete="off"
+                                        autoCorrect="off"
+                                        spellCheck={false}
+                                        className="flex-1 p-2 border-b-2 border-gray-400 bg-transparent focus:border-orange-500 outline-none font-mono text-[16px] md:text-lg"
                                         placeholder="Nhập đáp án..."
                                     />
                                 </div>
@@ -398,6 +459,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                     const qDistractors = (q as any).distractors || [];
                     // 🔐 Filter to ensure only strings (blanks might be objects in some cases)
                     const words = [...qBlanks, ...qDistractors].filter((w): w is string => typeof w === 'string');
+                    const hasLatex = /\$[^$]+\$/.test(text);
 
                     // --- NEW FALLBACK LOGIC ---
                     // If text is empty or has no blanks, but we have qBlanks, auto-generate drop zones
@@ -433,6 +495,75 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                         onAnswerChange(q.id, newAnswers);
                     };
 
+                    // ⚠️ LaTeX Handling for Drag & Drop
+                    if (hasLatex) {
+                        return (
+                            <div className="space-y-6">
+                                <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                    <MathSpan content={text} />
+                                </div>
+
+                                {/* List of drop zones below the math block */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-green-50/30 p-4 rounded-xl border border-green-100">
+                                    {blanks.map((blankIdx, i) => {
+                                        const filledWord = currentAnswers[blankIdx];
+                                        return (
+                                            <div key={blankIdx} className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-gray-500 w-12 flex-shrink-0">Ô số {i + 1}:</span>
+                                                <div
+                                                    onClick={() => filledWord && handleBlankClick(blankIdx)}
+                                                    className={`flex-1 h-10 px-3 flex items-center justify-center rounded border-2 transition-all cursor-pointer select-none
+                                                        ${filledWord
+                                                            ? 'bg-white border-green-600 text-green-700 font-bold shadow-sm'
+                                                            : 'bg-white border-dashed border-gray-300 text-gray-300'
+                                                        }`}
+                                                >
+                                                    {filledWord || '...'}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Word Bank */}
+                                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                    <p className="text-sm font-bold text-indigo-800 mb-3 uppercase tracking-wide">Kho từ vựng (Chạm để điền):</p>
+                                    <div className="flex flex-wrap gap-3">
+                                        {allWords.map((word, wIdx) => {
+                                            const usedCount = Object.values(currentAnswers).filter(w => w === word).length;
+                                            const totalCount = allWords.filter(w => w === word).length;
+                                            const isFullyUsed = usedCount >= totalCount;
+
+                                            return (
+                                                <button
+                                                    key={`${word}-${wIdx}`}
+                                                    onClick={() => !isFullyUsed && handleWordClick(word)}
+                                                    disabled={isFullyUsed}
+                                                    className={`px-4 py-2 rounded-lg font-bold shadow-sm transition-all transform active:scale-95 ${isFullyUsed
+                                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                                                        : 'bg-white text-indigo-700 hover:bg-indigo-600 hover:text-white hover:shadow-md border border-indigo-200'
+                                                        }`}
+                                                >
+                                                    {word}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={() => onAnswerChange(q.id, {})}
+                                        className="text-xs text-red-500 hover:underline flex items-center"
+                                    >
+                                        <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    // Normal Inline rendering
                     return (
                         <div className="space-y-6">
                             <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -569,12 +700,14 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                         <div className="flex-shrink-0">
                                             <input
                                                 type="number"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
                                                 min="1"
                                                 max={items.length}
                                                 value={currentAnswers[item.idx] || ''}
                                                 onChange={(e) => handleOrderChange(item.idx, e.target.value)}
                                                 placeholder="?"
-                                                className="w-12 h-12 text-center text-xl font-bold border-2 border-amber-400 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                                                className="w-12 h-12 text-center text-[16px] md:text-xl font-bold border-2 border-amber-400 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
                                             />
                                         </div>
                                         <div className="flex-1 pt-2">
@@ -696,9 +829,60 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                     const currentAnswers = (answers[q.id] as Record<string, string>) || {};
                     const blanks = (q as any).blanks || [];
                     const text = (q as any).text || "";
+                    const hasLatex = /\$[^$]+\$/.test(text);
+
                     // Parse text: "Thủ đô là [1] có dân số [2] triệu"
                     const parts = text.split(/(\[\d+\])/g);
 
+                    // ⚠️ Strategy: If text contains LaTeX, render full block and dropdowns below
+                    if (hasLatex) {
+                        return (
+                            <div className="space-y-4">
+                                {(q as any).image && (
+                                    <img src={(q as any).image} alt="Question" className="w-full max-h-64 object-contain rounded-lg mb-4 bg-gray-50 border border-gray-100" />
+                                )}
+                                <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                    <MathSpan content={text} />
+                                </div>
+
+                                {/* Dropdowns list below */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                    {blanks.map((blank: any, i: number) => (
+                                        <div key={blank.id} className="flex items-center gap-2">
+                                            <span className="text-xs font-bold text-gray-500 w-12 flex-shrink-0">Ô số {i + 1}:</span>
+                                            <select
+                                                value={currentAnswers[blank.id] || ''}
+                                                onChange={(e) => onAnswerChange(q.id, { ...currentAnswers, [blank.id]: e.target.value })}
+                                                className={`flex-1 px-3 py-1.5 border-2 rounded-lg font-medium text-[16px] transition-all cursor-pointer ${currentAnswers[blank.id]
+                                                    ? 'border-indigo-500 bg-white text-indigo-700'
+                                                    : 'border-gray-300 bg-white text-gray-600 hover:border-indigo-300'
+                                                    }`}
+                                            >
+                                                <option value="">-- Chọn đáp án --</option>
+                                                {(blank.options || []).map((opt: string, i: number) => (
+                                                    <option key={i} value={opt}>{opt}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="flex justify-between items-center">
+                                    <p className="text-xs text-gray-500">
+                                        Đã điền: {Object.keys(currentAnswers).length}/{blanks.length}
+                                    </p>
+                                    <button
+                                        onClick={() => onAnswerChange(q.id, {})}
+                                        className="text-xs text-red-500 hover:underline flex items-center"
+                                    >
+                                        <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    // Normal Inline rendering (for non-Latex text)
                     return (
                         <div className="space-y-4">
                             {(q as any).image && (
@@ -716,7 +900,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                     key={idx}
                                                     value={currentAnswers[blank.id] || ''}
                                                     onChange={(e) => onAnswerChange(q.id, { ...currentAnswers, [blank.id]: e.target.value })}
-                                                    className={`mx-1 px-3 py-1.5 border-2 rounded-lg font-medium transition-all cursor-pointer ${currentAnswers[blank.id]
+                                                    className={`mx-1 px-3 py-1.5 border-2 rounded-lg font-medium text-[16px] transition-all cursor-pointer ${currentAnswers[blank.id]
                                                         ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                                                         : 'border-gray-300 bg-gray-50 text-gray-600 hover:border-indigo-300'
                                                         }`}

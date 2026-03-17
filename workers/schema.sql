@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS quizzes (
   access_code TEXT DEFAULT '',
   require_code TEXT DEFAULT 'FALSE',
   created_by TEXT DEFAULT '',
-  show_on_home TEXT DEFAULT 'TRUE'
+  show_on_home TEXT DEFAULT 'TRUE',
+  tags TEXT DEFAULT '[]'
 );
 
 -- Questions (flexible schema to handle 14+ question types)
@@ -60,7 +61,8 @@ CREATE TABLE IF NOT EXISTS questions (
   sentence TEXT DEFAULT '',
   words TEXT DEFAULT '',
   correct_word_indexes TEXT DEFAULT '',
-  image TEXT DEFAULT ''
+  image TEXT DEFAULT '',
+  tags TEXT DEFAULT ''
 );
 
 -- Results
@@ -131,3 +133,4 @@ CREATE INDEX IF NOT EXISTS idx_assignments_quiz_id ON assignments(quiz_id);
 CREATE INDEX IF NOT EXISTS idx_results_quiz_id ON results(quiz_id);
 CREATE INDEX IF NOT EXISTS idx_results_student ON results(student_name);
 CREATE INDEX IF NOT EXISTS idx_classes_teacher ON classes(teacher_username);
+CREATE INDEX IF NOT EXISTS idx_results_submitted_at ON results(submitted_at DESC);

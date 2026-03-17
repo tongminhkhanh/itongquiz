@@ -14,7 +14,7 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
 
     // GET /api/quizzes
     if (path === '/api/quizzes' && method === 'GET') {
-        const rows = await db.prepare('SELECT * FROM quizzes').all();
+        const rows = await db.prepare('SELECT * FROM quizzes').all<import('../types').Quiz>();
         return jsonResponse(rows.results);
     }
 
@@ -23,10 +23,10 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         const url = new URL(request.url);
         const quizId = url.searchParams.get('quizId');
         if (quizId) {
-            const rows = await db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all();
+            const rows = await db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all<import('../types').Question>();
             return jsonResponse(rows.results);
         }
-        const rows = await db.prepare('SELECT * FROM questions').all();
+        const rows = await db.prepare('SELECT * FROM questions').all<import('../types').Question>();
         return jsonResponse(rows.results);
     }
 
@@ -39,23 +39,24 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
             const batch = [];
             batch.push(
                 db.prepare(
-                    `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                    `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home, tags)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 ).bind(
                     body.id, body.title, body.classLevel, body.category || '',
                     body.timeLimit, body.createdAt, body.accessCode || '',
                     body.requireCode ? 'TRUE' : 'FALSE', body.createdBy || '',
-                    body.showOnHome === false ? 'FALSE' : 'TRUE'
+                    body.showOnHome === false ? 'FALSE' : 'TRUE',
+                    body.tags ? (Array.isArray(body.tags) ? JSON.stringify(body.tags) : body.tags) : '[]'
                 )
             );
 
             // Insert questions (batch)
             if (body.questions && Array.isArray(body.questions) && body.questions.length > 0) {
                 const stmt = db.prepare(
-                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 );
-                body.questions.forEach((q: any) => {
+                body.questions.forEach((q: Partial<import('../types').Question> & { type: string }) => {
                     const mapped = mapQuestionForSave(q, body.id);
                     batch.push(stmt.bind(...mapped));
                 });
@@ -91,21 +92,22 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
             // Re-insert quiz
             batch.push(
                 db.prepare(
-                    `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                    `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home, tags)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 ).bind(
                     id, body.title, body.classLevel, body.category || '',
                     body.timeLimit, body.createdAt, body.accessCode || '',
                     body.requireCode ? 'TRUE' : 'FALSE', body.createdBy || '',
-                    body.showOnHome === false ? 'FALSE' : 'TRUE'
+                    body.showOnHome === false ? 'FALSE' : 'TRUE',
+                    body.tags ? (Array.isArray(body.tags) ? JSON.stringify(body.tags) : body.tags) : '[]'
                 )
             );
 
             // Re-insert questions
             if (body.questions && Array.isArray(body.questions) && body.questions.length > 0) {
                 const stmt = db.prepare(
-                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 );
                 body.questions.forEach((q: any) => {
                     const mapped = mapQuestionForSave(q, id);
@@ -139,11 +141,11 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
 
         try {
             // Fetch original quiz
-            const originalQuiz = await db.prepare('SELECT * FROM quizzes WHERE id = ?').bind(quizId).first();
+            const originalQuiz = await db.prepare('SELECT * FROM quizzes WHERE id = ?').bind(quizId).first<import('../types').Quiz>();
             if (!originalQuiz) return errorResponse('Quiz not found', 404);
 
             // Fetch original questions
-            const originalQuestions = await db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all();
+            const originalQuestions = await db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all<import('../types').Question>();
 
             // Generate new IDs
             const newQuizId = generateId('quiz');
@@ -155,28 +157,29 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
             // Insert new quiz
             batch.push(
                 db.prepare(
-                    `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                    `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home, tags)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 ).bind(
                     newQuizId, newTitle, originalQuiz.class_level, originalQuiz.category || '',
                     originalQuiz.time_limit, createdAt, '', // No access code for copy
                     originalQuiz.require_code || 'FALSE', originalQuiz.created_by || '',
-                    'FALSE' // Don't show copies on home by default
+                    'FALSE', // Don't show copies on home by default
+                    originalQuiz.tags || '[]'
                 )
             );
 
             // Insert copied questions
             if (originalQuestions.results.length > 0) {
                 const stmt = db.prepare(
-                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 );
-                for (const q of originalQuestions.results as any[]) {
+                for (const q of originalQuestions.results) {
                     const newQId = generateId('q');
                     batch.push(stmt.bind(
                         newQId, newQuizId, q.type, q.question || '', q.options || '', q.correct_answer || '',
                         q.items || '', q.text_field || '', q.blanks || '', q.distractors || '',
-                        q.sentence || '', q.words || '', q.correct_word_indexes || '', q.image || ''
+                        q.sentence || '', q.words || '', q.correct_word_indexes || '', q.image || '', q.tags || ''
                     ));
                 }
             }

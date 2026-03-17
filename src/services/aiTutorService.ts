@@ -11,48 +11,30 @@ import { Question } from '../types';
 
 // Get LLM-Mux configuration
 const getLLMConfig = () => {
-    const baseUrl = import.meta.env.VITE_LLM_MUX_BASE_URL || 'https://api.thitong.site/v1';
-    const apiKey = import.meta.env.VITE_LLM_MUX_API_KEY;
-
-    if (!apiKey) {
-        throw new Error('VITE_LLM_MUX_API_KEY is not configured');
-    }
-
-    return { baseUrl, apiKey };
+    // We now use our Worker Proxy instead of direct CLIProxy to avoid CORS
+    // No apiKey needed on frontend anymore
+    return { baseUrl: '/api/ai/chat' };
 };
 
-// Call LLM-Mux API (OpenAI-compatible)
+// Call AI via Worker Proxy (handles CORS and protects API Key)
 async function callLLM(prompt: string): Promise<string> {
-    const { baseUrl, apiKey } = getLLMConfig();
+    const { callApi } = await import('./apiAdapter');
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-            model: 'gemini-2.0-flash',
-            messages: [
-                {
-                    role: 'system',
-                    content: 'Bạn là một gia sư AI thân thiện cho học sinh tiểu học Việt Nam. Trả lời bằng tiếng Việt, dùng emoji để sinh động.'
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
-            temperature: 0.7,
-        }),
+    const data = await callApi('ai_chat', {
+        model: 'gemini-2.0-flash',
+        messages: [
+            {
+                role: 'system',
+                content: 'Bạn là một gia sư AI thân thiện cho học sinh tiểu học Việt Nam. Trả lời bằng tiếng Việt, dùng emoji để sinh động.'
+            },
+            {
+                role: 'user',
+                content: prompt
+            }
+        ],
+        temperature: 0.7,
     });
 
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`LLM API error: ${error}`);
-    }
-
-    const data = await response.json();
     return data.choices?.[0]?.message?.content || '';
 }
 
@@ -282,35 +264,46 @@ export interface WrongAnswer {
 /**
  * Extract wrong answers from quiz results
  */
-export function extractWrongAnswers(quiz: any, answers: Record<string, any>): WrongAnswer[] {
+export function extractWrongAnswers(quiz: any, answers: Record<string, any>, result?: any): WrongAnswer[] {
     const wrongAnswers: WrongAnswer[] = [];
 
     quiz.questions.forEach((q: any, idx: number) => {
         const answer = answers[q.id];
         const questionText = q.question || q.mainQuestion || '';
+        const vd = result?.validationDetails?.find((d: any) => d.questionId === q.id);
+
         let isCorrect = false;
         let correctAnswer = '';
 
-        // Check correctness based on question type
-        if (q.type === 'MCQ' || q.type === 'SHORT_ANSWER' || q.type === 'RIDDLE') {
-            isCorrect = String(answer).toLowerCase().trim() === String(q.correctAnswer).toLowerCase().trim();
-            correctAnswer = q.correctAnswer || '';
-        } else if (q.type === 'MULTIPLE_SELECT') {
-            const studentAns = (answer as string[]) || [];
-            const correctAns = q.correctAnswers || [];
-            isCorrect = studentAns.length === correctAns.length && studentAns.every((v: string) => correctAns.includes(v));
-            correctAnswer = (q.correctAnswers || []).join(', ');
-        } else if (q.type === 'TRUE_FALSE') {
-            const items = q.items || [];
-            isCorrect = items.every((item: any, i: number) => {
-                const itemKey = item.id || `item-${i}`;
-                return answer?.[itemKey] === item.isCorrect;
-            });
-            correctAnswer = 'Xem chi tiết';
+        if (vd) {
+            isCorrect = vd.isCorrect;
+            correctAnswer = vd.correctAnswer || '';
         } else {
-            // Default: check if answered
-            isCorrect = !!answer;
-            correctAnswer = q.correctAnswer || 'N/A';
+            // Fallback for types not handled well by simple check
+            if (q.type === 'MCQ' || q.type === 'RIDDLE') {
+                isCorrect = String(answer).toLowerCase().trim() === String(q.correctAnswer).toLowerCase().trim();
+                correctAnswer = q.correctAnswer || '';
+            } else if (q.type === 'SHORT_ANSWER' || q.type === 'FILL_BLANK') {
+                const cleanStudent = String(answer || '').trim().replace(/^'/, '').toLowerCase();
+                const cleanCorrect = String(q.correctAnswer || '').trim().replace(/^'/, '').toLowerCase();
+                isCorrect = cleanStudent === cleanCorrect;
+                correctAnswer = q.correctAnswer || '';
+            } else if (q.type === 'MULTIPLE_SELECT') {
+                const studentAns = (answer as string[]) || [];
+                const correctAns = q.correctAnswers || [];
+                isCorrect = studentAns.length === correctAns.length && studentAns.every((v: string) => correctAns.includes(v));
+                correctAnswer = (q.correctAnswers || []).join(', ');
+            } else if (q.type === 'TRUE_FALSE') {
+                const items = q.items || [];
+                isCorrect = items.every((item: any, i: number) => {
+                    const itemKey = item.id || `item-${i}`;
+                    return answer?.[itemKey] === item.isCorrect;
+                });
+                correctAnswer = 'Xem chi tiết';
+            } else {
+                isCorrect = !!answer;
+                correctAnswer = q.correctAnswer || 'N/A';
+            }
         }
 
         if (!isCorrect) {

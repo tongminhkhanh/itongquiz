@@ -15,9 +15,32 @@ interface Props {
 const OverviewTab: React.FC<Props> = ({ quiz, result, answers, studentUsername }) => {
     const [showDrOwl, setShowDrOwl] = useState(false);
 
-    // Calculate additional stats
-    const wrongCount = result.totalQuestions - result.correctCount;
-    const unansweredCount = quiz.questions.filter(q => !answers[q.id]).length;
+    // Calculate additional stats using validationDetails as source of truth
+    const stats = useMemo(() => {
+        let correct = 0;
+        let wrong = 0;
+        let skipped = 0;
+
+        quiz.questions.forEach(q => {
+            const ans = answers[q.id];
+            const vd = result.validationDetails?.find(d => d.questionId === q.id);
+
+            if (!ans && ans !== false && ans !== 0) {
+                skipped++;
+            } else if (vd) {
+                if (vd.isCorrect) correct++;
+                else wrong++;
+            } else {
+                // Fallback if no validationDetails (should not happen for submitted results)
+                const isCorrect = result.correctCount > 0; // Simple fallback
+                if (isCorrect) correct++; else wrong++;
+            }
+        });
+
+        return { correct, wrong, skipped };
+    }, [quiz.questions, answers, result.validationDetails]);
+
+    const { correct: correctCount, wrong: wrongCount, skipped: unansweredCount } = stats;
     const accuracy = Math.round((result.correctCount / result.totalQuestions) * 100);
     const scorePct = (result.correctCount / result.totalQuestions) * 100;
 
@@ -26,15 +49,11 @@ const OverviewTab: React.FC<Props> = ({ quiz, result, answers, studentUsername }
         return quiz.questions
             .filter(q => {
                 const ans = answers[q.id];
-                if (!ans && ans !== false && ans !== 0) return true; // unanswered = wrong
-                if (q.type === 'MCQ') return ans !== (q as any).correctAnswer;
-                if (q.type === 'SHORT_ANSWER') return String(ans).toLowerCase().trim() !== String((q as any).correctAnswer).toLowerCase().trim();
-                if (q.type === 'RIDDLE') return String(ans).toLowerCase().trim() !== String((q as any).correctAnswer).toLowerCase().trim();
-                // For complex types, check validationDetails
-                if (result.validationDetails) {
-                    const detail = result.validationDetails.find(d => d.questionId === q.id);
-                    if (detail) return !detail.isCorrect;
-                }
+                if (!ans && ans !== false && ans !== 0) return true; // unanswered = wrong context for AI
+
+                const vd = result.validationDetails?.find(d => d.questionId === q.id);
+                if (vd) return !vd.isCorrect;
+
                 return false;
             })
             .map(q => q.id)

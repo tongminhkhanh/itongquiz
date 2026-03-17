@@ -11,17 +11,22 @@ export async function handleAnnouncementRoutes(request: Request, env: Env, path:
 
     // GET /api/announcements
     if (path === '/api/announcements' && method === 'GET') {
-        const row = await db.prepare('SELECT * FROM announcements WHERE id = ?').bind('1').first();
+        const row = await db.prepare('SELECT * FROM announcements WHERE id = ?').bind('1').first<{
+            id: string;
+            content: string;
+            is_active: string;
+            updated_at: string;
+        }>();
         if (!row) {
             return jsonResponse({ status: 'success', announcement: null });
         }
         return jsonResponse({
             status: 'success',
             announcement: {
-                id: (row as any).id,
-                content: (row as any).content || '',
-                isActive: (row as any).is_active === 'true' || (row as any).is_active === 'TRUE',
-                updatedAt: (row as any).updated_at,
+                id: row.id,
+                content: row.content || '',
+                isActive: row.is_active === 'true' || row.is_active === 'TRUE',
+                updatedAt: row.updated_at,
             },
         });
     }

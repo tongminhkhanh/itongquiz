@@ -13,7 +13,7 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
         const username = url.searchParams.get('username');
         if (!username) return errorResponse('Missing username parameter');
 
-        let pet = await db.prepare('SELECT * FROM user_pets WHERE username = ?').bind(username).first<any>();
+        let pet = await db.prepare('SELECT * FROM user_pets WHERE username = ?').bind(username).first<import('../types').PetData>();
         if (!pet) {
             // Create default pet
             const petId = url.searchParams.get('petId') || 'cat_01';
@@ -25,7 +25,7 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
         }
 
         const stu = await db.prepare('SELECT coins FROM students WHERE username = ?').bind(username).first<any>();
-        const shopItems = await db.prepare('SELECT * FROM shop_items').all();
+        const shopItems = await db.prepare('SELECT * FROM shop_items').all<import('../types').ShopItem>();
 
         return jsonResponse({
             status: 'success',

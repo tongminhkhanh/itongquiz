@@ -456,7 +456,6 @@ export const shareResult = async (options: {
             return { success: true, method: 'share' };
         } catch (err) {
             // User cancelled or error
-            console.log('Share cancelled or failed:', err);
         }
     }
 

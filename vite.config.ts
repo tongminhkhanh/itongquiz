@@ -33,6 +33,10 @@ export default defineConfig(({ mode }) => {
     },
     // Code Splitting Configuration
     build: {
+      // Strip console.log and debugger in production builds
+      esbuild: {
+        drop: mode === 'production' ? ['console', 'debugger'] : [],
+      },
       rollupOptions: {
         output: {
           manualChunks: {

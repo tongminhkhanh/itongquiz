@@ -39,7 +39,7 @@ const IoeManageTab: React.FC<IoeManageTabProps> = ({ onEdit }) => {
             const data = await fetchIoeQuizzes();
             setQuizzes(data);
         } catch (error) {
-            console.error('[IOE ManageTab] Error loading quizzes:', error);
+            // Handled
         } finally {
             setIsLoading(false);
         }
@@ -79,7 +79,6 @@ const IoeManageTab: React.FC<IoeManageTabProps> = ({ onEdit }) => {
                 alert('Không thể xóa đề thi. Vui lòng thử lại.');
             }
         } catch (error) {
-            console.error('[IOE ManageTab] Delete error:', error);
             alert('Lỗi khi xóa đề thi.');
         } finally {
             setDeletingId(null);
@@ -94,7 +93,7 @@ const IoeManageTab: React.FC<IoeManageTabProps> = ({ onEdit }) => {
             setCopiedId(quizId);
             setTimeout(() => setCopiedId(null), 2000);
         } catch (error) {
-            console.error('Failed to copy:', error);
+            // Handled
         }
     };
 
@@ -144,7 +143,6 @@ const IoeManageTab: React.FC<IoeManageTabProps> = ({ onEdit }) => {
                 setSaveError('Không thể lưu. Vui lòng thử lại.');
             }
         } catch (error) {
-            console.error('[IOE ManageTab] Save error:', error);
             setSaveError('Lỗi khi lưu đề thi.');
         } finally {
             setIsSaving(false);

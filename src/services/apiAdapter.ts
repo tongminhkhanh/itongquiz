@@ -35,6 +35,11 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
 
         // --- AI Tutor ---
         case 'ai_tutor_diagnose': method = 'POST'; path = '/api/ai-tutor/diagnose'; break;
+        case 'ai_chat': method = 'POST'; path = '/api/ai/chat'; break;
+
+        // --- Practice Library ---
+        case 'get_practice_topics': method = 'GET'; path = '/api/practice/topics'; break;
+        case 'get_practice_quiz': method = 'GET'; path = '/api/practice'; if (payload.topic) urlParams.append('topic', payload.topic); if (payload.limit) urlParams.append('limit', payload.limit); break;
 
         // --- Classroom ---
         case 'get_classes': method = 'GET'; path = '/api/classes'; if (payload.teacherUsername) urlParams.append('teacherUsername', payload.teacherUsername); break;

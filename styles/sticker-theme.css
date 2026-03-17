@@ -1929,11 +1929,35 @@
 }
 
 /* Responsive */
-@media (max-width: 400px) {
+@media (max-width: 640px) {
+    .avatar-modal {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        max-width: 100%;
+        margin: 0;
+        border-radius: 32px 32px 0 0;
+        padding-bottom: calc(24px + env(safe-area-inset-bottom));
+        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+    }
+
     .avatar-modal__grid {
         grid-template-columns: repeat(3, 1fr);
     }
 
+    .avatar-modal__item-img {
+        width: 44px;
+        height: 44px;
+    }
+}
+
+@media (max-width: 400px) {
     .avatar-modal__item-img {
         width: 40px;
         height: 40px;

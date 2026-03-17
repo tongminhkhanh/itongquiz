@@ -218,6 +218,12 @@ export const useQuizStore = create<QuizState>()(
                         accessCode: row.accessCode || row.access_code || undefined,
                         requireCode: row.requireCode === true || row.requireCode === 'TRUE' || row.requireCode === 1 || row.require_code === true || row.require_code === 'TRUE' || row.require_code === 1,
                         showOnHome: !(row.showOnHome === false || row.showOnHome === 'FALSE' || row.showOnHome === 0 || row.show_on_home === false || row.show_on_home === 'FALSE' || row.show_on_home === 0),
+                        tags: (() => {
+                            if (typeof row.tags === 'string') {
+                                try { return JSON.parse(row.tags); } catch { return []; }
+                            }
+                            return Array.isArray(row.tags) ? row.tags : [];
+                        })(),
                         questions: questionsByQuizId[row.id] || []
                     }));
 
@@ -236,12 +242,16 @@ export const useQuizStore = create<QuizState>()(
 
             loadResults: async () => {
                 try {
-                    const data = await callApi<any[]>('get_results');
-                    if (!data || !Array.isArray(data)) {
+                    const data = await callApi<any>('get_results');
+
+                    // Handle both legacy array format and new object format { data: [], meta: {} }
+                    const rawResults = Array.isArray(data) ? data : (data?.data || []);
+
+                    if (!Array.isArray(rawResults)) {
                         set({ results: [] });
                         return;
                     }
-                    const results: StudentResult[] = data.map((row: any) => ({
+                    const results: StudentResult[] = rawResults.map((row: any) => ({
                         id: row.id || `result-${Date.now()}`,
                         studentName: row.studentName || row.name || row['Student Name'] || '',
                         studentClass: row.studentClass || row.className || row['Class'] || '',

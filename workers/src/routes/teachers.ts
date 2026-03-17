@@ -6,7 +6,7 @@
 // POST /api/login - Teacher login
 
 import { Env } from '../types';
-import { jsonResponse, errorResponse } from '../utils/response';
+import { jsonResponse, errorResponse, hashPassword } from '../utils/response';
 import { parseBody, extractIdFromPath } from '../utils/helpers';
 
 export async function handleTeacherRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
@@ -34,10 +34,11 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
             return jsonResponse({ status: 'error', message: `Tài khoản "${username}" đã tồn tại.` });
         }
 
+        const hashedPassword = await hashPassword(password);
         await db.prepare(
             `INSERT INTO teachers (username, password, full_name, role, class) VALUES (?, ?, ?, ?, ?)`
         ).bind(
-            username, password, fullName, role || 'teacher', teacherClass || ''
+            username, hashedPassword, fullName, role || 'teacher', teacherClass || ''
         ).run();
 
         return jsonResponse({ status: 'success', message: `Đã tạo tài khoản giáo viên "${fullName}".` });
@@ -57,7 +58,11 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
         const updates: string[] = [];
         const values: any[] = [];
 
-        if (password) { updates.push('password = ?'); values.push(password); }
+        if (password) {
+            const hashedPassword = await hashPassword(password);
+            updates.push('password = ?');
+            values.push(hashedPassword);
+        }
         if (fullName) { updates.push('full_name = ?'); values.push(fullName); }
         if (role) { updates.push('role = ?'); values.push(role); }
         if (teacherClass !== undefined) { updates.push('class = ?'); values.push(teacherClass); }
@@ -87,9 +92,24 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
         const { username, password } = body;
         if (!username || !password) return errorResponse('Missing username or password');
 
-        const teacher = await db.prepare(
+        const hashedPassword = await hashPassword(password);
+        let teacher = await db.prepare(
             'SELECT * FROM teachers WHERE username = ? AND password = ?'
-        ).bind(username, password).first<any>();
+        ).bind(username, hashedPassword).first<any>();
+
+        // Lazy Migration: If hash login fails, try plain text login
+        if (!teacher) {
+            teacher = await db.prepare(
+                'SELECT * FROM teachers WHERE username = ? AND password = ?'
+            ).bind(username, password).first<any>();
+
+            if (teacher) {
+                // Auto-hash and update the plain text password
+                await db.prepare('UPDATE teachers SET password = ? WHERE username = ?')
+                    .bind(hashedPassword, username).run();
+                console.log(`[Lazy Migration] Password hashed for user: ${username}`);
+            }
+        }
 
         if (!teacher) {
             return jsonResponse({ status: 'error', message: 'Sai tên đăng nhập hoặc mật khẩu.' });

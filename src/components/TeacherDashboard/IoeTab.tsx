@@ -777,7 +777,7 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
             const updatedHistory = [...newQuestions, ...history].slice(0, MAX_HISTORY_SIZE);
             localStorage.setItem(StorageKeys.IOE_QUESTION_HISTORY, JSON.stringify(updatedHistory));
         } catch (e) {
-            console.warn('[IOE] Failed to save question history:', e);
+            // Error handled by caller if needed
         }
     };
 
@@ -880,7 +880,6 @@ TOTAL: ${totalQuestions} questions
             // ===== BƯỚC 1: TÌM KIẾM ĐỀ IOE (chỉ nếu usePerplexitySearch = true) =====
             if (usePerplexitySearch) {
                 setSearchStatus('🔍 Đang tìm kiếm đề IOE trên mạng (Perplexity)...');
-                console.log('[IOE Two-Step] Bước 1: Tìm kiếm đề IOE...');
 
                 const searchResult = await searchIoeQuestions(classLevel, competitionRound);
 
@@ -899,14 +898,11 @@ ${searchResult.content}
 2. Đảm bảo độ khó phù hợp với vòng thi
 3. Sử dụng các mẫu câu và cách hỏi tương tự
 `;
-                    console.log('[IOE Two-Step] Tìm kiếm thành công, độ dài:', searchResult.content.length);
                 } else {
-                    console.warn('[IOE Two-Step] Không tìm được kết quả, tiếp tục sinh đề bình thường');
                     searchContext = '\n\n(Không có kết quả tìm kiếm - sinh đề dựa trên kiến thức có sẵn)\n';
                 }
             } else {
                 setSearchStatus('✨ Đang sinh đề bằng AI (nhanh)...');
-                console.log('[IOE Quick] Sinh đề trực tiếp không qua Perplexity search');
                 searchContext = '\n\n(Chế độ nhanh - sinh đề dựa trên kiến thức có sẵn)\n';
             }
 
@@ -915,7 +911,6 @@ ${searchResult.content}
             setSearchStatus(usePerplexitySearch
                 ? '✨ Đang sinh câu hỏi từ kết quả tìm kiếm...'
                 : '✨ Đang sinh câu hỏi từ kho kiến thức AI...');
-            console.log('[IOE Two-Step] Bước 2: Sinh câu hỏi...');
 
             const basePrompt = generateIoePrompt();
             const customPrompt = basePrompt + searchContext;
@@ -989,9 +984,7 @@ ${searchResult.content}
 
             setGeneratedQuiz(quiz);
         } catch (err: any) {
-            console.error('IOE Quiz generation error:', err);
-
-            // Xử lý timeout error với gợi ý cụ thể
+            // Error handling already sets state
             const errorMsg = err?.message || '';
             if (errorMsg.toLowerCase().includes('timeout') ||
                 errorMsg.toLowerCase().includes('abort') ||
@@ -1047,7 +1040,7 @@ ${searchResult.content}
             setLinkCopied(true);
             setTimeout(() => setLinkCopied(false), 3000);
         } catch (err) {
-            console.error('Failed to copy:', err);
+            // Silent catch
         }
     };
 

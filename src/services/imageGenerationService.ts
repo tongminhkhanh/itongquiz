@@ -6,7 +6,7 @@
 // Use local proxy path to avoid CORS issues when using remote API
 const CLIPROXY_BASE_URL = '/api/cliproxy';
 // const CLIPROXY_BASE_URL = (import.meta as any).env.VITE_CLIPROXY_API || 'http://localhost:3000/v1';
-const CLIPROXY_TOKEN = (import.meta as any).env.VITE_CLIPROXY_TOKEN || '123456';
+const CLIPROXY_TOKEN = (import.meta as any).env.VITE_CLIPROXY_TOKEN || '';
 const DEFAULT_MODEL = 'gemini-3-pro-image-preview'; // Or gemini-2.0-flash experimental
 
 export interface ImageGenerationResult {
@@ -38,7 +38,6 @@ export const checkImageServiceAvailability = async (): Promise<boolean> => {
  */
 export const generateImage = async (prompt: string): Promise<ImageGenerationResult> => {
     try {
-        console.log(`🎨 Generating image for: "${prompt}"...`);
 
         const payload = {
             model: DEFAULT_MODEL,
@@ -107,11 +106,9 @@ export const generateImage = async (prompt: string): Promise<ImageGenerationResu
         }
 
         if (!imageUrl) {
-            console.error('❌ Unknown response format. Response data:', JSON.stringify(data, null, 2));
             throw new Error('Failed to extract image data from response. See console for details.');
         }
 
-        console.log('✅ Image extracted successfully');
         return { success: true, data: imageUrl };
 
     } catch (error: any) {

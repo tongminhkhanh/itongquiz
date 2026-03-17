@@ -160,7 +160,9 @@ const calculateIsCorrectFallback = (
     // SHORT_ANSWER: Case-insensitive
     if (type === 'SHORT_ANSWER') {
         if (correctAnswer === undefined || correctAnswer === null) return undefined;
-        return String(selectedAnswer).trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
+        const cleanStudent = String(selectedAnswer || '').trim().replace(/^'/, '').toLowerCase();
+        const cleanCorrect = String(correctAnswer || '').trim().replace(/^'/, '').toLowerCase();
+        return cleanStudent === cleanCorrect;
     }
 
     // MULTIPLE_SELECT: Array comparison (use correctAnswers first, fallback to correctAnswer)

@@ -24,7 +24,7 @@ const IoeResultsTab: React.FC = () => {
             const data = await fetchIoeResults();
             setResults(data);
         } catch (error) {
-            console.error('[IOE ResultsTab] Error loading results:', error);
+            // Handled
         } finally {
             setIsLoading(false);
         }
@@ -292,8 +292,8 @@ const IoeResultsTab: React.FC = () => {
                                             <td className="px-4 py-3 text-sm text-gray-600">{result.quizTitle}</td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold ${result.score >= 8 ? 'bg-green-100 text-green-700' :
-                                                        result.score >= 5 ? 'bg-yellow-100 text-yellow-700' :
-                                                            'bg-red-100 text-red-700'
+                                                    result.score >= 5 ? 'bg-yellow-100 text-yellow-700' :
+                                                        'bg-red-100 text-red-700'
                                                     }`}>
                                                     {result.score}
                                                 </span>

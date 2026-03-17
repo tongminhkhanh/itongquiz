@@ -1,6 +1,6 @@
 # API Endpoints Documentation
 
-**Ngày cập nhật**: 2026-03-11
+**Ngày cập nhật**: 2026-03-12
 **Base URL**: `WORKERS_API_URL` (Cloudflare Workers)
 
 ---
@@ -57,3 +57,27 @@ Lấy danh sách bài tập của lớp.
 
 ### GET /api/assignments?studentId={id}
 Lấy danh sách bài tập được giao cho học sinh cụ thể.
+
+---
+
+## 🛠️ Practice Library (Thư viện luyện tập)
+
+### GET /api/practice/topics
+Lấy danh sách tất cả các chủ đề (hashtags) duy nhất từ kho câu hỏi.
+
+**Response (200 OK):**
+```json
+[
+  { "tag": "Toán", "count": 15 },
+  { "tag": "Hình học", "count": 5 }
+]
+```
+
+### GET /api/practice?topic={name}
+Sinh đề thi luyện tập ngẫu nhiên (10 câu) dựa trên chủ đề.
+
+**Response (200 OK):**
+Trả về một `Quiz` object hoàn chỉnh nhưng có thêm cờ:
+- `isPractice: true`
+- `timeLimit: 0` (Không giới hạn thời gian)
+- `id`: Mang format `practice-{topic}-{timestamp}`

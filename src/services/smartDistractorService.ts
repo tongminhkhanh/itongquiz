@@ -9,53 +9,31 @@
 
 // Get LLM-Mux configuration
 const getLLMConfig = () => {
-    const baseUrl = import.meta.env.VITE_LLM_MUX_BASE_URL || 'https://api.thitong.site/v1';
-    const apiKey = import.meta.env.VITE_LLM_MUX_API_KEY;
-
-    if (!apiKey) {
-        throw new Error('VITE_LLM_MUX_API_KEY is not configured');
-    }
-
-    return { baseUrl, apiKey };
+    // We now use our Worker Proxy instead of direct CLIProxy to avoid CORS
+    return { baseUrl: '/api/ai/chat' };
 };
 
-// Call LLM-Mux API (OpenAI-compatible)
+// Call AI via Worker Proxy (handles CORS and protects API Key)
 async function callLLM(prompt: string): Promise<string> {
-    const { baseUrl, apiKey } = getLLMConfig();
+    const { callApi } = await import('./apiAdapter');
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-            model: 'gemini-2.0-flash',
-            messages: [
-                {
-                    role: 'system',
-                    content: 'Bạn là một chuyên gia giáo dục tiểu học Việt Nam. Nhiệm vụ của bạn là tạo các đáp án nhiễu (distractors) chất lượng cao cho câu hỏi trắc nghiệm. Trả lời bằng JSON array thuần túy, KHÔNG dùng markdown code block.'
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
-            temperature: 0.7,
-            max_tokens: 1024,
-        }),
+    const data = await callApi('ai_chat', {
+        model: 'gemini-2.0-flash',
+        messages: [
+            {
+                role: 'system',
+                content: 'Bạn là một chuyên gia giáo dục tiểu học Việt Nam. Nhiệm vụ của bạn là tạo các đáp án nhiễu (distractors) chất lượng cao cho câu hỏi trắc nghiệm. Trả lời bằng JSON array thuần túy, KHÔNG dùng markdown code block.'
+            },
+            {
+                role: 'user',
+                content: prompt
+            }
+        ],
+        temperature: 0.7,
+        max_tokens: 1024,
     });
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[SmartDistractor] API error:', response.status, errorText);
-        throw new Error(`LLM API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
-    console.log('[SmartDistractor] Raw LLM response:', content);
-    return content;
+    return data.choices?.[0]?.message?.content || '';
 }
 
 // Parse JSON from LLM response (handles markdown code blocks)
@@ -67,8 +45,6 @@ function parseJSONResponse(text: string): string[] {
     if (codeBlockMatch) {
         cleaned = codeBlockMatch[1].trim();
     }
-
-    console.log('[SmartDistractor] Cleaned for parsing:', cleaned.substring(0, 200));
 
     try {
         const parsed = JSON.parse(cleaned);

@@ -26,6 +26,7 @@ const StatisticsTab: React.FC<Props> = ({ quiz, result, answers }) => {
         quiz.questions.forEach(q => {
             const answer = answers[q.id];
             const typeName = q.type;
+            const vd = result.validationDetails?.find(d => d.questionId === q.id);
 
             if (!byType[typeName]) {
                 byType[typeName] = { correct: 0, total: 0 };
@@ -38,9 +39,9 @@ const StatisticsTab: React.FC<Props> = ({ quiz, result, answers }) => {
                 return;
             }
 
-            // Check correctness (simplified - using result data)
-            // In real implementation, we'd use the same logic as DetailedAnswersTab
-            const isCorrect = checkCorrectness(q, answer);
+            // Check correctness - USE SERVER VALIDATION DETAILS AS SOURCE OF TRUTH
+            const isCorrect = vd ? vd.isCorrect : false;
+
             if (isCorrect) {
                 correct++;
                 byType[typeName].correct++;
@@ -50,91 +51,7 @@ const StatisticsTab: React.FC<Props> = ({ quiz, result, answers }) => {
         });
 
         return { correct, wrong, skipped, byType };
-    }, [quiz.questions, answers]);
-
-    // Helper function to check correctness
-    function checkCorrectness(question: any, answer: any): boolean {
-        switch (question.type) {
-            case QuestionType.MCQ:
-            case QuestionType.IMAGE_QUESTION:
-                return answer === question.correctAnswer;
-            case QuestionType.SHORT_ANSWER:
-                return String(answer).toLowerCase().trim() === String(question.correctAnswer).toLowerCase().trim();
-            case QuestionType.TRUE_FALSE:
-                return (question.items || []).every((item: any, idx: number) => {
-                    const key = item.id || `item-${idx}`;
-                    return answer?.[key] === item.isCorrect;
-                });
-            case QuestionType.MATCHING:
-                return (question.pairs || []).every((p: any) => answer?.[p.left] === p.right);
-            case QuestionType.MULTIPLE_SELECT:
-                const studentAns = (answer as string[]) || [];
-                const correctAns = question.correctAnswers || [];
-                return studentAns.length === correctAns.length && studentAns.every((v: string) => correctAns.includes(v));
-            case QuestionType.WORD_SCRAMBLE:
-                const letters = question.letters || [];
-                const word = ((answer as number[]) || []).map((i: number) => letters[i]).join('');
-                return word.toLowerCase().replace(/\s+/g, '') === (question.correctWord || '').toLowerCase().replace(/\s+/g, '');
-            case QuestionType.RIDDLE:
-                return String(answer).toLowerCase().trim() === String(question.correctAnswer).toLowerCase().trim();
-            case QuestionType.DRAG_DROP: {
-                let ddText = (question as any).text || "";
-                const ddBlanks = (question as any).blanks || [];
-                // Fallback: auto-generate text if empty (same as QuestionRenderer)
-                if ((!ddText || !ddText.includes('[')) && ddBlanks.length > 0) {
-                    ddText = ddBlanks.map((_: any, i: number) => `[blank_${i}]`).join(" ");
-                }
-                const ddParts = ddText.split(/(\[.*?\])/g);
-                let ddBlankIndex = 0;
-                let isDDCorrect = true;
-                ddParts.forEach((part: string, partIdx: number) => {
-                    if (part.startsWith('[') && part.endsWith(']')) {
-                        const correctWord = ddBlanks[ddBlankIndex];
-                        const studentWord = answer?.[partIdx];
-                        if (studentWord !== correctWord) isDDCorrect = false;
-                        ddBlankIndex++;
-                    }
-                });
-                return isDDCorrect && ddBlanks.length > 0;
-            }
-            case QuestionType.DROPDOWN:
-                const dropdownBlanks = (question as any).blanks || [];
-                return dropdownBlanks.every((b: any) => answer?.[b.id] === b.correctAnswer);
-            case QuestionType.ORDERING:
-                const studentOrder = (answer as number[]) || [];
-                const correctOrder = (question as any).correctOrder || [];
-                if (studentOrder.length !== correctOrder.length) return false;
-                return studentOrder.every((val, idx) => val === correctOrder[idx]);
-            case QuestionType.CATEGORIZATION:
-                const catItems = (question as any).items || [];
-                return catItems.every((item: any) => {
-                    const studentCatId = answer?.[item.id];
-                    const correctCatId = item.categoryId;
-                    if (correctCatId) {
-                        return studentCatId === correctCatId;
-                    } else {
-                        return !studentCatId;
-                    }
-                });
-            case QuestionType.UNDERLINE:
-                const studentIdxs = (answer as number[]) || [];
-                const correctIdxs = (question as any).correctWordIndexes || [];
-                if (studentIdxs.length !== correctIdxs.length) return false;
-                const sSorted = [...studentIdxs].sort((a, b) => a - b);
-                const cSorted = [...correctIdxs].sort((a, b) => a - b);
-                return sSorted.every((val, idx) => val === cSorted[idx]);
-            case QuestionType.ERROR_CORRECTION: {
-                const ecAnswer = answer as { wrongWord?: string; correctWord?: string } || {};
-                const sWrong = String(ecAnswer.wrongWord || '').toLowerCase().trim();
-                const sCorrect = String(ecAnswer.correctWord || '').toLowerCase().trim();
-                const eWrong = String((question as any).wrongWord || '').toLowerCase().trim();
-                const eCorrect = String((question as any).correctWord || '').toLowerCase().trim();
-                return sWrong !== '' && sCorrect !== '' && sWrong === eWrong && sCorrect === eCorrect;
-            }
-            default:
-                return false;
-        }
-    }
+    }, [quiz.questions, answers, result.validationDetails]);
 
     // Pie chart data
     const pieData = [

@@ -51,7 +51,8 @@ export const createProvider = (config: CreateProviderConfig): IAIProvider => {
 
         case 'llm-mux':
             const muxBaseUrl = baseUrl || import.meta.env.VITE_LLM_MUX_BASE_URL || 'http://localhost:3000/v1';
-            return new OpenAIProvider(apiKey || 'sk-dummy-key', 'llm-mux', muxBaseUrl, model);
+            if (!apiKey) throw new Error('LLM-Mux API Key is required. Please configure VITE_LLM_MUX_API_KEY or VITE_CLIPROXY_TOKEN.');
+            return new OpenAIProvider(apiKey, 'llm-mux', muxBaseUrl, model);
 
         default:
             throw new Error(`Unknown AI provider type: ${type}`);

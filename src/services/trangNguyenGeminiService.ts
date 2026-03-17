@@ -178,7 +178,6 @@ ${customPrompt}
  * Parse and validate AI response
  */
 const parseAIResponse = (text: string): TrangNguyenQuizResult => {
-    console.log('[TrangNguyen] Raw AI response (first 500 chars):', text.substring(0, 500));
 
     // Remove markdown code blocks if present
     let cleaned = text
@@ -205,14 +204,12 @@ const parseAIResponse = (text: string): TrangNguyenQuizResult => {
     }
 
     cleaned = cleaned.substring(startIdx, endIdx + 1);
-    console.log('[TrangNguyen] Cleaned JSON (first 300 chars):', cleaned.substring(0, 300));
 
     try {
         const parsed = JSON.parse(cleaned);
 
         // Handle array response - wrap in object
         if (isArrayResponse && Array.isArray(parsed)) {
-            console.log('[TrangNguyen] Response is array, wrapping in object');
             return { questions: parsed } as TrangNguyenQuizResult;
         }
 
@@ -226,7 +223,6 @@ const parseAIResponse = (text: string): TrangNguyenQuizResult => {
             throw new Error('Response không có mảng questions');
         }
 
-        console.log('[TrangNguyen] Successfully parsed', parsed.questions.length, 'questions');
         return parsed as TrangNguyenQuizResult;
     } catch (e: any) {
         console.error('[TrangNguyen] JSON parse error:', e.message);
@@ -356,7 +352,6 @@ export const generateTrangNguyenQuiz = async (
 
     // Step 1: Search for real exam questions first (if enabled)
     if (enableSearch) {
-        console.log('[TrangNguyen] Step 1: Searching for real exam questions (2020-2026)...');
 
         const { searchTrangNguyenQuestions, enrichPromptWithSearchResults } = await import('./trangNguyenSearchService');
 
@@ -367,16 +362,9 @@ export const generateTrangNguyenQuiz = async (
         );
 
         if (searchResult.success && searchResult.content) {
-            console.log('[TrangNguyen] Found real exam questions from search');
             userPrompt = enrichPromptWithSearchResults(userPrompt, searchResult);
-        } else {
-            console.log('[TrangNguyen] No search results, will generate from scratch');
         }
-    } else {
-        console.log('[TrangNguyen] Quick mode - skipping search, generating directly...');
     }
-
-    console.log('[TrangNguyen] Step 2: Calling AI to generate quiz...');
 
     // Use LLM-Mux or Gemini API
     const geminiApiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
@@ -384,36 +372,18 @@ export const generateTrangNguyenQuiz = async (
     let responseText: string;
 
     if (aiProvider === 'llm-mux') {
-        // Call LLM-Mux proxy (api.thitong.site)
-        const llmMuxBaseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || 'https://api.thitong.site/v1';
-        const llmMuxApiKey = (import.meta as any).env.VITE_LLM_MUX_API_KEY || '';
+        const { callApi } = await import('./apiAdapter');
 
-        console.log('[TrangNguyen] Calling LLM-Mux:', llmMuxBaseUrl);
-
-        const response = await fetch(`${llmMuxBaseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${llmMuxApiKey}`
-            },
-            body: JSON.stringify({
-                model: 'gemini-2.0-flash',
-                messages: [
-                    { role: 'system', content: TRANG_NGUYEN_SYSTEM_PROMPT },
-                    { role: 'user', content: userPrompt }
-                ],
-                temperature: 0.4,
-                max_tokens: 8192
-            })
+        const data = await callApi('ai_chat', {
+            model: 'gemini-2.0-flash',
+            messages: [
+                { role: 'system', content: TRANG_NGUYEN_SYSTEM_PROMPT },
+                { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.4,
+            max_tokens: 8192
         });
 
-        if (!response.ok) {
-            const errorText = await response.text().catch(() => '');
-            console.error('[TrangNguyen] LLM-Mux error:', response.status, errorText);
-            throw new Error(`LLM-Mux error: ${response.status}`);
-        }
-
-        const data = await response.json();
         responseText = data.choices?.[0]?.message?.content || '';
     } else {
         // Direct Gemini API call

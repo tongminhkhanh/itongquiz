@@ -11,6 +11,7 @@ import {
 import { validateAnswersOnServer } from '../services/quizValidationService';
 import { useClassroomStore } from '../stores/useClassroomStore';
 import { useGamificationStore } from '../stores/useGamificationStore';
+import { getAvatarUrl } from '../config/avatars';
 import RewardOverlay from './gamification/RewardOverlay';
 
 interface Props {
@@ -97,6 +98,9 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
   // Timer logic
   useEffect(() => {
+    // Disable timer countdown and auto-submit for practice mode or quizzes with no time limit
+    if (quiz.isPractice || quiz.timeLimit === 0) return;
+
     if (step === 'quiz' && timeLeft > 0) {
       const timer = setInterval(() => {
         setTimeLeft((prev) => prev - 1);
@@ -106,7 +110,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       handleSubmit();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, timeLeft]);
+  }, [step, timeLeft, quiz.isPractice, quiz.timeLimit]);
 
   // Prevent refresh (F5) and navigation away during quiz
   useEffect(() => {
@@ -255,8 +259,8 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
           if (allCorrect && correctAnswers.length > 0) correctCount++;
         } else {
           // Legacy mode: single answer
-          const studentAns = (answers[q.id] || "").toString().trim().toLowerCase();
-          const correctAns = q.correctAnswer.toString().trim().toLowerCase();
+          const studentAns = (answers[q.id] || "").toString().trim().replace(/^'/, '').toLowerCase();
+          const correctAns = q.correctAnswer.toString().trim().replace(/^'/, '').toLowerCase();
           // Support multiple correct answers separated by |
           const correctOptions = correctAns.split('|').map((s: string) => s.trim());
           if (correctOptions.includes(studentAns)) correctCount++;
@@ -468,7 +472,6 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       const score = validationResult.score;
       const correctCount = validationResult.correctCount;
       const totalItems = validationResult.total;
-      console.log('✅ Server validation successful:', validationResult);
 
       // 📸 Build answers with question snapshots for future reference
       // This allows viewing answer details even if quiz is deleted later
@@ -623,6 +626,11 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       });
       const correctedScore = totalItems === 0 ? 0 : parseFloat(((correctedCorrectCount / totalItems) * 10).toFixed(1));
 
+      const finalAnswers = {
+        ...answersWithSnapshots,
+        _questionOrder: shuffledQuestions.map(q => q.id)
+      };
+
       const resultData: StudentResult = {
         id: generateUUID(),
         quizId: quiz.id,
@@ -634,12 +642,14 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         totalQuestions: totalItems,
         timeTaken,
         submittedAt: new Date().toISOString(),
-        answers: answersWithSnapshots,  // 👈 Now includes snapshots
+        answers: finalAnswers,  // 👈 Now includes snapshots AND _questionOrder
         validationDetails: validationResult.details // Store server validation details
       };
 
-      // Save result
-      await onSaveResult(resultData);
+      // Save result only for real quizzes
+      if (!quiz.isPractice) {
+        await onSaveResult(resultData);
+      }
       setResult(resultData);
 
       // 🎮 Gamification: Award EXP + Coins after quiz submission
@@ -834,18 +844,26 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     <div className="min-h-screen bg-gray-100 font-sans">
       {/* Header */}
       <div className="bg-white shadow-sm border-b px-6 py-4 flex justify-between items-center sticky top-0 z-20">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">{quiz.title}</h1>
-          <p className="text-lg text-gray-500 mt-1">
-            Thí sinh: <span className="font-semibold text-gray-700">{studentName}</span> -
-            Lớp: <span className="font-semibold text-gray-700">{studentClass}</span>
-          </p>
+        <div className="flex items-center gap-3">
+          {session?.avatar && (
+            <img
+              src={getAvatarUrl(session.avatar)}
+              alt="Avatar"
+              className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-indigo-100 object-cover bg-white shrink-0 shadow-sm"
+            />
+          )}
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800 line-clamp-1">{quiz.title}</h1>
+            <p className="text-sm md:text-lg text-gray-500 mt-0.5 md:mt-1">
+              {studentName} <span className="hidden md:inline">-</span> Lớp: {studentClass}
+            </p>
+          </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 flex flex-col md:flex-row gap-6">
         {/* Questions */}
-        <div className="flex-1 space-y-6 pb-20 md:pb-0">
+        <div className="flex-1 space-y-6 pb-32 md:pb-0">
           {questionsOnCurrentPage.map((q, index) => (
             <QuestionRenderer
               key={q.id}
@@ -913,9 +931,9 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         <div className="w-full md:w-80 flex-shrink-0">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sticky top-24">
             <div className="text-center mb-6">
-              <p className="text-sm text-gray-500 mb-1">Thời gian còn lại</p>
+              <p className="text-sm text-gray-500 mb-1">Thời gian</p>
               <div className="text-3xl font-mono font-bold text-orange-600 bg-orange-50 py-2 rounded-lg border border-orange-100">
-                {formatTime(timeLeft)}
+                {(quiz.isPractice || quiz.timeLimit === 0) ? 'Tự do' : formatTime(timeLeft)}
               </div>
             </div>
 

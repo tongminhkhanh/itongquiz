@@ -11,11 +11,12 @@ export interface SidebarProps {
     activeTab: string;
     setActiveTab: (tab: string) => void;
     onLogout: () => void;
+    isMobileOpen?: boolean;
+    setIsMobileOpen?: (open: boolean) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout, isMobileOpen = false, setIsMobileOpen = () => { } }) => {
     const authStore = useAuthStore();
-    const [isMobileOpen, setIsMobileOpen] = useState(false);
 
     // Sidebar items configuration
     const navItems = [
@@ -77,22 +78,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout }) 
 
     return (
         <>
-            {/* Mobile Hamburger Button */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 z-50 flex items-center justify-between px-4 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-orange-100 rounded-lg">
-                        <Bot className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <span className="font-bold text-white tracking-tight">iTongQuiz</span>
-                </div>
-                <button
-                    onClick={() => setIsMobileOpen(!isMobileOpen)}
-                    className="p-2 text-slate-300 hover:text-white"
-                >
-                    {isMobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                </button>
-            </div>
-
             {/* Backdrop for Mobile */}
             {isMobileOpen && (
                 <div
@@ -103,11 +88,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout }) 
 
             {/* Sidebar Container */}
             <aside
-                className={`fixed top-0 left-0 z-50 h-full w-64 bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 ease-in-out ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+                className={`fixed top-0 left-0 z-50 h-[calc(100vh-64px)] lg:h-full pb-20 lg:pb-0 w-64 bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 ease-in-out overflow-y-auto ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                     }`}
             >
                 {/* Brand Area */}
-                <div className="h-16 flex items-center px-6 border-b border-slate-800">
+                <div className="h-16 flex items-center px-6 border-b border-slate-800 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-orange-100 rounded-xl">
                             <Bot className="w-6 h-6 text-orange-600" />
@@ -118,39 +103,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout }) 
                     </div>
                 </div>
 
-                {/* User Info (Desktop only, mobile has it in top bar or we can keep it here) */}
-                <div className="px-6 py-6 border-b border-slate-800">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-orange-400 font-bold border border-slate-700">
-                            {authStore.teacherName?.charAt(0)?.toUpperCase() || 'GV'}
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-semibold text-white">
-                                {authStore.teacherName || 'Giáo viên'}
-                            </span>
-                            <span className="text-xs text-slate-400 truncate">
-                                {SCHOOL_NAME}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
                 {/* Navigation Links */}
-                <div className="flex-1 overflow-y-auto py-6 custom-scrollbar">
+                <div className="flex-1 py-6 custom-scrollbar">
                     <NavGroup title="Chính" items={navItems} />
                     <NavGroup title="Tiếng Anh IOE" items={ioeItems} adminOnly={true} />
                     <NavGroup title="Hệ thống" items={settingItems} adminOnly={true} />
-                </div>
-
-                {/* Bottom Actions */}
-                <div className="p-4 border-t border-slate-800">
-                    <button
-                        onClick={onLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
-                    >
-                        <LogOut className="w-5 h-5" />
-                        <span className="font-medium">Đăng xuất</span>
-                    </button>
                 </div>
             </aside>
         </>

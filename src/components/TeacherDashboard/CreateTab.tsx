@@ -346,9 +346,6 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
 
             // ===== TRẠNG NGUYÊN MODE =====
             if (isTrangNguyen) {
-                console.log('[CreateTab] Trạng Nguyên mode - using specialized service');
-                console.log('[CreateTab] Search mode:', tnSearchMode);
-
                 // Map selected types to Trạng Nguyên format
                 const tnTypes: string[] = [];
                 if (selectedTypes[QuestionType.MCQ]) tnTypes.push('single_choice');
@@ -447,7 +444,6 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
 
             setGeneratedQuiz(quiz);
         } catch (err: any) {
-            console.error('Quiz generation error:', err);
             setError(err.message || 'Đã xảy ra lỗi khi tạo đề');
         } finally {
             setIsGenerating(false);
@@ -486,12 +482,9 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                             viewAnswers: true,
                             shuffleQuestions: true
                         }
-                    } as any); // Type cast might be needed if I missed some fields
-                    // Note: CreateAssignmentPayload usually needs basic fields.
+                    } as any);
                 } catch (assignErr) {
-                    console.error('Auto-assign failed:', assignErr);
-                    // We don't block the success flow, just maybe alert?
-                    // For now, let's proceed.
+                    // Silent catch
                 }
             }
 
@@ -529,7 +522,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
             setLinkCopied(true);
             setTimeout(() => setLinkCopied(false), 3000);
         } catch (err) {
-            console.error('Failed to copy:', err);
+            // Silent catch
         }
     };
 

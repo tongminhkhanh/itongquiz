@@ -146,10 +146,6 @@ const PdfTab: React.FC<PdfTabProps> = ({ onSaveQuiz, onSuccess }) => {
     // Step 1: Extract text from PDF using dedicated OCR function
     // Step 1: Extract text from PDF using dedicated OCR function
     const handleExtractText = async () => {
-        console.log('handleExtractText called');
-        console.log('Current aiProvider:', aiProvider);
-        console.log('Uploaded file:', uploadedFile);
-
         if (!uploadedFile) {
             setError('Vui lòng tải lên file PDF hoặc ảnh');
             return;
@@ -166,10 +162,8 @@ const PdfTab: React.FC<PdfTabProps> = ({ onSaveQuiz, onSuccess }) => {
         setSuccessMessage(null);
 
         try {
-            console.log('Calling extractTextFromPdf...');
             // Use dedicated OCR function that returns raw text
             const text = await extractTextFromPdf(uploadedFile, aiProvider);
-            console.log('extractTextFromPdf result length:', text?.length);
 
             if (text && text.length > 50) {
                 setExtractedText(text);
@@ -180,7 +174,6 @@ const PdfTab: React.FC<PdfTabProps> = ({ onSaveQuiz, onSuccess }) => {
                 setError('Không thể trích xuất văn bản từ file. Vui lòng thử lại hoặc dùng file khác.');
             }
         } catch (err: any) {
-            console.error('Text extraction error in PdfTab:', err);
             setError(err.message || 'Đã xảy ra lỗi khi trích xuất văn bản');
         } finally {
             setIsExtracting(false);
@@ -262,9 +255,6 @@ ${editedText}
                 genAiProvider // Use generation AI provider
             );
 
-            // DEBUG: Log AI response
-            console.log('🔍 AI Quiz Generation Result:', JSON.stringify(result, null, 2));
-
             if (result.questions && result.questions.length > 0) {
                 const questionsWithIds = result.questions.map((q: any, idx: number) => ({
                     ...q,
@@ -278,7 +268,6 @@ ${editedText}
                 setError('Không tìm thấy câu hỏi nào trong văn bản. Vui lòng kiểm tra lại.');
             }
         } catch (err: any) {
-            console.error('Question generation error:', err);
             setError(err.message || 'Đã xảy ra lỗi khi tạo câu hỏi');
         } finally {
             setIsGenerating(false);

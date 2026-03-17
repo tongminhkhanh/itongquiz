@@ -12,6 +12,9 @@ const StudentView = React.lazy(() => import('./src/components/StudentView'));
 const IoeStudentView = React.lazy(() => import('./src/components/IoeStudentView'));
 const TeacherDashboard = React.lazy(() => import('./src/components/TeacherDashboard'));
 const HomePage = React.lazy(() => import('./src/components/HomePage/HomePage'));
+const PrivacyPolicy = React.lazy(() => import('./src/components/legal/PrivacyPolicy'));
+const TermsOfService = React.lazy(() => import('./src/components/legal/TermsOfService'));
+const Footer = React.lazy(() => import('./src/components/common/Footer'));
 
 const App: React.FC = () => {
     // --- STORES ---
@@ -36,6 +39,39 @@ const App: React.FC = () => {
             loadIoeData(false); // Initial load for deep link
         }
     }, []);
+
+    // --- SEO & Meta Tags ---
+    useEffect(() => {
+        let title = 'iTong Quiz - Luyện thi Olympic Tiếng Anh IOE | Trường TH Ít Ong';
+        let description = 'Hệ thống luyện thi Olympic Tiếng Anh IOE trực tuyến dành cho học sinh tiểu học. Tạo đề thi tự động bằng AI, làm bài online, xem kết quả ngay.';
+
+        if (quizStore.view === 'teacher_dash') {
+            title = 'Quản lý Đề thi - iTong Quiz';
+        } else if (quizStore.view === 'student' && quizStore.selectedQuiz) {
+            title = `${quizStore.selectedQuiz.title} - iTong Quiz`;
+            description = `Luyện tập bài thi ${quizStore.selectedQuiz.title} trên hệ thống iTong Quiz. Bài thi dành cho học sinh lớp ${quizStore.selectedQuiz.classLevel || 'Tiểu học'}.`;
+        } else if ((quizStore.view as any) === 'privacy') {
+            title = 'Chính sách bảo mật - iTong Quiz';
+        } else if ((quizStore.view as any) === 'tos') {
+            title = 'Điều khoản dịch vụ - iTong Quiz';
+        }
+
+        document.title = title;
+
+        // Update meta description
+        const metaDescription = document.querySelector('meta[name="description"]');
+        if (metaDescription) {
+            metaDescription.setAttribute('content', description);
+        }
+
+        // Update OG Tags
+        const ogTitle = document.querySelector('meta[property="og:title"]');
+        if (ogTitle) ogTitle.setAttribute('content', title);
+
+        const ogDesc = document.querySelector('meta[property="og:description"]');
+        if (ogDesc) ogDesc.setAttribute('content', description);
+
+    }, [quizStore.view, quizStore.selectedQuiz?.id]);
 
     const loadIoeData = async (forceRefresh = false) => {
         if (ioeLoading) return;
@@ -74,6 +110,12 @@ const App: React.FC = () => {
     // --- VIEWS ---
 
     if (quizStore.view === 'teacher_dash') {
+        // 🔐 Security Guard: Redirect to home if not logged in as teacher
+        if (!authStore.isLoggedIn) {
+            quizStore.setView('home');
+            return null;
+        }
+
         return (
             <>
                 <Suspense fallback={
@@ -125,6 +167,24 @@ const App: React.FC = () => {
         );
     }
 
+    if (quizStore.view === 'privacy') {
+        return (
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+                <PrivacyPolicy onBack={() => quizStore.goHome()} />
+                <Footer onNavigate={(v) => quizStore.setView(v as any)} />
+            </Suspense>
+        );
+    }
+
+    if (quizStore.view === 'tos') {
+        return (
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+                <TermsOfService onBack={() => quizStore.goHome()} />
+                <Footer onNavigate={(v) => quizStore.setView(v as any)} />
+            </Suspense>
+        );
+    }
+
     // Home Screen (New Component)
     return (
         <Suspense fallback={
@@ -132,11 +192,16 @@ const App: React.FC = () => {
                 <Loader2 className="w-12 h-12 text-[#6C5CE7] animate-spin" />
             </div>
         }>
-            <HomePage
-                ioeQuizzes={ioeQuizzes}
-                ioeLoading={ioeLoading}
-                onRefreshIoe={() => loadIoeData(true)}
-            />
+            <div className="flex flex-col min-h-screen">
+                <main className="flex-1">
+                    <HomePage
+                        ioeQuizzes={ioeQuizzes}
+                        ioeLoading={ioeLoading}
+                        onRefreshIoe={() => loadIoeData(true)}
+                    />
+                </main>
+                <Footer onNavigate={(v) => quizStore.setView(v as any)} />
+            </div>
             <Analytics />
         </Suspense>
     );

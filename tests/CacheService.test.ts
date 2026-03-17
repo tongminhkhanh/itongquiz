@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { CacheService, CacheTTL, CacheKeys } from '../services/CacheService';
+import { CacheService, CacheTTL, CacheKeys } from '../src/services/CacheService';
 
 describe('CacheService', () => {
     let cacheService: CacheService;

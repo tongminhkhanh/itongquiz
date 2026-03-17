@@ -14,6 +14,7 @@ import { ResultsStatistics } from '../../../utils/statisticsUtils';
 
 interface ResultsAnalyticsProps {
     statistics: ResultsStatistics;
+    hideStats?: boolean;
 }
 
 // Colors for charts
@@ -23,7 +24,7 @@ const COLORS = {
     histogram: ['#fbbf24', '#f97316', '#22c55e', '#3b82f6', '#8b5cf6'],
 };
 
-export const ResultsAnalytics: React.FC<ResultsAnalyticsProps> = ({ statistics }) => {
+export const ResultsAnalytics: React.FC<ResultsAnalyticsProps> = ({ statistics, hideStats = false }) => {
     // Pie chart data for pass/fail
     const passFailData = [
         { name: 'Đạt (≥5đ)', value: statistics.passCount, color: COLORS.pass },
@@ -39,48 +40,50 @@ export const ResultsAnalytics: React.FC<ResultsAnalyticsProps> = ({ statistics }
     return (
         <div className="space-y-6">
             {/* Enhanced Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <StatCard
-                    icon={<Users className="w-5 h-5 text-blue-600" />}
-                    label="Tổng bài làm"
-                    value={statistics.totalResults}
-                    className="bg-blue-50 border-blue-200"
-                />
-                <StatCard
-                    icon={<Target className="w-5 h-5 text-orange-600" />}
-                    label="Điểm TB"
-                    value={statistics.mean}
-                    suffix="điểm"
-                    className="bg-orange-50 border-orange-200"
-                />
-                <StatCard
-                    icon={<TrendingUp className="w-5 h-5 text-purple-600" />}
-                    label="Trung vị"
-                    value={statistics.median}
-                    suffix="điểm"
-                    className="bg-purple-50 border-purple-200"
-                />
-                <StatCard
-                    icon={<Award className="w-5 h-5 text-green-600" />}
-                    label="Tỷ lệ đạt"
-                    value={statistics.passRate}
-                    suffix="%"
-                    className="bg-green-50 border-green-200"
-                    trend={statistics.passRate >= 70 ? 'up' : statistics.passRate >= 50 ? 'neutral' : 'down'}
-                />
-                <StatCard
-                    icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
-                    label="Điểm cao nhất"
-                    value={statistics.max}
-                    className="bg-emerald-50 border-emerald-200"
-                />
-                <StatCard
-                    icon={<TrendingDown className="w-5 h-5 text-red-600" />}
-                    label="Điểm thấp nhất"
-                    value={statistics.min}
-                    className="bg-red-50 border-red-200"
-                />
-            </div>
+            {!hideStats && (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <StatCard
+                        icon={<Users className="w-5 h-5 text-blue-600" />}
+                        label="Tổng bài làm"
+                        value={statistics.totalResults}
+                        className="bg-blue-50 border-blue-200"
+                    />
+                    <StatCard
+                        icon={<Target className="w-5 h-5 text-orange-600" />}
+                        label="Điểm TB"
+                        value={statistics.mean}
+                        suffix="điểm"
+                        className="bg-orange-50 border-orange-200"
+                    />
+                    <StatCard
+                        icon={<TrendingUp className="w-5 h-5 text-purple-600" />}
+                        label="Trung vị"
+                        value={statistics.median}
+                        suffix="điểm"
+                        className="bg-purple-50 border-purple-200"
+                    />
+                    <StatCard
+                        icon={<Award className="w-5 h-5 text-green-600" />}
+                        label="Tỷ lệ đạt"
+                        value={statistics.passRate}
+                        suffix="%"
+                        className="bg-green-50 border-green-200"
+                        trend={statistics.passRate >= 70 ? 'up' : statistics.passRate >= 50 ? 'neutral' : 'down'}
+                    />
+                    <StatCard
+                        icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
+                        label="Điểm cao nhất"
+                        value={statistics.max}
+                        className="bg-emerald-50 border-emerald-200"
+                    />
+                    <StatCard
+                        icon={<TrendingDown className="w-5 h-5 text-red-600" />}
+                        label="Điểm thấp nhất"
+                        value={statistics.min}
+                        className="bg-red-50 border-red-200"
+                    />
+                </div>
+            )}
 
             {/* Charts Row */}
             <div className="grid md:grid-cols-2 gap-6">
@@ -199,7 +202,7 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, value, suffix, classNa
             </div>
             {trend && (
                 <div className={`text-xs mt-1 ${trend === 'up' ? 'text-green-600' :
-                        trend === 'down' ? 'text-red-600' : 'text-gray-500'
+                    trend === 'down' ? 'text-red-600' : 'text-gray-500'
                     }`}>
                     {trend === 'up' && '↑ Tốt'}
                     {trend === 'down' && '↓ Cần cải thiện'}

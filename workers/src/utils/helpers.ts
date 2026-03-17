@@ -2,9 +2,10 @@
 // Extracted from legacy GAS compatibility handler
 
 import { jsonResponse } from './response';
+import { Question, Assignment, PetData, ShopItem, ResultRow } from '../types';
 
 // ============ Map question data for D1 insert ============
-export function mapQuestionForSave(q: any, quizId: string): any[] {
+export function mapQuestionForSave(q: Partial<Question> & { type: string }, quizId: string): string[] {
     let options = '';
     let items = '';
     let textField = '';
@@ -15,57 +16,68 @@ export function mapQuestionForSave(q: any, quizId: string): any[] {
     let correctWordIndexesField = '';
     const imageField = q.image || '';
 
+    // Legacy object mapping to strings
+    const anyQ = q as any;
+
     if (q.type === 'MCQ') {
-        options = (q.options || []).join('|');
+        options = (anyQ.options || []).join('|');
     } else if (q.type === 'IMAGE_QUESTION') {
-        options = (q.options || []).join('|');
-        distractorsField = JSON.stringify(q.optionImages || []);
+        options = (anyQ.options || []).join('|');
+        distractorsField = JSON.stringify(anyQ.optionImages || []);
     } else if (q.type === 'TRUE_FALSE') {
-        items = JSON.stringify(q.items || []);
+        items = JSON.stringify(anyQ.items || []);
     } else if (q.type === 'MATCHING') {
-        items = JSON.stringify(q.pairs || []);
+        items = JSON.stringify(anyQ.pairs || []);
     } else if (q.type === 'MULTIPLE_SELECT') {
-        options = (q.options || []).join('|');
+        options = (anyQ.options || []).join('|');
     } else if (q.type === 'DRAG_DROP' || q.type === 'DROPDOWN') {
-        textField = q.text || '';
-        blanksField = JSON.stringify(q.blanks || []);
-        distractorsField = JSON.stringify(q.distractors || []);
+        textField = anyQ.text || '';
+        blanksField = JSON.stringify(anyQ.blanks || []);
+        distractorsField = JSON.stringify(anyQ.distractors || []);
     } else if (q.type === 'CATEGORIZATION') {
-        items = JSON.stringify(q.items || []);
-        distractorsField = JSON.stringify(q.categories || []);
+        items = JSON.stringify(anyQ.items || []);
+        distractorsField = JSON.stringify(anyQ.categories || []);
     } else if (q.type === 'ORDERING') {
-        items = JSON.stringify(q.items || []);
-        q.correctAnswer = JSON.stringify(q.correctOrder || []);
+        items = JSON.stringify(anyQ.items || []);
+        anyQ.correctAnswer = JSON.stringify(anyQ.correctOrder || []);
     } else if (q.type === 'UNDERLINE') {
-        items = JSON.stringify(q.words || []);
-        q.correctAnswer = JSON.stringify(q.correctWordIndexes || []);
-        sentenceField = q.sentence || q.hint || '';
-        wordsField = JSON.stringify(q.words || []);
-        correctWordIndexesField = JSON.stringify(q.correctWordIndexes || []);
+        items = JSON.stringify(anyQ.words || []);
+        anyQ.correctAnswer = JSON.stringify(anyQ.correctWordIndexes || []);
+        sentenceField = anyQ.sentence || anyQ.hint || '';
+        wordsField = JSON.stringify(anyQ.words || []);
+        correctWordIndexesField = JSON.stringify(anyQ.correctWordIndexes || []);
     } else if (q.type === 'RIDDLE') {
-        items = JSON.stringify(q.items || q.riddleLines || []);
-        textField = q.text || q.answerLabel || '';
-        sentenceField = q.sentence || q.hint || '';
+        items = JSON.stringify(anyQ.items || anyQ.riddleLines || []);
+        textField = anyQ.text || anyQ.answerLabel || '';
+        sentenceField = anyQ.sentence || anyQ.hint || '';
     } else if (q.type === 'WORD_SCRAMBLE') {
-        items = JSON.stringify(q.letters || []);
-        textField = q.text || q.hint || '';
-        q.correctAnswer = q.correctWord || q.correctAnswer || '';
+        items = JSON.stringify(anyQ.letters || []);
+        textField = anyQ.text || anyQ.hint || '';
+        anyQ.correctAnswer = anyQ.correctWord || anyQ.correctAnswer || '';
     } else if (q.type === 'ERROR_CORRECTION') {
-        textField = q.text || q.passage || '';
-        distractorsField = q.wrongWord || q.distractors || '';
-        q.correctAnswer = q.correctWord || q.correctAnswer || '';
+        textField = anyQ.text || anyQ.passage || '';
+        distractorsField = anyQ.wrongWord || anyQ.distractors || '';
+        anyQ.correctAnswer = anyQ.correctWord || anyQ.correctAnswer || '';
     }
 
     const correctAnswer = q.type === 'MULTIPLE_SELECT'
-        ? JSON.stringify(q.correctAnswers || [])
-        : (q.correctAnswer || '');
+        ? JSON.stringify(anyQ.correctAnswers || [])
+        : (anyQ.correctAnswer || q.correct_answer || '');
 
-    const questionText = q.type === 'TRUE_FALSE' ? q.mainQuestion : q.question;
+    const questionText = q.type === 'TRUE_FALSE' ? anyQ.mainQuestion : (q.question || anyQ.question);
+
+    // Build tags string from question's tags array or string
+    let tagsField = '';
+    if (Array.isArray(q.tags)) {
+        tagsField = q.tags.join(',');
+    } else if (typeof q.tags === 'string') {
+        tagsField = q.tags;
+    }
 
     const result = [
-        q.id, quizId, q.type, questionText || '', options, correctAnswer,
+        q.id || '', quizId, q.type, questionText || '', options, correctAnswer,
         items, textField, blanksField, distractorsField, sentenceField,
-        wordsField, correctWordIndexesField, imageField,
+        wordsField, correctWordIndexesField, imageField, tagsField,
     ];
 
     // Ensure no undefined/null values are sent to D1 bind, which causes silent drops/throws
@@ -73,7 +85,7 @@ export function mapQuestionForSave(q: any, quizId: string): any[] {
 }
 
 // ============ Map assignment from DB row ============
-export function mapAssignment(a: any): any {
+export function mapAssignment(a: Assignment): any {
     return {
         id: a.id, quizId: a.quiz_id, classId: a.class_id,
         studentId: a.student_id || '', deadline: a.deadline,
@@ -82,7 +94,7 @@ export function mapAssignment(a: any): any {
     };
 }
 
-export function mapAssignments(rows: any[]): any[] {
+export function mapAssignments(rows: Assignment[]): any[] {
     return rows.map(mapAssignment);
 }
 
@@ -94,7 +106,7 @@ export async function hashSHA256(input: string): Promise<string> {
 }
 
 // ============ Map pet data from DB row ============
-export function mapPetData(pet: any): any {
+export function mapPetData(pet: PetData): any {
     return {
         petId: pet.pet_id,
         petName: pet.pet_name,
@@ -109,7 +121,7 @@ export function mapPetData(pet: any): any {
 }
 
 // ============ Map shop item from DB row ============
-export function mapShopItem(i: any): any {
+export function mapShopItem(i: ShopItem): any {
     return {
         itemId: i.item_id,
         name: i.name,
@@ -119,6 +131,7 @@ export function mapShopItem(i: any): any {
         assetUrl: i.asset_url || '',
     };
 }
+
 
 // ============ VALIDATE ANSWERS (Server-side anti-cheat) ============
 export async function handleValidateAnswers(db: D1Database, body: any): Promise<Response> {
@@ -142,9 +155,18 @@ export async function handleValidateAnswers(db: D1Database, body: any): Promise<
         const studentAnswer = studentAnswers[qId];
         let isCorrect = false;
 
-        if (qType === 'MCQ' || qType === 'SHORT_ANSWER' || qType === 'IMAGE_QUESTION') {
+        // 🛡️ Guard: A skipped answer is ALWAYS wrong, even if the correct answer in DB is empty
+        const isSkipped = !studentAnswer && studentAnswer !== false && studentAnswer !== 0;
+
+        if (isSkipped) {
+            isCorrect = false;
+        } else if (qType === 'MCQ' || qType === 'SHORT_ANSWER' || qType === 'IMAGE_QUESTION') {
             if (qType === 'SHORT_ANSWER') {
-                isCorrect = String(studentAnswer || '').trim().toLowerCase() === String(correctAnswer || '').trim().toLowerCase();
+                const cleanStudent = String(studentAnswer || '').trim().replace(/^'/, '').toLowerCase();
+                const cleanCorrect = String(correctAnswer || '').trim().replace(/^'/, '').toLowerCase();
+                // Support multiple correct answers separated by |
+                const correctOptions = cleanCorrect.split('|').map(s => s.trim());
+                isCorrect = correctOptions.includes(cleanStudent);
             } else {
                 let normalizedCorrect = String(correctAnswer || '').trim().toUpperCase();
                 const normalizedStudent = String(studentAnswer || '').trim().toUpperCase();
@@ -225,7 +247,7 @@ export async function handleValidateAnswers(db: D1Database, body: any): Promise<
         }
 
         if (isCorrect) correctCount++;
-        details.push({ questionId: qId, isCorrect, correctAnswer });
+        details.push({ questionId: qId, isCorrect, correctAnswer: String(correctAnswer || '').replace(/^'/, '') });
     }
 
     const total = questions.results.length;

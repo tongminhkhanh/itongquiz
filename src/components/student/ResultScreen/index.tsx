@@ -68,7 +68,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                 return answer === (question as any).correctAnswer ? 'correct' : 'wrong';
             }
             case 'SHORT_ANSWER': {
-                return String(answer).toLowerCase().trim() === String((question as any).correctAnswer).toLowerCase().trim() ? 'correct' : 'wrong';
+                return String(answer ?? '').replace(/^'/, '').toLowerCase().trim() === String((question as any).correctAnswer ?? '').replace(/^'/, '').toLowerCase().trim() ? 'correct' : 'wrong';
             }
             case 'TRUE_FALSE': {
                 const items = (question as any).items || [];
@@ -95,7 +95,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                 return studentWord.toLowerCase().replace(/\s+/g, '') === ((question as any).correctWord || '').toLowerCase().replace(/\s+/g, '') ? 'correct' : 'wrong';
             }
             case 'RIDDLE': {
-                return String(answer).toLowerCase().trim() === String((question as any).correctAnswer).toLowerCase().trim() ? 'correct' : 'wrong';
+                return String(answer ?? '').replace(/^'/, '').toLowerCase().trim() === String((question as any).correctAnswer ?? '').replace(/^'/, '').toLowerCase().trim() ? 'correct' : 'wrong';
             }
             case 'DRAG_DROP': {
                 const ddText = (question as any).text || "";

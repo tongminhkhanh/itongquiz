@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Clock, ChevronRight, ArrowLeft, Lock } from 'lucide-react';
+import { Search, Clock, ChevronRight, ArrowLeft, Lock, ShieldCheck } from 'lucide-react';
 
 // --- Fluent Emoji CDN Base ---
 const FLUENT_CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
@@ -58,17 +58,17 @@ const QuizListPage: React.FC<Props> = ({
             {/* Decorative Elements */}
             <img
                 src={`${FLUENT_CDN}/Sun/3D/sun_3d.png`}
-                alt=""
+                alt="Hình minh họa mặt trời 3D"
                 className="quiz-list-deco quiz-list-deco--sun"
             />
             <img
                 src={`${FLUENT_CDN}/Cloud/3D/cloud_3d.png`}
-                alt=""
+                alt="Hình minh họa đám mây 3D"
                 className="quiz-list-deco quiz-list-deco--cloud-1"
             />
             <img
                 src={`${FLUENT_CDN}/Cloud/3D/cloud_3d.png`}
-                alt=""
+                alt="Hình minh họa đám mây 3D"
                 className="quiz-list-deco quiz-list-deco--cloud-2"
             />
 
@@ -88,7 +88,7 @@ const QuizListPage: React.FC<Props> = ({
                     <div className="quiz-list-header__content">
                         <img
                             src={categoryConfig.icon}
-                            alt=""
+                            alt={`Biểu tượng danh mục ${categoryConfig.label}`}
                             className="quiz-list-header__icon"
                         />
                         <div className="quiz-list-header__text">
@@ -140,26 +140,39 @@ const QuizListPage: React.FC<Props> = ({
                         quizzes.map((quiz) => {
                             const quizCategory = quiz.category || 'class';
                             const quizConfig = SUBJECT_CONFIG[quizCategory] || categoryConfig;
+                            const assignment = (quiz as any)._assignmentData;
+                            const attempts = assignment?.attemptCount || 0;
+                            const maxAttempts = assignment?.maxAttempts || 1;
+                            const isCompleted = assignment && attempts >= maxAttempts;
+
                             return (
                                 <button
-                                    key={quiz.id}
-                                    onClick={() => onQuizClick(quiz)}
-                                    className="quiz-list-card"
+                                    key={(quiz as any)._assignmentData?.id || quiz.id}
+                                    onClick={() => !isCompleted && onQuizClick(quiz)}
+                                    disabled={isCompleted}
+                                    className={`quiz-list-card ${isCompleted ? 'quiz-list-card--completed' : ''}`}
+                                    style={isCompleted ? { opacity: 0.8, cursor: 'default' } : {}}
                                 >
                                     {/* Top Stripe */}
                                     <div
                                         className="quiz-list-card__stripe"
-                                        style={{ background: quizConfig.color }}
+                                        style={{ background: isCompleted ? '#10b981' : quizConfig.color }}
                                     />
+
+                                    {isCompleted && (
+                                        <div className="absolute top-2 right-2 bg-emerald-500 text-white p-1 rounded-full shadow-sm z-10">
+                                            <ShieldCheck className="w-4 h-4" />
+                                        </div>
+                                    )}
 
                                     {/* Header with Icon */}
                                     <div className="quiz-list-card__header">
                                         <img
                                             src={quizConfig.icon}
-                                            alt=""
+                                            alt={`Biểu tượng môn ${quizConfig.title}`}
                                             className="quiz-list-card__icon"
                                         />
-                                        {quiz.requireCode && (
+                                        {quiz.requireCode && !isCompleted && (
                                             <Lock className="quiz-list-card__lock" />
                                         )}
                                     </div>
@@ -172,15 +185,19 @@ const QuizListPage: React.FC<Props> = ({
                                         <span>
                                             <Clock className="w-3.5 h-3.5" /> {quiz.timeLimit} phút
                                         </span>
-                                        <span>📝 {quiz.questions.length} câu</span>
+                                        {isCompleted ? (
+                                            <span className="text-emerald-600 font-bold">✨ Hoàn thành ({attempts}/{maxAttempts})</span>
+                                        ) : (
+                                            <span>📝 {quiz.questions.length} câu</span>
+                                        )}
                                     </div>
 
                                     {/* CTA */}
                                     <div
                                         className="quiz-list-card__cta"
-                                        style={{ color: quizConfig.color }}
+                                        style={{ color: isCompleted ? '#10b981' : quizConfig.color }}
                                     >
-                                        Bắt đầu <ChevronRight className="w-4 h-4" />
+                                        {isCompleted ? 'Đã xong' : 'Bắt đầu'} <ChevronRight className="w-4 h-4" />
                                     </div>
                                 </button>
                             );
@@ -214,7 +231,7 @@ const QuizListPage: React.FC<Props> = ({
                             <div className="quiz-list-empty">
                                 <img
                                     src={`${FLUENT_CDN}/See-no-evil%20monkey/3D/see-no-evil_monkey_3d.png`}
-                                    alt=""
+                                    alt="Khỉ che mắt 3D - Không có kết quả"
                                     className="quiz-list-empty__img"
                                 />
                                 <h3 className="quiz-list-empty__title">Không tìm thấy bài nào!</h3>

@@ -20,7 +20,7 @@ const AnnouncementSettings: React.FC = () => {
                     setIsActive(data.isActive);
                 }
             } catch (error) {
-                console.error('Failed to fetch announcement:', error);
+                // Error handled in UI if needed
             } finally {
                 setIsLoading(false);
             }
@@ -102,8 +102,8 @@ const AnnouncementSettings: React.FC = () => {
             {/* Message */}
             {message && (
                 <div className={`mb-4 p-3 rounded-lg ${message.type === 'success'
-                        ? 'bg-green-50 text-green-700 border border-green-200'
-                        : 'bg-red-50 text-red-700 border border-red-200'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
                     }`}>
                     {message.type === 'success' ? '✅' : '❌'} {message.text}
                 </div>
@@ -114,8 +114,8 @@ const AnnouncementSettings: React.FC = () => {
                 onClick={handleSave}
                 disabled={isSaving}
                 className={`px-6 py-2.5 rounded-lg font-medium text-white transition-all ${isSaving
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
                     }`}
             >
                 {isSaving ? (

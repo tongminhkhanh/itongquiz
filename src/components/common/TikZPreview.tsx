@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTikZJax } from '../../hooks/useMathJax';
 
 interface TikZPreviewProps {
     code: string;
@@ -6,6 +7,9 @@ interface TikZPreviewProps {
 }
 
 const TikZPreview: React.FC<TikZPreviewProps> = ({ code, className = '' }) => {
+    // Ensure TikZJax is loaded
+    useTikZJax();
+
     const containerRef = useRef<HTMLDivElement>(null);
     const [svgContent, setSvgContent] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);

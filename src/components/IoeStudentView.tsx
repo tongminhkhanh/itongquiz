@@ -214,7 +214,6 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
             // IOE quizzes are stored in a separate sheet, so we use local calculation
             // instead of the main quiz validation endpoint
             const { score, correctCount, totalItems } = calculateScore();
-            console.log('✅ IOE Local calculation:', { score, correctCount, totalItems });
 
             const resultData: StudentResult = {
                 id: crypto.randomUUID(),
@@ -227,7 +226,10 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                 totalQuestions: totalItems,
                 timeTaken,
                 submittedAt: new Date().toISOString(),
-                answers
+                answers: {
+                    ...answers,
+                    _questionOrder: shuffledQuestions.map(q => q.id)
+                }
             };
 
             setResult(resultData);
@@ -531,7 +533,6 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                             textToSpeak = cleanQ.replace(UNDERSCORE_FILL_REGEX, correctAnswer);
                                                         }
 
-                                                        console.log('[TTS] Speaking:', textToSpeak); // Debug log
 
                                                         if (textToSpeak && 'speechSynthesis' in window) {
                                                             // Cancel any ongoing speech
@@ -556,7 +557,6 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
                                                             if (femaleVoice) {
                                                                 utterance.voice = femaleVoice;
-                                                                console.log('[TTS] Using voice:', femaleVoice.name);
                                                             }
 
                                                             window.speechSynthesis.speak(utterance);

@@ -194,33 +194,69 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
 
         // Get all assignments (for teacher dashboard)
         if (all === 'true') {
-            const allRows = await db.prepare(`
-                SELECT a.*, c.name as class_name, q.title as quiz_title, s.full_name as student_name
+            const assignments = await db.prepare(`
+                SELECT 
+                    a.*, 
+                    c.name as class_name, 
+                    q.title as quiz_title, 
+                    s.full_name as student_name,
+                    (SELECT COUNT(*) FROM students WHERE class_id = a.class_id) as total_students,
+                    (
+                        SELECT COUNT(DISTINCT r.student_name) 
+                        FROM results r 
+                        WHERE r.quiz_id = a.quiz_id 
+                        AND (r.class_name = c.name OR r.class_name = 'Lớp ' || c.name OR REPLACE(r.class_name, 'Lớp ', '') = c.name)
+                        AND r.answers != '{"status":"STARTED"}'
+                    ) as submitted_count
                 FROM assignments a
                 LEFT JOIN classes c ON a.class_id = c.id
                 LEFT JOIN quizzes q ON a.quiz_id = q.id
                 LEFT JOIN students s ON a.student_id = s.id
             `).all();
-            const mapped = allRows.results.map((a: any) => ({
-                ...mapAssignment(a), className: a.class_name || '', quizTitle: a.quiz_title || 'Bài tập', studentName: a.student_name || ''
+
+            const mapped = assignments.results.map((a: any) => ({
+                ...mapAssignment(a),
+                className: a.class_name || '',
+                quizTitle: a.quiz_title || 'Bài tập',
+                studentName: a.student_name || '',
+                totalStudents: Number(a.total_students) || 0,
+                submittedCount: Number(a.submitted_count) || 0
             }));
             return jsonResponse({ status: 'success', data: mapped });
         }
 
         // Get teacher assignments
         if (teacherUsername) {
-            const teacherClasses = await db.prepare('SELECT id, name FROM classes WHERE teacher_username = ?')
-                .bind(teacherUsername).all();
+            const teacherClasses = await db.prepare('SELECT id FROM classes WHERE teacher_username = ?').bind(teacherUsername).all();
             const classIds = teacherClasses.results.map((c: any) => c.id);
             if (classIds.length === 0) return jsonResponse({ status: 'success', data: [] });
 
             const placeholders = classIds.map(() => '?').join(',');
-            const assignments = await db.prepare(
-                `SELECT a.*, c.name as class_name, s.full_name as student_name FROM assignments a LEFT JOIN classes c ON a.class_id = c.id LEFT JOIN students s ON a.student_id = s.id WHERE a.class_id IN (${placeholders})`
-            ).bind(...classIds).all();
+            const assignments = await db.prepare(`
+                SELECT 
+                    a.*, 
+                    c.name as class_name, 
+                    s.full_name as student_name,
+                    (SELECT COUNT(*) FROM students WHERE class_id = a.class_id) as total_students,
+                    (
+                        SELECT COUNT(DISTINCT r.student_name) 
+                        FROM results r 
+                        WHERE r.quiz_id = a.quiz_id 
+                        AND (r.class_name = c.name OR r.class_name = 'Lớp ' || c.name OR REPLACE(r.class_name, 'Lớp ', '') = c.name)
+                        AND r.answers != '{"status":"STARTED"}'
+                    ) as submitted_count
+                FROM assignments a 
+                LEFT JOIN classes c ON a.class_id = c.id 
+                LEFT JOIN students s ON a.student_id = s.id 
+                WHERE a.class_id IN (${placeholders})
+            `).bind(...classIds).all();
 
             const mapped = assignments.results.map((a: any) => ({
-                ...mapAssignment(a), className: a.class_name || '', studentName: a.student_name || ''
+                ...mapAssignment(a),
+                className: a.class_name || '',
+                studentName: a.student_name || '',
+                totalStudents: Number(a.total_students) || 0,
+                submittedCount: Number(a.submitted_count) || 0
             }));
             return jsonResponse({ status: 'success', data: mapped });
         }
@@ -234,17 +270,27 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
                 `SELECT * FROM assignments WHERE class_id = ? AND (student_id = '' OR student_id = ?)`
             ).bind(stu.class_id, stu.id).all();
 
-            const mapped = [];
-            for (const a of asns.results as any[]) {
-                const countResult = await db.prepare(
-                    `SELECT COUNT(*) as cnt FROM results WHERE student_name = ? AND quiz_id = ? AND answers != '{"status":"STARTED"}'`
-                ).bind(stu.full_name, a.quiz_id).first<{ cnt: number }>();
-                mapped.push({
-                    ...mapAssignment(a),
-                    attemptCount: countResult?.cnt || 0,
-                    maxAttempts: Number(a.max_attempts) || 1,
-                });
+            if (asns.results.length === 0) {
+                return jsonResponse({ status: 'success', data: [] });
             }
+
+            const quizIds = [...new Set(asns.results.map((a: any) => a.quiz_id))];
+            const placeholders = quizIds.map(() => '?').join(',');
+
+            const countsQuery = `SELECT quiz_id, COUNT(*) as cnt FROM results WHERE student_name = ? AND quiz_id IN (${placeholders}) AND answers != '{"status":"STARTED"}' GROUP BY quiz_id`;
+            const countsResult = await db.prepare(countsQuery).bind(stu.full_name, ...quizIds).all();
+
+            const countMap = new Map();
+            for (const row of countsResult.results as any[]) {
+                countMap.set(row.quiz_id, row.cnt);
+            }
+
+            const mapped = asns.results.map((a: any) => ({
+                ...mapAssignment(a),
+                attemptCount: countMap.get(a.quiz_id) || 0,
+                maxAttempts: Number(a.max_attempts) || 1,
+            }));
+
             return jsonResponse({ status: 'success', data: mapped });
         }
 
