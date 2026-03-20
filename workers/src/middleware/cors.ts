@@ -23,7 +23,7 @@ export function corsHeaders(request: Request): Record<string, string> {
     return {
         'Access-Control-Allow-Origin': allowedOrigin,
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Token',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Token, x-target-url, x-target-token',
         'Access-Control-Max-Age': '86400',
     };
 }
