@@ -61,7 +61,7 @@ export function mapQuestionForSave(q: Partial<Question> & { type: string }, quiz
     }
 
     const correctAnswer = q.type === 'MULTIPLE_SELECT'
-        ? JSON.stringify(anyQ.correctAnswers || [])
+        ? JSON.stringify(anyQ.correctAnswers || anyQ.correctAnswer || [])
         : (anyQ.correctAnswer || q.correct_answer || '');
 
     const questionText = q.type === 'TRUE_FALSE' ? anyQ.mainQuestion : (q.question || anyQ.question);
@@ -176,7 +176,13 @@ export async function handleValidateAnswers(db: D1Database, body: any): Promise<
             }
         } else if (qType === 'MULTIPLE_SELECT') {
             try {
-                const correct = JSON.parse(correctAnswer);
+                let correct: string[] = [];
+                if (correctAnswer.startsWith('[') && correctAnswer.endsWith(']')) {
+                    correct = JSON.parse(correctAnswer);
+                } else {
+                    // Fallback for pipe-separated format (A|B|C)
+                    correct = correctAnswer.split('|').map((s: string) => s.trim()).filter((s: string) => s !== '');
+                }
                 const student = Array.isArray(studentAnswer) ? studentAnswer : [];
                 isCorrect = correct.length === student.length && correct.every((a: string) => student.includes(a));
             } catch { isCorrect = false; }

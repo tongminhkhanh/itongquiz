@@ -4,7 +4,7 @@
  * Comprehensive results analysis with charts, filters, and detailed views
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Quiz, StudentResult, Question } from '../../types';
 import { Card, Button } from '../common';
 import {
@@ -18,7 +18,8 @@ import {
 } from '../teacher/ResultsView';
 import { useResults } from '../../hooks';
 import { useQuizStore } from '../../../stores/quizStore';
-import { RefreshCw, Download, ChevronDown, Search, FileText, Users, BarChart } from 'lucide-react';
+import { fetchResultAnswers } from '../../services/googleSheetService';
+import { RefreshCw, Download, ChevronDown, Search, FileText, Users, BarChart, Loader2 } from 'lucide-react';
 import {
     calculateResultsStatistics,
     analyzeQuestionDifficulty,
@@ -41,6 +42,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
     });
     const [searchName, setSearchName] = useState('');
     const [selectedStudent, setSelectedStudent] = useState<StudentResult | null>(null);
+    const [isFetchingDetail, setIsFetchingDetail] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [activeQuizId, setActiveQuizId] = useState<string>('all');
 
@@ -203,6 +205,28 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
         return quiz?.questions || [];
     };
 
+    // Lazy-load answers when teacher clicks "View Detail"
+    const handleViewDetail = useCallback(async (result: StudentResult) => {
+        // If answers already loaded (non-empty), show modal directly
+        if (result.answers && Object.keys(result.answers).length > 0) {
+            setSelectedStudent(result);
+            return;
+        }
+
+        setIsFetchingDetail(true);
+        try {
+            const answers = await fetchResultAnswers(result.id);
+            // Merge loaded answers into the result object
+            setSelectedStudent({ ...result, answers });
+        } catch (error) {
+            console.error('Failed to fetch student answers:', error);
+            // Show modal anyway with empty answers (will show warning)
+            setSelectedStudent(result);
+        } finally {
+            setIsFetchingDetail(false);
+        }
+    }, []);
+
     return (
         <div className="space-y-6">
             {/* Top Filter Bar */}
@@ -356,7 +380,8 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                             resultsHook.setSortOrder('desc');
                         }
                     }}
-                    onRowClick={(result) => setSelectedStudent(result)}
+                    onRowClick={handleViewDetail}
+                    isLoading={isFetchingDetail}
                     onDeleteClick={async (result) => {
                         try {
                             await useQuizStore.getState().removeResult(result.id);

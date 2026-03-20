@@ -1,10 +1,15 @@
 import { Env } from '../types';
-import { jsonResponse, errorResponse } from '../utils/response';
+import { errorResponse } from '../utils/response';
+import { corsHeaders } from '../middleware/cors';
 
 /**
- * AI Proxy Route Handler
- * Forwards requests to CLIProxy (api.thitong.site) to resolve CORS
- * and protect the API Key.
+ * AI Proxy Route Handler - STREAMING MODE
+ * 
+ * Forwards requests to CLIProxy (api.thitong.site) with stream:true enabled.
+ * Pipes SSE (Server-Sent Events) chunks directly from upstream to browser.
+ * 
+ * This prevents Cloudflare Worker timeout (524) because data flows continuously
+ * instead of waiting for the full AI response to complete.
  */
 export async function handleAiProxy(
     request: Request,
@@ -13,22 +18,24 @@ export async function handleAiProxy(
     method: string
 ): Promise<Response | null> {
 
-    // POST /api/ai/chat - Proxy for chat completions
+    // POST /api/ai/chat - Streaming proxy for chat completions
     if (path === '/api/ai/chat' && method === 'POST') {
         try {
             const body = await request.json() as any;
 
-            // Forward the request to CLIProxy
-            const aiResponse = await fetch(`${env.CLIPROXY_API}/chat/completions`, {
+            // ⚡ FORCE stream:true to prevent timeout
+            body.stream = true;
+
+            const targetApi = request.headers.get('x-target-url') || env.CLIPROXY_API;
+            const targetToken = request.headers.get('x-target-token') || env.CLIPROXY_TOKEN || '';
+
+            const aiResponse = await fetch(`${targetApi}/chat/completions`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${env.CLIPROXY_TOKEN}`,
+                    'Authorization': `Bearer ${targetToken}`,
                 },
-                body: JSON.stringify({
-                    ...body,
-                    // Ensure we don't accidentally pass sensitive headers from client
-                }),
+                body: JSON.stringify(body),
             });
 
             if (!aiResponse.ok) {
@@ -38,8 +45,17 @@ export async function handleAiProxy(
                 return errorResponse(`AI Service Error (${status})`, status as any);
             }
 
-            const data = await aiResponse.json();
-            return jsonResponse(data);
+            // ⚡ STREAM: Pipe SSE response body directly to browser
+            const cors = corsHeaders(request);
+            return new Response(aiResponse.body, {
+                status: 200,
+                headers: {
+                    'Content-Type': 'text/event-stream',
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                    ...cors,
+                },
+            });
 
         } catch (error: any) {
             console.error('[AI Proxy] Request error:', error);

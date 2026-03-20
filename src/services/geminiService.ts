@@ -3,7 +3,7 @@ import { QuestionType } from "../types";
 import { generateImage, checkImageServiceAvailability } from "./imageGenerationService";
 import { callApi } from "./apiAdapter";
 
-export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux' | 'native-ocr';
+export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux' | 'localhost' | 'native-ocr';
 
 export interface QuizGenerationOptions {
   title: string;
@@ -903,15 +903,68 @@ Tài liệu đính kèm:`
   const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 phút timeout cho 100 câu
 
   try {
-    const data = await callApi('ai_chat', {
-      model: MODEL_NAME,
-      messages: messages,
-      temperature: 0.4,
-      response_format: { type: "json_object" }
+    const WORKERS_API_URL = (import.meta as any).env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+    const workerProxyUrl = `${WORKERS_API_URL}/api/ai/chat`;
+
+    // ⚡ ĐƯA REQUEST QUA WORKER PROXY (Giải quyết CORS + Chống Timeout 524)
+    // - Cloudflare Worker sẽ gọi tới API_URL (ai.thitong.site)
+    // - Trả về với header CORS đầy đủ
+    // - Stream data về tránh bị timeout 524
+    const response = await fetch(workerProxyUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-target-url': API_URL,
+        'x-target-token': apiKey,
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
     });
 
-    console.log(`[AIClient] Received data from proxy through callApi`);
-    const text = extractAIContent(data);
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(`AI Service Error (${response.status}): ${errText || response.statusText}`);
+    }
+
+    // Đọc response - hỗ trợ cả SSE stream và JSON thông thường
+    let fullContent = '';
+    const contentType = response.headers.get('Content-Type') || '';
+
+    if (contentType.includes('text/event-stream') && response.body) {
+      // SSE Streaming mode
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+            try {
+              const json = JSON.parse(line.slice(6));
+              const delta = json.choices?.[0]?.delta?.content;
+              if (delta) fullContent += delta;
+            } catch {
+              // Skip malformed SSE lines
+            }
+          }
+        }
+      }
+      console.log(`[AIClient] SSE stream complete. Content length: ${fullContent.length}`);
+    } else {
+      // JSON response (non-streaming)
+      const data = await response.json();
+      fullContent = extractAIContent(data) || '';
+      console.log(`[AIClient] JSON response from ${API_URL}`);
+    }
+
+    const text = fullContent;
     if (!text) throw new Error("AI không trả về kết quả nào (Định dạng OpenAI không xác định).");
 
     // Format multiplication signs: Replace ALL * with x in math contexts
@@ -962,13 +1015,15 @@ export const generateQuiz = async (
   file?: File | null,
   options?: QuizGenerationOptions,
   customApiKey?: string,
-  provider: AIProvider = 'perplexity' // Default to Perplexity
+  provider: AIProvider = 'localhost' // Default to Localhost AIcliproxy
 ): Promise<any> => {
   // Determine API Key based on provider
   let envKey = '';
   let actualProvider = provider;
 
-  if (provider === 'perplexity') {
+  if (provider === 'localhost') {
+    envKey = (import.meta as any).env.VITE_LOCALHOST_AI_KEY || (import.meta as any).env.VITE_CLIPROXY_TOKEN || 'no-key-needed';
+  } else if (provider === 'perplexity') {
     envKey = (import.meta as any).env.VITE_PERPLEXITY_API_KEY || '';
   } else if (provider === 'openai') {
     envKey = (import.meta as any).env.VITE_OPENAI_API_KEY || '';
@@ -997,12 +1052,15 @@ export const generateQuiz = async (
 
   let result: any;
 
-  if (actualProvider === 'perplexity') {
+  if (actualProvider === 'localhost') {
+    // ⚡ Localhost AIcliproxy - gọi trực tiếp, không qua Cloudflare → 0% timeout
+    const baseUrl = (import.meta as any).env.VITE_LOCALHOST_AI_URL || 'http://localhost:8317/v1';
+    result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary, baseUrl);
+  } else if (actualProvider === 'perplexity') {
     result = await generateWithPerplexity(promptText, apiKey);
   } else if (actualProvider === 'openai') {
     result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary);
   } else if (actualProvider === 'llm-mux') {
-    // Try LLM_MUX_BASE_URL first, then CLIPROXY_API, then fallback to localhost
     const baseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || (import.meta as any).env.VITE_CLIPROXY_API || 'http://localhost:8317/v1';
     result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary, baseUrl);
   } else {

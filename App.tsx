@@ -42,8 +42,8 @@ const App: React.FC = () => {
 
     // --- SEO & Meta Tags ---
     useEffect(() => {
-        let title = 'iTong Quiz - Luyện thi Olympic Tiếng Anh IOE | Trường TH Ít Ong';
-        let description = 'Hệ thống luyện thi Olympic Tiếng Anh IOE trực tuyến dành cho học sinh tiểu học. Tạo đề thi tự động bằng AI, làm bài online, xem kết quả ngay.';
+        let title = 'iTong Quiz - Hệ thống luyện thi các môn học chính khóa | Trường TH Ít Ong';
+        let description = 'Hệ thống luyện thi các môn học chính khóa được thiết kế dành riêng cho học sinh Tiểu học. Tạo đề thi tự động bằng AI, làm bài online, xem kết quả ngay.';
 
         if (quizStore.view === 'teacher_dash') {
             title = 'Quản lý Đề thi - iTong Quiz';

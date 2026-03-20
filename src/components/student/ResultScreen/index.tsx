@@ -9,9 +9,6 @@ import ResultTabs from './ResultTabs';
 
 // Tabs
 import OverviewTab from './tabs/OverviewTab';
-import DetailedAnswersTab from './tabs/DetailedAnswersTab';
-import StatisticsTab from './tabs/StatisticsTab';
-import RecommendationsTab from './tabs/RecommendationsTab';
 
 interface Props {
     quiz: Quiz;
@@ -22,10 +19,9 @@ interface Props {
     studentClass?: string;
 }
 
-export type TabType = 'overview' | 'details' | 'statistics' | 'recommendations';
+export type TabType = 'overview';
 
 const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentName, studentClass }) => {
-    const [activeTab, setActiveTab] = useState<TabType>('overview');
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Trigger MathJax rendering when component mounts or tab changes
@@ -36,7 +32,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
             }, 100);
             return () => clearTimeout(timeoutId);
         }
-    }, [quiz, answers, activeTab]);
+    }, [quiz, answers]);
 
     // Trigger MathJax rendering when component mounts or tab changes
 
@@ -239,45 +235,6 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
         };
     }, [result, calculatedCorrectCount, quiz.questions.length]);
 
-    const renderActiveTab = () => {
-        switch (activeTab) {
-            case 'overview':
-                return (
-                    <OverviewTab
-                        quiz={quiz}
-                        result={result}
-                        answers={answers}
-                        studentUsername={studentName}
-                    />
-                );
-            case 'details':
-                return (
-                    <DetailedAnswersTab
-                        quiz={quiz}
-                        result={result}
-                        answers={answers}
-                    />
-                );
-            case 'statistics':
-                return (
-                    <StatisticsTab
-                        quiz={quiz}
-                        result={result}
-                        answers={answers}
-                    />
-                );
-            case 'recommendations':
-                return (
-                    <RecommendationsTab
-                        quiz={quiz}
-                        result={result}
-                        answers={answers}
-                    />
-                );
-            default:
-                return null;
-        }
-    };
 
     return (
         <div
@@ -295,17 +252,15 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                 </button>
             </div>
 
-            {/* Tab Navigation */}
-            <ResultTabs
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                hasRecommendations={displayResult.correctCount < displayResult.totalQuestions}
-            />
-
-            {/* Tab Content */}
+            {/* Content Area */}
             <div className="max-w-5xl mx-auto px-4 pb-8">
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                    {renderActiveTab()}
+                    <OverviewTab
+                        quiz={quiz}
+                        result={result}
+                        answers={answers}
+                        studentUsername={studentName}
+                    />
                 </div>
             </div>
         </div>

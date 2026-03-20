@@ -297,7 +297,19 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       } else if (q.type === QuestionType.MULTIPLE_SELECT) {
         totalItems++;
         const studentAns = (answers[q.id] as string[]) || [];
-        const correctAns = q.correctAnswers || [];
+        const rawCorrect = (q as any).correctAnswer || (q as any).correctAnswers || "";
+        let correctAns: string[] = [];
+
+        if (Array.isArray(rawCorrect)) {
+          correctAns = rawCorrect;
+        } else if (typeof rawCorrect === 'string') {
+          if (rawCorrect.startsWith('[') && rawCorrect.endsWith(']')) {
+            try { correctAns = JSON.parse(rawCorrect); } catch { correctAns = []; }
+          } else {
+            correctAns = rawCorrect.split('|').map(s => s.trim()).filter(s => s !== '');
+          }
+        }
+
         const isCorrect = studentAns.length === correctAns.length &&
           studentAns.every(val => correctAns.includes(val));
         if (isCorrect) correctCount++;

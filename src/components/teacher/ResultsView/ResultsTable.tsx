@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { StudentResult, Quiz } from '../../../types';
-import { ArrowUpDown, Eye, Trash2 } from 'lucide-react';
+import { ArrowUpDown, Eye, Trash2, Loader2 } from 'lucide-react';
 
 export interface ResultsTableProps {
     results: StudentResult[];
@@ -16,6 +16,7 @@ export interface ResultsTableProps {
     onSortChange: (field: 'score' | 'submittedAt') => void;
     onRowClick?: (result: StudentResult) => void;
     onDeleteClick?: (result: StudentResult) => void;
+    isLoading?: boolean;
 }
 
 export const ResultsTable: React.FC<ResultsTableProps> = ({
@@ -26,6 +27,7 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
     onSortChange,
     onRowClick,
     onDeleteClick,
+    isLoading,
 }) => {
     // Get quiz title by ID, prioritize quizTitle from result if available
     const getQuizTitle = (result: StudentResult) => {
@@ -146,10 +148,15 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                                                 e.stopPropagation();
                                                 onRowClick(result);
                                             }}
-                                            className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
+                                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50"
                                             title="Xem chi tiết"
+                                            disabled={isLoading}
                                         >
-                                            <Eye className="w-4 h-4" />
+                                            {isLoading ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <Eye className="w-4 h-4" />
+                                            )}
                                         </button>
                                         {onDeleteClick && (
                                             <button

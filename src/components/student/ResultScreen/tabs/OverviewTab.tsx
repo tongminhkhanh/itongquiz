@@ -255,15 +255,6 @@ const OverviewTab: React.FC<Props> = ({ quiz, result, answers, studentUsername }
                 </div>
             </div>
 
-            {/* Encouragement message */}
-            {result.score < 10 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-                    <p className="text-blue-700">
-                        💡 <strong>Mẹo:</strong> Xem tab <strong>"Chi tiết"</strong> để biết mình sai ở đâu,
-                        và tab <strong>"Gợi ý"</strong> để nhận tư vấn ôn tập từ AI nhé!
-                    </p>
-                </div>
-            )}
 
             {/* Dr. Owl Modal */}
             <DrOwlModal

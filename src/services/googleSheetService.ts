@@ -114,6 +114,36 @@ export const fetchResultsFromSheets = async (sheetId: string, resultsGid: string
     );
 };
 
+/**
+ * Lazy-load answers for a specific result
+ * Called when teacher clicks "View Detail" to avoid loading heavy answers data in list view
+ */
+export const fetchResultAnswers = async (resultId: string | number): Promise<Record<string, any>> => {
+    try {
+        const data = await callApi<{ answers: string }>('get_result_answers', { resultId });
+        if (!data || !data.answers) return {};
+
+        // Parse JSON string from database
+        const parsed = typeof data.answers === 'string' ? JSON.parse(data.answers) : data.answers;
+
+        // Handle old format (array) vs new format (object)
+        if (Array.isArray(parsed)) {
+            const converted: Record<string, any> = {};
+            parsed.forEach((item: any) => {
+                if (item && typeof item === 'object' && item.questionId) {
+                    converted[item.questionId] = item;
+                }
+            });
+            return converted;
+        }
+
+        return typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+        console.error('[fetchResultAnswers] Error:', error);
+        return {};
+    }
+};
+
 // Helper to escape values for Google Sheets (prevent auto-formatting like 1/10 -> Date)
 const escapeSheetValue = (val: any): string => {
     if (val === undefined || val === null) return '';

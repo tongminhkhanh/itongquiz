@@ -54,7 +54,7 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
     }
 
     // GET /api/results/:id/answers - Lazy-load answers for a specific result
-    if (path.match(/^\/api\/results\/\d+\/answers$/) && method === 'GET') {
+    if (path.match(/^\/api\/results\/[^/]+\/answers$/) && method === 'GET') {
         const id = path.split('/')[3];
         const row = await db.prepare('SELECT answers FROM results WHERE id = ?').bind(id).first<{ answers: string }>();
         if (!row) return errorResponse('Result not found', 404);
@@ -105,7 +105,7 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
     }
 
     // DELETE /api/results/:id - Delete result
-    if (path.match(/^\/api\/results\/\d+$/) && method === 'DELETE') {
+    if (path.match(/^\/api\/results\/[^/]+$/) && method === 'DELETE') {
         const id = path.split('/').pop();
         await db.prepare('DELETE FROM results WHERE id = ?').bind(id).run();
         return jsonResponse({ status: 'success' });

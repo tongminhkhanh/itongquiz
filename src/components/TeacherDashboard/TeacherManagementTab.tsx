@@ -230,7 +230,7 @@ const TeacherManagementTab: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3">{roleLabel(t.role)}</td>
-                                            <td className="px-4 py-3 text-gray-600">{t.class || '—'}</td>
+                                            <td className="px-4 py-3 text-gray-600">{t.class || '-'}</td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center justify-center gap-1">
                                                     <button

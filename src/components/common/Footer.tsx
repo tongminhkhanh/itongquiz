@@ -21,7 +21,7 @@ const Footer: React.FC<Props> = ({ onNavigate }) => {
                             </span>
                         </div>
                         <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                            Hệ thống luyện thi Olympic Tiếng Anh và các môn học chính khóa được thiết kế dành riêng cho học sinh Tiểu học.
+                            Hệ thống luyện thi các môn học chính khóa được thiết kế dành riêng cho học sinh Tiểu học.
                         </p>
                         <div className="flex gap-4">
                             <a href="#" className="p-2 bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition-all">
@@ -69,7 +69,7 @@ const Footer: React.FC<Props> = ({ onNavigate }) => {
                 {/* Bottom Bar */}
                 <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
                     <p className="text-slate-400 text-xs">
-                        © {currentYear} ÍtOng Quiz Team. All rights reserved.
+                        © {currentYear} Ít Ong Quiz Team. All rights reserved.
                     </p>
                 </div>
             </div>

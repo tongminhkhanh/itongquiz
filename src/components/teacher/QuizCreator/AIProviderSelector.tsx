@@ -10,8 +10,8 @@ import { AIProvider } from '../../../services/geminiService';
 import { Bot } from 'lucide-react';
 
 const AI_PROVIDERS = [
-    { id: 'perplexity', name: 'Perplexity', description: 'Sonar model', adminOnly: true },
-    { id: 'llm-mux', name: 'AI Client Pro', description: 'Multi-Model (Gemini/Claude/OpenAI)', adminOnly: false },
+    { id: 'localhost', name: 'Localhost', description: 'AIcliproxy trên máy (Không timeout)', adminOnly: false },
+    { id: 'llm-mux', name: 'AI Client Pro', description: 'Multi-Model qua api.thitong.site', adminOnly: false },
 ];
 
 interface AIProviderSelectorProps {

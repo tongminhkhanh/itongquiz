@@ -29,6 +29,7 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
 
         // --- Results ---
         case 'get_results': method = 'GET'; path = '/api/results'; break;
+        case 'get_result_answers': method = 'GET'; path = `/api/results/${payload.resultId}/answers`; break;
         case 'submit_result': method = 'POST'; path = '/api/results'; break;
         case 'delete_result': method = 'DELETE'; path = `/api/results/${payload.resultId}`; break;
         case 'validate_answers': method = 'POST'; path = '/api/validate'; break;

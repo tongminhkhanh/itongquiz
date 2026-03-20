@@ -94,14 +94,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop with blur & warm tint */}
+            {/* Backdrop with blur & blue tint */}
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={onClose}
-                className="absolute inset-0 bg-cream/80 backdrop-blur-sm"
-                style={{ backgroundColor: 'rgba(255, 251, 240, 0.8)' }}
+                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
             />
 
             {/* Modal Container */}
@@ -109,22 +108,22 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                className="relative w-full max-w-[420px] bg-white rounded-[32px] p-8 pt-10 shadow-3xl"
+                className="relative w-full max-w-[420px] bg-white rounded-[32px] p-8 pt-10 shadow-2xl overflow-visible"
                 style={{
-                    boxShadow: '0 12px 0 rgba(0,0,0,0.08), 0 20px 40px rgba(0,0,0,0.1)'
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.15)'
                 }}
             >
                 {/* Mascot Peeking */}
                 <div className="absolute -top-[60px] left-1/2 -translate-x-1/2 w-[120px] h-[120px] flex items-center justify-center z-10 pointer-events-none">
-                    <span className="text-[80px] filter drop-shadow-xl transform hover:scale-110 transition-transform cursor-pointer">🦉</span>
+                    <span className="text-[80px] filter drop-shadow-xl transform hover:scale-110 transition-transform cursor-pointer">🐝</span>
                 </div>
 
                 {/* Tabs */}
-                <div className="bg-slate-100 p-1 rounded-2xl flex gap-1 mb-6 relative z-0">
+                <div className="bg-slate-100 p-1 rounded-2xl flex gap-1 mb-8 relative z-0">
                     <button
                         onClick={() => { setActiveTab('student'); setLocalError(''); }}
                         className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${activeTab === 'student'
-                            ? 'bg-white text-slate-800 shadow-sm scale-[1.02]'
+                            ? 'bg-white text-blue-600 shadow-sm scale-[1.02]'
                             : 'text-slate-400 hover:text-slate-600'
                             }`}
                     >
@@ -134,11 +133,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                     <button
                         onClick={() => { setActiveTab('teacher'); setLocalError(''); }}
                         className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${activeTab === 'teacher'
-                            ? 'bg-white text-slate-800 shadow-sm scale-[1.02]'
+                            ? 'bg-white text-blue-600 shadow-sm scale-[1.02]'
                             : 'text-slate-400 hover:text-slate-600'
                             }`}
                     >
-                        <Apple className={`w-5 h-5 ${activeTab === 'teacher' ? 'text-red-500' : ''}`} />
+                        <Apple className={`w-5 h-5 ${activeTab === 'teacher' ? 'text-blue-500' : ''}`} />
                         Giáo viên
                     </button>
                 </div>
@@ -160,14 +159,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                                 {activeTab === 'student' ? 'Tên đăng nhập' : 'Username'}
                             </label>
                             <div className="relative group">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
                                     <User className="w-6 h-6" />
                                 </div>
                                 <input
                                     type="text"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
-                                    className="w-full pl-[52px] pr-4 h-14 border-2 border-slate-200 rounded-2xl focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all font-bold text-slate-700 bg-slate-50 focus:bg-white"
+                                    className="w-full pl-[52px] pr-4 h-14 border-2 border-slate-200 rounded-2xl focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all font-bold text-slate-700 bg-slate-50 focus:bg-white"
                                     placeholder={activeTab === 'student' ? "Tên đăng nhập..." : "Username..."}
                                     autoFocus
                                 />
@@ -179,15 +178,16 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                                 Mật khẩu
                             </label>
                             <div className="relative group">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
                                     <Lock className="w-6 h-6" />
                                 </div>
                                 <input
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-[52px] pr-4 h-14 border-2 border-slate-200 rounded-2xl focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all font-bold text-slate-700 bg-slate-50 focus:bg-white"
+                                    className="w-full pl-[52px] pr-4 h-14 border-2 border-slate-200 rounded-2xl focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all font-bold text-slate-700 bg-slate-50 focus:bg-white"
                                     placeholder="••••••••"
+                                    autoComplete="current-password"
                                 />
                             </div>
                         </div>
@@ -202,7 +202,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full h-14 bg-gradient-to-br from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white rounded-full font-black text-lg shadow-[0_4px_0_#F57C00] active:shadow-[0_2px_0_#F57C00] active:translate-y-[2px] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
+                            className="w-full h-14 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-2xl font-black text-lg shadow-lg shadow-blue-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
                         >
                             {isLoading ? (
                                 <>

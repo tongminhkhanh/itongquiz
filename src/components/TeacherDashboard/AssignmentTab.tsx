@@ -6,7 +6,7 @@ import { Assignment, CreateAssignmentPayload, Classroom } from '../../types/clas
 import { Quiz } from '../../types';
 import {
     ClipboardList, CalendarClock, Send, Trash2, X, Loader2,
-    ChevronDown, Clock, CheckCircle2, AlertCircle, BookOpen, Users, Edit3, Check
+    Clock, CheckCircle2, BookOpen, Users, Edit3, Check
 } from 'lucide-react';
 import { Button } from '../common';
 
@@ -385,7 +385,6 @@ const AssignmentRow: React.FC<{
 
     const isOpen = assignment.status === 'OPEN';
     const deadlineDate = new Date(assignment.deadline);
-    const isOverdue = !isOpen || deadlineDate < new Date();
     const submitted = assignment.submittedCount ?? 0;
     const total = assignment.totalStudents ?? 0;
     const progress = total > 0 ? Math.round((submitted / total) * 100) : 0;
@@ -637,7 +636,7 @@ const AssignmentProgress: React.FC<{
                 </div>
             </div>
         ) : (
-            <span className="text-xs text-gray-300">—</span>
+            <span className="text-xs text-gray-300">-</span>
         )}
     </>
 );

@@ -4,13 +4,16 @@ const ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://localhost:4173',
     'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
     'http://103.47.224.66:3000',
     'http://103.47.224.66:3001',
-    'http://localhost:3001',
+    'http://103.47.224.66:3002',
     'https://thitong.site',
     'https://www.thitong.site',
     'https://itongquiz1.vercel.app',
 ];
+
 
 export function corsHeaders(request: Request): Record<string, string> {
     const origin = request.headers.get('Origin') || '';
