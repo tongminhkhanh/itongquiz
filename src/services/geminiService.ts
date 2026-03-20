@@ -914,7 +914,7 @@ Tài liệu đính kèm:`
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Token': (import.meta as any).env.VITE_API_SECRET_TOKEN || '',
+        'X-API-Token': (import.meta as any).env.VITE_API_SECRET_TOKEN || '[REDACTED-COMPROMISED-SHARED-TOKEN]',
         'x-target-url': API_URL,
         'x-target-token': apiKey,
       },
