@@ -904,20 +904,33 @@ Tài liệu đính kèm:`
 
   try {
     const WORKERS_API_URL = (import.meta as any).env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
-    const workerProxyUrl = `${WORKERS_API_URL}/api/ai/chat`;
 
-    // ⚡ ĐƯA REQUEST QUA WORKER PROXY (Giải quyết CORS + Chống Timeout 524)
-    // - Cloudflare Worker sẽ gọi tới API_URL (ai.thitong.site)
-    // - Trả về với header CORS đầy đủ
-    // - Stream data về tránh bị timeout 524
-    const response = await fetch(workerProxyUrl, {
-      method: 'POST',
-      headers: {
+    // Mặc định đi qua Cloudflare Worker Proxy
+    let fetchUrl = `${WORKERS_API_URL}/api/ai/chat`;
+    let fetchHeaders: any = {
+      'Content-Type': 'application/json',
+      'X-API-Token': (import.meta as any).env.VITE_API_SECRET_TOKEN || '[REDACTED-COMPROMISED-SHARED-TOKEN]',
+      'x-target-url': API_URL,
+      'x-target-token': apiKey,
+    };
+
+    // ⚡ CHẾ ĐỘ DEV (Dành cho Anh chạy Localhost)
+    // Nếu anh đang chạy web trên máy tính (localhost) và gọi AIProxy cũng trên máy tính (localhost),
+    // Chúng ta sẽ BẮN THẲNG không cần phải đi vòng lên mạng Cloudflare nữa!
+    const isDevLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isDevLocalhost && (API_URL.includes('localhost') || API_URL.includes('127.0.0.1'))) {
+      console.log('🚀 [DevMode] Bypassing Worker Proxy -> Gọi thẳng AI Client API Dưới Localhost!');
+      fetchUrl = `${API_URL}/chat/completions`;
+      fetchHeaders = {
         'Content-Type': 'application/json',
-        'X-API-Token': (import.meta as any).env.VITE_API_SECRET_TOKEN || '[REDACTED-COMPROMISED-SHARED-TOKEN]',
-        'x-target-url': API_URL,
-        'x-target-token': apiKey,
-      },
+        'Authorization': `Bearer ${apiKey}`
+      };
+      (requestBody as any).stream = true; // Ép stream luôn vì dưới máy gọi trực tiếp được
+    }
+
+    const response = await fetch(fetchUrl, {
+      method: 'POST',
+      headers: fetchHeaders,
       body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
