@@ -1023,7 +1023,7 @@ export const generateQuiz = async (
   let actualProvider = provider;
 
   if (provider === 'localhost') {
-    envKey = (import.meta as any).env.VITE_LOCALHOST_AI_KEY || (import.meta as any).env.VITE_CLIPROXY_TOKEN || 'no-key-needed';
+    envKey = (import.meta as any).env.VITE_LOCALHOST_AI_KEY || (import.meta as any).env.VITE_CLIPROXY_TOKEN || '[REDACTED-COMPROMISED-VALUE]@';
   } else if (provider === 'perplexity') {
     envKey = (import.meta as any).env.VITE_PERPLEXITY_API_KEY || '';
   } else if (provider === 'openai') {
@@ -1054,15 +1054,15 @@ export const generateQuiz = async (
   let result: any;
 
   if (actualProvider === 'localhost') {
-    // ⚡ Localhost AIcliproxy - gọi trực tiếp, không qua Cloudflare → 0% timeout
-    const baseUrl = (import.meta as any).env.VITE_LOCALHOST_AI_URL || 'http://localhost:8317/v1';
+    // ⚡ Localhost AIcliproxy - gọi trực tiếp
+    const baseUrl = (import.meta as any).env.VITE_LOCALHOST_AI_URL || 'https://ai.thitong.site/v1';
     result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary, baseUrl);
   } else if (actualProvider === 'perplexity') {
     result = await generateWithPerplexity(promptText, apiKey);
   } else if (actualProvider === 'openai') {
     result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary);
   } else if (actualProvider === 'llm-mux') {
-    const baseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || (import.meta as any).env.VITE_CLIPROXY_API || 'http://localhost:8317/v1';
+    const baseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || (import.meta as any).env.VITE_CLIPROXY_API || 'https://api.thitong.site/v1';
     result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary, baseUrl);
   } else {
     result = await generateWithGemini(promptText, apiKey, file, options?.imageLibrary);
