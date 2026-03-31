@@ -1,8 +1,11 @@
 User-agent: *
 Allow: /
 Disallow: /api/
-Disallow: /.env
-Disallow: /node_modules/
+Disallow: /admin/
+Disallow: /teacher-dashboard/
+Disallow: /student-portal/
+Disallow: /*?*token=
+Disallow: /*?*auth=
 
 # Sitemap
 Sitemap: https://thitong.site/sitemap.xml

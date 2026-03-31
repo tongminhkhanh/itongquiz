@@ -16,6 +16,114 @@ const PrivacyPolicy = React.lazy(() => import('./src/components/legal/PrivacyPol
 const TermsOfService = React.lazy(() => import('./src/components/legal/TermsOfService'));
 const Footer = React.lazy(() => import('./src/components/common/Footer'));
 
+const DEFAULT_TITLE = 'ItOng Quiz - Hệ thống Tạo đề và Ôn thi cho học sinh Tiểu học Ít Ong';
+const DEFAULT_DESCRIPTION = 'ItOng Quiz giúp giáo viên tạo đề thi trắc nghiệm từ file PDF/Notion chỉ trong 30 giây. Hỗ trợ học sinh ôn thi chương trình GDPT 2018 bám sát chương trình sách giáo khoa với công nghệ AI tiên tiến.';
+const DEFAULT_KEYWORDS = 'Ít Ong, Trường Tiểu học Ít Ong, ItOng Quiz, luyện thi tiểu học, trắc nghiệm tiểu học, GDPT 2018, tạo đề thi AI, ôn thi online';
+const SEO_CATEGORY_WHITELIST = new Set(['all', 'vioedu', 'trang-nguyen', 'ioe', 'on-tap']);
+
+const upsertMetaByName = (name: string, content: string) => {
+    let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+    if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('name', name);
+        document.head.appendChild(tag);
+    }
+    tag.setAttribute('content', content);
+};
+
+const upsertMetaByProperty = (property: string, content: string) => {
+    let tag = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement | null;
+    if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('property', property);
+        document.head.appendChild(tag);
+    }
+    tag.setAttribute('content', content);
+};
+
+const upsertCanonical = (href: string) => {
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+        canonical = document.createElement('link');
+        canonical.setAttribute('rel', 'canonical');
+        document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', href);
+};
+
+const upsertJsonLd = (id: string, payload: Record<string, any>) => {
+    let tag = document.getElementById(id) as HTMLScriptElement | null;
+    if (!tag) {
+        tag = document.createElement('script');
+        tag.id = id;
+        tag.type = 'application/ld+json';
+        document.head.appendChild(tag);
+    }
+    tag.textContent = JSON.stringify(payload);
+};
+
+const getCanonicalUrl = (view: string, selectedQuiz: Quiz | null): string => {
+    const canonical = new URL(window.location.origin + '/');
+
+    if (view === 'student' && selectedQuiz?.id) {
+        canonical.searchParams.set('quizId', selectedQuiz.id);
+        return canonical.toString();
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const category = params.get('category');
+    if (category && SEO_CATEGORY_WHITELIST.has(category)) {
+        canonical.searchParams.set('category', category);
+    }
+
+    return canonical.toString();
+};
+
+const buildStructuredData = (canonicalUrl: string, title: string, description: string, selectedQuiz: Quiz | null) => {
+    const organization = {
+        '@type': 'EducationalOrganization',
+        name: 'Trường Tiểu học Ít Ong',
+        alternateName: 'ItOng Quiz',
+        url: 'https://thitong.site',
+    };
+
+    if (selectedQuiz) {
+        return {
+            '@context': 'https://schema.org',
+            '@type': 'Quiz',
+            name: selectedQuiz.title,
+            description,
+            url: canonicalUrl,
+            educationalLevel: selectedQuiz.classLevel ? `Lớp ${selectedQuiz.classLevel}` : 'Tiểu học',
+            about: selectedQuiz.category || 'Trắc nghiệm',
+            inLanguage: 'vi',
+            isAccessibleForFree: true,
+            numberOfQuestions: selectedQuiz.questions?.length || 0,
+            publisher: organization,
+        };
+    }
+
+    return {
+        '@context': 'https://schema.org',
+        '@graph': [
+            {
+                '@type': 'WebSite',
+                name: 'ItOng Quiz',
+                url: 'https://thitong.site/',
+                inLanguage: 'vi',
+                description,
+            },
+            organization,
+            {
+                '@type': 'WebPage',
+                name: title,
+                url: canonicalUrl,
+                description,
+            },
+        ],
+    };
+};
+
 const App: React.FC = () => {
     // --- STORES ---
     const authStore = useAuthStore();
@@ -42,36 +150,67 @@ const App: React.FC = () => {
 
     // --- SEO & Meta Tags ---
     useEffect(() => {
-        let title = 'ItOng Quiz - Hệ thống Tạo đề và Ôn thi cho học sinh Tiểu học Ít Ong';
-        let description = 'ItOng Quiz giúp giáo viên tạo đề thi trắc nghiệm từ file PDF/Notion chỉ trong 30 giây. Hỗ trợ học sinh ôn thi chương trình GDPT 2018 bám sát chương trình sách giáo khoa với công nghệ AI tiên tiến.';
+        let title = DEFAULT_TITLE;
+        let description = DEFAULT_DESCRIPTION;
+        let keywords = DEFAULT_KEYWORDS;
+        let robots = 'index, follow';
 
         if (quizStore.view === 'teacher_dash') {
             title = 'Quản lý Đề thi - ItOng Quiz';
+            robots = 'noindex, nofollow, noarchive';
         } else if (quizStore.view === 'student' && quizStore.selectedQuiz) {
             title = `${quizStore.selectedQuiz.title} - ItOng Quiz`;
             description = `Luyện tập bài thi ${quizStore.selectedQuiz.title} trên hệ thống ItOng Quiz. Bài thi dành cho học sinh lớp ${quizStore.selectedQuiz.classLevel || 'Tiểu học'}.`;
+            keywords = [
+                quizStore.selectedQuiz.title,
+                `Lớp ${quizStore.selectedQuiz.classLevel || 'Tiểu học'}`,
+                quizStore.selectedQuiz.category || 'trắc nghiệm',
+                'ItOng Quiz',
+                'ôn thi tiểu học',
+            ].join(', ');
         } else if ((quizStore.view as any) === 'privacy') {
             title = 'Chính sách bảo mật - ItOng Quiz';
         } else if ((quizStore.view as any) === 'tos') {
             title = 'Điều khoản dịch vụ - ItOng Quiz';
+        } else if (quizStore.view === 'student_portal') {
+            title = 'Cổng học sinh - ItOng Quiz';
+            robots = 'noindex, nofollow, noarchive';
         }
+
+        const canonicalUrl = getCanonicalUrl(quizStore.view, quizStore.selectedQuiz);
+        const structuredData = buildStructuredData(
+            canonicalUrl,
+            title,
+            description,
+            quizStore.view === 'student' ? quizStore.selectedQuiz : null
+        );
 
         document.title = title;
 
-        // Update meta description
-        const metaDescription = document.querySelector('meta[name="description"]');
-        if (metaDescription) {
-            metaDescription.setAttribute('content', description);
-        }
+        upsertMetaByName('description', description);
+        upsertMetaByName('keywords', keywords);
+        upsertMetaByName('robots', robots);
 
-        // Update OG Tags
-        const ogTitle = document.querySelector('meta[property="og:title"]');
-        if (ogTitle) ogTitle.setAttribute('content', title);
+        upsertMetaByProperty('og:title', title);
+        upsertMetaByProperty('og:description', description);
+        upsertMetaByProperty('og:url', canonicalUrl);
+        upsertMetaByProperty('twitter:title', title);
+        upsertMetaByProperty('twitter:description', description);
+        upsertMetaByProperty('twitter:url', canonicalUrl);
 
-        const ogDesc = document.querySelector('meta[property="og:description"]');
-        if (ogDesc) ogDesc.setAttribute('content', description);
+        upsertMetaByName('twitter:title', title);
+        upsertMetaByName('twitter:description', description);
 
-    }, [quizStore.view, quizStore.selectedQuiz?.id]);
+        upsertCanonical(canonicalUrl);
+        upsertJsonLd('seo-jsonld', structuredData);
+    }, [
+        quizStore.view,
+        quizStore.selectedQuiz?.id,
+        quizStore.selectedQuiz?.title,
+        quizStore.selectedQuiz?.classLevel,
+        quizStore.selectedQuiz?.category,
+        quizStore.selectedQuiz?.questions?.length,
+    ]);
 
     const loadIoeData = async (forceRefresh = false) => {
         if (ioeLoading) return;
