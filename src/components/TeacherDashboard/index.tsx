@@ -138,9 +138,7 @@ const TeacherDashboard: React.FC = () => {
                 <header className="h-16 bg-white/90 backdrop-blur border-b border-slate-200 sticky top-0 z-30 flex items-center justify-between px-4 lg:px-8">
                     {/* Page Title */}
                     <div className="flex items-center">
-                        <h1 className="text-xl font-bold text-slate-800 tracking-tight hidden lg:block">
-                            {getPageTitle()}
-                        </h1>
+                        {/* Title removed per user request */}
                     </div>
 
                     {/* Right side: Search, Notifications, Profile */}
