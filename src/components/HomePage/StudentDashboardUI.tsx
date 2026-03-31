@@ -11,6 +11,7 @@ import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Roc
 import { motion, AnimatePresence } from 'framer-motion';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import AvatarSelectorModal from '../common/AvatarSelectorModal';
+import MathSpan from '../common/MathSpan';
 
 // --- Subject Config (Reused from HomePage) ---
 export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color: string; desc: string; showOnHome?: boolean }> = {
@@ -28,17 +29,74 @@ interface StudentDashboardUIProps {
     ioeQuizzes?: Quiz[];
 }
 
+const ASSIGNMENTS_PER_PAGE = 5;
+const ATTENDANCE_REWARD = { exp: 50, coins: 50 };
+const ATTENDANCE_STORAGE_PREFIX = 'student-attendance-reward';
+
+interface AttendanceQuestion {
+    id: string;
+    quizTitle: string;
+    question: string;
+    options: string[];
+    correctLabel: string;
+}
+
+const getLocalDateKey = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const cleanOptionText = (value: unknown) => {
+    return String(value ?? '')
+        .replace(/^\s*[A-Z]\s*[\.\)\:\-]\s*/i, '')
+        .trim();
+};
+
+const resolveCorrectLabel = (correctAnswer: unknown, options: string[]): string | null => {
+    const raw = String(correctAnswer ?? '').trim();
+    if (!raw) return null;
+
+    const directLabelMatch = raw.toUpperCase().match(/^([A-Z])(?:[\.\)\:\-].*)?$/);
+    if (directLabelMatch) return directLabelMatch[1];
+
+    if (/^\d+$/.test(raw)) {
+        const idx = Number(raw);
+        if (idx >= 0 && idx < options.length) {
+            return String.fromCharCode(65 + idx);
+        }
+    }
+
+    const normalizedRaw = cleanOptionText(raw).toUpperCase();
+    const optionIndex = options.findIndex((option) => cleanOptionText(option).toUpperCase() === normalizedRaw);
+    if (optionIndex >= 0) {
+        return String.fromCharCode(65 + optionIndex);
+    }
+
+    return null;
+};
+
 const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = [] }) => {
     // --- Stores ---
     const classroomStore = useClassroomStore();
     const quizStore = useQuizStore();
-    const { pet, coins } = useGamificationStore();
+    const { pet, coins, updateGameState } = useGamificationStore();
     const studentSession = classroomStore.studentSession;
 
     // --- State ---
     const [isLoadingTasks, setIsLoadingTasks] = useState(true);
     const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
     const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+    const [assignmentPage, setAssignmentPage] = useState(1);
+    const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+    const [attendanceQuestion, setAttendanceQuestion] = useState<AttendanceQuestion | null>(null);
+    const [selectedAttendanceAnswer, setSelectedAttendanceAnswer] = useState<string | null>(null);
+    const [attendanceResult, setAttendanceResult] = useState<'correct' | 'wrong' | null>(null);
+    const [attendanceMessage, setAttendanceMessage] = useState('');
+    const [isSubmittingAttendance, setIsSubmittingAttendance] = useState(false);
+    const [attendanceClaimed, setAttendanceClaimed] = useState(false);
 
     // --- Fetch Data ---
     useEffect(() => {
@@ -110,6 +168,66 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         });
     }, [quizStore.quizzes, ioeQuizzes]);
 
+    const attendanceStorageKey = useMemo(() => {
+        if (!studentSession?.username) return '';
+        return `${ATTENDANCE_STORAGE_PREFIX}:${studentSession.username}:${getLocalDateKey()}`;
+    }, [studentSession?.username]);
+
+    const attendanceQuestionPool = useMemo<AttendanceQuestion[]>(() => {
+        const allQuizzes = [...quizStore.quizzes, ...ioeQuizzes];
+
+        return allQuizzes.flatMap((quiz) => {
+            const sourceQuestions = Array.isArray(quiz.questions) ? quiz.questions : [];
+
+            return sourceQuestions
+                .map((q: any) => {
+                    const qType = String(q?.type || '').toUpperCase();
+                    const options = Array.isArray(q?.options)
+                        ? q.options.map((opt: unknown) => String(opt ?? '').trim()).filter(Boolean)
+                        : [];
+                    const correctLabel = resolveCorrectLabel(q?.correctAnswer, options);
+
+                    if (qType !== 'MCQ' || options.length < 2 || !correctLabel) return null;
+
+                    return {
+                        id: `${quiz.id}-${q.id || Math.random().toString(36).slice(2)}`,
+                        quizTitle: quiz.title || 'Ngân hàng câu hỏi',
+                        question: String(q?.question || ''),
+                        options,
+                        correctLabel,
+                    } as AttendanceQuestion;
+                })
+                .filter(Boolean) as AttendanceQuestion[];
+        });
+    }, [quizStore.quizzes, ioeQuizzes]);
+
+    const totalAssignmentPages = Math.max(1, Math.ceil(myAssignmentQuizzes.length / ASSIGNMENTS_PER_PAGE));
+
+    const pagedAssignmentQuizzes = useMemo(() => {
+        const start = (assignmentPage - 1) * ASSIGNMENTS_PER_PAGE;
+        return myAssignmentQuizzes.slice(start, start + ASSIGNMENTS_PER_PAGE);
+    }, [myAssignmentQuizzes, assignmentPage]);
+
+    useEffect(() => {
+        if (assignmentPage > totalAssignmentPages) {
+            setAssignmentPage(totalAssignmentPages);
+        }
+    }, [assignmentPage, totalAssignmentPages]);
+
+    useEffect(() => {
+        if (!attendanceStorageKey) {
+            setAttendanceClaimed(false);
+            return;
+        }
+
+        try {
+            const claimed = localStorage.getItem(attendanceStorageKey) === 'done';
+            setAttendanceClaimed(claimed);
+        } catch {
+            setAttendanceClaimed(false);
+        }
+    }, [attendanceStorageKey]);
+
     if (!studentSession) return null;
 
     // Render subjective library view if selected
@@ -128,6 +246,88 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         }
     };
 
+    const pickRandomAttendanceQuestion = () => {
+        if (attendanceQuestionPool.length === 0) return null;
+
+        if (!attendanceQuestion || attendanceQuestionPool.length === 1) {
+            return attendanceQuestionPool[Math.floor(Math.random() * attendanceQuestionPool.length)];
+        }
+
+        const currentId = attendanceQuestion.id;
+        const candidates = attendanceQuestionPool.filter((q) => q.id !== currentId);
+        const pool = candidates.length > 0 ? candidates : attendanceQuestionPool;
+        return pool[Math.floor(Math.random() * pool.length)];
+    };
+
+    const openAttendanceModal = () => {
+        if (attendanceClaimed) {
+            alert('Hôm nay em đã điểm danh nhận thưởng rồi. Mai quay lại nhé!');
+            return;
+        }
+
+        const randomQuestion = pickRandomAttendanceQuestion();
+        if (!randomQuestion) {
+            alert('Hiện chưa có câu hỏi trắc nghiệm phù hợp trong ngân hàng đề.');
+            return;
+        }
+
+        setAttendanceQuestion(randomQuestion);
+        setSelectedAttendanceAnswer(null);
+        setAttendanceResult(null);
+        setAttendanceMessage('');
+        setIsAttendanceModalOpen(true);
+    };
+
+    const handleAttendanceSubmit = async () => {
+        if (!attendanceQuestion || !selectedAttendanceAnswer || attendanceClaimed || isSubmittingAttendance) return;
+
+        const isCorrect = selectedAttendanceAnswer === attendanceQuestion.correctLabel;
+
+        if (!isCorrect) {
+            const correctIdx = attendanceQuestion.correctLabel.charCodeAt(0) - 65;
+            const correctText = attendanceQuestion.options[correctIdx]
+                ? ` (${cleanOptionText(attendanceQuestion.options[correctIdx])})`
+                : '';
+            setAttendanceResult('wrong');
+            setAttendanceMessage(`Chưa chính xác. Đáp án đúng là ${attendanceQuestion.correctLabel}${correctText}.`);
+            return;
+        }
+
+        if (!studentSession?.username) {
+            setAttendanceResult('wrong');
+            setAttendanceMessage('Không xác định tài khoản học sinh để cộng thưởng.');
+            return;
+        }
+
+        setIsSubmittingAttendance(true);
+        try {
+            const ok = await updateGameState(studentSession.username, ATTENDANCE_REWARD.exp, ATTENDANCE_REWARD.coins);
+            if (!ok) {
+                setAttendanceResult('wrong');
+                setAttendanceMessage('Trả lời đúng nhưng chưa cộng thưởng được. Em thử lại sau nhé!');
+                return;
+            }
+
+            if (attendanceStorageKey) {
+                localStorage.setItem(attendanceStorageKey, 'done');
+            }
+            setAttendanceClaimed(true);
+            setAttendanceResult('correct');
+            setAttendanceMessage(`Chính xác! Em nhận +${ATTENDANCE_REWARD.coins} Xu và +${ATTENDANCE_REWARD.exp} EXP.`);
+        } catch {
+            setAttendanceResult('wrong');
+            setAttendanceMessage('Trả lời đúng nhưng hệ thống chưa cộng thưởng. Em thử lại sau nhé!');
+        } finally {
+            setIsSubmittingAttendance(false);
+        }
+    };
+
+    const attendanceBadgeText = attendanceClaimed
+        ? 'Đã điểm danh hôm nay'
+        : attendanceQuestionPool.length > 0
+            ? `Điểm danh nhận +${ATTENDANCE_REWARD.coins} Xu +${ATTENDANCE_REWARD.exp} EXP`
+            : 'Đang tải câu hỏi điểm danh...';
+
     return (
         <div className="min-h-screen bg-[#F4F7FC] font-sans text-slate-800 flex flex-col items-center">
 
@@ -135,7 +335,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             <header className="w-full bg-white shadow-sm border-b border-slate-100 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 md:px-8 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <img src={`${FLUENT_CDN}/Honeybee/3D/honeybee_3d.png`} alt="Logo Ong Vàng iTong Quiz" className="w-10 h-10 drop-shadow-md" />
+                        <img src="/school-logo.png" alt="School logo iTong Quiz" className="w-10 h-10 object-contain drop-shadow-md" />
                         <span className="text-2xl font-black tracking-tight text-slate-800">
                             ÍtOng<span className="text-orange-500">Quiz</span>
                         </span>
@@ -220,8 +420,20 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                             <p className="text-indigo-100 text-lg font-medium mb-6">Hôm nay em muốn chinh phục thử thách nào? Hãy chọn một bài tập và bắt đầu nhé!</p>
 
                             <div className="flex items-center justify-center md:justify-start gap-4">
-                                <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-2 text-sm font-semibold flex items-center gap-2">
-                                    <ShieldCheck className="w-4 h-4 text-emerald-300" /> Cập nhật điểm danh 100%
+                                <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={openAttendanceModal}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') openAttendanceModal();
+                                    }}
+                                    className={`backdrop-blur-sm rounded-2xl px-5 py-2.5 text-sm font-black flex items-center gap-2 cursor-pointer transition-all duration-200 ${attendanceClaimed
+                                        ? 'bg-gradient-to-r from-emerald-400/70 to-teal-300/70 text-white ring-2 ring-emerald-200/70 shadow-[0_8px_24px_rgba(16,185,129,0.35)]'
+                                        : 'bg-gradient-to-r from-amber-300 via-yellow-300 to-lime-300 text-slate-900 ring-2 ring-yellow-100 shadow-[0_10px_28px_rgba(251,191,36,0.45)] hover:scale-105 hover:shadow-[0_12px_36px_rgba(251,191,36,0.55)] animate-pulse'
+                                        }`}
+                                >
+                                    <ShieldCheck className={`w-4 h-4 ${attendanceClaimed ? 'text-white' : 'text-indigo-700'}`} />
+                                    <span>{attendanceBadgeText}</span>
                                 </div>
                             </div>
                         </div>
@@ -247,8 +459,8 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                         </div>
                     ) : myAssignmentQuizzes.length > 0 ? (
                         <div className="flex flex-col gap-4 md:gap-6">
-                            <AnimatePresence>
-                                {myAssignmentQuizzes.map((quiz, i) => {
+                            <AnimatePresence mode="popLayout">
+                                {pagedAssignmentQuizzes.map((quiz, i) => {
                                     const assignment = quiz._assignmentData;
                                     const attempts = assignment?.attemptCount || 0;
                                     const maxAttempts = assignment?.maxAttempts || 1;
@@ -308,6 +520,46 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                     );
                                 })}
                             </AnimatePresence>
+
+                            {totalAssignmentPages > 1 && (
+                                <div className="mt-2 flex items-center justify-center gap-2 flex-wrap">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAssignmentPage(p => Math.max(1, p - 1))}
+                                        disabled={assignmentPage === 1}
+                                        className="px-3 py-1.5 rounded-lg text-sm font-bold border border-slate-200 bg-white text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Trước
+                                    </button>
+
+                                    {Array.from({ length: totalAssignmentPages }, (_, idx) => {
+                                        const page = idx + 1;
+                                        const isActive = page === assignmentPage;
+                                        return (
+                                            <button
+                                                key={page}
+                                                type="button"
+                                                onClick={() => setAssignmentPage(page)}
+                                                className={`w-9 h-9 rounded-lg text-sm font-bold border transition-colors ${isActive
+                                                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                                    }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        );
+                                    })}
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setAssignmentPage(p => Math.min(totalAssignmentPages, p + 1))}
+                                        disabled={assignmentPage === totalAssignmentPages}
+                                        className="px-3 py-1.5 rounded-lg text-sm font-bold border border-slate-200 bg-white text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Sau
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center flex flex-col items-center">
@@ -362,6 +614,123 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             </main>
 
             {/* --- MODALS --- */}
+            <AnimatePresence>
+                {isAttendanceModalOpen && attendanceQuestion && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 flex items-center justify-center"
+                        onClick={() => !isSubmittingAttendance && setIsAttendanceModalOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-2xl bg-white rounded-3xl p-6 md:p-8 shadow-2xl"
+                        >
+                            <div className="flex items-start justify-between gap-4 mb-5">
+                                <div>
+                                    <p className="text-xs font-black text-indigo-500 uppercase tracking-wider mb-1">Điểm danh nhận thưởng</p>
+                                    <h3 className="text-xl md:text-2xl font-black text-slate-800">Câu hỏi ngẫu nhiên</h3>
+                                    <p className="text-sm text-slate-500 mt-1">Nguồn: {attendanceQuestion.quizTitle}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAttendanceModalOpen(false)}
+                                    className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                                >
+                                    Đóng
+                                </button>
+                            </div>
+
+                            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 md:p-5 mb-4">
+                                <MathSpan
+                                    content={attendanceQuestion.question || ''}
+                                    className="text-slate-800 font-semibold leading-relaxed"
+                                />
+                            </div>
+
+                            <div className="space-y-3 mb-5">
+                                {attendanceQuestion.options.map((option, index) => {
+                                    const label = String.fromCharCode(65 + index);
+                                    const isSelected = selectedAttendanceAnswer === label;
+                                    const isCorrectOption = attendanceResult !== null && label === attendanceQuestion.correctLabel;
+                                    const isWrongSelected = attendanceResult === 'wrong' && isSelected && !isCorrectOption;
+
+                                    return (
+                                        <button
+                                            key={`${attendanceQuestion.id}-${label}`}
+                                            type="button"
+                                            disabled={attendanceResult !== null || isSubmittingAttendance}
+                                            onClick={() => setSelectedAttendanceAnswer(label)}
+                                            className={`w-full text-left p-3 rounded-xl border-2 transition-colors flex items-center gap-3 ${isCorrectOption
+                                                ? 'border-emerald-400 bg-emerald-50 text-emerald-700'
+                                                : isWrongSelected
+                                                    ? 'border-red-400 bg-red-50 text-red-700'
+                                                    : isSelected
+                                                        ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
+                                                        : 'border-slate-200 hover:border-indigo-300 bg-white'
+                                                }`}
+                                        >
+                                            <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 text-xs font-black flex items-center justify-center shrink-0">
+                                                {label}
+                                            </span>
+                                            <MathSpan
+                                                content={cleanOptionText(option)}
+                                                className="font-medium text-slate-700"
+                                            />
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {attendanceMessage && (
+                                <div className={`rounded-xl px-4 py-3 text-sm font-semibold mb-5 ${attendanceResult === 'correct'
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-red-50 text-red-700 border border-red-200'
+                                    }`}>
+                                    {attendanceMessage}
+                                </div>
+                            )}
+
+                            <div className="flex items-center justify-end gap-3">
+                                {attendanceResult === 'wrong' && !attendanceClaimed && (
+                                    <button
+                                        type="button"
+                                        onClick={openAttendanceModal}
+                                        className="px-4 py-2 rounded-xl border border-indigo-200 text-indigo-600 font-bold hover:bg-indigo-50"
+                                    >
+                                        Câu khác
+                                    </button>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAttendanceModalOpen(false)}
+                                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+                                >
+                                    Đóng
+                                </button>
+
+                                {attendanceResult === null && (
+                                    <button
+                                        type="button"
+                                        onClick={handleAttendanceSubmit}
+                                        disabled={!selectedAttendanceAnswer || isSubmittingAttendance}
+                                        className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    >
+                                        {isSubmittingAttendance ? 'Đang kiểm tra...' : 'Xác nhận đáp án'}
+                                    </button>
+                                )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <AvatarSelectorModal
                 isOpen={isAvatarModalOpen}
                 onClose={() => setIsAvatarModalOpen(false)}

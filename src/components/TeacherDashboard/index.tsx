@@ -135,7 +135,7 @@ const TeacherDashboard: React.FC = () => {
             <div className="flex-1 lg:ml-64 flex flex-col min-h-screen transition-all duration-300 pb-20 lg:pb-0">
 
                 {/* Top Header / Top Bar */}
-                <header className="h-16 bg-white border-b border-gray-200 sticky top-0 z-30 flex items-center justify-between px-4 lg:px-8 shadow-sm">
+                <header className="h-16 bg-white/90 backdrop-blur border-b border-slate-200 sticky top-0 z-30 flex items-center justify-between px-4 lg:px-8">
                     {/* Page Title */}
                     <div className="flex items-center">
                         <h1 className="text-xl font-bold text-slate-800 tracking-tight hidden lg:block">
@@ -150,32 +150,32 @@ const TeacherDashboard: React.FC = () => {
                             <input
                                 type="text"
                                 placeholder="Tìm kiếm..."
-                                className="pl-9 pr-4 py-2 bg-slate-100 border-none rounded-full text-sm focus:ring-2 focus:ring-orange-500 w-48 lg:w-64 outline-none transition-all"
+                                className="pl-9 pr-4 py-2 bg-slate-100 border border-slate-200 rounded-full text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 w-48 lg:w-64 outline-none transition-all"
                             />
                         </div>
 
                         <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full relative transition-colors">
                             <Bell className="w-5 h-5" />
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full border-2 border-white"></span>
+                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full border-2 border-white"></span>
                         </button>
 
                         {/* User Profile Dropdown */}
-                        <div className="flex items-center gap-3 pl-4 border-l border-gray-100 group relative py-2 cursor-pointer">
+                        <div className="flex items-center gap-3 pl-4 border-l border-slate-200 group relative py-2 cursor-pointer">
                             <div className="flex flex-col items-end hidden sm:flex">
                                 <span className="text-sm font-bold text-slate-700 leading-tight">
                                     {teacherDisplayName}
                                 </span>
-                                <span className="text-[10px] text-orange-500 font-bold uppercase tracking-wider">
+                                <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">
                                     {authStore.isAdmin ? 'Quản trị viên' : 'Giáo viên'}
                                 </span>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 text-white font-bold flex items-center justify-center border-2 border-white shadow-sm transition-transform group-hover:scale-105">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold flex items-center justify-center border-2 border-white shadow-sm transition-transform group-hover:scale-105">
                                 {teacherInitial}
                             </div>
 
                             {/* Hover Menu */}
-                            <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50 overflow-hidden">
-                                <div className="p-4 border-b border-gray-50 bg-slate-50/50">
+                            <div className="absolute top-full right-0 mt-1 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50 overflow-hidden">
+                                <div className="p-4 border-b border-slate-100 bg-slate-50/80">
                                     <p className="text-xs text-gray-400 mb-1">Tài khoản</p>
                                     <p className="text-sm font-bold text-slate-800 truncate">{teacherDisplayName}</p>
                                 </div>
@@ -194,11 +194,11 @@ const TeacherDashboard: React.FC = () => {
                 </header>
 
                 {/* Content View */}
-                <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
+                <main className="flex-1 p-5 lg:p-10 overflow-x-hidden">
                     <ErrorBoundary onReset={() => setActiveTab('overview')}>
                         <Suspense fallback={
                             <div className="flex items-center justify-center py-20 h-full">
-                                <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+                                <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                             </div>
                         }>
                             {activeTab === 'overview' && (
@@ -331,7 +331,7 @@ const TeacherDashboard: React.FC = () => {
                                     value={newAccessCode}
                                     onChange={(e) => setNewAccessCode(e.target.value.toUpperCase())}
                                     placeholder="Nhập mã mới (VD: TOAN3A)"
-                                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none uppercase font-mono transition-all"
+                                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase font-mono transition-all"
                                     maxLength={10}
                                 />
                                 <p className="text-xs text-gray-500 mt-2">

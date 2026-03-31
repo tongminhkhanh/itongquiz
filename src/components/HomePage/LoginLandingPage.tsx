@@ -5,9 +5,6 @@ import { useQuizStore } from '../../../stores/quizStore';
 import { Loader2, User, Lock, GraduationCap, Apple, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-// --- Fluent Emoji CDN Base ---
-const FLUENT_CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
-
 const LoginLandingPage: React.FC = () => {
     // --- State ---
     const [activeTab, setActiveTab] = useState<'student' | 'teacher'>('student');
@@ -100,7 +97,7 @@ const LoginLandingPage: React.FC = () => {
                 <div className="relative z-10 max-w-2xl">
                     <div className="flex items-center gap-3 mb-8">
                         <img
-                            src={`${FLUENT_CDN}/Honeybee/3D/honeybee_3d.png`}
+                            src="/school-logo.png"
                             alt="Logo"
                             className="w-12 h-12 md:w-16 md:h-16 drop-shadow-lg"
                         />
