@@ -40,23 +40,25 @@ const App: React.FC = () => {
         }
     }, []);
 
-    // --- SEO & Meta Tags ---
+    // --- SEO & Scrolling Title ---
+    const [baseTitle, setBaseTitle] = useState('ItOng Quiz - Hệ thống Tạo đề và Ôn thi cho học sinh Tiểu học Ít Ong');
+
     useEffect(() => {
-        let title = 'iTong Quiz - Hệ thống luyện thi các môn học chính khóa | Trường TH Ít Ong';
-        let description = 'Hệ thống luyện thi các môn học chính khóa được thiết kế dành riêng cho học sinh Tiểu học. Tạo đề thi tự động bằng AI, làm bài online, xem kết quả ngay.';
+        let title = 'ItOng Quiz - Hệ thống Tạo đề và Ôn thi cho học sinh Tiểu học Ít Ong';
+        let description = 'ItOng Quiz giúp giáo viên tạo đề thi trắc nghiệm từ file PDF/Notion chỉ trong 30 giây. Hỗ trợ học sinh ôn thi chương trình GDPT 2018 bám sát chương trình sách giáo khoa với công nghệ AI tiên tiến.';
 
         if (quizStore.view === 'teacher_dash') {
-            title = 'Quản lý Đề thi - iTong Quiz';
+            title = 'Quản lý Đề thi - ItOng Quiz';
         } else if (quizStore.view === 'student' && quizStore.selectedQuiz) {
-            title = `${quizStore.selectedQuiz.title} - iTong Quiz`;
-            description = `Luyện tập bài thi ${quizStore.selectedQuiz.title} trên hệ thống iTong Quiz. Bài thi dành cho học sinh lớp ${quizStore.selectedQuiz.classLevel || 'Tiểu học'}.`;
+            title = `${quizStore.selectedQuiz.title} - ItOng Quiz`;
+            description = `Luyện tập bài thi ${quizStore.selectedQuiz.title} trên hệ thống ItOng Quiz. Bài thi dành cho học sinh lớp ${quizStore.selectedQuiz.classLevel || 'Tiểu học'}.`;
         } else if ((quizStore.view as any) === 'privacy') {
-            title = 'Chính sách bảo mật - iTong Quiz';
+            title = 'Chính sách bảo mật - ItOng Quiz';
         } else if ((quizStore.view as any) === 'tos') {
-            title = 'Điều khoản dịch vụ - iTong Quiz';
+            title = 'Điều khoản dịch vụ - ItOng Quiz';
         }
 
-        document.title = title;
+        setBaseTitle(title);
 
         // Update meta description
         const metaDescription = document.querySelector('meta[name="description"]');
@@ -72,6 +74,20 @@ const App: React.FC = () => {
         if (ogDesc) ogDesc.setAttribute('content', description);
 
     }, [quizStore.view, quizStore.selectedQuiz?.id]);
+
+    // Marquee effect logic
+    useEffect(() => {
+        let currentTitle = baseTitle + "    ";
+        const interval = setInterval(() => {
+            currentTitle = currentTitle.substring(1) + currentTitle.substring(0, 1);
+            document.title = currentTitle;
+        }, 300); // 300ms for smooth scrolling
+
+        return () => {
+            clearInterval(interval);
+            document.title = baseTitle;
+        };
+    }, [baseTitle]);
 
     const loadIoeData = async (forceRefresh = false) => {
         if (ioeLoading) return;
