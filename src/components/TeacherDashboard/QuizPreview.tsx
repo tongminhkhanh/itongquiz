@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, Question, QuestionType } from '../../types';
 import { Card, Button, Modal } from '../common';
-import { Save, PlusCircle, Edit3, Trash2, X, FileDown, Bold, Italic, Sparkles, Loader2 } from 'lucide-react';
+import { Save, PlusCircle, Edit3, Trash2, X, FileDown, Bold, Italic, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import { formatMathText } from '../../utils/formatters';
 import GeometryPreview from './GeometryPreview';
 import { renderMathJax } from '../../hooks/useMathJax';
@@ -73,9 +73,10 @@ interface QuizPreviewProps {
     isSaving?: boolean;
     onUpdateQuestions?: (questions: Question[]) => void;
     onCreateManual?: () => void;
+    onRegenerateQuestion?: (question: Question) => Promise<Question | null>;
 }
 
-const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = false, onUpdateQuestions, onCreateManual }) => {
+const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = false, onUpdateQuestions, onCreateManual, onRegenerateQuestion }) => {
     // Edit modal state
     const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
     const [editQuestionText, setEditQuestionText] = useState('');
@@ -122,6 +123,9 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
     const [showDistractorPopover, setShowDistractorPopover] = useState<string | null>(null);
     const [distractorError, setDistractorError] = useState<string | null>(null);
 
+    // Single Question Generation state
+    const [isGeneratingSingle, setIsGeneratingSingle] = useState<string | null>(null);
+
     // Add Question modal state
     const [showAddModal, setShowAddModal] = useState(false);
     const [newQuestionType, setNewQuestionType] = useState<QuestionType>(QuestionType.MCQ);
@@ -150,6 +154,22 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
         }
     };
 
+    const handleRegenerateSingleQuestion = async (q: Question) => {
+        if (!onRegenerateQuestion) return;
+        setIsGeneratingSingle(q.id);
+        try {
+            const newQ = await onRegenerateQuestion(q);
+            if (newQ && onUpdateQuestions && quiz) {
+                const updated = quiz.questions.map(existing => existing.id === q.id ? newQ : existing);
+                onUpdateQuestions(updated);
+            }
+        } catch (error) {
+            console.error("Failed to regenerate question:", error);
+            alert("Lỗi khi sinh lại câu hỏi. Vui lòng thử lại.");
+        } finally {
+            setIsGeneratingSingle(null);
+        }
+    };
 
     // Ref for MathJax rendering
     const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -856,7 +876,11 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
 
                         <div ref={previewContainerRef} className="border-t pt-4 max-h-[500px] overflow-y-auto space-y-4">
                             {quiz.questions.map((q, idx) => (
-                                <div key={q.id} className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                                <div
+                                    key={q.id}
+                                    className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-default"
+                                    onDoubleClick={() => onUpdateQuestions && handleEditQuestion(q)}
+                                >
                                     {/* Question Header with Edit/Delete buttons */}
                                     <div className="flex items-start justify-between gap-2 mb-3">
                                         <div className="flex items-start gap-2 flex-1">
@@ -929,10 +953,32 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                         )}
                                                     </div>
                                                 )}
+
+                                                {/* Regenerate Single Question Button */}
+                                                {onRegenerateQuestion && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRegenerateSingleQuestion(q);
+                                                        }}
+                                                        disabled={isGeneratingSingle === q.id}
+                                                        className={`p-1.5 rounded-lg transition-colors ${isGeneratingSingle === q.id
+                                                            ? 'text-blue-400 bg-blue-50 cursor-wait'
+                                                            : 'text-blue-500 hover:bg-blue-50'
+                                                            }`}
+                                                        title="Sinh lại câu hỏi này (AI)"
+                                                    >
+                                                        {isGeneratingSingle === q.id
+                                                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                            : <RefreshCw className="w-4 h-4" />
+                                                        }
+                                                    </button>
+                                                )}
+
                                                 <button
                                                     onClick={() => handleEditQuestion(q)}
                                                     className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                                                    title="Sửa câu hỏi"
+                                                    title="Sửa câu hỏi (nhấp đúp vào thẻ để sửa)"
                                                 >
                                                     <Edit3 className="w-4 h-4" />
                                                 </button>
@@ -1069,15 +1115,22 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                             {(q as any).image && (
                                                 <img src={(q as any).image} alt="Question" className="max-h-48 rounded-lg object-contain border" />
                                             )}
-                                            <p className="text-sm text-gray-600">{formatMathText((q as any).text)}</p>
-                                            <div className="space-y-1">
-                                                {((q as any).blanks || []).map((blank: any, i: number) => (
-                                                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg text-sm">
-                                                        <span className="text-gray-500">Ô {i + 1}:</span>
-                                                        <span className="font-bold text-green-700">{blank.correctAnswer}</span>
-                                                        <span className="text-gray-400 text-xs">({(blank.options || []).join(', ')})</span>
-                                                    </div>
-                                                ))}
+                                            <div className="text-sm text-gray-700 leading-relaxed flex flex-wrap items-center gap-y-1">
+                                                {((q as any).text || "").split(/(\[\d+\])/g).map((part: string, idx: number) => {
+                                                    const match = part.match(/\[(\d+)\]/);
+                                                    if (match) {
+                                                        const blankIndex = parseInt(match[1]) - 1;
+                                                        const blank = ((q as any).blanks || [])[blankIndex];
+                                                        if (blank) {
+                                                            return (
+                                                                <span key={idx} className="inline-flex items-center mx-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-md border border-indigo-200 text-xs font-bold" title={`Options: ${(blank.options || []).join(', ')}`}>
+                                                                    ▼ {blank.correctAnswer}
+                                                                </span>
+                                                            );
+                                                        }
+                                                    }
+                                                    return <span key={idx}>{formatMathText(part)}</span>;
+                                                })}
                                             </div>
                                         </div>
                                     )}

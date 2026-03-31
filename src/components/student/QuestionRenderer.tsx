@@ -51,6 +51,107 @@ const MathSpan: React.FC<{ content: string; className?: string }> = React.memo((
 });
 
 
+/**
+ * LatexDropdown: Custom dropdown that renders LaTeX inside each option.
+ * Native <select>/<option> only supports plain text, so LaTeX like $\frac{7}{20}$
+ * gets stripped to "720". This component uses a popover with MathSpan for each option.
+ */
+const LatexDropdown: React.FC<{
+    options: string[];
+    value: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    className?: string;
+}> = React.memo(({ options, value, onChange, placeholder = '-- Chọn --', className = '' }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const hasLatex = options.some(opt => /\$[^$]+\$/.test(opt));
+
+    // If no LaTeX in options, use native <select> for better UX
+    if (!hasLatex) {
+        return (
+            <select
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className={`mx-1 px-3 py-1.5 border-2 rounded-lg font-medium text-[16px] transition-all cursor-pointer ${value
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                    : 'border-gray-300 bg-gray-50 text-gray-600 hover:border-indigo-300'
+                    } ${className}`}
+            >
+                <option value="">{placeholder}</option>
+                {options.map((opt, i) => (
+                    <option key={i} value={opt}>{opt}</option>
+                ))}
+            </select>
+        );
+    }
+
+    // Close dropdown when clicking outside
+    React.useEffect(() => {
+        if (!isOpen) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
+
+    return (
+        <div ref={dropdownRef} className={`inline-block relative mx-1 ${className}`}>
+            {/* Trigger button */}
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className={`flex items-center gap-2 px-3 py-1.5 border-2 rounded-lg font-medium text-[16px] transition-all cursor-pointer min-w-[90px] ${value
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                    : 'border-gray-300 bg-gray-50 text-gray-600 hover:border-indigo-300'
+                    }`}
+            >
+                {value ? (
+                    <MathSpan content={value} className="flex-1 text-left" />
+                ) : (
+                    <span className="flex-1 text-left text-gray-400">{placeholder}</span>
+                )}
+                <svg className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            {/* Options popover */}
+            {isOpen && (
+                <div className="absolute z-50 mt-1 left-0 min-w-full w-max bg-white border-2 border-indigo-200 rounded-xl shadow-xl py-1 max-h-60 overflow-y-auto animate-in fade-in-0 zoom-in-95">
+                    {/* Empty/reset option */}
+                    <button
+                        type="button"
+                        onClick={() => { onChange(''); setIsOpen(false); }}
+                        className="w-full text-left px-3 py-2 text-gray-400 hover:bg-gray-50 transition-colors text-sm"
+                    >
+                        {placeholder}
+                    </button>
+                    {options.map((opt, i) => (
+                        <button
+                            key={i}
+                            type="button"
+                            onClick={() => { onChange(opt); setIsOpen(false); }}
+                            className={`w-full text-left px-3 py-2.5 transition-colors flex items-center gap-2 ${opt === value
+                                ? 'bg-indigo-50 text-indigo-700 font-bold'
+                                : 'hover:bg-indigo-50/50 text-gray-700'
+                                }`}
+                        >
+                            {opt === value && (
+                                <CheckCircle className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                            )}
+                            <MathSpan content={opt} className="flex-1" />
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
+
 // Color palette for matching pairs
 const pairColors = [
     { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-700' },
@@ -495,21 +596,85 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                         onAnswerChange(q.id, newAnswers);
                     };
 
-                    // ⚠️ LaTeX Handling for Drag & Drop
-                    if (hasLatex) {
-                        return (
-                            <div className="space-y-6">
-                                <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                                    <MathSpan content={text} />
-                                </div>
+                    // Unified Token Rendering for DRAG_DROP
+                    // Splitting by Math vs Text
+                    // --- Pre-scan to identify math-trapped blanks ---
+                    const mathBlankIds = new Set<number>();
+                    let scanBracketCounter = 0;
+                    const tokens = text.split(/(\$[^$]+\$)/g);
 
-                                {/* List of drop zones below the math block */}
+                    tokens.forEach(token => {
+                        const isMath = token.startsWith('$') && token.endsWith('$');
+                        const regex = /\[.*?\]/g;
+                        let m;
+                        while ((m = regex.exec(token)) !== null) {
+                            const blankPartIdx = 1 + scanBracketCounter * 2;
+                            if (isMath) mathBlankIds.add(blankPartIdx);
+                            scanBracketCounter++;
+                        }
+                    });
+
+                    const blanksNeedExternalZone = blanks.filter(idx => mathBlankIds.has(idx));
+                    let bracketCounter = 0; // Actual counter for render pass
+
+                    const renderToken = (token: string, tIdx: number) => {
+                        const isMath = token.startsWith('$') && token.endsWith('$');
+                        if (isMath) {
+                            const mathContent = token.replace(/(\[.*?\])/g, (match: string) => {
+                                const blankPartIdx = 1 + bracketCounter * 2;
+                                bracketCounter++;
+                                const filledWord = currentAnswers[blankPartIdx];
+                                // Polish: Use colored placeholder for empty blanks
+                                return filledWord
+                                    ? `\\boxed{\\text{${filledWord}}}`
+                                    : `\\boxed{\\color{#94a3b8}{\\text{...}}}`;
+                            });
+                            return <MathSpan key={tIdx} content={mathContent} className="mx-1" />;
+                        } else {
+                            const textParts = token.split(/(\[.*?\])/g);
+                            return textParts.map((part, pIdx) => {
+                                if (part.startsWith('[') && part.endsWith(']')) {
+                                    const blankPartIdx = 1 + bracketCounter * 2;
+                                    bracketCounter++;
+                                    const filledWord = currentAnswers[blankPartIdx];
+                                    return (
+                                        <span
+                                            key={`${tIdx}-${pIdx}`}
+                                            onClick={() => filledWord && handleBlankClick(blankPartIdx)}
+                                            className={`inline-block min-w-[80px] h-9 mx-1 px-2 align-middle text-center border-b-2 transition-all cursor-pointer select-none relative
+                                                ${filledWord
+                                                    ? 'bg-green-50/50 border-green-500 text-green-700 font-bold shadow-sm'
+                                                    : 'bg-gray-50 border-dashed border-gray-300 text-gray-400 hover:bg-gray-100'
+                                                }`}
+                                        >
+                                            <div className="flex items-center justify-center h-full w-full text-base">
+                                                {filledWord || '...'}
+                                            </div>
+                                        </span>
+                                    );
+                                }
+                                return <MathSpan key={`${tIdx}-${pIdx}`} content={part} />;
+                            });
+                        }
+                    };
+
+                    return (
+                        <div className="space-y-6">
+                            <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap items-center gap-y-2">
+                                {tokens.map((token, tIdx) => renderToken(token, tIdx))}
+                            </div>
+
+                            {/* Render drop zones below ONLY for the blanks trapped inside MathJax */}
+                            {blanksNeedExternalZone.length > 0 && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-green-50/30 p-4 rounded-xl border border-green-100">
-                                    {blanks.map((blankIdx, i) => {
+                                    <p className="col-span-full text-sm font-bold text-green-800 mb-1">Điền vào các ô trong công thức:</p>
+                                    {blanksNeedExternalZone.map((blankIdx, i) => {
                                         const filledWord = currentAnswers[blankIdx];
+                                        // Original index to show Ô số N
+                                        const originalIndex = blanks.findIndex(b => b === blankIdx);
                                         return (
                                             <div key={blankIdx} className="flex items-center gap-2">
-                                                <span className="text-xs font-bold text-gray-500 w-12 flex-shrink-0">Ô số {i + 1}:</span>
+                                                <span className="text-xs font-bold text-gray-500 w-12 flex-shrink-0">Ô số {originalIndex + 1}:</span>
                                                 <div
                                                     onClick={() => filledWord && handleBlankClick(blankIdx)}
                                                     className={`flex-1 h-10 px-3 flex items-center justify-center rounded border-2 transition-all cursor-pointer select-none
@@ -524,72 +689,9 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                         );
                                     })}
                                 </div>
+                            )}
 
-                                {/* Word Bank */}
-                                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                                    <p className="text-sm font-bold text-indigo-800 mb-3 uppercase tracking-wide">Kho từ vựng (Chạm để điền):</p>
-                                    <div className="flex flex-wrap gap-3">
-                                        {allWords.map((word, wIdx) => {
-                                            const usedCount = Object.values(currentAnswers).filter(w => w === word).length;
-                                            const totalCount = allWords.filter(w => w === word).length;
-                                            const isFullyUsed = usedCount >= totalCount;
-
-                                            return (
-                                                <button
-                                                    key={`${word}-${wIdx}`}
-                                                    onClick={() => !isFullyUsed && handleWordClick(word)}
-                                                    disabled={isFullyUsed}
-                                                    className={`px-4 py-2 rounded-lg font-bold shadow-sm transition-all transform active:scale-95 ${isFullyUsed
-                                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
-                                                        : 'bg-white text-indigo-700 hover:bg-indigo-600 hover:text-white hover:shadow-md border border-indigo-200'
-                                                        }`}
-                                                >
-                                                    {word}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-end">
-                                    <button
-                                        onClick={() => onAnswerChange(q.id, {})}
-                                        className="text-xs text-red-500 hover:underline flex items-center"
-                                    >
-                                        <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    }
-
-                    // Normal Inline rendering
-                    return (
-                        <div className="space-y-6">
-                            <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                                {parts.map((part, idx) => {
-                                    if (part.startsWith('[') && part.endsWith(']')) {
-                                        const filledWord = currentAnswers[idx];
-                                        return (
-                                            <span
-                                                key={idx}
-                                                onClick={() => filledWord && handleBlankClick(idx)}
-                                                className={`inline-block min-w-[120px] h-10 mx-2 px-3 align-middle text-center rounded border-2 transition-all cursor-pointer select-none relative
-                                                    ${filledWord
-                                                        ? 'bg-white border-green-600 text-green-700 font-bold'
-                                                        : 'bg-white border-green-600'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center justify-center h-full w-full">
-                                                    {filledWord}
-                                                </div>
-                                            </span>
-                                        );
-                                    }
-                                    return <MathSpan key={idx} content={part} />;
-                                })}
-                            </div>
-
+                            {/* Word Bank */}
                             <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                                 <p className="text-sm font-bold text-indigo-800 mb-3 uppercase tracking-wide">Kho từ vựng (Chạm để điền):</p>
                                 <div className="flex flex-wrap gap-3">
@@ -608,7 +710,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                     : 'bg-white text-indigo-700 hover:bg-indigo-600 hover:text-white hover:shadow-md border border-indigo-200'
                                                     }`}
                                             >
-                                                {word}
+                                                <MathSpan content={word} />
                                             </button>
                                         );
                                     })}
@@ -829,93 +931,103 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                     const currentAnswers = (answers[q.id] as Record<string, string>) || {};
                     const blanks = (q as any).blanks || [];
                     const text = (q as any).text || "";
-                    const hasLatex = /\$[^$]+\$/.test(text);
 
-                    // Parse text: "Thủ đô là [1] có dân số [2] triệu"
-                    const parts = text.split(/(\[\d+\])/g);
+                    // --- Pre-scan to identify math-trapped blanks ---
+                    const mathBlankIds = new Set<string>();
+                    const tokens = text.split(/(\$[^$]+\$)/g);
 
-                    // ⚠️ Strategy: If text contains LaTeX, render full block and dropdowns below
-                    if (hasLatex) {
-                        return (
-                            <div className="space-y-4">
-                                {(q as any).image && (
-                                    <img src={(q as any).image} alt="Question" className="w-full max-h-64 object-contain rounded-lg mb-4 bg-gray-50 border border-gray-100" />
-                                )}
-                                <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                                    <MathSpan content={text} />
-                                </div>
+                    tokens.forEach(token => {
+                        if (token.startsWith('$') && token.endsWith('$')) {
+                            const regex = /\[(\d+)\]/g;
+                            let m;
+                            while ((m = regex.exec(token)) !== null) {
+                                const blankIndex = parseInt(m[1]) - 1;
+                                const blank = blanks[blankIndex];
+                                if (blank) mathBlankIds.add(blank.id);
+                            }
+                        }
+                    });
 
-                                {/* Dropdowns list below */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                    {blanks.map((blank: any, i: number) => (
-                                        <div key={blank.id} className="flex items-center gap-2">
-                                            <span className="text-xs font-bold text-gray-500 w-12 flex-shrink-0">Ô số {i + 1}:</span>
-                                            <select
+                    const blanksNeedExternalSelect = blanks.filter((b: any) => mathBlankIds.has(b.id));
+
+                    const renderToken = (token: string, tIdx: number) => {
+                        const isMath = token.startsWith('$') && token.endsWith('$');
+
+                        if (isMath) {
+                            // Math Block: Replace [N] (and {[N]}) with \boxed{...}
+                            // Normalize {[N]} → [N] first (AI sometimes wraps in braces)
+                            const normalizedToken = token.replace(/\{\[(\d+)\]\}/g, '[$1]');
+                            const mathContent = normalizedToken.replace(/\[(\d+)\]/g, (_: string, num: string) => {
+                                const blankIndex = parseInt(num) - 1;
+                                const blank = blanks[blankIndex];
+                                if (blank) {
+                                    const value = currentAnswers[blank.id];
+                                    // Polish: Use colored placeholder for empty blanks
+                                    return value
+                                        ? `\\boxed{\\text{${value}}}`
+                                        : `\\boxed{\\color{#94a3b8}{\\text{...}}}`;
+                                }
+                                return '\\boxed{\\color{#94a3b8}{\\text{...}}}';
+                            });
+                            return <MathSpan key={tIdx} content={mathContent} className="mx-1 font-semibold" />;
+                        } else {
+                            // Text Block: Split by [N] and render inline <select>
+                            const parts = token.split(/(\[\d+\])/g);
+                            return parts.map((part, pIdx) => {
+                                const match = part.match(/\[(\d+)\]/);
+                                if (match) {
+                                    const blankIndex = parseInt(match[1]) - 1;
+                                    const blank = blanks[blankIndex];
+                                    if (blank) {
+                                        return (
+                                            <LatexDropdown
+                                                key={`${tIdx}-${pIdx}`}
+                                                options={blank.options || []}
                                                 value={currentAnswers[blank.id] || ''}
-                                                onChange={(e) => onAnswerChange(q.id, { ...currentAnswers, [blank.id]: e.target.value })}
-                                                className={`flex-1 px-3 py-1.5 border-2 rounded-lg font-medium text-[16px] transition-all cursor-pointer ${currentAnswers[blank.id]
-                                                    ? 'border-indigo-500 bg-white text-indigo-700'
-                                                    : 'border-gray-300 bg-white text-gray-600 hover:border-indigo-300'
-                                                    }`}
-                                            >
-                                                <option value="">-- Chọn đáp án --</option>
-                                                {(blank.options || []).map((opt: string, i: number) => (
-                                                    <option key={i} value={opt}>{opt}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    ))}
-                                </div>
+                                                onChange={(val) => onAnswerChange(q.id, { ...currentAnswers, [blank.id]: val })}
+                                                placeholder="-- Chọn --"
+                                            />
+                                        );
+                                    }
+                                }
+                                return <MathSpan key={`${tIdx}-${pIdx}`} content={part} />;
+                            });
+                        }
+                    };
 
-                                <div className="flex justify-between items-center">
-                                    <p className="text-xs text-gray-500">
-                                        Đã điền: {Object.keys(currentAnswers).length}/{blanks.length}
-                                    </p>
-                                    <button
-                                        onClick={() => onAnswerChange(q.id, {})}
-                                        className="text-xs text-red-500 hover:underline flex items-center"
-                                    >
-                                        <RefreshCcw className="w-3 h-3 mr-1" /> Làm lại câu này
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    }
-
-                    // Normal Inline rendering (for non-Latex text)
                     return (
                         <div className="space-y-4">
                             {(q as any).image && (
                                 <img src={(q as any).image} alt="Question" className="w-full max-h-64 object-contain rounded-lg mb-4 bg-gray-50 border border-gray-100" />
                             )}
-                            <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                                {parts.map((part: string, idx: number) => {
-                                    const match = part.match(/\[(\d+)\]/);
-                                    if (match) {
-                                        const blankIndex = parseInt(match[1]) - 1;
-                                        const blank = blanks[blankIndex];
-                                        if (blank) {
-                                            return (
-                                                <select
-                                                    key={idx}
-                                                    value={currentAnswers[blank.id] || ''}
-                                                    onChange={(e) => onAnswerChange(q.id, { ...currentAnswers, [blank.id]: e.target.value })}
-                                                    className={`mx-1 px-3 py-1.5 border-2 rounded-lg font-medium text-[16px] transition-all cursor-pointer ${currentAnswers[blank.id]
-                                                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                                                        : 'border-gray-300 bg-gray-50 text-gray-600 hover:border-indigo-300'
-                                                        }`}
-                                                >
-                                                    <option value="">-- Chọn --</option>
-                                                    {(blank.options || []).map((opt: string, i: number) => (
-                                                        <option key={i} value={opt}>{opt}</option>
-                                                    ))}
-                                                </select>
-                                            );
-                                        }
-                                    }
-                                    return <MathSpan key={idx} content={part} />;
-                                })}
+
+                            <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap items-center gap-y-2">
+                                {tokens.map((token, tIdx) => renderToken(token, tIdx))}
                             </div>
+
+                            {/* Render dropdowns below ONLY for the blanks that were trapped inside MathJax */}
+                            {blanksNeedExternalSelect.length > 0 && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                                    <p className="col-span-full text-sm font-bold text-indigo-800 mb-1">Chọn đáp án cho các ô trong công thức:</p>
+                                    {blanksNeedExternalSelect.map((blank: any, i: number) => {
+                                        // Find original index for label
+                                        const originalIndex = blanks.findIndex((b: any) => b.id === blank.id);
+                                        return (
+                                            <div key={blank.id} className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-indigo-600 w-14 flex-shrink-0">Ô {originalIndex + 1}:</span>
+                                                <LatexDropdown
+                                                    options={blank.options || []}
+                                                    value={currentAnswers[blank.id] || ''}
+                                                    onChange={(val) => onAnswerChange(q.id, { ...currentAnswers, [blank.id]: val })}
+                                                    placeholder="-- Chọn đáp án --"
+                                                    className="flex-1"
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
                             <div className="flex justify-between items-center">
                                 <p className="text-xs text-gray-500">
                                     Đã điền: {Object.keys(currentAnswers).length}/{blanks.length}

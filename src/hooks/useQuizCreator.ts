@@ -109,7 +109,7 @@ export const useQuizCreator = (): UseQuizCreatorReturn => {
 
     // AI Provider
     const [aiProvider, setAiProvider] = useState<AIProvider>(() =>
-        (localStorage.getItem('ai_provider') as AIProvider) || 'gemini'
+        (localStorage.getItem('ai_provider') as AIProvider) || 'llm-mux'
     );
 
     // Generate random access code

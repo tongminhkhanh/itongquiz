@@ -86,13 +86,14 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     const [content, setContent] = useState('');
     const [manualTimeLimit, setManualTimeLimit] = useState<number | ''>('');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [generationStep, setGenerationStep] = useState<'idle' | 'generating' | 'reviewing' | 'completed'>('idle');
     const [generatedQuiz, setGeneratedQuiz] = useState<Quiz | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [customPrompt, setCustomPrompt] = useState('');
     const [quizMode, setQuizMode] = useState<'exam' | 'practice'>('practice');
     const [aiProvider, setAiProvider] = useState<AIProvider>(() =>
-        (localStorage.getItem('ai_provider') as AIProvider) || 'gemini'
+        (localStorage.getItem('ai_provider') as AIProvider) || 'llm-mux'
     );
     const [selectedTypes, setSelectedTypes] = useState<Record<string, boolean>>({
         [QuestionType.MCQ]: true,
@@ -422,7 +423,8 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                 uploadedFile, // Pass PDF/image file for AI to read
                 options,
                 undefined,
-                aiProvider
+                aiProvider,
+                (step) => setGenerationStep(step)
             );
 
             const quiz: Quiz = {
@@ -443,10 +445,60 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
             };
 
             setGeneratedQuiz(quiz);
+            setGenerationStep('completed');
         } catch (err: any) {
             setError(err.message || 'Đã xảy ra lỗi khi tạo đề');
+            setGenerationStep('idle');
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    // Handle single question regeneration
+    const handleRegenerateSingle = async (question: any): Promise<any | null> => {
+        try {
+            const prompt = customPrompt.trim()
+                ? `${customPrompt}\n\nYêu cầu đặc biệt: Sinh lại duy nhất một câu hỏi dựa trên câu hỏi sau, thay đổi nội dung, số liệu, tên gọi nhưng PHẢI GIỮ NGUYÊN dạng bài, độ khó và chủ đề. Tôn trọng tuyệt đối các quy tắc format JSON và LaTeX quy định trong hệ thống.\nCâu hỏi gốc:\n${JSON.stringify(question)}`
+                : `Yêu cầu đặc biệt: Sinh lại duy nhất một câu hỏi dựa trên câu hỏi sau, thay đổi nội dung, số liệu, tên gọi nhưng PHẢI GIỮ NGUYÊN dạng bài, độ khó và chủ đề. Tôn trọng tuyệt đối các quy tắc format JSON và LaTeX quy định trong hệ thống.\nCâu hỏi gốc:\n${JSON.stringify(question)}`;
+
+            const isPdfMode = (quizMode as any) === 'pdf';
+            const options: QuizGenerationOptions = {
+                title: quizTitle || `Sinh lại câu hỏi: ${topic || 'Bài kiểm tra'}`,
+                questionCount: 1,
+                questionTypes: [question.type], // Force same type
+                difficultyLevels: {
+                    level1: question.difficulty === 1 ? 1 : 0,
+                    level2: question.difficulty === 2 || !question.difficulty ? 1 : 0,
+                    level3: question.difficulty === 3 ? 1 : 0,
+                },
+                imageLibrary: imageLibrary.map(img => ({
+                    id: img.id,
+                    name: img.name,
+                    data: img.data,
+                })),
+                customPrompt: prompt,
+                isPdfMode: false, // Turn off PDF mode for single generation to ensure it generates new content
+            };
+
+            const result = await generateQuiz(
+                topic || generatedQuiz?.title || 'Tổng hợp',
+                classLevel,
+                content,
+                undefined, // Don't use uploaded file for single regens to avoid copy-pasting
+                options,
+                undefined,
+                aiProvider
+            );
+
+            if (result && result.questions && result.questions.length > 0) {
+                // Ensure the returned ID matches the original to replace it seamlessly, or return new ID?
+                // The QuizPreview logic maps over it and replaces existing based on original ID.
+                return { ...result.questions[0], id: question.id };
+            }
+            return null;
+        } catch (err: any) {
+            console.error("Lỗi khi sinh lại câu hỏi:", err);
+            throw err;
         }
     };
 
@@ -979,7 +1031,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                             >
                                 <Search className="w-5 h-5" />
                                 {isGenerating && tnSearchMode === 'search'
-                                    ? '🔍 Đang tìm kiếm đề thật...'
+                                    ? (generationStep === 'reviewing' ? '🤖 Đang duyệt & soát lỗi...' : '🔍 Đang tìm kiếm đề thật...')
                                     : `🔍 Tạo đề (Search) - ${questionCount} câu`
                                 }
                             </button>
@@ -993,7 +1045,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                             >
                                 <Zap className="w-5 h-5" />
                                 {isGenerating && tnSearchMode === 'quick'
-                                    ? '⚡ Đang sinh đề...'
+                                    ? (generationStep === 'reviewing' ? '🤖 Đang duyệt & soát lỗi...' : '⚡ Đang sinh đề...')
                                     : `⚡ Tạo đề nhanh (AI) - ${questionCount} câu`
                                 }
                             </button>
@@ -1013,7 +1065,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                     variant="primary"
                                     icon={<FileText className="w-5 h-5" />}
                                 >
-                                    {isGenerating && (quizMode as any) === 'pdf' ? 'Đang đọc PDF...' : `📄 TẠO ĐỀ TỪ FILE: ${uploadedFile.name.substring(0, 20)}...`}
+                                    {isGenerating && (quizMode as any) === 'pdf' ? (generationStep === 'reviewing' ? '🤖 Đang duyệt & soát lỗi...' : 'Đang đọc PDF...') : `📄 TẠO ĐỀ TỪ FILE: ${uploadedFile.name.substring(0, 20)}...`}
                                 </Button>
                             )}
                             <div className="grid grid-cols-2 gap-3">
@@ -1026,7 +1078,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                         }`}
                                 >
                                     <FileText className="w-4 h-4" />
-                                    {isGenerating && quizMode === 'exam' ? 'Đang tạo...' : '📝 Ra đề THI'}
+                                    {isGenerating && quizMode === 'exam' ? (generationStep === 'reviewing' ? '🤖 Đang duyệt & soát lỗi...' : 'Đang tạo bản thảo...') : '📝 Ra đề THI'}
                                 </button>
                                 <button
                                     onClick={() => { setQuizMode('practice'); handleGenerate(); }}
@@ -1037,7 +1089,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                         }`}
                                 >
                                     <Sparkles className="w-4 h-4" />
-                                    {isGenerating && quizMode === 'practice' ? 'Đang tạo...' : '📚 Ra đề ÔN TẬP'}
+                                    {isGenerating && quizMode === 'practice' ? (generationStep === 'reviewing' ? '🤖 Đang duyệt & soát lỗi...' : 'Đang tạo bản thảo...') : '📚 Ra đề ÔN TẬP'}
                                 </button>
                             </div>
                             <p className="text-xs text-gray-400 text-center">
@@ -1060,6 +1112,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                         }
                     }}
                     onCreateManual={handleCreateManual}
+                    onRegenerateQuestion={handleRegenerateSingle}
                 />
             </div>
 

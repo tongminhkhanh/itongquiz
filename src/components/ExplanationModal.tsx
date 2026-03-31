@@ -176,7 +176,7 @@ const ExplanationModal: React.FC<ExplanationModalProps> = ({
                             ) : (
                                 <div className="space-y-4">
                                     {similarQuestions.map((sq, index) => (
-                                        <div key={index} className="bg-white rounded-lg p-4 border border-purple-200">
+                                        <div key={sq.question || `sq-${index}`} className="bg-white rounded-lg p-4 border border-purple-200">
                                             <div className="font-medium text-gray-800 mb-3">
                                                 {index + 1}. <MathSpan content={sq.question} />
                                             </div>

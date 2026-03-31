@@ -49,6 +49,107 @@ const compareOrdering = (student: any, correct: any): boolean => {
     return toIdStr(student) === toIdStr(correct);
 };
 
+const normalizeTrueFalseAnswers = (question: any): Record<string, boolean> => {
+    const normalized: Record<string, boolean> = {};
+
+    if (Array.isArray(question?.items) && question.items.length > 0) {
+        question.items.forEach((item: any, idx: number) => {
+            if (item && typeof item === 'object' && 'isCorrect' in item) {
+                normalized[item.id || `item-${idx}`] = Boolean(item.isCorrect);
+            }
+        });
+        if (Object.keys(normalized).length > 0) {
+            return normalized;
+        }
+    }
+
+    const rawCorrect = question?.correctAnswer ?? question?.correctAnswers;
+
+    if (rawCorrect && typeof rawCorrect === 'object' && !Array.isArray(rawCorrect)) {
+        Object.entries(rawCorrect).forEach(([key, value]) => {
+            normalized[key] = Boolean(value);
+        });
+        return normalized;
+    }
+
+    if (typeof rawCorrect === 'string') {
+        try {
+            const parsed = JSON.parse(rawCorrect);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                Object.entries(parsed).forEach(([key, value]) => {
+                    normalized[key] = Boolean(value);
+                });
+                return normalized;
+            }
+        } catch {
+            // Keep simple true/false fallback below.
+        }
+    }
+
+    return normalized;
+};
+
+const normalizeMultipleSelectChoices = (value: any, options: any[] = []): string[] => {
+    const normalizeOptionText = (option: any): string => {
+        if (typeof option === 'string') return option.trim().toUpperCase();
+        if (option && typeof option === 'object') {
+            return String(option.text ?? option.content ?? option.label ?? '').trim().toUpperCase();
+        }
+        return String(option ?? '').trim().toUpperCase();
+    };
+
+    const toLabel = (raw: any): string => {
+        if (typeof raw === 'number' && Number.isFinite(raw)) {
+            return String.fromCharCode(65 + raw);
+        }
+
+        const normalized = String(raw ?? '').trim().toUpperCase();
+        if (!normalized) return '';
+
+        if (/^[A-Z]$/.test(normalized)) {
+            return normalized;
+        }
+
+        const optionIndex = options.findIndex((option) => normalizeOptionText(option) === normalized);
+        if (optionIndex >= 0) {
+            return String.fromCharCode(65 + optionIndex);
+        }
+
+        return normalized;
+    };
+
+    let values: any[] = [];
+
+    if (Array.isArray(value)) {
+        values = value;
+    } else if (typeof value === 'object' && value !== null) {
+        values = Object.keys(value)
+            .filter((key) => Boolean(value[key]))
+            .map((key) => {
+                if (key.startsWith('item-')) {
+                    const idx = Number(key.replace('item-', ''));
+                    return Number.isFinite(idx) ? String.fromCharCode(65 + idx) : key;
+                }
+                return key;
+            });
+    } else if (typeof value === 'string') {
+        try {
+            const parsed = JSON.parse(value);
+            if (Array.isArray(parsed)) {
+                values = parsed;
+            } else {
+                values = value.split('|');
+            }
+        } catch {
+            values = value.split('|');
+        }
+    } else if (value !== undefined && value !== null) {
+        values = [value];
+    }
+
+    return Array.from(new Set(values.map(toLabel).filter(Boolean))).sort();
+};
+
 /**
  * Main scoring function
  */
@@ -57,7 +158,8 @@ export const checkAnswer = (question: any, answer: any): ScoringResult => {
     const isEmpty = answer === undefined ||
         answer === null ||
         answer === '' ||
-        (Array.isArray(answer) && answer.length === 0);
+        (Array.isArray(answer) && answer.length === 0) ||
+        (typeof answer === 'object' && answer !== null && !Array.isArray(answer) && Object.keys(answer).length === 0);
 
     if (isEmpty) {
         return {
@@ -85,8 +187,26 @@ export const checkAnswer = (question: any, answer: any): ScoringResult => {
             isCorrect = compareOrdering(answer, question.correctOrder || question.correctAnswer);
             break;
 
+        case 'MULTIPLE_SELECT': {
+            const studentChoices = normalizeMultipleSelectChoices(answer, question.options || []);
+            const correctChoices = normalizeMultipleSelectChoices(question.correctAnswers ?? question.correctAnswer, question.options || []);
+            isCorrect = studentChoices.length === correctChoices.length &&
+                studentChoices.every((choice, idx) => choice === correctChoices[idx]);
+            break;
+        }
+
         case 'TRUE_FALSE':
-            isCorrect = String(answer).toLowerCase() === String(question.correctAnswer).toLowerCase();
+            if (typeof answer === 'object' && answer !== null && !Array.isArray(answer)) {
+                const correctAnswers = normalizeTrueFalseAnswers(question);
+                const keys = Object.keys(correctAnswers);
+                isCorrect = keys.length > 0 && keys.every((key) => answer[key] === correctAnswers[key]);
+            } else {
+                const correctAnswers = normalizeTrueFalseAnswers(question);
+                const fallbackAnswer = Object.keys(correctAnswers).length === 1
+                    ? Object.values(correctAnswers)[0]
+                    : question.correctAnswer;
+                isCorrect = String(answer).toLowerCase() === String(fallbackAnswer).toLowerCase();
+            }
             break;
 
         case 'MATCHING':

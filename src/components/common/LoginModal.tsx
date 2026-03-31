@@ -64,7 +64,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
 
             if (teacher) {
                 const tUsername = String(teacher.username || teacher.id || '').trim();
-                const tFullName = teacher.fullName || teacher.fullname || teacher.name || '';
+                const tFullNameRaw = String(teacher.fullName || teacher.fullname || teacher.full_name || teacher.name || '').trim();
+                const tFullName = tFullNameRaw || tUsername;
                 const isTeacherAdmin = teacher.role === 'admin';
                 const tClass = teacher.class ? String(teacher.class).trim() : undefined;
                 authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass);

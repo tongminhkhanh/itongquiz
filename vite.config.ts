@@ -6,11 +6,11 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
     server: {
-      port: 3000,
+      port: 3001,
       host: '0.0.0.0',
       proxy: {
         '/api/cliproxy': {
-          target: process.env.VITE_CLIPROXY_API || 'https://api.thitong.site/v1',
+          target: env.VITE_CLIPROXY_API || process.env.VITE_CLIPROXY_API || 'https://api.thitong.site/v1',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api\/cliproxy/, ''),
         },

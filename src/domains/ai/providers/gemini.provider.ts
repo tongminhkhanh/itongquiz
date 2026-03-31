@@ -10,6 +10,7 @@ import type { IAIProvider, AIProviderType, QuizGenerationOptions, QuizGeneration
 import { buildPrompt, buildFileAttachmentPrompt } from '../shared/prompt-builder';
 import { parseAndRepairJSON, formatMathSymbols } from '../shared/json-repair';
 import { fileToBase64, urlToBase64 } from '../shared/file-utils';
+import { validateLatexSyntax, validateBlankMapping } from '../../../lib/ai/validators/latexValidator';
 
 const MODEL_NAME = 'gemini-2.0-flash';
 const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -144,7 +145,28 @@ export class GeminiProvider implements IAIProvider {
                 if (!text) throw new Error("AI trả về dữ liệu rỗng.");
 
                 const formattedText = formatMathSymbols(text);
-                return parseAndRepairJSON(formattedText);
+                const result = parseAndRepairJSON(formattedText);
+
+                // Phase 03: Validate LaTeX Syntax and Blank Mapping
+                if (result && Array.isArray(result.questions)) {
+                    for (const q of result.questions) {
+                        try {
+                            const textToValidate = q.text || q.question;
+                            if (textToValidate) {
+                                validateLatexSyntax(textToValidate);
+                            }
+                            // Validate blanks if available (DRAG_DROP)
+                            if (q.type === 'DRAG_DROP' && q.text && Array.isArray(q.blanks)) {
+                                validateBlankMapping(q.text, q.blanks);
+                            }
+                        } catch (validationError: any) {
+                            console.warn("AI Question Validation Failed:", validationError.message, "Question:", q);
+                            throw new Error(`Validation Error: ${validationError.message}`);
+                        }
+                    }
+                }
+
+                return result;
 
             } catch (error: any) {
                 if (attempt >= maxRetries || !error.message.includes("429")) {

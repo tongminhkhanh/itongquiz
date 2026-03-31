@@ -129,6 +129,36 @@ export const useQuizStore = create<QuizState>()(
                     }
 
                     const qDataArray = Array.isArray(questionData) ? questionData : [];
+                    const parseMultipleSelectAnswers = (raw: any): string[] => {
+                        if (Array.isArray(raw)) {
+                            return raw.map((v: any) => String(v).trim().toUpperCase()).filter(Boolean);
+                        }
+
+                        if (raw === undefined || raw === null) {
+                            return [];
+                        }
+
+                        const str = String(raw).trim();
+                        if (!str) return [];
+
+                        const normalized = str.startsWith("'") ? str.substring(1).trim() : str;
+
+                        if (normalized.startsWith('[') && normalized.endsWith(']')) {
+                            try {
+                                const parsed = JSON.parse(normalized);
+                                if (Array.isArray(parsed)) {
+                                    return parsed.map((v: any) => String(v).trim().toUpperCase()).filter(Boolean);
+                                }
+                            } catch {
+                                // Fall through to pipe format.
+                            }
+                        }
+
+                        return normalized
+                            .split('|')
+                            .map((v: string) => v.trim().toUpperCase())
+                            .filter(Boolean);
+                    };
 
                     // Group questions by quizId
                     const questionsByQuizId: Record<string, any[]> = {};
@@ -187,6 +217,12 @@ export const useQuizStore = create<QuizState>()(
                             parsed.correctWord = parsed.correctAnswer || '';
                         } else if (qType === 'MATCHING') {
                             parsed.pairs = parsed.items || [];
+                        } else if (qType === 'MULTIPLE_SELECT') {
+                            const sourceCorrect = parsed.correctAnswers ?? parsed.correctAnswer;
+                            parsed.correctAnswers = parseMultipleSelectAnswers(sourceCorrect);
+                            if (!parsed.correctAnswer && parsed.correctAnswers.length > 0) {
+                                parsed.correctAnswer = JSON.stringify(parsed.correctAnswers);
+                            }
                         }
 
                         // BẢO ĐẢM CÁC TRƯỜNG ARRAY KHÔNG BAO GIỜ UNDEFINED ĐỂ TRÁNH CRASH GIAO DIỆN
@@ -202,6 +238,7 @@ export const useQuizStore = create<QuizState>()(
                         parsed.correctWordIndexes = Array.isArray(parsed.correctWordIndexes) ? parsed.correctWordIndexes : [];
                         parsed.correctOrder = Array.isArray(parsed.correctOrder) ? parsed.correctOrder : [];
                         parsed.optionImages = Array.isArray(parsed.optionImages) ? parsed.optionImages : [];
+                        parsed.correctAnswers = Array.isArray(parsed.correctAnswers) ? parsed.correctAnswers : [];
 
                         questionsByQuizId[qId].push(parsed);
                     });

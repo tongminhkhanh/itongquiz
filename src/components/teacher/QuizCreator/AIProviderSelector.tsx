@@ -25,13 +25,20 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
     onChange,
     isAdmin = false,
 }) => {
+    const isLocalBrowser = typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
     // Filter providers based on admin status
-    const availableProviders = AI_PROVIDERS.filter(p => !p.adminOnly || isAdmin);
+    const availableProviders = AI_PROVIDERS.filter((p) => {
+        if ((p.id === 'localhost') && !isLocalBrowser) return false;
+        return !p.adminOnly || isAdmin;
+    });
 
     // If current value is not available, switch to first available
     React.useEffect(() => {
         if (!availableProviders.find(p => p.id === value)) {
-            onChange(availableProviders[0]?.id as AIProvider || 'llm-mux');
+            const preferredProvider = availableProviders.find(p => p.id === 'llm-mux');
+            onChange((preferredProvider?.id || availableProviders[0]?.id) as AIProvider || 'llm-mux');
         }
     }, [isAdmin, value, onChange, availableProviders]);
 

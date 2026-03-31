@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    Home, FileText, List, Settings, Bot, Users,
+    Home, FileText, List, Settings, Users,
     Globe, Megaphone, GraduationCap, ClipboardList,
     Menu, X, ChevronRight, LogOut, PlusCircle
 } from 'lucide-react';
@@ -94,8 +94,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout, is
                 {/* Brand Area */}
                 <div className="h-16 flex items-center px-6 border-b border-slate-800 shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-orange-100 rounded-xl">
-                            <Bot className="w-6 h-6 text-orange-600" />
+                        <div className="w-10 h-10 rounded-xl bg-white p-1.5 flex items-center justify-center">
+                            <img
+                                src="/school-logo.png"
+                                alt={`Logo ${SCHOOL_NAME}`}
+                                className="w-full h-full object-contain"
+                            />
                         </div>
                         <span className="text-xl font-bold tracking-tight text-white">
                             iTongQuiz

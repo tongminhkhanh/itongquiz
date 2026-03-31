@@ -56,6 +56,9 @@ const TeacherDashboard: React.FC = () => {
     const [editingAccessCode, setEditingAccessCode] = useState<{ quizId: string; currentCode: string } | null>(null);
     const [newAccessCode, setNewAccessCode] = useState('');
 
+    const teacherDisplayName = (authStore.teacherName || '').trim() || authStore.username || 'Giáo viên';
+    const teacherInitial = teacherDisplayName.charAt(0).toUpperCase();
+
     // Filter results by teacherClass (Flexible matching: case-insensitive & partial)
     const filteredResultsByClass = authStore.isAdmin || !authStore.teacherClass
         ? quizStore.results
@@ -160,21 +163,21 @@ const TeacherDashboard: React.FC = () => {
                         <div className="flex items-center gap-3 pl-4 border-l border-gray-100 group relative py-2 cursor-pointer">
                             <div className="flex flex-col items-end hidden sm:flex">
                                 <span className="text-sm font-bold text-slate-700 leading-tight">
-                                    {authStore.teacherName || 'Giáo viên'}
+                                    {teacherDisplayName}
                                 </span>
                                 <span className="text-[10px] text-orange-500 font-bold uppercase tracking-wider">
                                     {authStore.isAdmin ? 'Quản trị viên' : 'Giáo viên'}
                                 </span>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 text-white font-bold flex items-center justify-center border-2 border-white shadow-sm transition-transform group-hover:scale-105">
-                                {authStore.teacherName?.charAt(0)?.toUpperCase()}
+                                {teacherInitial}
                             </div>
 
                             {/* Hover Menu */}
                             <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50 overflow-hidden">
                                 <div className="p-4 border-b border-gray-50 bg-slate-50/50">
                                     <p className="text-xs text-gray-400 mb-1">Tài khoản</p>
-                                    <p className="text-sm font-bold text-slate-800 truncate">{authStore.teacherName}</p>
+                                    <p className="text-sm font-bold text-slate-800 truncate">{teacherDisplayName}</p>
                                 </div>
                                 <div className="p-2">
                                     <button

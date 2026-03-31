@@ -1,4 +1,4 @@
-import { SYSTEM_INSTRUCTION } from "../config/constants";
+import { SYSTEM_INSTRUCTION, REVIEWER_INSTRUCTION } from "../config/constants";
 import { QuestionType } from "../types";
 import { generateImage, checkImageServiceAvailability } from "./imageGenerationService";
 import { callApi } from "./apiAdapter";
@@ -351,7 +351,24 @@ const fixLatexInText = (text: string): string => {
 
   let result = text;
 
-  // 🚨 CRITICAL FIX: Extract Vietnamese text from inside $...$
+  // ⚡ Cân bằng dấu $ bị thiếu quanh phân số để tránh làm hỏng cấu trúc Text/Math tiếp theo
+  // TH1: Thiếu $ mở (vd: \frac{1}{4}$ hoặc \frac{[1]}{8}$) -> Thêm $ trước
+  result = result.replace(/(^|[^$])(\\frac\{[^{}]*\}\{[^{}]*\})\$/g, '$1$$$2$$');
+  // TH2: Thiếu $ đóng (vd: $\frac{1}{4} hoặc $\frac{[1]}{8}) -> Thêm $ sau
+  result = result.replace(/\$(\\frac\{[^{}]*\}\{[^{}]*\})($|[^$])/g, '$$$1$$$2');
+
+  //  PRE-FIX: Normalize {[N]} → [N] in math blocks
+  // AI sometimes wraps blank placeholders in extra braces: $\frac{{[1]}}{10}$ → $\frac{[1]}{10}$
+  result = result.replace(/\$([^$]+?)\$/g, (_match: string, inner: string) => {
+    let fixed = inner.replace(/\{\[(\d+)\]\}/g, (_: string, n: string) => `[${n}]`);
+    // ⚡ CRITICAL FIX: Sửa lỗi AI viết \frac[1]{8} thành \frac{[1]}{8}
+    fixed = fixed.replace(/\\frac\s*\[(\d+)\]/g, '\\frac{[$1]}');
+    fixed = fixed.replace(/\\frac\s*\{([^}]+)\}\s*\[(\d+)\]/g, '\\frac{$1}{[$2]}');
+    fixed = fixed.replace(/\\frac\s*\[(\d+)\]\s*\[(\d+)\]/g, '\\frac{[$1]}{[$2]}');
+    return `$${fixed}$`;
+  });
+
+  // �🚨 CRITICAL FIX: Extract Vietnamese text from inside $...$
   // Pattern: Find $...$ that contains Vietnamese letters and extract them
   // Vietnamese characters: àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ
   const vietnamesePattern = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐa-zA-Z]/;
@@ -518,7 +535,63 @@ const fixQuestionLatex = (q: any): any => {
     }));
   }
 
+  // Fix text field for DROPDOWN and DRAG_DROP (contains [N] placeholders mixed with LaTeX)
+  // Only normalize {[N]} → [N] in math blocks, preserve [N] placeholders for renderToken
+  if (fixedQ.text && typeof fixedQ.text === 'string') {
+    fixedQ.text = fixedQ.text.replace(/\$([^$]+?)\$/g, (_match: string, inner: string) => {
+      let fixed = inner.replace(/\{\[(\d+)\]\}/g, (_: string, n: string) => `[${n}]`);
+      // ⚡ CRITICAL FIX: Sửa lỗi AI viết \frac[1]{8} thành \frac{[1]}{8}
+      fixed = fixed.replace(/\\frac\s*\[(\d+)\]/g, '\\frac{[$1]}');
+      fixed = fixed.replace(/\\frac\s*\{([^}]+)\}\s*\[(\d+)\]/g, '\\frac{$1}{[$2]}');
+      fixed = fixed.replace(/\\frac\s*\[(\d+)\]\s*\[(\d+)\]/g, '\\frac{[$1]}{[$2]}');
+      return `$${fixed}$`;
+    });
+  }
+
+  // ⚡ CRITICAL: Extract [N] placeholders OUT of LaTeX $...$ blocks
+  // Prevents KaTeX errors: "macro parameter character #" and "Missing open brace"
+  if (fixedQ.text && typeof fixedQ.text === 'string') {
+    fixedQ.text = extractPlaceholdersFromLatex(fixedQ.text);
+  }
+
   return fixedQ;
+};
+
+/**
+ * Extract [N] placeholders from LaTeX $...$ blocks to prevent KaTeX render errors.
+ * KaTeX cannot render [N] inside math mode → causes "macro parameter character #" or
+ * "Missing open brace for subscript" errors.
+ *
+ * Converts:
+ *   $\frac{[1]}{21}$ → [1]/21
+ *   $\frac{15}{[2]}$ → 15/[2]
+ *   $[N]$             → [N]
+ *   $X + [N]$         → X + [N] (de-LaTeX the whole block)
+ */
+const extractPlaceholdersFromLatex = (text: string): string => {
+  if (!text || typeof text !== 'string') return text;
+
+  // Step 1: Handle \$...\$ blocks that contain [N] placeholders
+  // Only target blocks that actually have placeholder patterns
+  return text.replace(/\$([^$]*?\[\d+\][^$]*?)\$/g, (_match: string, inner: string) => {
+    // Convert \frac{A}{B} → A/B
+    let result = inner.replace(/\\frac\s*\{([^}]*)\}\s*\{([^}]*)\}/g, '$1/$2');
+    // Convert common LaTeX operators to Unicode
+    result = result.replace(/\\times/g, '×');
+    result = result.replace(/\\div/g, '÷');
+    result = result.replace(/\\cdot/g, '·');
+    result = result.replace(/\\pm/g, '±');
+    // Convert \text{X} → X
+    result = result.replace(/\\text\{([^}]*)\}/g, '$1');
+    result = result.replace(/\\textbf\{([^}]*)\}/g, '$1');
+    // Remove remaining backslash commands
+    result = result.replace(/\\[a-zA-Z]+/g, '');
+    // Remove leftover braces
+    result = result.replace(/[{}]/g, '');
+    // Clean up extra spaces
+    result = result.replace(/\s{2,}/g, ' ').trim();
+    return result;
+  });
 };
 
 // Validate and fix quiz data, especially CATEGORIZATION questions
@@ -591,25 +664,152 @@ const validateAndFixQuiz = (quiz: any, maxQuestions?: number): any => {
  * Helper to robustly extract content text from various AI response formats
  * Handles both OpenAI (choices) and Gemini (candidates) formats
  */
+const extractTextValue = (value: any, depth = 0): string => {
+  if (depth > 6 || value == null) return '';
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map(item => extractTextValue(item, depth + 1))
+      .filter(Boolean)
+      .join('');
+  }
+
+  if (typeof value !== 'object') {
+    return '';
+  }
+
+  const candidates = [
+    value.text,
+    value.output_text,
+    value.content,
+    value.parts,
+    value.message,
+    value.delta,
+    value.output,
+    value.response,
+    value.data,
+    value.reasoning,
+  ];
+
+  for (const candidate of candidates) {
+    const extracted = extractTextValue(candidate, depth + 1);
+    if (extracted) return extracted;
+  }
+
+  return '';
+};
+
 const extractAIContent = (data: any): string => {
   if (!data) return '';
 
-  // 1. OpenAI format
-  if (data.choices && data.choices[0]?.message?.content) {
-    return data.choices[0].message.content;
+  // 1. OpenAI-compatible format
+  if (Array.isArray(data.choices)) {
+    for (const choice of data.choices) {
+      const extracted = extractTextValue(
+        choice?.message?.content ??
+        choice?.message ??
+        choice?.delta?.content ??
+        choice?.delta ??
+        choice?.text
+      );
+      if (extracted) return extracted;
+    }
   }
 
   // 2. Gemini format
-  if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-    return data.candidates[0].content.parts[0].text;
+  if (Array.isArray(data.candidates)) {
+    for (const candidate of data.candidates) {
+      const extracted = extractTextValue(candidate?.content?.parts ?? candidate?.content ?? candidate);
+      if (extracted) return extracted;
+    }
   }
 
-  // 3. Nested data (sometimes proxy wraps it)
+  // 3. Responses-style or other compatible wrappers
+  const wrappedText = extractTextValue(
+    data.output_text ??
+    data.output ??
+    data.response ??
+    data.content ??
+    data.text
+  );
+  if (wrappedText) {
+    return wrappedText;
+  }
+
+  // 4. Nested data (sometimes proxy wraps it)
   if (data.data) {
     return extractAIContent(data.data);
   }
 
   return '';
+};
+
+const extractAIErrorMessage = (data: any): string => {
+  if (!data || typeof data !== 'object') return '';
+
+  const message =
+    data?.error?.message ||
+    data?.data?.error?.message ||
+    data?.errors?.[0]?.message ||
+    data?.message ||
+    data?.detail ||
+    '';
+  return typeof message === 'string' ? message.trim() : '';
+};
+
+const shouldTryNextModel = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error || '');
+  const normalized = message.toLowerCase();
+
+  return normalized.includes('no capacity available') ||
+    normalized.includes('rate_limit_error') ||
+    normalized.includes('resource_exhausted') ||
+    normalized.includes('model overloaded') ||
+    normalized.includes('temporarily unavailable') ||
+    normalized.includes('ai không trả về kết quả nào') ||
+    normalized.includes('định dạng openai không xác định');
+};
+
+const shouldUseCliproxyDevProxy = (url: string): boolean => {
+  if (!(import.meta as any).env.DEV || typeof window === 'undefined') {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url, window.location.origin);
+    const hostname = parsed.hostname.toLowerCase();
+    return parsed.port === '3000' || hostname === 'localhost' || hostname === '127.0.0.1';
+  } catch {
+    return url.includes(':3000') || url.includes('localhost') || url.includes('127.0.0.1');
+  }
+};
+
+const shouldTreatAsLocalUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    const hostname = parsed.hostname.toLowerCase();
+    return hostname === 'localhost' || hostname === '127.0.0.1';
+  } catch {
+    return url.includes('localhost') || url.includes('127.0.0.1');
+  }
+};
+
+const isBrowserOnLocalhost = (): boolean => {
+  if (typeof window === 'undefined') return true;
+  const hostname = window.location.hostname.toLowerCase();
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+};
+
+const resolvePublicProviderBaseUrl = (configuredUrl: string, publicFallback: string): string => {
+  if (!configuredUrl) return publicFallback;
+  if (!isBrowserOnLocalhost() && shouldTreatAsLocalUrl(configuredUrl)) {
+    return publicFallback;
+  }
+  return configuredUrl;
 };
 
 // Generate quiz using Perplexity API
@@ -641,140 +841,79 @@ const generateWithPerplexity = async (
   return validateAndFixQuiz(parseAndRepairJSON(text));
 };
 
-// Generate quiz using Gemini API
+// Generate quiz using Gemini API (Tương thích qua AI Proxy)
 const generateWithGemini = async (
   promptText: string,
   apiKey: string,
   file?: File | null,
-  imageLibrary?: Array<{ id: string; name: string; data?: string; }>
+  imageLibrary?: Array<{ id: string; name: string; data?: string; }>,
+  onStepChange?: (step: 'generating' | 'reviewing' | 'completed') => void
 ): Promise<any> => {
   const MODEL_NAME = 'gemini-2.0-flash';
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
+  const VITE_LOCALHOST_AI_URL = (import.meta as any).env.VITE_LOCALHOST_AI_URL || 'http://localhost:3000/v1';
+  const API_URL = `${VITE_LOCALHOST_AI_URL}/chat/completions`;
 
-  const contents: any[] = [];
-  const parts: any[] = [];
+  const messages: any[] = [
+    {
+      role: 'system',
+      content: SYSTEM_INSTRUCTION
+    }
+  ];
+
+  const userContent: any[] = [{ type: 'text', text: promptText }];
 
   if (file) {
     const base64Data = await fileToBase64(file);
     const isPDF = file.type === 'application/pdf';
-    parts.push({
-      text: `⛔⛔⛔ TÀI LIỆU ĐÍNH KÈM - ƯU TIÊN TUYỆT ĐỐI ⛔⛔⛔
-
-📄 LOẠI FILE: ${isPDF ? 'PDF - Tài liệu văn bản' : 'HÌNH ẢNH - Ảnh chụp bài học'}
-📁 TÊN FILE: ${file.name}
-
-🔴🔴🔴 NHIỆM VỤ BẮT BUỘC - ƯU TIÊN CAO NHẤT 🔴🔴🔴
-
-BƯỚC 1: XỬ LÝ NỘI DUNG FILE
-- ĐỌC KỸ toàn bộ nội dung trong file
-- NẾU LÀ ĐỀ THI CÓ SẴN: Trích xuất nguyên văn câu hỏi.
-- NẾU LÀ TÀI LIỆU HỌC TẬP (Truyện, văn, lý thuyết): Tự tạo câu hỏi trắc nghiệm dựa trên nội dung đó.
-- ĐƯỢC PHÉP điều chỉnh, bổ sung để câu hỏi rõ ràng, chính xác hơn.
-
-📝 QUY TẮC ĐỊNH DẠNG VĂN BẢN:
-⚠️ QUAN TRỌNG - GIỮ NGUYÊN ĐỊNH DẠNG:
-- Nếu có từ GẠCH CHÂN trong câu hỏi → dùng thẻ <u>từ gạch chân</u>
-- Nếu có từ QUAN TRỌNG, TỪ KHOÁ (VD: "Không đúng", "Sai", "Đồng nghĩa") → dùng thẻ <b>từ in đậm</b>
-- Nếu có TÊN RIÊNG, TRÍCH DẪN, TỪ ĐƯỢC NHẮC ĐẾN → dùng thẻ <q>từ trích dẫn</q> (sẽ hiển thị ngoặc kép cong)
-- VÍ DỤ: "Tìm từ <b>trái nghĩa</b> với từ <q>thông minh</q>"
-
-📖 QUY TẮC VỚI ĐOẠN VĂN/THƠ/BÀI ĐỌC:
-⚠️ RẤT QUAN TRỌNG - NẾU CÂU HỎI CÓ ĐOẠN THƠ, ĐOẠN VĂN, BÀI VĂN ĐI KÈM:
-- PHẢI LẤY TOÀN BỘ đoạn thơ/văn/bài đọc vào trường "question"
-- Format: "[Nội dung đoạn thơ/văn]\\n\\n[Câu hỏi về đoạn đó]"
-- VÍ DỤ: Nếu có bài thơ rồi hỏi "Mẹ của bạn nhỏ làm nghề gì?" 
-  → question phải chứa CẢ bài thơ VÀ câu hỏi
-- GIỮ NGUYÊN VĂN đoạn thơ/văn, kể cả tên tác giả nếu có
-
-⚠️ QUY TẮC LỌC CÂU HỎI:
-- BỎ QUA các câu hỏi cần HÌNH ẢNH/BIỂU ĐỒ/SƠ ĐỒ để trả lời
-- NHƯNG GIỮ LẠI các câu có ĐOẠN VĂN/THƠ/BÀI ĐỌC bằng chữ
-- ƯU TIÊN các câu hỏi có thể hiểu và làm được chỉ bằng chữ
-
-BƯỚC 2: TỰ ĐỘNG TẠO ĐÁP ÁN ĐÚNG
-⚠️ ĐÂY LÀ YÊU CẦU QUAN TRỌNG NHẤT:
-- Nếu file KHÔNG có đáp án: AI PHẢI TỰ GIẢI và đưa ra đáp án đúng
-- Nếu file CÓ đáp án: Sử dụng đáp án trong file
-- Với câu trắc nghiệm: Xác định đáp án đúng (A, B, C, D)
-- Với câu điền số: Tính toán và đưa ra kết quả đúng
-- Với câu Đúng/Sai: Xác định phát biểu nào Đúng, nào Sai
-- Với câu nối: Xác định cặp nối đúng
-
-BƯỚC 3: FORMAT JSON CHUẨN
-- question: NGUYÊN VĂN từ file (bao gồm cả đoạn thơ/văn nếu có)
-- options: NGUYÊN VĂN từ file (nếu có)
-- correctAnswer: Đáp án đúng (AI tự xác định hoặc lấy từ file)
-
-⚠️ LƯU Ý QUAN TRỌNG:
-1. Câu hỏi phải COPY NGUYÊN VĂN từ file - KHÔNG được sửa đổi
-2. Nếu có đoạn thơ/văn → PHẢI đưa vào question cùng câu hỏi
-3. Đáp án AI phải TỰ XÁC ĐỊNH nếu file không có
-4. BỎ QUA câu cần hình ảnh - GIỮ câu có đoạn văn/thơ bằng chữ
-5. NẾU file không phải đề thi (chỉ là tài liệu): HÃY SÁNG TẠO câu hỏi dựa trên nội dung file và kiến thức chuẩn.
-6. ƯU TIÊN sử dụng kiến thức trong file, nhưng CÓ THỂ dùng kiến thức bên ngoài để bổ trợ.
-
-⏬⏬⏬ TÀI LIỆU BẮT ĐẦU - ĐỌC VÀ TRÍCH XUẤT CÂU HỎI ⏬⏬⏬`
+    
+    userContent.unshift({
+      type: 'text',
+      text: `⛔⛔⛔ TÀI LIỆU ĐÍNH KÈM - ƯU TIÊN TUYỆT ĐỐI ⛔⛔⛔\n\n📄 LOẠI FILE: ${isPDF ? 'PDF - Tài liệu văn bản' : 'HÌNH ẢNH - Ảnh chụp bài học'}\n📁 TÊN FILE: ${file.name}\n\n🔴🔴🔴 NHIỆM VỤ BẮT BUỘC - ƯU TIÊN CAO NHẤT 🔴🔴🔴\n\nBƯỚC 1: XỬ LÝ NỘI DUNG FILE\n- ĐỌC KỸ toàn bộ nội dung trong file\n- NẾU LÀ ĐỀ THI CÓ SẴN: Trích xuất nguyên văn câu hỏi.\n- NẾU LÀ TÀI LIỆU HỌC TẬP (Truyện, văn, lý thuyết): Tự tạo câu hỏi trắc nghiệm dựa trên nội dung đó.\n- ĐƯỢC PHÉP điều chỉnh, bổ sung để câu hỏi rõ ràng, chính xác hơn.\n\n📝 QUY TẮC ĐỊNH DẠNG VĂN BẢN:\n⚠️ QUAN TRỌNG - GIỮ NGUYÊN ĐỊNH DẠNG:\n- Nếu có từ GẠCH CHÂN trong câu hỏi → dùng thẻ <u>từ gạch chân</u>\n- Nếu có từ QUAN TRỌNG, TỪ KHOÁ (VD: "Không đúng", "Sai", "Đồng nghĩa") → dùng thẻ <b>từ in đậm</b>\n- Nếu có TÊN RIÊNG, TRÍCH DẪN, TỪ ĐƯỢC NHẮC ĐẾN → dùng thẻ <q>từ trích dẫn</q> (sẽ hiển thị ngoặc kép cong)\n- VÍ DỤ: "Tìm từ <b>trái nghĩa</b> với từ <q>thông minh</q>"\n\n📖 QUY TẮC VỚI ĐOẠN VĂN/THƠ/BÀI ĐỌC:\n⚠️ RẤT QUAN TRỌNG - NẾU CÂU HỎI CÓ ĐOẠN THƠ, ĐOẠN VĂN, BÀI VĂN ĐI KÈM:\n- PHẢI LẤY TOÀN BỘ đoạn thơ/văn/bài đọc vào trường "question"\n- Format: "[Nội dung đoạn thơ/văn]\\n\\n[Câu hỏi về đoạn đó]"\n- VÍ DỤ: Nếu có bài thơ rồi hỏi "Mẹ của bạn nhỏ làm nghề gì?" \n  → question phải chứa CẢ bài thơ VÀ câu hỏi\n- GIỮ NGUYÊN VĂN đoạn thơ/văn, kể cả tên tác giả nếu có\n\n⚠️ QUY TẮC LỌC CÂU HỎI:\n- BỎ QUA các câu hỏi cần HÌNH ẢNH/BIỂU ĐỒ/SƠ ĐỒ để trả lời\n- NHƯNG GIỮ LẠI các câu có ĐOẠN VĂN/THƠ/BÀI ĐỌC bằng chữ\n- ƯU TIÊN các câu hỏi có thể hiểu và làm được chỉ bằng chữ\n\nBƯỚC 2: TỰ ĐỘNG TẠO ĐÁP ÁN ĐÚNG\n⚠️ ĐÂY LÀ YÊU CẦU QUAN TRỌNG NHẤT:\n- Nếu file KHÔNG có đáp án: AI PHẢI TỰ GIẢI và đưa ra đáp án đúng\n- Nếu file CÓ đáp án: Sử dụng đáp án trong file\n- Với câu trắc nghiệm: Xác định đáp án đúng (A, B, C, D)\n- Với câu điền số: Tính toán và đưa ra kết quả đúng\n- Với câu Đúng/Sai: Xác định phát biểu nào Đúng, nào Sai\n- Với câu nối: Xác định cặp nối đúng\n\nBƯỚC 3: FORMAT JSON CHUẨN\n- question: NGUYÊN VĂN từ file (bao gồm cả đoạn thơ/văn nếu có)\n- options: NGUYÊN VĂN từ file (nếu có)\n- correctAnswer: Đáp án đúng (AI tự xác định hoặc lấy từ file)\n\n⚠️ LƯU Ý QUAN TRỌNG:\n1. Câu hỏi phải COPY NGUYÊN VĂN từ file - KHÔNG được sửa đổi\n2. Nếu có đoạn thơ/văn → PHẢI đưa vào question cùng câu hỏi\n3. Đáp án AI phải TỰ XÁC ĐỊNH nếu file không có\n4. BỎ QUA câu cần hình ảnh - GIỮ câu có đoạn văn/thơ bằng chữ\n5. NẾU file không phải đề thi (chỉ là tài liệu): HÃY SÁNG TẠO câu hỏi dựa trên nội dung file và kiến thức chuẩn.\n6. ƯU TIÊN sử dụng kiến thức trong file, nhưng CÓ THỂ dùng kiến thức bên ngoài để bổ trợ.\n\n⏬⏬⏬ TÀI LIỆU BẮT ĐẦU - ĐỌC VÀ TRÍCH XUẤT CÂU HỎI ⏬⏬⏬`
     });
-    parts.push({
-      inline_data: {
-        mime_type: file.type,
-        data: base64Data
+    userContent.splice(1, 0, {
+      type: 'image_url',
+      image_url: {
+        url: `data:${file.type};base64,${base64Data}`
       }
     });
-    parts.push({
-      text: `⏫⏫⏫ KẾT THÚC TÀI LIỆU ⏫⏫⏫
-
-📋 NHẮC LẠI NHIỆM VỤ:
-1. Lấy NGUYÊN VĂN câu hỏi từ file (kèm đoạn thơ/văn nếu có)
-2. TỰ XÁC ĐỊNH đáp án đúng cho mỗi câu hỏi
-3. Format theo JSON schema đã định nghĩa`
+    userContent.push({
+      type: 'text',
+      text: `⏫⏫⏫ KẾT THÚC TÀI LIỆU ⏫⏫⏫\n\n📋 NHẮC LẠI NHIỆM VỤ:\n1. Lấy NGUYÊN VĂN câu hỏi từ file (kèm đoạn thơ/văn nếu có)\n2. TỰ XÁC ĐỊNH đáp án đúng cho mỗi câu hỏi\n3. Format theo JSON schema đã định nghĩa`
     });
   }
 
   // Handle Image Library
   if (imageLibrary && imageLibrary.length > 0) {
-    parts.push({ text: "THƯ VIỆN HÌNH ẢNH (Image Library):" });
+    userContent.push({ type: 'text', text: "THƯ VIỆN HÌNH ẢNH (Image Library):" });
     for (const img of imageLibrary) {
       if (img.data && img.data.startsWith('http')) {
         try {
           const { data, mimeType } = await urlToBase64(img.data);
-          parts.push({ text: `Image ID: ${img.id} (Name: ${img.name})` });
-          parts.push({
-            inline_data: {
-              mime_type: mimeType,
-              data: data
+          userContent.push({ type: 'text', text: `Image ID: ${img.id} (Name: ${img.name})` });
+          userContent.push({
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType};base64,${data}`
             }
           });
         } catch (err) {
           console.error(`Failed to fetch image ${img.id}:`, err);
-          parts.push({ text: `[Failed to load image ID: ${img.id}]` });
+          userContent.push({ type: 'text', text: `[Failed to load image ID: ${img.id}]` });
         }
       }
     }
   }
 
-  parts.push({ text: promptText });
-  contents.push({ parts: parts });
+  messages.push({
+    role: 'user',
+    content: userContent
+  });
 
   const requestBody = {
-    contents: contents,
-    system_instruction: {
-      parts: [{ text: SYSTEM_INSTRUCTION }]
-    },
-    tools: [
-      {
-        google_search_retrieval: {
-          dynamic_retrieval_config: {
-            mode: "MODE_DYNAMIC",
-            dynamic_threshold: 0.6
-          }
-        }
-      }
-    ],
-    generation_config: {
-      temperature: 0.4,
-      response_mime_type: "application/json"
-    }
+    model: MODEL_NAME,
+    messages: messages,
+    temperature: 0.4,
+    response_format: { type: "json_object" }
   };
 
   const maxRetries = 5;
@@ -782,20 +921,22 @@ BƯỚC 3: FORMAT JSON CHUẨN
 
   while (attempt < maxRetries) {
     try {
-      const data = await callApi('ai_chat', {
-        model: MODEL_NAME,
-        contents: contents,
-        system_instruction: {
-          parts: [{ text: SYSTEM_INSTRUCTION }]
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
         },
-        generation_config: {
-          temperature: 0.4,
-          response_mime_type: "application/json"
-        }
+        body: JSON.stringify(requestBody)
       });
 
+      if (!response.ok) {
+        throw new Error(`AI request failed with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
       const text = extractAIContent(data);
-      if (!text) throw new Error("AI không trả về kết quả nào (Định dạng Gemini không xác định).");
+      if (!text) throw new Error("AI không trả về kết quả nào.");
 
       // Format multiplication signs
       const formattedText = text
@@ -805,20 +946,133 @@ BƯỚC 3: FORMAT JSON CHUẨN
         .replace(/([a-zA-Z0-9?])\s*\*\s*([a-zA-Z0-9?(])/g, '$1 x $2')
         .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
 
-      return validateAndFixQuiz(parseAndRepairJSON(formattedText));
+      const quizData = validateAndFixQuiz(parseAndRepairJSON(formattedText));
+      
+      let finalQuiz = quizData;
+      if (onStepChange) {
+        onStepChange('reviewing');
+        try {
+          const reviewedJson = await validateQuizWithAI(quizData, apiKey);
+          finalQuiz = validateAndFixQuiz(reviewedJson);
+        } catch (reviewError) {
+          console.warn("[generateWithGemini] ⚠️ Reviewer agent failed, falling back to Generator draft:", reviewError);
+        }
+      }
+
+      // Map image IDs to data URLs if imageLibrary is provided
+      if (imageLibrary && imageLibrary.length > 0 && finalQuiz.questions) {
+        finalQuiz.questions = finalQuiz.questions.map((q: any) => {
+          if (q.type === 'IMAGE_QUESTION' && q.image) {
+            const imageItem = imageLibrary.find(img => img.id === q.image || img.name === q.image);
+            if (imageItem && imageItem.data) {
+              return { ...q, image: imageItem.data };
+            }
+          }
+          return q;
+        });
+      }
+
+      return finalQuiz;
 
     } catch (error: any) {
       attempt++;
-      if (attempt >= maxRetries || !error.message.includes("429")) {
-        console.error("Generate Quiz Error (Gemini):", error);
+      if (attempt >= maxRetries) {
+        console.error("Generate Quiz Error (Gemini through Proxy):", error);
         throw error;
       }
       const delay = Math.pow(2, attempt) * 1000;
-      console.log(`Rate limited (Gemini). Đang chờ ${delay / 1000}s trước khi thử lại (lần ${attempt}/${maxRetries})...`);
+      console.log(`Rate limited or Error (Gemini Proxy). Đang chờ ${delay / 1000}s trước khi thử lại (lần ${attempt}/${maxRetries})...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
-}
+};
+
+// Review quiz using AI Validation Chain
+export const validateQuizWithAI = async (
+  quizJson: any,
+  apiKey: string
+): Promise<any> => {
+  const MODEL_NAME = 'gemini-2.0-flash';
+  const configuredReviewerBaseUrl = (import.meta as any).env.VITE_LOCALHOST_AI_URL || 'http://localhost:3000/v1';
+  const reviewerBaseUrl = resolvePublicProviderBaseUrl(configuredReviewerBaseUrl, 'https://api.thitong.site/v1');
+  const API_URL = `${reviewerBaseUrl}/chat/completions`;
+
+  console.log('[AI Validation Chain] Đang tiến hành duyệt và sửa lỗi JSON...');
+
+  const messages: any[] = [
+    {
+      role: 'system',
+      content: REVIEWER_INSTRUCTION
+    },
+    {
+      role: 'user',
+      content: `Hãy soát lỗi và sửa lại file JSON bản thảo đề thi dưới đây:\n\n${JSON.stringify(quizJson, null, 2)}`
+    }
+  ];
+
+  const requestBody = {
+    model: MODEL_NAME,
+    messages: messages,
+    temperature: 0.1, // Temperature rất thấp
+    response_format: { type: "json_object" }
+  };
+
+  const maxRetries = 2;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    try {
+      let targetUrl = API_URL.endsWith('/chat/completions') ? API_URL : `${reviewerBaseUrl}/chat/completions`;
+
+      if ((targetUrl.includes('localhost') || targetUrl.includes('127.0.0.1')) &&
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1') {
+        targetUrl = targetUrl
+          .replace('localhost', window.location.hostname)
+          .replace('127.0.0.1', window.location.hostname);
+      }
+
+      const fetchUrl = shouldUseCliproxyDevProxy(targetUrl) ? '/api/cliproxy/chat/completions' : targetUrl;
+
+      const response = await fetch(fetchUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Reviewer request failed with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const aiErrorMessage = extractAIErrorMessage(data);
+      if (aiErrorMessage) {
+        throw new Error(aiErrorMessage);
+      }
+      const text = extractAIContent(data);
+      
+      if (!text) throw new Error("AI Reviewer không trả về kết quả nào.");
+
+      const parsedJSON = parseAndRepairJSON(text);
+      console.log('[AI Validation Chain] Đã rà soát và sửa lỗi thành công!');
+      
+      return validateAndFixQuiz(parsedJSON); 
+
+    } catch (error: any) {
+      attempt++;
+      if (attempt >= maxRetries) {
+        console.error("[AI Validation Chain] Lỗi rà soát đề thi:", error);
+        console.warn("[AI Validation Chain] Dùng lại JSON bản thảo ban đầu làm Fallback.");
+        return validateAndFixQuiz(quizJson); // Fallback to original
+      }
+      const delay = Math.pow(2, attempt) * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+};
 
 // Generate quiz using OpenAI API (or compatible LLM-Mux)
 const generateWithOpenAI = async (
@@ -826,13 +1080,16 @@ const generateWithOpenAI = async (
   apiKey: string,
   file?: File | null,
   imageLibrary?: Array<{ id: string; name: string; data?: string; }>,
-  baseUrl: string = 'https://api.openai.com/v1'
+  baseUrl: string = 'https://api.openai.com/v1',
+  onStepChange?: (step: 'generating' | 'reviewing' | 'completed') => void
 ): Promise<any> => {
   const API_URL = `${baseUrl}/chat/completions`;
   // If using LLM-Mux or AIClient, default to Gemini model
   // Check for localhost, 127.0.0.1, or thitong.site (AIClient deployed)
   const isLlmMux = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('thitong.site');
-  const MODEL_NAME = isLlmMux ? 'gemini-3-pro-preview' : 'gpt-4o';
+  const modelCandidates = isLlmMux
+    ? ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3-pro-preview']
+    : ['gpt-4o'];
 
   const messages: any[] = [
     {
@@ -890,44 +1147,58 @@ Tài liệu đính kèm:`
     content: userContent
   });
 
-  const requestBody = {
-    model: MODEL_NAME,
+  let currentModel = modelCandidates[0];
+  let requestBody = {
+    model: currentModel,
     messages: messages,
     temperature: 0.4,
     response_format: { type: "json_object" }
   };
 
-  console.log(`[AIClient] Sending request to ${API_URL} with model ${MODEL_NAME}`);
+  console.log(`[AIClient] Sending request to ${API_URL} with model ${currentModel}`);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 phút timeout cho 100 câu
 
-  try {
-    const WORKERS_API_URL = (import.meta as any).env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
 
-    // Mặc định đi qua Cloudflare Worker Proxy
-    let fetchUrl = `${WORKERS_API_URL}/api/ai/chat`;
-    let fetchHeaders: any = {
+  // ✅ Gọi thẳng AI proxy URL (không đi qua Workers để tránh lỗi 403 token expired)
+  // API_URL đã được build từ baseUrl, chỉ cần thêm /chat/completions nếu chưa có
+  let targetUrl = API_URL.endsWith('/chat/completions') ? API_URL : `${baseUrl}/chat/completions`;
+
+  // ⚡ Tự động đổi localhost thành IP/Domain thực tế của tab trình duyệt
+  // Giúp khi truy cập web bằng IP (vd: 103.47...) thì trình duyệt không gọi nhầm vào localhost
+  if ((targetUrl.includes('localhost') || targetUrl.includes('127.0.0.1')) &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1') {
+    targetUrl = targetUrl.replace('localhost', window.location.hostname).replace('127.0.0.1', window.location.hostname);
+  }
+
+  let fetchUrl = shouldUseCliproxyDevProxy(targetUrl) ? '/api/cliproxy/chat/completions' : targetUrl;
+  let fetchHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (apiKey) {
+    fetchHeaders.Authorization = `Bearer ${apiKey}`;
+  }
+
+  // 🔁 Fallback: Nếu không có apiKey, thử qua Workers với token từ env
+  const WORKERS_API_URL = (import.meta as any).env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+  const workerToken = (import.meta as any).env.VITE_API_SECRET_TOKEN || '';
+  if (!apiKey && workerToken) {
+    console.log('⚠️ [AIClient] No apiKey, falling back to Workers proxy...');
+    fetchUrl = `${WORKERS_API_URL}/api/ai/chat`;
+    fetchHeaders = {
       'Content-Type': 'application/json',
-      'X-API-Token': (import.meta as any).env.VITE_API_SECRET_TOKEN || '[REDACTED-COMPROMISED-SHARED-TOKEN]',
+      'X-API-Token': workerToken,
       'x-target-url': API_URL,
-      'x-target-token': apiKey,
+      'x-target-token': '',
     };
+  }
 
-    // ⚡ CHẾ ĐỘ DEV (Dành cho Anh chạy Localhost)
-    // Nếu anh đang chạy web trên máy tính (localhost) và gọi AIProxy cũng trên máy tính (localhost),
-    // Chúng ta sẽ BẮN THẲNG không cần phải đi vòng lên mạng Cloudflare nữa!
-    const isDevLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (isDevLocalhost && (API_URL.includes('localhost') || API_URL.includes('127.0.0.1'))) {
-      console.log('🚀 [DevMode] Bypassing Worker Proxy -> Gọi thẳng AI Client API Dưới Localhost!');
-      fetchUrl = `${API_URL}/chat/completions`;
-      fetchHeaders = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      };
-      (requestBody as any).stream = true; // Ép stream luôn vì dưới máy gọi trực tiếp được
-    }
+  console.log(`🚀 [AIClient] Calling: ${fetchUrl}`);
 
+  try {
     const response = await fetch(fetchUrl, {
       method: 'POST',
       headers: fetchHeaders,
@@ -962,7 +1233,7 @@ Tài liệu đính kèm:`
           if (line.startsWith('data: ') && !line.includes('[DONE]')) {
             try {
               const json = JSON.parse(line.slice(6));
-              const delta = json.choices?.[0]?.delta?.content;
+              const delta = extractAIContent(json);
               if (delta) fullContent += delta;
             } catch {
               // Skip malformed SSE lines
@@ -974,6 +1245,10 @@ Tài liệu đính kèm:`
     } else {
       // JSON response (non-streaming)
       const data = await response.json();
+      const aiErrorMessage = extractAIErrorMessage(data);
+      if (aiErrorMessage) {
+        throw new Error(aiErrorMessage);
+      }
       fullContent = extractAIContent(data) || '';
       console.log(`[AIClient] JSON response from ${API_URL}`);
     }
@@ -997,9 +1272,20 @@ Tài liệu đính kèm:`
 
     const parsedQuiz = validateAndFixQuiz(parseAndRepairJSON(formattedText));
 
+    let finalQuiz = parsedQuiz;
+    if (onStepChange) {
+      onStepChange('reviewing');
+      try {
+        const reviewedJson = await validateQuizWithAI(parsedQuiz, apiKey);
+        finalQuiz = validateAndFixQuiz(reviewedJson);
+      } catch (reviewError) {
+        console.warn("[generateWithOpenAI] ⚠️ Reviewer agent failed, falling back to Generator draft:", reviewError);
+      }
+    }
+
     // Map image IDs to data URLs if imageLibrary is provided
-    if (imageLibrary && imageLibrary.length > 0 && parsedQuiz.questions) {
-      parsedQuiz.questions = parsedQuiz.questions.map((q: any) => {
+    if (imageLibrary && imageLibrary.length > 0 && finalQuiz.questions) {
+      finalQuiz.questions = finalQuiz.questions.map((q: any) => {
         if (q.type === 'IMAGE_QUESTION' && q.image) {
           const imageItem = imageLibrary.find(img => img.id === q.image || img.name === q.image);
           if (imageItem && imageItem.data) {
@@ -1010,7 +1296,7 @@ Tài liệu đính kèm:`
       });
     }
 
-    return parsedQuiz;
+    return finalQuiz;
 
   } catch (error: any) {
     if (error.name === 'AbortError') {
@@ -1021,6 +1307,239 @@ Tài liệu đính kèm:`
   }
 };
 
+const generateWithOpenAIResilient = async (
+  promptText: string,
+  apiKey: string,
+  file?: File | null,
+  imageLibrary?: Array<{ id: string; name: string; data?: string; }>,
+  baseUrl: string = 'https://api.openai.com/v1',
+  onStepChange?: (step: 'generating' | 'reviewing' | 'completed') => void
+): Promise<any> => {
+  const API_URL = `${baseUrl}/chat/completions`;
+  const isLlmMux = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('thitong.site');
+  const modelCandidates = isLlmMux
+    ? ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3-pro-preview']
+    : ['gpt-4o'];
+
+  const messages: any[] = [
+    {
+      role: 'system',
+      content: SYSTEM_INSTRUCTION
+    }
+  ];
+
+  const userContent: any[] = [{ type: 'text', text: promptText }];
+
+  if (file && file.type.startsWith('image/')) {
+    const base64Data = await fileToBase64(file);
+    userContent.unshift({
+      type: 'text',
+      text: `TAI LIEU DINH KEM (Attached File) - UU TIEN CAO NHAT:
+Day la tai lieu bai hoc/noi dung do giao vien tai len.
+
+YEU CAU BAT BUOC:
+1. DOC KY VA HIEU noi dung trong tai lieu nay.
+2. TAO CAU HOI DUA TREN NOI DUNG TRONG TAI LIEU NAY LA CHINH.
+3. Tat ca cau hoi phai lien quan truc tiep den kien thuc trong tai lieu.
+4. Khong tu bia noi dung ngoai tai lieu tru khi can bo sung.
+5. Neu la anh chup bai hoc, hay doc van ban trong anh va tao cau hoi tu do.
+
+Tai lieu dinh kem:`
+    });
+    userContent.splice(1, 0, {
+      type: 'image_url',
+      image_url: {
+        url: `data:${file.type};base64,${base64Data}`
+      }
+    });
+  }
+
+  if (imageLibrary && imageLibrary.length > 0) {
+    userContent.push({ type: 'text', text: '\n\nTHU VIEN HINH ANH (Image Library):' });
+    for (const img of imageLibrary) {
+      if (img.data && img.data.startsWith('http')) {
+        userContent.push({ type: 'text', text: `\nImage ID: ${img.id} (Name: ${img.name})` });
+        userContent.push({
+          type: 'image_url',
+          image_url: {
+            url: img.data
+          }
+        });
+      }
+    }
+  }
+
+  messages.push({
+    role: 'user',
+    content: userContent
+  });
+
+  const WORKERS_API_URL = (import.meta as any).env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+  const workerToken = (import.meta as any).env.VITE_API_SECRET_TOKEN || '';
+
+  let targetUrl = API_URL.endsWith('/chat/completions') ? API_URL : `${baseUrl}/chat/completions`;
+
+  if ((targetUrl.includes('localhost') || targetUrl.includes('127.0.0.1')) &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1') {
+    targetUrl = targetUrl
+      .replace('localhost', window.location.hostname)
+      .replace('127.0.0.1', window.location.hostname);
+  }
+
+  let fetchUrl = shouldUseCliproxyDevProxy(targetUrl) ? '/api/cliproxy/chat/completions' : targetUrl;
+  let fetchHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (apiKey) {
+    fetchHeaders.Authorization = `Bearer ${apiKey}`;
+  }
+
+  if (!apiKey && workerToken) {
+    fetchUrl = `${WORKERS_API_URL}/api/ai/chat`;
+    fetchHeaders = {
+      'Content-Type': 'application/json',
+      'X-API-Token': workerToken,
+      'x-target-url': API_URL,
+      'x-target-token': '',
+    };
+  }
+
+  const mapImageReferences = (quiz: any) => {
+    if (!imageLibrary || imageLibrary.length === 0 || !quiz?.questions) {
+      return quiz;
+    }
+
+    quiz.questions = quiz.questions.map((q: any) => {
+      if (q.type === 'IMAGE_QUESTION' && q.image) {
+        const imageItem = imageLibrary.find(img => img.id === q.image || img.name === q.image);
+        if (imageItem?.data) {
+          return { ...q, image: imageItem.data };
+        }
+      }
+      return q;
+    });
+
+    return quiz;
+  };
+
+  let lastError: unknown = null;
+
+  for (let modelIndex = 0; modelIndex < modelCandidates.length; modelIndex++) {
+    const modelName = modelCandidates[modelIndex];
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000);
+
+    try {
+      const requestBody = {
+        model: modelName,
+        messages,
+        temperature: 0.4,
+        response_format: { type: 'json_object' }
+      };
+
+      console.log(`[AIClient] Sending request to ${API_URL} with model ${modelName}`);
+      console.log(`[AIClient] Calling: ${fetchUrl}`);
+
+      const response = await fetch(fetchUrl, {
+        method: 'POST',
+        headers: fetchHeaders,
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        throw new Error(`AI Service Error (${response.status}): ${errText || response.statusText}`);
+      }
+
+      let fullContent = '';
+      const contentType = response.headers.get('Content-Type') || '';
+
+      if (contentType.includes('text/event-stream') && response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+              try {
+                const json = JSON.parse(line.slice(6));
+                const delta = extractAIContent(json);
+                if (delta) fullContent += delta;
+              } catch {
+                // Ignore malformed SSE frames.
+              }
+            }
+          }
+        }
+      } else {
+        const data = await response.json();
+        const aiErrorMessage = extractAIErrorMessage(data);
+        if (aiErrorMessage) {
+          throw new Error(aiErrorMessage);
+        }
+        fullContent = extractAIContent(data) || '';
+      }
+
+      if (!fullContent) {
+        throw new Error('AI không trả về kết quả nào (Định dạng OpenAI không xác định).');
+      }
+
+      const formattedText = fullContent
+        .replace(/\s\*\s/g, ' x ')
+        .replace(/\)\s*\*\s*/g, ') x ')
+        .replace(/\s*\*\s*\(/g, ' x (')
+        .replace(/([a-zA-Z0-9?])\s*\*\s*([a-zA-Z0-9?(])/g, '$1 x $2')
+        .replace(/([a-zA-Z0-9?]+)\s+\/\s+([a-zA-Z0-9?]+)/g, '$1 : $2');
+
+      const parsedQuiz = validateAndFixQuiz(parseAndRepairJSON(formattedText));
+
+      let finalQuiz = parsedQuiz;
+      if (onStepChange) {
+        onStepChange('reviewing');
+        try {
+          const reviewedJson = await validateQuizWithAI(parsedQuiz, apiKey);
+          finalQuiz = validateAndFixQuiz(reviewedJson);
+        } catch (reviewError) {
+          console.warn('[generateWithOpenAIResilient] Reviewer agent failed, using generator draft.', reviewError);
+        }
+      }
+
+      return mapImageReferences(finalQuiz);
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        throw new Error('Yêu cầu quá thời gian (Timeout). Vui lòng thử lại.');
+      }
+
+      lastError = error;
+      const canTryNextModel = isLlmMux &&
+        modelIndex < modelCandidates.length - 1 &&
+        shouldTryNextModel(error);
+
+      if (canTryNextModel) {
+        console.warn(`[AIClient] Model ${modelName} failed, trying next candidate...`, error);
+        continue;
+      }
+
+      console.error('GenerateWithOpenAIResilient Error:', error);
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  console.error('GenerateWithOpenAIResilient Error:', lastError);
+  throw lastError instanceof Error ? lastError : new Error('AI không trả về kết quả nào.');
+};
+
 // Main export function
 export const generateQuiz = async (
   topic: string,
@@ -1029,14 +1548,15 @@ export const generateQuiz = async (
   file?: File | null,
   options?: QuizGenerationOptions,
   customApiKey?: string,
-  provider: AIProvider = 'localhost' // Default to Localhost AIcliproxy
+  provider: AIProvider = 'localhost', // Default to Localhost AIcliproxy
+  onStepChange?: (step: 'generating' | 'reviewing' | 'completed') => void
 ): Promise<any> => {
   // Determine API Key based on provider
   let envKey = '';
   let actualProvider = provider;
 
   if (provider === 'localhost') {
-    envKey = (import.meta as any).env.VITE_LOCALHOST_AI_KEY || (import.meta as any).env.VITE_CLIPROXY_TOKEN || '[REDACTED-COMPROMISED-VALUE]@';
+    envKey = (import.meta as any).env.VITE_LOCALHOST_AI_KEY || (import.meta as any).env.VITE_CLIPROXY_TOKEN || '';
   } else if (provider === 'perplexity') {
     envKey = (import.meta as any).env.VITE_PERPLEXITY_API_KEY || '';
   } else if (provider === 'openai') {
@@ -1069,16 +1589,17 @@ export const generateQuiz = async (
   if (actualProvider === 'localhost') {
     // ⚡ Localhost AIcliproxy - gọi trực tiếp
     const baseUrl = (import.meta as any).env.VITE_LOCALHOST_AI_URL || 'https://ai.thitong.site/v1';
-    result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary, baseUrl);
+    result = await generateWithOpenAIResilient(promptText, apiKey, file, options?.imageLibrary, baseUrl, onStepChange);
   } else if (actualProvider === 'perplexity') {
     result = await generateWithPerplexity(promptText, apiKey);
   } else if (actualProvider === 'openai') {
-    result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary);
+    result = await generateWithOpenAIResilient(promptText, apiKey, file, options?.imageLibrary, undefined, onStepChange);
   } else if (actualProvider === 'llm-mux') {
-    const baseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || (import.meta as any).env.VITE_CLIPROXY_API || 'https://api.thitong.site/v1';
-    result = await generateWithOpenAI(promptText, apiKey, file, options?.imageLibrary, baseUrl);
+    const configuredBaseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || (import.meta as any).env.VITE_CLIPROXY_API || '';
+    const baseUrl = resolvePublicProviderBaseUrl(configuredBaseUrl, 'https://api.thitong.site/v1');
+    result = await generateWithOpenAIResilient(promptText, apiKey, file, options?.imageLibrary, baseUrl, onStepChange);
   } else {
-    result = await generateWithGemini(promptText, apiKey, file, options?.imageLibrary);
+    result = await generateWithGemini(promptText, apiKey, file, options?.imageLibrary, onStepChange);
   }
 
   // ⚠️ CRITICAL: Ensure question count matches requested count

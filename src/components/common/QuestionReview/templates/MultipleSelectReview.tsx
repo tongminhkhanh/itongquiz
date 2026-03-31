@@ -13,11 +13,27 @@ interface MultipleSelectReviewProps {
  */
 const MultipleSelectReview: React.FC<MultipleSelectReviewProps> = memo(({ question, studentAnswer, status }) => {
     const options = question.options || [];
+    const normalizeOptionText = (option: any) => {
+        if (typeof option === 'string') return option.trim().toUpperCase();
+        return String(option?.text ?? option?.content ?? option?.label ?? '').trim().toUpperCase();
+    };
+    const normalizeChoice = (raw: any): string => {
+        if (typeof raw === 'number' && Number.isFinite(raw)) {
+            return String.fromCharCode(65 + raw);
+        }
+
+        const normalized = String(raw ?? '').trim().toUpperCase();
+        if (!normalized) return '';
+        if (/^[A-Z]$/.test(normalized)) return normalized;
+
+        const optionIndex = options.findIndex((option: any) => normalizeOptionText(option) === normalized);
+        return optionIndex >= 0 ? String.fromCharCode(65 + optionIndex) : normalized;
+    };
 
     // Normalize student choices
     let studentChoices: string[] = [];
     if (Array.isArray(studentAnswer)) {
-        studentChoices = studentAnswer;
+        studentChoices = studentAnswer.map(normalizeChoice);
     } else if (typeof studentAnswer === 'object' && studentAnswer !== null) {
         // Handle format: { "item-0": true, "A": true }
         studentChoices = Object.keys(studentAnswer).filter(key => studentAnswer[key]).map(key => {
@@ -25,24 +41,34 @@ const MultipleSelectReview: React.FC<MultipleSelectReviewProps> = memo(({ questi
                 const idx = parseInt(key.replace('item-', ''), 10);
                 return String.fromCharCode(65 + idx);
             }
-            return key;
-        });
+            return normalizeChoice(key);
+        }).filter(Boolean);
     }
 
     // Normalize correct answers
     let correctAnswers: string[] = [];
     if (Array.isArray(question.correctAnswers)) {
-        correctAnswers = question.correctAnswers;
+        correctAnswers = question.correctAnswers.map(normalizeChoice);
     } else if (Array.isArray(question.correctAnswer)) {
-        correctAnswers = question.correctAnswer;
+        correctAnswers = question.correctAnswer.map(normalizeChoice);
     } else if (typeof question.correctAnswer === 'string') {
         try {
             const parsed = JSON.parse(question.correctAnswer);
-            if (Array.isArray(parsed)) correctAnswers = parsed;
+            if (Array.isArray(parsed)) correctAnswers = parsed.map(normalizeChoice);
         } catch {
-            correctAnswers = [question.correctAnswer];
+            correctAnswers = question.correctAnswer.split('|').map(normalizeChoice);
+        }
+    } else if (typeof question.correctAnswers === 'string') {
+        try {
+            const parsed = JSON.parse(question.correctAnswers);
+            if (Array.isArray(parsed)) correctAnswers = parsed.map(normalizeChoice);
+        } catch {
+            correctAnswers = question.correctAnswers.split('|').map(normalizeChoice);
         }
     }
+
+    studentChoices = Array.from(new Set(studentChoices)).sort();
+    correctAnswers = Array.from(new Set(correctAnswers.filter(Boolean))).sort();
 
     return (
         <div className="multiple-select-review-template">

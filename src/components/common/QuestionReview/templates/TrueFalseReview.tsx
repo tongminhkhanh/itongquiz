@@ -15,13 +15,54 @@ interface TrueFalseReviewProps {
 const TrueFalseReview: React.FC<TrueFalseReviewProps> = memo(({ question, studentAnswer, status }) => {
     const items = question.items || [];
     const correctAnswer = question.correctAnswer;
+    const buildCorrectAnswers = (): Record<string, boolean> => {
+        const normalized: Record<string, boolean> = {};
+
+        if (Array.isArray(items) && items.length > 0) {
+            items.forEach((item: any, idx: number) => {
+                if (item && typeof item === 'object' && 'isCorrect' in item) {
+                    normalized[item.id || `item-${idx}`] = Boolean(item.isCorrect);
+                }
+            });
+            if (Object.keys(normalized).length > 0) {
+                return normalized;
+            }
+        }
+
+        if (typeof correctAnswer === 'object' && correctAnswer !== null && !Array.isArray(correctAnswer)) {
+            Object.entries(correctAnswer).forEach(([key, value]) => {
+                normalized[key] = Boolean(value);
+            });
+            return normalized;
+        }
+
+        if (typeof correctAnswer === 'string') {
+            try {
+                const parsed = JSON.parse(correctAnswer);
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    Object.entries(parsed).forEach(([key, value]) => {
+                        normalized[key] = Boolean(value);
+                    });
+                    return normalized;
+                }
+            } catch {
+                // Keep simple single-value fallback below.
+            }
+        }
+
+        return normalized;
+    };
 
     // Handle simple true/false (single statement)
     if (typeof studentAnswer === 'string' || typeof studentAnswer === 'boolean') {
         const studentVal = String(studentAnswer).toLowerCase() === 'true';
-        const correctVal = typeof correctAnswer === 'string'
+        const normalizedCorrectAnswers = buildCorrectAnswers();
+        const singleDerivedAnswer = Object.keys(normalizedCorrectAnswers).length === 1
+            ? Object.values(normalizedCorrectAnswers)[0]
+            : undefined;
+        const correctVal = singleDerivedAnswer ?? (typeof correctAnswer === 'string'
             ? correctAnswer.toLowerCase() === 'true'
-            : Boolean(correctAnswer);
+            : Boolean(correctAnswer));
 
         return (
             <div className="true-false-review-template">
@@ -41,12 +82,7 @@ const TrueFalseReview: React.FC<TrueFalseReviewProps> = memo(({ question, studen
     // Handle multi-item format: { "item-0": true, "item-1": false }
     if (typeof studentAnswer === 'object' && studentAnswer !== null) {
         // Parse correct answers
-        let correctAnswers: Record<string, boolean> = {};
-        if (typeof correctAnswer === 'object' && correctAnswer !== null) {
-            correctAnswers = correctAnswer;
-        } else if (typeof correctAnswer === 'string') {
-            try { correctAnswers = JSON.parse(correctAnswer); } catch { }
-        }
+        const correctAnswers = buildCorrectAnswers();
 
         return (
             <div className="true-false-review-template">
