@@ -337,7 +337,14 @@ const LoginLandingPage: React.FC = () => {
 
                     {/* Bottom notes */}
                     <p className="text-center text-sm text-slate-400 mt-8 font-medium">
-                        Cần hỗ trợ? Hãy liên hệ với Quản trị viên nhà trường.
+                        Cần hỗ trợ? Hãy{' '}
+                        <a
+                            href="mailto:sample_user_baf53feb@gmail.com"
+                            className="text-blue-600 hover:text-blue-700 underline decoration-blue-400 underline-offset-2 font-semibold"
+                        >
+                            liên hệ
+                        </a>{' '}
+                        với Quản trị viên nhà trường.
                     </p>
                 </motion.div>
 
