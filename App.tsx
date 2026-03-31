@@ -40,9 +40,7 @@ const App: React.FC = () => {
         }
     }, []);
 
-    // --- SEO & Scrolling Title ---
-    const [baseTitle, setBaseTitle] = useState('ItOng Quiz - Hệ thống Tạo đề và Ôn thi cho học sinh Tiểu học Ít Ong');
-
+    // --- SEO & Meta Tags ---
     useEffect(() => {
         let title = 'ItOng Quiz - Hệ thống Tạo đề và Ôn thi cho học sinh Tiểu học Ít Ong';
         let description = 'ItOng Quiz giúp giáo viên tạo đề thi trắc nghiệm từ file PDF/Notion chỉ trong 30 giây. Hỗ trợ học sinh ôn thi chương trình GDPT 2018 bám sát chương trình sách giáo khoa với công nghệ AI tiên tiến.';
@@ -58,7 +56,7 @@ const App: React.FC = () => {
             title = 'Điều khoản dịch vụ - ItOng Quiz';
         }
 
-        setBaseTitle(title);
+        document.title = title;
 
         // Update meta description
         const metaDescription = document.querySelector('meta[name="description"]');
@@ -74,20 +72,6 @@ const App: React.FC = () => {
         if (ogDesc) ogDesc.setAttribute('content', description);
 
     }, [quizStore.view, quizStore.selectedQuiz?.id]);
-
-    // Marquee effect logic
-    useEffect(() => {
-        let currentTitle = baseTitle + "        "; // Thêm 8 khoảng trắng để mượt hơn
-        const interval = setInterval(() => {
-            currentTitle = currentTitle.substring(1) + currentTitle.substring(0, 1);
-            document.title = currentTitle;
-        }, 200); // Tăng tốc lên 200ms để đỡ bị giật
-
-        return () => {
-            clearInterval(interval);
-            document.title = baseTitle;
-        };
-    }, [baseTitle]);
 
     const loadIoeData = async (forceRefresh = false) => {
         if (ioeLoading) return;
