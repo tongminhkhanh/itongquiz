@@ -3,7 +3,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import { Loader2, User, Lock, GraduationCap, Apple, CheckCircle2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 
 const LoginLandingPage: React.FC = () => {
     // --- State ---
@@ -11,6 +11,33 @@ const LoginLandingPage: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [localError, setLocalError] = useState('');
+
+    // --- Parallax Mouse Tracking (Sửa lỗi thiếu biến) ---
+    const mouseX = useMotionValue(0);
+    const mouseY = useMotionValue(0);
+
+    const springConfig = { damping: 25, stiffness: 120 };
+    const xSpring = useSpring(mouseX, springConfig);
+    const ySpring = useSpring(mouseY, springConfig);
+
+    // Deep Parallax Layers (Tránh lặp tên)
+    const layer0_X = useTransform(xSpring, [-500, 500], [10, -10]);
+    const layer0_Y = useTransform(ySpring, [-400, 400], [10, -10]);
+
+    const layer1_X = useTransform(xSpring, [-500, 500], [25, -25]);
+    const layer1_Y = useTransform(ySpring, [-400, 400], [25, -25]);
+
+    const layer2_X = useTransform(xSpring, [-500, 500], [15, -15]);
+    const layer2_Y = useTransform(ySpring, [-400, 400], [15, -15]);
+
+    const layerFront_X = useTransform(xSpring, [-500, 500], [40, -40]);
+    const layerFront_Y = useTransform(ySpring, [-400, 400], [40, -40]);
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        const { clientX, clientY } = e;
+        mouseX.set(clientX - window.innerWidth / 2);
+        mouseY.set(clientY - window.innerHeight / 2);
+    };
 
     // --- Stores ---
     const authStore = useAuthStore();
@@ -83,7 +110,10 @@ const LoginLandingPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full flex flex-col md:flex-row bg-slate-50 font-sans">
+        <div 
+            onMouseMove={handleMouseMove}
+            className="min-h-screen w-full flex flex-col md:flex-row bg-slate-50 font-sans overflow-x-hidden"
+        >
             {/* LEFT COLUMN: Hero Section (60%) */}
             <div className="md:w-[60%] w-full relative overflow-hidden flex flex-col justify-center p-8 md:p-16 lg:p-24 bg-gradient-to-br from-indigo-900 via-blue-800 to-teal-500 text-white">
                 {/* Background Decorations */}
@@ -92,7 +122,23 @@ const LoginLandingPage: React.FC = () => {
                     <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px] bg-teal-400"></div>
                 </div>
 
-
+                {/* Light Particles Layer (Layer 0) */}
+                <motion.div style={{ x: layer0_X, y: layer0_Y }} className="absolute inset-0 pointer-events-none overflow-hidden">
+                    {[...Array(15)].map((_, i) => (
+                        <div
+                            key={i}
+                            className="light-particle"
+                            style={{
+                                top: `${Math.random() * 100}%`,
+                                left: `${Math.random() * 100}%`,
+                                width: `${Math.random() * 6 + 2}px`,
+                                height: `${Math.random() * 6 + 2}px`,
+                                animation: `particle-pulse ${Math.random() * 4 + 2}s infinite ${Math.random() * 2}s`,
+                                opacity: Math.random() * 0.5 + 0.1
+                            }}
+                        />
+                    ))}
+                </motion.div>
 
                 <div className="relative z-10 max-w-2xl">
                     <div className="flex items-center gap-3 mb-8">
@@ -135,6 +181,52 @@ const LoginLandingPage: React.FC = () => {
                         </li>
                     </ul>
                 </div>
+
+                {/* 3D Knowledge Halo Overlay */}
+                <div className="absolute inset-0 z-0 pointer-events-none">
+                    
+                    {/* Layer 1: Middle (Behind Student) */}
+                    <motion.div style={{ x: layer1_X, y: layer1_Y }} className="absolute inset-0">
+                        <img 
+                            src="/assets/icons/book-icon.png" 
+                            className="absolute bottom-[35%] right-[25%] w-24 h-24 floating-halo-1 opacity-80 blur-[1px]" 
+                            alt="Book Icon"
+                        />
+                        <img 
+                            src="/assets/icons/cap-icon.png" 
+                            className="absolute bottom-[45%] right-[5%] w-20 h-20 floating-halo-2 opacity-70 blur-[0.5px]" 
+                            alt="Cap Icon"
+                        />
+                    </motion.div>
+
+                    {/* Layer 2: Main Student */}
+                    <motion.div
+                        style={{ x: layer2_X, y: layer2_Y }}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 1.2, delay: 0.5, ease: "easeOut" }}
+                        className="absolute bottom-[-20px] right-[-40px] w-[50%] max-w-[450px] z-10"
+                    >
+                        <img
+                            src="/assets/student-hero.png"
+                            alt="Student 3D"
+                            className="w-full h-auto shadow-3d-premium"
+                        />
+                    </motion.div>
+
+                    {/* Layer 3: Front (In front of student) */}
+                    <motion.div style={{ x: layerFront_X, y: layerFront_Y }} className="absolute inset-0 z-20">
+                        <img 
+                            src="/assets/icons/pencil-icon.png" 
+                            className="absolute bottom-[10%] right-[35%] w-20 h-20 floating-halo-3" 
+                            alt="Pencil Icon"
+                        />
+                        {/* Đã gỡ bỏ bóng đèn theo yêu cầu */}
+                    </motion.div>
+                </div>
+
+                {/* Right Edge Gradient Fade (Sự chuyển tiếp nhẹ nhàng - Premium Polish) */}
+                <div className="absolute top-0 right-0 h-full w-40 hero-edge-fade pointer-events-none hidden md:block z-20"></div>
             </div>
 
             {/* RIGHT COLUMN: Form Login (40%) */}

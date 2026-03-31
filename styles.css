@@ -2799,3 +2799,66 @@ canvas {
     bottom: calc(12px + env(safe-area-inset-bottom));
   }
 }
+
+/* =========================
+   3D CHARACTER EFFECTS
+   ========================= */
+@keyframes floating-3d {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(1deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+.animate-float-3d {
+    animation: floating-3d 6s ease-in-out infinite;
+}
+
+/* 3D Character Shadow & Blend Mode */
+/* 3D Character Shadow & Integration */
+/* 3D Knowledge Halo & Parallax Enhancements */
+.shadow-3d-premium {
+    filter: drop-shadow(0 20px 50px rgba(0, 0, 0, 0.4));
+}
+
+/* Light Particles (Dust) */
+.light-particle {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 80%);
+    pointer-events: none;
+    z-index: 5;
+    mix-blend-mode: screen;
+}
+
+@keyframes particle-pulse {
+    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+    50% { opacity: 0.8; transform: scale(1.2); }
+}
+
+/* Floating Animations for Halo Icons */
+.floating-halo-1 { animation: floating-3d-v2 6s ease-in-out infinite; }
+.floating-halo-2 { animation: floating-3d-v2 8s ease-in-out infinite 1.5s; }
+.floating-halo-3 { animation: floating-3d-v2 7s ease-in-out infinite 0.8s; }
+.floating-halo-4 { animation: floating-3d-v2 9s ease-in-out infinite 2s; }
+
+@keyframes floating-3d-v2 {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    33% { transform: translateY(-12px) rotate(2deg); }
+    66% { transform: translateY(-5px) rotate(-2deg); }
+}
+
+/* Bulb Glow Effect */
+.bulb-glow {
+    filter: drop-shadow(0 0 12px rgba(255, 223, 0, 0.7)) drop-shadow(0 20px 40px rgba(0, 0, 0, 0.4));
+}
+
+/* Hero Margin Smoothing Overlay */
+.hero-edge-fade {
+    background: linear-gradient(to left, #ffffff 0%, rgba(255, 255, 255, 0.2) 20%, transparent 60%);
+    opacity: 0.8;
+}
+
+/* Glassmorphism Refinement for Particles */
+.light-particle {
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
