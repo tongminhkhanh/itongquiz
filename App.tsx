@@ -77,11 +77,11 @@ const App: React.FC = () => {
 
     // Marquee effect logic
     useEffect(() => {
-        let currentTitle = baseTitle + "    ";
+        let currentTitle = baseTitle + "        "; // Thêm 8 khoảng trắng để mượt hơn
         const interval = setInterval(() => {
             currentTitle = currentTitle.substring(1) + currentTitle.substring(0, 1);
             document.title = currentTitle;
-        }, 300); // 300ms for smooth scrolling
+        }, 200); // Tăng tốc lên 200ms để đỡ bị giật
 
         return () => {
             clearInterval(interval);
