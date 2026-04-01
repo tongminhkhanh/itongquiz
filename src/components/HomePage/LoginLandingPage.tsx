@@ -4,6 +4,7 @@ import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import { Loader2, User, Lock, GraduationCap, Apple, CheckCircle2 } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import AnnouncementMarquee from '../common/AnnouncementMarquee';
 
 const LoginLandingPage: React.FC = () => {
     // --- State ---
@@ -231,6 +232,9 @@ const LoginLandingPage: React.FC = () => {
 
             {/* RIGHT COLUMN: Form Login (40%) */}
             <div className="md:w-[40%] w-full flex items-center justify-center p-6 md:p-8 relative">
+                <div className="absolute top-3 left-3 right-3 md:top-4 md:left-8 md:right-8 z-20">
+                    <AnnouncementMarquee variant="compact" />
+                </div>
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -284,7 +288,7 @@ const LoginLandingPage: React.FC = () => {
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="w-full pl-12 pr-4 h-14 border-2 border-slate-200 rounded-2xl focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-semibold text-slate-700 bg-slate-50 focus:bg-white"
-                                    placeholder={activeTab === 'student' ? "tentaikhoan..." : "username..."}
+                                    placeholder={activeTab === 'student' ? "Tài Khoản" : "username..."}
                                     autoFocus
                                 />
                             </div>
