@@ -42,6 +42,73 @@ const insertTags = (text: string, tag: 'b' | 'i', start: number, end: number) =>
     return `${before}${openTag}${selection}${closeTag}${after}`;
 };
 
+const toBoolean = (value: any): boolean => {
+    if (typeof value === 'boolean') return value;
+    const normalized = String(value ?? '').trim().toLowerCase();
+    if (['true', '1', 'd', 'yes'].includes(normalized)) return true;
+    if (['false', '0', 's', 'no'].includes(normalized)) return false;
+    return Boolean(value);
+};
+
+const normalizeTrueFalseItems = (items: any): { id: string; statement: string; isCorrect: boolean }[] => {
+    if (!Array.isArray(items)) return [];
+    return items.map((item: any, idx: number) => {
+        if (item && typeof item === 'object') {
+            return {
+                id: String(item.id ?? `item-${idx + 1}`),
+                statement: String(item.statement ?? item.text ?? item.content ?? ''),
+                isCorrect: toBoolean(item.isCorrect ?? item.isTrue ?? item.correct ?? item.answer),
+            };
+        }
+
+        return {
+            id: `item-${idx + 1}`,
+            statement: String(item ?? ''),
+            isCorrect: false,
+        };
+    });
+};
+
+const normalizeDropdownBlanks = (blanks: any): { id: string; options: string[]; correctAnswer: string }[] => {
+    if (!Array.isArray(blanks)) return [];
+
+    return blanks.map((blank: any, idx: number) => {
+        const rawOptions = Array.isArray(blank?.options)
+            ? blank.options
+            : typeof blank?.options === 'string'
+                ? blank.options.split('|')
+                : Array.isArray(blank?.choices)
+                    ? blank.choices
+                    : [];
+
+        let options = rawOptions
+            .map((opt: any) => String(opt ?? '').trim())
+            .filter((opt: string) => opt.length > 0);
+
+        let correctAnswer = String(blank?.correctAnswer ?? blank?.answer ?? blank?.correct ?? '').trim();
+
+        if (!correctAnswer && options.length > 0) {
+            correctAnswer = options[0];
+        }
+
+        if (correctAnswer && !options.includes(correctAnswer)) {
+            options = [correctAnswer, ...options];
+        }
+
+        if (options.length === 0) {
+            options = ['', ''];
+        } else if (options.length === 1) {
+            options = [...options, ''];
+        }
+
+        return {
+            id: String(blank?.id ?? `${idx + 1}`),
+            options,
+            correctAnswer,
+        };
+    });
+};
+
 interface FormattingToolbarProps {
     onApply: (tag: 'b' | 'i') => void;
 }
@@ -289,10 +356,12 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
     // Open edit modal
     const handleEditQuestion = (question: Question) => {
         setEditingQuestion(question);
-        if ('question' in question) {
-            setEditQuestionText((question as any).question);
-        } else if ('mainQuestion' in question) {
-            setEditQuestionText((question as any).mainQuestion);
+
+        // Use type-based mapping to avoid mismatched `question` vs `mainQuestion` in legacy data.
+        if (question.type === QuestionType.TRUE_FALSE) {
+            setEditQuestionText((question as any).mainQuestion || (question as any).question || '');
+        } else {
+            setEditQuestionText((question as any).question || (question as any).mainQuestion || '');
         }
 
         // Fix: Load properties based on Question Type instead of key existence
@@ -319,8 +388,21 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             setEditAnswerLabel((question as any).answerLabel || '');
         }
 
-        // TRUE_FALSE & ORDERING items
-        if (question.type === QuestionType.TRUE_FALSE || question.type === QuestionType.ORDERING) {
+        // TRUE_FALSE items
+        if (question.type === QuestionType.TRUE_FALSE) {
+            const normalizedItems = normalizeTrueFalseItems((question as any).items);
+            setEditItems(
+                normalizedItems.length > 0
+                    ? normalizedItems
+                    : [
+                        { id: '1', statement: '', isCorrect: true },
+                        { id: '2', statement: '', isCorrect: false },
+                    ]
+            );
+        }
+
+        // ORDERING items
+        if (question.type === QuestionType.ORDERING) {
             setEditItems((question as any).items ? [...(question as any).items] : []);
         }
 
@@ -360,7 +442,12 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
         // DROPDOWN specific
         if (question.type === QuestionType.DROPDOWN) {
             setEditDropdownText((question as any).text || '');
-            setEditDropdownBlanks((question as any).blanks ? (question as any).blanks.map((b: any) => ({ ...b })) : []);
+            const normalizedBlanks = normalizeDropdownBlanks((question as any).blanks);
+            setEditDropdownBlanks(
+                normalizedBlanks.length > 0
+                    ? normalizedBlanks
+                    : [{ id: '1', options: ['', ''], correctAnswer: '' }]
+            );
             // Fix: Load image for DROPDOWN
             setEditImageUrl((question as any).image || '');
         }
@@ -407,10 +494,12 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
 
             const updated: any = { ...q };
 
-            if ('question' in updated) {
-                updated.question = editQuestionText;
-            } else if ('mainQuestion' in updated) {
+            if (updated.type === QuestionType.TRUE_FALSE) {
                 updated.mainQuestion = editQuestionText;
+                // Keep `question` in sync for compatibility with old render paths.
+                updated.question = editQuestionText;
+            } else {
+                updated.question = editQuestionText;
             }
 
             // MCQ, MULTIPLE_SELECT, IMAGE_QUESTION options
@@ -441,7 +530,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
 
             // TRUE_FALSE items
             if (updated.type === QuestionType.TRUE_FALSE) {
-                updated.items = editItems;
+                updated.items = normalizeTrueFalseItems(editItems).filter(item => item.statement.trim());
             }
 
             // ORDERING items and correctOrder
@@ -485,7 +574,22 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             // DROPDOWN specific - always save all fields
             if (updated.type === QuestionType.DROPDOWN) {
                 updated.text = editDropdownText;
-                updated.blanks = editDropdownBlanks;
+                updated.blanks = normalizeDropdownBlanks(editDropdownBlanks).map((blank) => {
+                    const cleanOptions = blank.options
+                        .map((opt) => String(opt ?? '').trim())
+                        .filter((opt) => opt.length > 0);
+
+                    let correctAnswer = String(blank.correctAnswer ?? '').trim();
+                    if (!correctAnswer && cleanOptions.length > 0) {
+                        correctAnswer = cleanOptions[0];
+                    }
+
+                    return {
+                        ...blank,
+                        options: cleanOptions,
+                        correctAnswer,
+                    };
+                }).filter((blank) => blank.options.length > 0);
                 // Fix: Save image for DROPDOWN
                 updated.image = editImageUrl;
             }
@@ -1044,9 +1148,11 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                         <div className="ml-8 space-y-1">
                                             {((q as any).items || []).map((item: any, i: number) => (
                                                 <div key={i} className="flex items-center justify-between px-3 py-1.5 bg-gray-50 rounded-lg text-sm">
-                                                    <span className="text-gray-700">{String.fromCharCode(97 + i)}. {formatMathText(item.statement)}</span>
-                                                    <span className={`font-bold px-2 py-0.5 rounded ${item.isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                        {item.isCorrect ? 'Đ' : 'S'}
+                                                    <span className="text-gray-700">
+                                                        {String.fromCharCode(97 + i)}. {formatMathText(String(item?.statement ?? item?.text ?? item?.content ?? ''))}
+                                                    </span>
+                                                    <span className={`font-bold px-2 py-0.5 rounded ${toBoolean(item?.isCorrect ?? item?.isTrue ?? item?.correct ?? item?.answer) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                        {toBoolean(item?.isCorrect ?? item?.isTrue ?? item?.correct ?? item?.answer) ? 'Đ' : 'S'}
                                                     </span>
                                                 </div>
                                             ))}
@@ -1122,9 +1228,13 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                         const blankIndex = parseInt(match[1]) - 1;
                                                         const blank = ((q as any).blanks || [])[blankIndex];
                                                         if (blank) {
+                                                            const options = Array.isArray(blank.options)
+                                                                ? blank.options
+                                                                : (typeof blank.options === 'string' ? blank.options.split('|') : []);
+                                                            const correctAnswer = String(blank.correctAnswer ?? blank.answer ?? blank.correct ?? '');
                                                             return (
-                                                                <span key={idx} className="inline-flex items-center mx-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-md border border-indigo-200 text-xs font-bold" title={`Options: ${(blank.options || []).join(', ')}`}>
-                                                                    ▼ {blank.correctAnswer}
+                                                                <span key={idx} className="inline-flex items-center mx-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-md border border-indigo-200 text-xs font-bold" title={`Options: ${options.join(', ')}`}>
+                                                                    ▼ {correctAnswer}
                                                                 </span>
                                                             );
                                                         }
@@ -1651,7 +1761,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                             <span className="text-gray-500 text-sm">{String.fromCharCode(97 + i)}.</span>
                                             <input
                                                 type="text"
-                                                value={item.statement || ''}
+                                                value={item.statement || item.text || ''}
                                                 onChange={(e) => {
                                                     const newItems = [...editItems];
                                                     newItems[i] = { ...newItems[i], statement: e.target.value };
@@ -1660,7 +1770,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                             />
                                             <select
-                                                value={item.isCorrect ? 'true' : 'false'}
+                                                value={toBoolean(item.isCorrect ?? item.isTrue ?? item.correct ?? item.answer) ? 'true' : 'false'}
                                                 onChange={(e) => {
                                                     const newItems = [...editItems];
                                                     newItems[i] = { ...newItems[i], isCorrect: e.target.value === 'true' };
@@ -1671,8 +1781,31 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 <option value="true">Đúng</option>
                                                 <option value="false">Sai</option>
                                             </select>
+                                            {editItems.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newItems = editItems.filter((_, idx) => idx !== i);
+                                                        setEditItems(newItems);
+                                                    }}
+                                                    className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                                    title="Xóa mệnh đề"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
                                         </div>
                                     ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditItems([
+                                            ...editItems,
+                                            { id: `${Date.now()}`, statement: '', isCorrect: true }
+                                        ])}
+                                        className="text-sm text-blue-600 hover:underline"
+                                    >
+                                        + Thêm mệnh đề
+                                    </button>
                                 </div>
                             )}
 
@@ -2069,7 +2202,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                         <span className="text-sm font-bold text-indigo-600">[{i + 1}]</span>
                                                         <span className="text-xs text-gray-500">Đáp án đúng:</span>
                                                         <select
-                                                            value={blank.correctAnswer}
+                                                            value={blank.correctAnswer || ''}
                                                             onChange={(e) => {
                                                                 const newBlanks = [...editDropdownBlanks];
                                                                 newBlanks[i] = { ...newBlanks[i], correctAnswer: e.target.value };
@@ -2081,6 +2214,19 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                                 <option key={optIdx} value={opt}>{opt}</option>
                                                             ))}
                                                         </select>
+                                                        {editDropdownBlanks.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const newBlanks = editDropdownBlanks.filter((_, idx) => idx !== i);
+                                                                    setEditDropdownBlanks(newBlanks);
+                                                                }}
+                                                                className="ml-auto text-red-500 hover:bg-red-50 p-1 rounded"
+                                                                title="Xóa ô dropdown"
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        )}
                                                     </div>
                                                     <div className="flex flex-wrap gap-2">
                                                         {blank.options.map((opt, optIdx) => (
@@ -2091,19 +2237,32 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                                     onChange={(e) => {
                                                                         const newBlanks = [...editDropdownBlanks];
                                                                         const newOpts = [...newBlanks[i].options];
+                                                                        const prevOpt = newOpts[optIdx];
                                                                         newOpts[optIdx] = e.target.value;
-                                                                        newBlanks[i] = { ...newBlanks[i], options: newOpts };
+                                                                        newBlanks[i] = {
+                                                                            ...newBlanks[i],
+                                                                            options: newOpts,
+                                                                            correctAnswer: newBlanks[i].correctAnswer === prevOpt
+                                                                                ? e.target.value
+                                                                                : newBlanks[i].correctAnswer
+                                                                        };
                                                                         setEditDropdownBlanks(newBlanks);
                                                                     }}
                                                                     className="w-24 px-2 py-1 border rounded text-sm"
                                                                 />
                                                                 {blank.options.length > 2 && (
                                                                     <button
+                                                                        type="button"
                                                                         onClick={() => {
                                                                             const newBlanks = [...editDropdownBlanks];
+                                                                            const removedOpt = newBlanks[i].options[optIdx];
+                                                                            const remainingOptions = blank.options.filter((_, idx) => idx !== optIdx);
                                                                             newBlanks[i] = {
                                                                                 ...newBlanks[i],
-                                                                                options: blank.options.filter((_, idx) => idx !== optIdx)
+                                                                                options: remainingOptions,
+                                                                                correctAnswer: newBlanks[i].correctAnswer === removedOpt
+                                                                                    ? (remainingOptions[0] || '')
+                                                                                    : newBlanks[i].correctAnswer
                                                                             };
                                                                             setEditDropdownBlanks(newBlanks);
                                                                         }}
@@ -2113,6 +2272,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                             </div>
                                                         ))}
                                                         <button
+                                                            type="button"
                                                             onClick={() => {
                                                                 const newBlanks = [...editDropdownBlanks];
                                                                 newBlanks[i] = {
@@ -2126,6 +2286,16 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                     </div>
                                                 </div>
                                             ))}
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditDropdownBlanks([
+                                                    ...editDropdownBlanks,
+                                                    { id: `${Date.now()}`, options: ['', ''], correctAnswer: '' }
+                                                ])}
+                                                className="text-sm text-blue-600 hover:underline"
+                                            >
+                                                + Thêm ô dropdown
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

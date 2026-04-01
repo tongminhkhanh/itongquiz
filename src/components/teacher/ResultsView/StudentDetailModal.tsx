@@ -20,7 +20,7 @@ interface StudentDetailModalProps {
 // Helper to normalize answer detail (support both old and new format)
 interface NormalizedAnswer {
     selectedAnswer: any;
-    isCorrect: boolean;
+    isCorrect?: boolean;
     timeSpent?: number;
     snapshot?: QuestionSnapshot;
 }
@@ -53,7 +53,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                     // New format with snapshot
                     normalized = {
                         selectedAnswer: answerData.selectedAnswer,
-                        isCorrect: answerData.isCorrect ?? false,
+                        isCorrect: typeof answerData.isCorrect === 'boolean' ? answerData.isCorrect : undefined,
                         timeSpent: answerData.timeSpent,
                         snapshot: answerData.questionSnapshot
                     };
@@ -62,7 +62,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                     const validation = result.validationDetails?.find(v => v.questionId === questionId);
                     normalized = {
                         selectedAnswer: answerData,
-                        isCorrect: validation?.isCorrect ?? false,
+                        isCorrect: typeof validation?.isCorrect === 'boolean' ? validation.isCorrect : undefined,
                         snapshot: undefined
                     };
                 }
@@ -84,10 +84,11 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                     question: snapshot?.question || snapshot?.mainQuestion || (fromQuiz as any)?.question || (fromQuiz as any)?.mainQuestion || '',
                 };
 
-                // Final correctness check using Scoring Util as second source of truth
+                // IMPORTANT: trust persisted correctness first (submit-time validation source of truth).
+                // Only fallback to local re-check when old records do not have correctness flag.
                 let finalIsCorrect = normalized.isCorrect;
-                // If we have question data, re-verify using Scoring Util
-                if (standardizedQuestion.type) {
+                const hasPersistedCorrectness = typeof normalized.isCorrect === 'boolean';
+                if (!hasPersistedCorrectness && standardizedQuestion.type) {
                     const { status } = checkAnswer(standardizedQuestion as any, normalized.selectedAnswer);
                     finalIsCorrect = status === 'correct';
                 }

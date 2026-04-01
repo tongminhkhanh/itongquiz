@@ -4,7 +4,7 @@
  * Comprehensive results analysis with charts, filters, and detailed views
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Quiz, StudentResult, Question } from '../../types';
 import { Card, Button } from '../common';
 import {
@@ -34,6 +34,8 @@ interface ResultsTabProps {
 }
 
 const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) => {
+    const PAGE_SIZE = 5;
+
     // State for filters and modals
     const [dateRange, setDateRange] = useState<DateRange>({
         startDate: null,
@@ -45,6 +47,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
     const [isFetchingDetail, setIsFetchingDetail] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [activeQuizId, setActiveQuizId] = useState<string>('all');
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Use custom hooks for results
     const resultsHook = useResults({
@@ -77,6 +80,23 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
 
         return filtered;
     }, [resultsHook.filteredResults, dateRange, searchName, activeQuizId]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredResults.length / PAGE_SIZE));
+
+    const paginatedResults = useMemo(() => {
+        const start = (currentPage - 1) * PAGE_SIZE;
+        return filteredResults.slice(start, start + PAGE_SIZE);
+    }, [filteredResults, currentPage]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [dateRange, searchName, activeQuizId, resultsHook.filterClass, resultsHook.sortField, resultsHook.sortOrder]);
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
 
     // Calculate statistics
     const statistics = useMemo(() => {
@@ -368,7 +388,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                     </h3>
                 </div>
                 <ResultsTable
-                    results={filteredResults}
+                    results={paginatedResults}
                     quizzes={quizzes}
                     sortField={resultsHook.sortField}
                     sortOrder={resultsHook.sortOrder}
@@ -390,6 +410,32 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                         }
                     }}
                 />
+                {filteredResults.length > 0 && (
+                    <div className="px-4 py-3 border-t bg-gray-50 flex items-center justify-between gap-3 flex-wrap">
+                        <p className="text-sm text-gray-600">
+                            Hiển thị {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredResults.length)} / {filteredResults.length} kết quả
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1.5 text-sm border rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Trước
+                            </button>
+                            <span className="text-sm font-medium text-gray-700">
+                                Trang {currentPage}/{totalPages}
+                            </span>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1.5 text-sm border rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Sau
+                            </button>
+                        </div>
+                    </div>
+                )}
             </Card>
 
             {/* Question Analysis */}

@@ -64,7 +64,9 @@ export function mapQuestionForSave(q: Partial<Question> & { type: string }, quiz
         ? JSON.stringify(anyQ.correctAnswers || anyQ.correctAnswer || [])
         : (anyQ.correctAnswer || q.correct_answer || '');
 
-    const questionText = q.type === 'TRUE_FALSE' ? anyQ.mainQuestion : (q.question || anyQ.question);
+    const questionText = q.type === 'TRUE_FALSE'
+        ? (anyQ.mainQuestion || q.question || anyQ.question)
+        : (q.question || anyQ.question);
 
     // Build tags string from question's tags array or string
     let tagsField = '';

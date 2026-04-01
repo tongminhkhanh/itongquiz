@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { renderMathJax } from '../../../hooks/useMathJax';
+import { formatMathText } from '../../../utils/formatters';
 
 interface MathContentProps {
     content: string;
@@ -14,19 +15,20 @@ interface MathContentProps {
  */
 const MathContent: React.FC<MathContentProps> = ({ content, className = '' }) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const formattedContent = useMemo(() => formatMathText(content), [content]);
 
     useEffect(() => {
         if (!containerRef.current) return;
         // `renderMathJax` handles: loading MathJax if not present,
         // awaiting startup.promise, and then calling typesetPromise.
         renderMathJax(containerRef.current);
-    }, [content]);
+    }, [formattedContent]);
 
     return (
         <div
             ref={containerRef}
             className={`math-content ${className} mathjax-skeleton`}
-            dangerouslySetInnerHTML={{ __html: content }}
+            dangerouslySetInnerHTML={{ __html: formattedContent }}
         />
     );
 };
