@@ -46,7 +46,7 @@ const AnnouncementMarquee: React.FC<AnnouncementMarqueeProps> = ({
     return (
         <div className={`announcement-marquee ${compactClass} ${className}`.trim()}>
             <div className="marquee-container">
-                <span className="marquee-icon">??</span>
+                <span className="marquee-icon">TB:</span>
                 <div className="marquee-content">
                     <span className="marquee-text">{announcement.content}</span>
                 </div>
