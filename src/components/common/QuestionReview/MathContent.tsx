@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { renderMathJax } from '../../../hooks/useMathJax';
 import { formatMathText } from '../../../utils/formatters';
 
@@ -17,18 +17,32 @@ const MathContent: React.FC<MathContentProps> = ({ content, className = '' }) =>
     const containerRef = useRef<HTMLDivElement>(null);
     const formattedContent = useMemo(() => formatMathText(content), [content]);
 
-    useEffect(() => {
+    React.useLayoutEffect(() => {
         if (!containerRef.current) return;
-        // `renderMathJax` handles: loading MathJax if not present,
-        // awaiting startup.promise, and then calling typesetPromise.
+
+        // Set HTML first, then typeset. This avoids races in fast modal/tab mounts.
+        containerRef.current.innerHTML = formattedContent;
         renderMathJax(containerRef.current);
+
+        // Retry a couple times for lazy-loaded/late-mounted sections (teacher result modal).
+        const t1 = setTimeout(() => {
+            if (containerRef.current) renderMathJax(containerRef.current);
+        }, 120);
+        const t2 = setTimeout(() => {
+            if (containerRef.current) renderMathJax(containerRef.current);
+        }, 320);
+
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
     }, [formattedContent]);
 
     return (
         <div
             ref={containerRef}
             className={`math-content ${className} mathjax-skeleton`}
-            dangerouslySetInnerHTML={{ __html: formattedContent }}
+            style={{ whiteSpace: 'pre-line' }}
         />
     );
 };

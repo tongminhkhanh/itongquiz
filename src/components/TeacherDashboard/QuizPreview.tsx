@@ -1501,7 +1501,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             {/* Edit Question Modal */}
             {editingQuestion && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white rounded-2xl shadow-xl w-[95vw] max-w-5xl p-6 md:p-8 mx-2 md:mx-4 max-h-[94vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-bold text-gray-800">✏️ Sửa câu hỏi</h2>
                             <button
@@ -2534,7 +2534,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             {/* Add Question Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white rounded-2xl shadow-xl w-[95vw] max-w-5xl p-6 md:p-8 mx-2 md:mx-4 max-h-[94vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-bold text-gray-800">➕ Thêm câu hỏi {getTypeLabel(newQuestionType)}</h2>
                             <button

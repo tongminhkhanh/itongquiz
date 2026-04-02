@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
-import MathContent from '../MathContent';
 import { CheckCircle, XCircle } from 'lucide-react';
+import MathContent from '../MathContent';
 
 interface MatchingReviewProps {
     question: any;
@@ -8,55 +8,78 @@ interface MatchingReviewProps {
     status: 'correct' | 'wrong' | 'skipped';
 }
 
-/**
- * MatchingReview: Render matching pairs (left-right) 
- * DB format: question.pairs = [{left: "...", right: "..."}] 
- * studentAnswer = Record<string, string> e.g. {leftId: rightId}
- */
-const MatchingReview: React.FC<MatchingReviewProps> = memo(({ question, studentAnswer, status }) => {
+const toText = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (typeof value === 'object') {
+        return String(value.text ?? value.content ?? value.label ?? value.value ?? value.id ?? '').trim();
+    }
+    return String(value);
+};
+
+const normalize = (value: any): string => toText(value).replace(/\s+/g, ' ').trim();
+
+const MatchingReview: React.FC<MatchingReviewProps> = memo(({ question, studentAnswer }) => {
     const pairs = question.pairs || [];
     const response = (typeof studentAnswer === 'object' && studentAnswer !== null) ? studentAnswer : {};
 
-    // Parse correct answers
     let correctAnswer = question.correctAnswer || {};
     if (typeof correctAnswer === 'string') {
-        try { correctAnswer = JSON.parse(correctAnswer); } catch { }
+        try {
+            correctAnswer = JSON.parse(correctAnswer);
+        } catch {
+            // Keep original value if parsing fails.
+        }
     }
 
-    // If pairs exist in DB format [{left, right}]
+    // New DB format: question.pairs = [{left, right}]
     if (pairs.length > 0) {
         return (
             <div className="matching-review-template">
                 <div className="pairs-list">
                     {pairs.map((pair: any, idx: number) => {
-                        const leftText = typeof pair === 'string' ? pair : (pair.left || pair.text || `Item ${idx + 1}`);
-                        const correctRight = typeof pair === 'string' ? '' : (pair.right || pair.match || '');
+                        const leftText = toText(typeof pair === 'string' ? pair : (pair.left ?? pair.text ?? `Item ${idx + 1}`));
+                        const correctRightText = toText(typeof pair === 'string' ? '' : (pair.right ?? pair.match ?? ''));
 
-                        // Try to find what student answered for this pair
-                        const pairKey = pair.id || `pair-${idx}` || String(idx);
-                        const studentRight = response[pairKey] || response[leftText] || response[String(idx)] || '';
+                        const pairKey = String(pair?.id ?? `pair-${idx}`);
+                        const rawStudentRight = response[pairKey] ?? response[leftText] ?? response[String(idx)] ?? '';
 
-                        const isCorrect = studentRight === correctRight
-                            || (correctAnswer[pairKey] && studentRight === correctAnswer[pairKey]);
+                        // Some payloads store right-side by id, not text.
+                        let studentRightText = toText(rawStudentRight);
+                        if (!studentRightText && rawStudentRight !== 0) {
+                            studentRightText = '';
+                        }
+
+                        const mappedCorrect = toText(
+                            (typeof correctAnswer === 'object' && correctAnswer !== null)
+                                ? (correctAnswer[pairKey] ?? correctAnswer[leftText] ?? correctAnswer[String(idx)] ?? '')
+                                : correctAnswer
+                        );
+
+                        const expectedRight = correctRightText || mappedCorrect;
+                        const isCorrect = normalize(studentRightText) === normalize(expectedRight);
 
                         return (
-                            <div key={idx} className={`pair-item ${isCorrect ? 'correct' : 'wrong'}`}>
+                            <div key={pairKey} className={`pair-item ${isCorrect ? 'correct' : 'wrong'}`}>
                                 <div className="pair-side left">
                                     <MathContent content={leftText} />
                                 </div>
                                 <div className="pair-connector">→</div>
                                 <div className="pair-side right student">
-                                    <span className={`pair-answer ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+                                    <div className={`pair-answer inline-flex items-center gap-1 ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
                                         {isCorrect ? (
-                                            <CheckCircle className="w-4 h-4 inline mr-1" />
+                                            <CheckCircle className="w-4 h-4 shrink-0" />
                                         ) : (
-                                            <XCircle className="w-4 h-4 inline mr-1" />
+                                            <XCircle className="w-4 h-4 shrink-0" />
                                         )}
-                                        {studentRight || '(Chưa nối)'}
-                                    </span>
-                                    {!isCorrect && correctRight && (
-                                        <div className="correct-hint">
-                                            (Đ.án: <MathContent content={correctRight} />)
+                                        <MathContent content={studentRightText || '(Chưa nối)'} className="inline-block" />
+                                    </div>
+                                    {!isCorrect && expectedRight && (
+                                        <div className="correct-hint inline-flex items-center gap-1">
+                                            <span>(Đ.án:</span>
+                                            <MathContent content={expectedRight} className="inline-block" />
+                                            <span>)</span>
                                         </div>
                                     )}
                                 </div>
@@ -68,7 +91,7 @@ const MatchingReview: React.FC<MatchingReviewProps> = memo(({ question, studentA
         );
     }
 
-    // Fallback for old leftItems/rightItems format
+    // Legacy format: leftItems/rightItems + mapping ids
     const leftItems = question.leftItems || [];
     const rightItems = question.rightItems || [];
 
@@ -93,8 +116,10 @@ const MatchingReview: React.FC<MatchingReviewProps> = memo(({ question, studentA
                             <div className="pair-side right student">
                                 <MathContent content={pair.studentRight?.text || '(Chưa nối)'} />
                                 {!pair.isCorrect && pair.correctRight && (
-                                    <div className="correct-hint">
-                                        (Đ.án: <MathContent content={pair.correctRight.text} />)
+                                    <div className="correct-hint inline-flex items-center gap-1">
+                                        <span>(Đ.án:</span>
+                                        <MathContent content={pair.correctRight.text} className="inline-block" />
+                                        <span>)</span>
                                     </div>
                                 )}
                             </div>
@@ -105,7 +130,6 @@ const MatchingReview: React.FC<MatchingReviewProps> = memo(({ question, studentA
         );
     }
 
-    // No data at all
     return (
         <div className="matching-review-template">
             <div className="no-data">(Không có dữ liệu ghép nối)</div>
