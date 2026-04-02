@@ -33,17 +33,20 @@ export const StudentFloatingSidebar: React.FC = () => {
     return (
         <>
             {/* The Floating Trigger Button */}
-            <div className="fixed right-0 top-1/2 -translate-y-1/2 z-40">
+            <div className="fixed right-3 top-[60%] -translate-y-1/2 z-40">
                 <motion.button
-                    whileHover={{ scale: 1.05, x: -4 }}
+                    whileHover={{ scale: 1.06 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setIsOpen(true)}
-                    className="bg-gradient-to-l from-blue-600 to-blue-400 text-white p-3 rounded-l-2xl shadow-[0_4px_20px_rgba(59,130,246,0.5)] flex items-center gap-2 pr-4 border border-blue-300/20 border-r-0 relative group"
+                    aria-label="Open leaderboard"
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-blue-600 to-blue-400 shadow-[0_8px_24px_rgba(59,130,246,0.45)] border border-blue-200/60 p-2.5 flex items-center justify-center relative overflow-hidden"
                 >
-                    {/* Inner Glow Optional */}
-                    <div className="absolute inset-0 rounded-l-2xl shadow-[inset_0_0_10px_rgba(255,255,255,0.2)] pointer-events-none" />
-                    <Trophy className="w-6 h-6 text-yellow-200 group-hover:text-yellow-100 transition-colors drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
-                    <span className="font-bold tracking-wide text-sm whitespace-nowrap">Bảng Vàng Ít Ong</span>
+                    <div className="absolute inset-0 rounded-full shadow-[inset_0_0_10px_rgba(255,255,255,0.2)] pointer-events-none" />
+                    <img
+                        src="/images/cup_01.png"
+                        alt="Cup"
+                        className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"
+                    />
                 </motion.button>
             </div>
 
