@@ -130,6 +130,20 @@ async function main() {
     priority: '1.0',
   });
 
+  entries.push({
+    loc: toUrl(siteUrl, '/about', []),
+    lastmod: today,
+    changefreq: 'weekly',
+    priority: '0.8',
+  });
+
+  entries.push({
+    loc: toUrl(siteUrl, '/contact', []),
+    lastmod: today,
+    changefreq: 'weekly',
+    priority: '0.8',
+  });
+
   Array.from(categories)
     .sort((a, b) => a.localeCompare(b))
     .forEach((category) => {
@@ -162,4 +176,3 @@ main().catch((error) => {
   console.error('[sitemap] generation failed:', error.message);
   process.exit(1);
 });
-

@@ -4,16 +4,15 @@ import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import { Loader2, User, Lock, GraduationCap, Apple, CheckCircle2 } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import AnnouncementMarquee from '../common/AnnouncementMarquee';
 
 const LoginLandingPage: React.FC = () => {
-    // --- State ---
     const [activeTab, setActiveTab] = useState<'student' | 'teacher'>('student');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [localError, setLocalError] = useState('');
 
-    // --- Parallax Mouse Tracking (Sửa lỗi thiếu biến) ---
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
 
@@ -21,18 +20,11 @@ const LoginLandingPage: React.FC = () => {
     const xSpring = useSpring(mouseX, springConfig);
     const ySpring = useSpring(mouseY, springConfig);
 
-    // Deep Parallax Layers (Tránh lặp tên)
     const layer0_X = useTransform(xSpring, [-500, 500], [10, -10]);
     const layer0_Y = useTransform(ySpring, [-400, 400], [10, -10]);
 
-    const layer1_X = useTransform(xSpring, [-500, 500], [25, -25]);
-    const layer1_Y = useTransform(ySpring, [-400, 400], [25, -25]);
-
     const layer2_X = useTransform(xSpring, [-500, 500], [15, -15]);
     const layer2_Y = useTransform(ySpring, [-400, 400], [15, -15]);
-
-    const layerFront_X = useTransform(xSpring, [-500, 500], [40, -40]);
-    const layerFront_Y = useTransform(ySpring, [-400, 400], [40, -40]);
 
     const handleMouseMove = (e: React.MouseEvent) => {
         const { clientX, clientY } = e;
@@ -40,10 +32,10 @@ const LoginLandingPage: React.FC = () => {
         mouseY.set(clientY - window.innerHeight / 2);
     };
 
-    // --- Stores ---
     const authStore = useAuthStore();
     const classroomStore = useClassroomStore();
     const quizStore = useQuizStore();
+    const navigate = useNavigate();
 
     const isLoading = activeTab === 'teacher' ? authStore.isLoggingIn : classroomStore.isLoading;
 
@@ -67,7 +59,6 @@ const LoginLandingPage: React.FC = () => {
         authStore.loginStart();
         try {
             const { callApi } = await import('../../services/apiAdapter');
-
             const teachers = await callApi<any[]>('get_teachers');
 
             if (!teachers || !Array.isArray(teachers)) {
@@ -95,7 +86,7 @@ const LoginLandingPage: React.FC = () => {
                 setLocalError('Tên đăng nhập hoặc mật khẩu không đúng!');
             }
         } catch (error) {
-            console.error("Login error:", error);
+            console.error('Login error:', error);
             authStore.loginFailure();
             setLocalError('Có lỗi xảy ra khi kết nối. Vui lòng thử lại!');
         }
@@ -111,19 +102,54 @@ const LoginLandingPage: React.FC = () => {
     };
 
     return (
-        <div 
+        <div
             onMouseMove={handleMouseMove}
             className="min-h-screen w-full flex flex-col md:flex-row bg-slate-50 font-sans overflow-x-hidden"
         >
-            {/* LEFT COLUMN: Hero Section (60%) */}
-            <div className="md:w-[60%] w-full relative overflow-hidden flex flex-col justify-center p-8 md:p-16 lg:p-24 bg-gradient-to-br from-indigo-900 via-blue-800 to-teal-500 text-white">
-                {/* Background Decorations */}
+            <div className="absolute top-0 left-0 z-30 w-full md:w-[60%] p-4 md:p-5">
+                <div className="rounded-2xl border border-white/25 bg-white/15 backdrop-blur-xl px-4 py-3 flex items-center justify-start gap-4 md:gap-8">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="flex items-center gap-2 md:gap-3 text-white hover:text-cyan-100 transition-colors shrink-0"
+                    >
+                        <img
+                            src="/school-logo.png"
+                            alt="Logo Trường"
+                            className="w-8 h-8 md:w-10 md:h-10 drop-shadow-lg"
+                        />
+                        <span className="text-xl md:text-2xl font-black tracking-tight">
+                            ÍtOng<span className="text-yellow-300">Quiz</span>
+                        </span>
+                    </button>
+                    <div className="flex items-center gap-1 md:gap-2">
+                        <button
+                            onClick={() => navigate('/')}
+                            className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-semibold text-white hover:bg-white/20 transition whitespace-nowrap"
+                        >
+                            Trang chủ
+                        </button>
+                        <button
+                            onClick={() => navigate('/about')}
+                            className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-semibold text-white hover:bg-white/20 transition whitespace-nowrap"
+                        >
+                            Giới thiệu
+                        </button>
+                        <button
+                            onClick={() => navigate('/contact')}
+                            className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-semibold text-white hover:bg-white/20 transition whitespace-nowrap"
+                        >
+                            Liên hệ
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="md:w-[60%] w-full relative overflow-hidden flex flex-col justify-center pt-24 p-8 md:pt-28 md:p-16 lg:p-24 bg-gradient-to-br from-indigo-900 via-blue-800 to-teal-500 text-white">
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
                     <div className="absolute top-[-10%] right-[-5%] w-[40vw] h-[40vw] rounded-full blur-[100px] bg-blue-400"></div>
                     <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px] bg-teal-400"></div>
                 </div>
 
-                {/* Light Particles Layer (Layer 0) */}
                 <motion.div style={{ x: layer0_X, y: layer0_Y }} className="absolute inset-0 pointer-events-none overflow-hidden">
                     {[...Array(15)].map((_, i) => (
                         <div
@@ -142,17 +168,6 @@ const LoginLandingPage: React.FC = () => {
                 </motion.div>
 
                 <div className="relative z-10 max-w-2xl">
-                    <div className="flex items-center gap-3 mb-8">
-                        <img
-                            src="/school-logo.png"
-                            alt="Logo"
-                            className="w-12 h-12 md:w-16 md:h-16 drop-shadow-lg"
-                        />
-                        <span className="text-2xl md:text-3xl font-black tracking-tight">
-                            ÍtOng<span className="text-yellow-400">Quiz</span>
-                        </span>
-                    </div>
-
                     <h1 className="text-4xl md:text-5xl lg:text-7xl font-black leading-tight mb-6 text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-100">
                         Khơi Dậy Tiềm Năng Tri Thức
                     </h1>
@@ -183,58 +198,30 @@ const LoginLandingPage: React.FC = () => {
                     </ul>
                 </div>
 
-                {/* 3D Knowledge Halo Overlay */}
                 <div className="absolute inset-0 z-0 pointer-events-none">
-                    
-                    {/* Layer 1: Middle (Behind Student) */}
-                    <motion.div style={{ x: layer1_X, y: layer1_Y }} className="absolute inset-0">
-                        <img 
-                            src="/assets/icons/book-icon.png" 
-                            className="absolute bottom-[35%] right-[25%] w-24 h-24 floating-halo-1 opacity-80 blur-[1px]" 
-                            alt="Book Icon"
-                        />
-                        <img 
-                            src="/assets/icons/cap-icon.png" 
-                            className="absolute bottom-[45%] right-[5%] w-20 h-20 floating-halo-2 opacity-70 blur-[0.5px]" 
-                            alt="Cap Icon"
-                        />
-                    </motion.div>
-
-                    {/* Layer 2: Main Student */}
                     <motion.div
                         style={{ x: layer2_X, y: layer2_Y }}
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 1.2, delay: 0.5, ease: "easeOut" }}
+                        transition={{ duration: 1.2, delay: 0.5, ease: 'easeOut' }}
                         className="absolute bottom-[-20px] right-[-40px] w-[50%] max-w-[450px] z-10"
                     >
                         <img
                             src="/assets/student-hero.png"
-                            alt="Student 3D"
+                            alt="Học sinh"
                             className="w-full h-auto shadow-3d-premium"
                         />
                     </motion.div>
-
-                    {/* Layer 3: Front (In front of student) */}
-                    <motion.div style={{ x: layerFront_X, y: layerFront_Y }} className="absolute inset-0 z-20">
-                        <img 
-                            src="/assets/icons/pencil-icon.png" 
-                            className="absolute bottom-[10%] right-[35%] w-20 h-20 floating-halo-3" 
-                            alt="Pencil Icon"
-                        />
-                        {/* Đã gỡ bỏ bóng đèn theo yêu cầu */}
-                    </motion.div>
                 </div>
 
-                {/* Right Edge Gradient Fade (Sự chuyển tiếp nhẹ nhàng - Premium Polish) */}
                 <div className="absolute top-0 right-0 h-full w-40 hero-edge-fade pointer-events-none hidden md:block z-20"></div>
             </div>
 
-            {/* RIGHT COLUMN: Form Login (40%) */}
             <div className="md:w-[40%] w-full flex items-center justify-center p-6 md:p-8 relative">
                 <div className="absolute top-3 left-3 right-3 md:top-4 md:left-8 md:right-8 z-20">
                     <AnnouncementMarquee variant="compact" />
                 </div>
+
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -250,25 +237,26 @@ const LoginLandingPage: React.FC = () => {
                         </p>
                     </div>
 
-                    {/* Custom Toggle Switch */}
                     <div className="bg-slate-100/80 p-1.5 rounded-full flex relative mb-8">
                         <div
-                            className={`absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-white rounded-full shadow transition-all duration-300 ease-out`}
+                            className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-white rounded-full shadow transition-all duration-300 ease-out"
                             style={{ left: activeTab === 'student' ? '6px' : 'calc(50%)' }}
                         />
                         <button
                             type="button"
                             onClick={() => { setActiveTab('student'); setLocalError(''); }}
-                            className={`flex-[1] flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-bold transition-colors relative z-10 ${activeTab === 'student' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'
-                                }`}
+                            className={`flex-[1] flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-bold transition-colors relative z-10 ${
+                                activeTab === 'student' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'
+                            }`}
                         >
                             <GraduationCap className="w-4 h-4" /> Học sinh
                         </button>
                         <button
                             type="button"
                             onClick={() => { setActiveTab('teacher'); setLocalError(''); }}
-                            className={`flex-[1] flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-bold transition-colors relative z-10 ${activeTab === 'teacher' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'
-                                }`}
+                            className={`flex-[1] flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-bold transition-colors relative z-10 ${
+                                activeTab === 'teacher' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'
+                            }`}
                         >
                             <Apple className="w-4 h-4" /> Giáo viên
                         </button>
@@ -288,7 +276,7 @@ const LoginLandingPage: React.FC = () => {
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="w-full pl-12 pr-4 h-14 border-2 border-slate-200 rounded-2xl focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-semibold text-slate-700 bg-slate-50 focus:bg-white"
-                                    placeholder={activeTab === 'student' ? "Tài Khoản" : "username..."}
+                                    placeholder={activeTab === 'student' ? 'Tài khoản' : 'username...'}
                                     autoFocus
                                 />
                             </div>
@@ -334,12 +322,11 @@ const LoginLandingPage: React.FC = () => {
                                     Đang xử lý...
                                 </>
                             ) : (
-                                "Đăng nhập ngay"
+                                'Đăng nhập ngay'
                             )}
                         </button>
                     </form>
 
-                    {/* Bottom notes */}
                     <p className="text-center text-sm text-slate-400 mt-8 font-medium">
                         Cần hỗ trợ? Hãy{' '}
                         <a
@@ -352,7 +339,6 @@ const LoginLandingPage: React.FC = () => {
                     </p>
                 </motion.div>
 
-                {/* Background Pattern Right */}
                 <div className="absolute bottom-0 right-0 opacity-5 pointer-events-none">
                     <svg width="400" height="400" viewBox="0 0 100 100">
                         <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">

@@ -8,6 +8,7 @@ import { setStripAnswersEnabled } from '../../services/googleSheetService';
 import { cacheService } from '../../services/CacheService';
 import Sidebar from './Sidebar';
 import BottomNavigation from './BottomNavigation';
+import { useNavigate } from 'react-router-dom';
 
 // Lazy load tab components
 const OverviewTab = React.lazy(() => import('./OverviewTab'));
@@ -26,6 +27,7 @@ const TeacherDashboard: React.FC = () => {
     // --- STORES ---
     const authStore = useAuthStore();
     const quizStore = useQuizStore();
+    const navigate = useNavigate();
 
     // 🔐 ANTI-CHEAT: Disable answer stripping for teacher views
     // Also force reload quizzes from server to get fresh data with answers
@@ -279,7 +281,7 @@ const TeacherDashboard: React.FC = () => {
                         </Suspense>
                     </ErrorBoundary>
                 </main>
-                <Footer onNavigate={(v) => quizStore.setView(v as any)} />
+                <Footer onNavigate={(path) => navigate(path)} showPublicLinks={false} />
             </div>
 
             <BottomNavigation

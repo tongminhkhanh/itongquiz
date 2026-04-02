@@ -1,11 +1,13 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
-import { Quiz, QuestionType } from './src/types';
-import { SCHOOL_NAME } from './src/config/constants';
 import { Loader2 } from 'lucide-react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+
+import { Quiz } from './src/types';
 import { fetchIoeQuizzes, saveIoeResult } from './src/services/ioeSheetService';
 import { useAuthStore } from './stores/authStore';
 import { useQuizStore } from './stores/quizStore';
+import { useClassroomStore } from './src/stores/useClassroomStore';
 
 // Lazy load main views
 const StudentView = React.lazy(() => import('./src/components/StudentView'));
@@ -15,10 +17,14 @@ const HomePage = React.lazy(() => import('./src/components/HomePage/HomePage'));
 const PrivacyPolicy = React.lazy(() => import('./src/components/legal/PrivacyPolicy'));
 const TermsOfService = React.lazy(() => import('./src/components/legal/TermsOfService'));
 const Footer = React.lazy(() => import('./src/components/common/Footer'));
+const AboutPage = React.lazy(() => import('./src/components/schoolPage/AboutPage'));
+const ContactPage = React.lazy(() => import('./src/components/schoolPage/ContactPage'));
 
-const DEFAULT_TITLE = 'ItOng Quiz - Hệ thống Tạo đề và Ôn thi cho học sinh Tiểu học Ít Ong';
-const DEFAULT_DESCRIPTION = 'ItOng Quiz giúp giáo viên tạo đề thi trắc nghiệm từ file PDF/Notion chỉ trong 30 giây. Hỗ trợ học sinh ôn thi chương trình GDPT 2018 bám sát chương trình sách giáo khoa với công nghệ AI tiên tiến.';
-const DEFAULT_KEYWORDS = 'Ít Ong, Trường Tiểu học Ít Ong, ItOng Quiz, luyện thi tiểu học, trắc nghiệm tiểu học, GDPT 2018, tạo đề thi AI, ôn thi online';
+type RoutePath = '/' | '/about' | '/contact' | '/privacy' | '/tos';
+
+const DEFAULT_TITLE = 'ItOng Quiz - Nền tảng tạo đề và ôn thi cho học sinh Tiểu học Ít Ong';
+const DEFAULT_DESCRIPTION = 'ItOng Quiz giúp giáo viên tạo đề trắc nghiệm nhanh, hỗ trợ học sinh ôn thi chương trình GDPT 2018.';
+const DEFAULT_KEYWORDS = 'Ít Ong, ItOng Quiz, luyện thi tiểu học, trắc nghiệm tiểu học, GDPT 2018, ôn thi online';
 const SEO_CATEGORY_WHITELIST = new Set(['all', 'vioedu', 'trang-nguyen', 'ioe', 'on-tap']);
 
 const upsertMetaByName = (name: string, content: string) => {
@@ -51,7 +57,7 @@ const upsertCanonical = (href: string) => {
     canonical.setAttribute('href', href);
 };
 
-const upsertJsonLd = (id: string, payload: Record<string, any>) => {
+const upsertJsonLd = (id: string, payload: Record<string, unknown>) => {
     let tag = document.getElementById(id) as HTMLScriptElement | null;
     if (!tag) {
         tag = document.createElement('script');
@@ -62,7 +68,11 @@ const upsertJsonLd = (id: string, payload: Record<string, any>) => {
     tag.textContent = JSON.stringify(payload);
 };
 
-const getCanonicalUrl = (view: string, selectedQuiz: Quiz | null): string => {
+const getCanonicalUrl = (pathname: string, view: string, selectedQuiz: Quiz | null): string => {
+    if (pathname !== '/') {
+        return new URL(pathname, `${window.location.origin}/`).toString();
+    }
+
     const canonical = new URL(window.location.origin + '/');
 
     if (view === 'student' && selectedQuiz?.id) {
@@ -124,43 +134,73 @@ const buildStructuredData = (canonicalUrl: string, title: string, description: s
     };
 };
 
+const PageLoading: React.FC = () => (
+    <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB]">
+        <Loader2 className="w-10 h-10 text-[#6C5CE7] animate-spin" />
+    </div>
+);
+
 const App: React.FC = () => {
-    // --- STORES ---
     const authStore = useAuthStore();
     const quizStore = useQuizStore();
+    const classroomStore = useClassroomStore();
+    const location = useLocation();
+    const navigate = useNavigate();
 
-    // --- IOE State (Lifted for deep linking) ---
     const [ioeQuizzes, setIoeQuizzes] = useState<Quiz[]>([]);
     const [ioeLoading, setIoeLoading] = useState(false);
 
-    // --- INITIALIZATION ---
+    const loadIoeData = async (forceRefresh = false) => {
+        if (ioeLoading) return;
+        setIoeLoading(true);
+        try {
+            const quizzes = await fetchIoeQuizzes(forceRefresh);
+            setIoeQuizzes(quizzes);
+            console.log('[IOE] Loaded', quizzes.length, 'quizzes', forceRefresh ? '(refreshed)' : '');
+        } catch (err) {
+            console.error('[IOE] Load error:', err);
+        } finally {
+            setIoeLoading(false);
+        }
+    };
+
     useEffect(() => {
-        // Load data on mount
         quizStore.loadQuizzes();
         quizStore.loadResults();
 
-
-        // Check URL for quizId - if it's an IOE quiz, load IOE quizzes
         const params = new URLSearchParams(window.location.search);
         const quizId = params.get('quizId') || params.get('quiz');
         if (quizId && quizId.startsWith('ioe-')) {
-            loadIoeData(false); // Initial load for deep link
+            loadIoeData(false);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // --- SEO & Meta Tags ---
     useEffect(() => {
+        const pathname = location.pathname;
         let title = DEFAULT_TITLE;
         let description = DEFAULT_DESCRIPTION;
         let keywords = DEFAULT_KEYWORDS;
         let robots = 'index, follow';
 
-        if (quizStore.view === 'teacher_dash') {
-            title = 'Quản lý Đề thi - ItOng Quiz';
+        if (pathname === '/about') {
+            title = 'Giới thiệu trường Ít Ong - ItOng Quiz';
+            description = 'Thông tin giới thiệu Trường Tiểu học Ít Ong, quá trình phát triển và hoạt động nổi bật.';
+            keywords = 'giới thiệu trường Ít Ong, Trường Tiểu học Ít Ong, ItOng Quiz';
+        } else if (pathname === '/contact') {
+            title = 'Liên hệ trường Ít Ong - ItOng Quiz';
+            description = 'Kênh liên hệ Trường Tiểu học Ít Ong: địa chỉ, hotline, fanpage và bản đồ.';
+            keywords = 'liên hệ trường Ít Ong, bản đồ trường Ít Ong, hotline trường Ít Ong';
+        } else if (pathname === '/privacy') {
+            title = 'Chính sách bảo mật - ItOng Quiz';
+        } else if (pathname === '/tos') {
+            title = 'Điều khoản sử dụng - ItOng Quiz';
+        } else if (quizStore.view === 'teacher_dash') {
+            title = 'Quản lý đề thi - ItOng Quiz';
             robots = 'noindex, nofollow, noarchive';
         } else if (quizStore.view === 'student' && quizStore.selectedQuiz) {
             title = `${quizStore.selectedQuiz.title} - ItOng Quiz`;
-            description = `Luyện tập bài thi ${quizStore.selectedQuiz.title} trên hệ thống ItOng Quiz. Bài thi dành cho học sinh lớp ${quizStore.selectedQuiz.classLevel || 'Tiểu học'}.`;
+            description = `Luyện tập bài thi ${quizStore.selectedQuiz.title} trên hệ thống ItOng Quiz.`;
             keywords = [
                 quizStore.selectedQuiz.title,
                 `Lớp ${quizStore.selectedQuiz.classLevel || 'Tiểu học'}`,
@@ -168,21 +208,17 @@ const App: React.FC = () => {
                 'ItOng Quiz',
                 'ôn thi tiểu học',
             ].join(', ');
-        } else if ((quizStore.view as any) === 'privacy') {
-            title = 'Chính sách bảo mật - ItOng Quiz';
-        } else if ((quizStore.view as any) === 'tos') {
-            title = 'Điều khoản dịch vụ - ItOng Quiz';
         } else if (quizStore.view === 'student_portal') {
             title = 'Cổng học sinh - ItOng Quiz';
             robots = 'noindex, nofollow, noarchive';
         }
 
-        const canonicalUrl = getCanonicalUrl(quizStore.view, quizStore.selectedQuiz);
+        const canonicalUrl = getCanonicalUrl(pathname, quizStore.view, quizStore.selectedQuiz);
         const structuredData = buildStructuredData(
             canonicalUrl,
             title,
             description,
-            quizStore.view === 'student' ? quizStore.selectedQuiz : null
+            pathname === '/' && quizStore.view === 'student' ? quizStore.selectedQuiz : null
         );
 
         document.title = title;
@@ -204,6 +240,7 @@ const App: React.FC = () => {
         upsertCanonical(canonicalUrl);
         upsertJsonLd('seo-jsonld', structuredData);
     }, [
+        location.pathname,
         quizStore.view,
         quizStore.selectedQuiz?.id,
         quizStore.selectedQuiz?.title,
@@ -212,81 +249,48 @@ const App: React.FC = () => {
         quizStore.selectedQuiz?.questions?.length,
     ]);
 
-    const loadIoeData = async (forceRefresh = false) => {
-        if (ioeLoading) return;
-        setIoeLoading(true);
-        try {
-            const quizzes = await fetchIoeQuizzes(forceRefresh);
-            setIoeQuizzes(quizzes);
-            console.log('[IOE] Loaded', quizzes.length, 'quizzes', forceRefresh ? '(refreshed)' : '');
-        } catch (err) {
-            console.error('[IOE] Load error:', err);
-        } finally {
-            setIoeLoading(false);
+    useEffect(() => {
+        if (location.pathname !== '/') return;
+
+        const params = new URLSearchParams(location.search);
+        const quizId = params.get('quizId') || params.get('quiz');
+        if (!quizId || quizStore.selectedQuiz) return;
+
+        let foundQuiz = quizStore.quizzes.find((q) => q.id === quizId);
+        if (!foundQuiz && ioeQuizzes.length > 0) {
+            foundQuiz = ioeQuizzes.find((q) => q.id === quizId);
         }
+
+        if (foundQuiz) {
+            quizStore.selectQuiz(foundQuiz);
+            quizStore.setView('student');
+        }
+    }, [location.pathname, location.search, quizStore, ioeQuizzes]);
+
+    const handleRouteNavigate = (path: RoutePath) => {
+        navigate(path);
     };
 
-    // Effect to handle deep linking once quizzes are loaded
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const quizId = params.get('quizId') || params.get('quiz');
-        if (quizId && !quizStore.selectedQuiz) {
-            // First check main quizzes
-            let foundQuiz = quizStore.quizzes.find(q => q.id === quizId);
+    const showPublicFooterLinks = !authStore.isLoggedIn && !classroomStore.studentSession;
 
-            // If not found in main, check IOE quizzes
-            if (!foundQuiz && ioeQuizzes.length > 0) {
-                foundQuiz = ioeQuizzes.find(q => q.id === quizId);
+    const renderRootView = () => {
+        if (quizStore.view === 'teacher_dash') {
+            if (!authStore.isLoggedIn) {
+                quizStore.setView('home');
+                return null;
             }
 
-            if (foundQuiz) {
-                quizStore.selectQuiz(foundQuiz);
-                quizStore.setView('student');
-            }
-        }
-    }, [quizStore.quizzes, ioeQuizzes]);
-
-    // --- VIEWS ---
-
-    if (quizStore.view === 'teacher_dash') {
-        // 🔐 Security Guard: Redirect to home if not logged in as teacher
-        if (!authStore.isLoggedIn) {
-            quizStore.setView('home');
-            return null;
-        }
-
-        return (
-            <>
-                <Suspense fallback={
-                    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-amber-50">
-                        <div className="flex flex-col items-center gap-4">
-                            <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
-                            <p className="text-gray-500 font-medium">Đang tải trang quản lý...</p>
-                        </div>
-                    </div>
-                }>
+            return (
+                <Suspense fallback={<PageLoading />}>
                     <TeacherDashboard />
                 </Suspense>
-                <Analytics />
-            </>
-        );
-    }
+            );
+        }
 
-    if (quizStore.view === 'student' && quizStore.selectedQuiz) {
-        const isIoeQuiz = quizStore.selectedQuiz.category === 'ioe';
-
-        return (
-            <>
-                <Suspense fallback={
-                    <div className={`min-h-screen flex items-center justify-center ${isIoeQuiz ? 'bg-[#1a3a5c]' : 'bg-white'}`}>
-                        <div className="flex flex-col items-center gap-4">
-                            <Loader2 className={`w-12 h-12 animate-spin ${isIoeQuiz ? 'text-[#c9a227]' : 'text-green-500'}`} />
-                            <p className={`font-medium ${isIoeQuiz ? 'text-white' : 'text-gray-500'}`}>
-                                {isIoeQuiz ? 'Loading IOE Quiz...' : 'Đang tải bài kiểm tra...'}
-                            </p>
-                        </div>
-                    </div>
-                }>
+        if (quizStore.view === 'student' && quizStore.selectedQuiz) {
+            const isIoeQuiz = quizStore.selectedQuiz.category === 'ioe';
+            return (
+                <Suspense fallback={<PageLoading />}>
                     {isIoeQuiz ? (
                         <IoeStudentView
                             quiz={quizStore.selectedQuiz}
@@ -301,48 +305,91 @@ const App: React.FC = () => {
                         />
                     )}
                 </Suspense>
-                <Analytics />
-            </>
-        );
-    }
+            );
+        }
 
-    if (quizStore.view === 'privacy') {
         return (
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
-                <PrivacyPolicy onBack={() => quizStore.goHome()} />
-                <Footer onNavigate={(v) => quizStore.setView(v as any)} />
+            <Suspense fallback={<PageLoading />}>
+                <div className="flex flex-col min-h-screen">
+                    <main className="flex-1">
+                        <HomePage
+                            ioeQuizzes={ioeQuizzes}
+                            ioeLoading={ioeLoading}
+                            onRefreshIoe={() => loadIoeData(true)}
+                        />
+                    </main>
+                    <Footer onNavigate={handleRouteNavigate} showPublicLinks={showPublicFooterLinks} />
+                </div>
             </Suspense>
         );
-    }
+    };
 
-    if (quizStore.view === 'tos') {
-        return (
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
-                <TermsOfService onBack={() => quizStore.goHome()} />
-                <Footer onNavigate={(v) => quizStore.setView(v as any)} />
-            </Suspense>
-        );
-    }
-
-    // Home Screen (New Component)
     return (
-        <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB]">
-                <Loader2 className="w-12 h-12 text-[#6C5CE7] animate-spin" />
-            </div>
-        }>
-            <div className="flex flex-col min-h-screen">
-                <main className="flex-1">
-                    <HomePage
-                        ioeQuizzes={ioeQuizzes}
-                        ioeLoading={ioeLoading}
-                        onRefreshIoe={() => loadIoeData(true)}
-                    />
-                </main>
-                <Footer onNavigate={(v) => quizStore.setView(v as any)} />
-            </div>
+        <>
+            <Routes>
+                <Route path="/" element={renderRootView()} />
+                <Route
+                    path="/about"
+                    element={
+                        <Suspense fallback={<PageLoading />}>
+                            <div className="flex flex-col min-h-screen">
+                                <main className="flex-1">
+                                    <AboutPage />
+                                </main>
+                                <Footer onNavigate={handleRouteNavigate} />
+                            </div>
+                        </Suspense>
+                    }
+                />
+                <Route
+                    path="/contact"
+                    element={
+                        <Suspense fallback={<PageLoading />}>
+                            <div className="flex flex-col min-h-screen">
+                                <main className="flex-1">
+                                    <ContactPage />
+                                </main>
+                                <Footer onNavigate={handleRouteNavigate} />
+                            </div>
+                        </Suspense>
+                    }
+                />
+                <Route
+                    path="/privacy"
+                    element={
+                        <Suspense fallback={<PageLoading />}>
+                            <div className="flex flex-col min-h-screen">
+                                <main className="flex-1">
+                                    <PrivacyPolicy onBack={() => {
+                                        quizStore.goHome();
+                                        navigate('/');
+                                    }} />
+                                </main>
+                                <Footer onNavigate={handleRouteNavigate} />
+                            </div>
+                        </Suspense>
+                    }
+                />
+                <Route
+                    path="/tos"
+                    element={
+                        <Suspense fallback={<PageLoading />}>
+                            <div className="flex flex-col min-h-screen">
+                                <main className="flex-1">
+                                    <TermsOfService onBack={() => {
+                                        quizStore.goHome();
+                                        navigate('/');
+                                    }} />
+                                </main>
+                                <Footer onNavigate={handleRouteNavigate} />
+                            </div>
+                        </Suspense>
+                    }
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
             <Analytics />
-        </Suspense>
+        </>
     );
 };
 

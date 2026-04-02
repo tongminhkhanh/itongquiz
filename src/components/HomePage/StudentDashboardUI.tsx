@@ -32,7 +32,7 @@ interface StudentDashboardUIProps {
 
 const ASSIGNMENTS_PER_PAGE = 5;
 const ATTENDANCE_REWARD = { exp: 50, coins: 50 };
-const ATTENDANCE_STORAGE_PREFIX = 'student-attendance-reward';
+const ATTENDANCE_WEEKLY_STORAGE_PREFIX = 'student-attendance-weekly';
 
 interface AttendanceQuestion {
     id: string;
@@ -48,6 +48,49 @@ const getLocalDateKey = () => {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+};
+
+const getDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const parseDateKey = (dateKey: string) => {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    return new Date(year, (month || 1) - 1, day || 1);
+};
+
+const getWeekStartDateKey = () => {
+    const now = new Date();
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dayOfWeek = monday.getDay(); // 0 = Sunday, 1 = Monday, ... 6 = Saturday
+    const offsetToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    monday.setDate(monday.getDate() + offsetToMonday);
+    return getDateKey(monday);
+};
+
+const getAttendanceMultiplier = (attendanceDayNumber: number) => {
+    if (attendanceDayNumber === 3) return 2;
+    if (attendanceDayNumber === 5) return 3;
+    if (attendanceDayNumber === 7) return 5;
+    return 1;
+};
+
+const calculateAttendanceStreak = (days: string[], endDateKey: string) => {
+    if (!endDateKey || days.length === 0) return 0;
+
+    const daySet = new Set(days);
+    let streak = 0;
+    const cursor = parseDateKey(endDateKey);
+
+    while (daySet.has(getDateKey(cursor))) {
+        streak += 1;
+        cursor.setDate(cursor.getDate() - 1);
+    }
+
+    return streak;
 };
 
 const cleanOptionText = (value: unknown) => {
@@ -98,6 +141,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const [attendanceMessage, setAttendanceMessage] = useState('');
     const [isSubmittingAttendance, setIsSubmittingAttendance] = useState(false);
     const [attendanceClaimed, setAttendanceClaimed] = useState(false);
+    const [attendanceDaysInWeek, setAttendanceDaysInWeek] = useState<string[]>([]);
 
     // --- Fetch Data ---
     useEffect(() => {
@@ -128,7 +172,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         if (!studentSession) return [];
 
         // Convert raw assignments to Quiz format
-        return classroomStore.assignments.map(assignment => {
+        const mappedAssignments = classroomStore.assignments.map(assignment => {
             const realQuiz = quizStore.quizzes.find(q => q.id === assignment.quizId) || ioeQuizzes.find(q => q.id === assignment.quizId);
             if (realQuiz) {
                 return { ...realQuiz, _assignmentData: assignment } as Quiz & { _assignmentData?: Assignment };
@@ -148,6 +192,47 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 maxScore: 0,
                 _assignmentData: assignment
             } as Quiz & { _assignmentData?: Assignment };
+        });
+
+        return mappedAssignments.sort((a, b) => {
+            const aAssignment = a._assignmentData;
+            const bAssignment = b._assignmentData;
+
+            const aAttempts = Number(aAssignment?.attemptCount) || 0;
+            const bAttempts = Number(bAssignment?.attemptCount) || 0;
+            const aMaxAttempts = Math.max(1, Number(aAssignment?.maxAttempts) || 1);
+            const bMaxAttempts = Math.max(1, Number(bAssignment?.maxAttempts) || 1);
+
+            const aCompleted = aAttempts >= aMaxAttempts;
+            const bCompleted = bAttempts >= bMaxAttempts;
+
+            // Always keep not-yet-completed assignments at the top (page 1 first).
+            if (aCompleted !== bCompleted) {
+                return aCompleted ? 1 : -1;
+            }
+
+            const parseDate = (value?: string, fallback: number = 0) => {
+                const timestamp = Date.parse(value || '');
+                return Number.isFinite(timestamp) ? timestamp : fallback;
+            };
+
+            // Among active assignments: nearest deadline first.
+            if (!aCompleted && !bCompleted) {
+                const aDeadline = parseDate(aAssignment?.deadline, Number.MAX_SAFE_INTEGER);
+                const bDeadline = parseDate(bAssignment?.deadline, Number.MAX_SAFE_INTEGER);
+                if (aDeadline !== bDeadline) {
+                    return aDeadline - bDeadline;
+                }
+            }
+
+            // Otherwise: newer created assignment first.
+            const aCreatedAt = parseDate(aAssignment?.createdAt, 0);
+            const bCreatedAt = parseDate(bAssignment?.createdAt, 0);
+            if (aCreatedAt !== bCreatedAt) {
+                return bCreatedAt - aCreatedAt;
+            }
+
+            return String(a.title || '').localeCompare(String(b.title || ''), 'vi');
         });
     }, [classroomStore.assignments, studentSession, quizStore.quizzes, ioeQuizzes]);
 
@@ -169,9 +254,11 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         });
     }, [quizStore.quizzes, ioeQuizzes]);
 
-    const attendanceStorageKey = useMemo(() => {
+    const attendanceTodayKey = useMemo(() => getLocalDateKey(), [studentSession?.username]);
+
+    const attendanceWeekStorageKey = useMemo(() => {
         if (!studentSession?.username) return '';
-        return `${ATTENDANCE_STORAGE_PREFIX}:${studentSession.username}:${getLocalDateKey()}`;
+        return `${ATTENDANCE_WEEKLY_STORAGE_PREFIX}:${studentSession.username}:${getWeekStartDateKey()}`;
     }, [studentSession?.username]);
 
     const attendanceQuestionPool = useMemo<AttendanceQuestion[]>(() => {
@@ -216,18 +303,33 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     }, [assignmentPage, totalAssignmentPages]);
 
     useEffect(() => {
-        if (!attendanceStorageKey) {
+        if (!attendanceWeekStorageKey) {
             setAttendanceClaimed(false);
+            setAttendanceDaysInWeek([]);
             return;
         }
 
         try {
-            const claimed = localStorage.getItem(attendanceStorageKey) === 'done';
-            setAttendanceClaimed(claimed);
+            const raw = localStorage.getItem(attendanceWeekStorageKey);
+            const parsed = raw ? JSON.parse(raw) : [];
+            const savedDays = Array.isArray(parsed)
+                ? Array.from(
+                    new Set(
+                        parsed
+                            .filter((value): value is string => typeof value === 'string')
+                            .map((value) => value.trim())
+                            .filter(Boolean)
+                    )
+                )
+                : [];
+
+            setAttendanceDaysInWeek(savedDays);
+            setAttendanceClaimed(savedDays.includes(attendanceTodayKey));
         } catch {
             setAttendanceClaimed(false);
+            setAttendanceDaysInWeek([]);
         }
-    }, [attendanceStorageKey]);
+    }, [attendanceWeekStorageKey, attendanceTodayKey]);
 
     if (!studentSession) return null;
 
@@ -302,19 +404,33 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
         setIsSubmittingAttendance(true);
         try {
-            const ok = await updateGameState(studentSession.username, ATTENDANCE_REWARD.exp, ATTENDANCE_REWARD.coins);
+            const attendanceDayNumber = attendanceDaysInWeek.length + 1;
+            const multiplier = getAttendanceMultiplier(attendanceDayNumber);
+            const attendanceReward = {
+                exp: ATTENDANCE_REWARD.exp * multiplier,
+                coins: ATTENDANCE_REWARD.coins * multiplier,
+            };
+
+            const ok = await updateGameState(studentSession.username, attendanceReward.exp, attendanceReward.coins);
             if (!ok) {
                 setAttendanceResult('wrong');
                 setAttendanceMessage('Trả lời đúng nhưng chưa cộng thưởng được. Em thử lại sau nhé!');
                 return;
             }
 
-            if (attendanceStorageKey) {
-                localStorage.setItem(attendanceStorageKey, 'done');
+            const updatedDays = attendanceDaysInWeek.includes(attendanceTodayKey)
+                ? attendanceDaysInWeek
+                : [...attendanceDaysInWeek, attendanceTodayKey];
+
+            if (attendanceWeekStorageKey) {
+                localStorage.setItem(attendanceWeekStorageKey, JSON.stringify(updatedDays));
             }
+            setAttendanceDaysInWeek(updatedDays);
             setAttendanceClaimed(true);
             setAttendanceResult('correct');
-            setAttendanceMessage(`Chính xác! Em nhận +${ATTENDANCE_REWARD.coins} Xu và +${ATTENDANCE_REWARD.exp} EXP.`);
+            const streakDays = calculateAttendanceStreak(updatedDays, attendanceTodayKey);
+            const bonusText = multiplier > 1 ? ` (x${multiplier} ngày ${attendanceDayNumber})` : '';
+            setAttendanceMessage(`Chính xác! Em nhận +${attendanceReward.coins} Xu và +${attendanceReward.exp} EXP${bonusText}. Bạn đã điểm danh liên tục ${streakDays} ngày.`);
         } catch {
             setAttendanceResult('wrong');
             setAttendanceMessage('Trả lời đúng nhưng hệ thống chưa cộng thưởng. Em thử lại sau nhé!');
@@ -323,10 +439,19 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         }
     };
 
+    const attendanceTodayOrder = attendanceClaimed
+        ? attendanceDaysInWeek.length
+        : attendanceDaysInWeek.length + 1;
+    const attendanceTodayMultiplier = getAttendanceMultiplier(attendanceTodayOrder);
+    const attendanceTodayReward = {
+        exp: ATTENDANCE_REWARD.exp * attendanceTodayMultiplier,
+        coins: ATTENDANCE_REWARD.coins * attendanceTodayMultiplier,
+    };
+
     const attendanceBadgeText = attendanceClaimed
         ? 'Đã điểm danh hôm nay'
         : attendanceQuestionPool.length > 0
-            ? `Điểm danh nhận +${ATTENDANCE_REWARD.coins} Xu +${ATTENDANCE_REWARD.exp} EXP`
+            ? `Điểm danh ngày ${attendanceTodayOrder}: +${attendanceTodayReward.coins} Xu +${attendanceTodayReward.exp} EXP`
             : 'Đang tải câu hỏi điểm danh...';
 
     return (
