@@ -7,7 +7,7 @@ import {
     Loader2, X, Eye, EyeOff, KeyRound, UserPlus, Phone, Search,
     Upload, Download, FileSpreadsheet, AlertCircle
 } from 'lucide-react';
-import { Button } from '../common';
+import { Button, ResponsiveDataView } from '../common';
 import * as XLSX from 'xlsx';
 
 // ==========================================
@@ -182,7 +182,7 @@ const CreateClassModal: React.FC<{
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white w-full h-dvh md:h-auto md:max-h-[90vh] md:max-w-md rounded-none md:rounded-2xl shadow-xl p-5 md:p-6 md:mx-4 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-gray-800">Tạo lớp mới</h2>
                     <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
@@ -269,7 +269,7 @@ const ClassDetailView: React.FC<{
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
                 <button
                     onClick={onBack}
                     className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
@@ -280,7 +280,7 @@ const ClassDetailView: React.FC<{
                     <h2 className="text-2xl font-bold text-gray-800">{classroom.name}</h2>
                     <p className="text-gray-500 text-sm">{students.length} học sinh</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                     <Button
                         onClick={handleCopyAllLogins}
                         variant="secondary"
@@ -337,57 +337,102 @@ const ClassDetailView: React.FC<{
 
             {/* Students Table */}
             {!store.isLoading && filteredStudents.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50/50">
-                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">#</th>
-                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Họ tên</th>
-                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Tài khoản</th>
-                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">SĐT phụ huynh</th>
-                                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredStudents.map((student, idx) => (
-                                <tr key={student.id} className="border-b border-gray-50 hover:bg-orange-50/30 transition-colors">
-                                    <td className="py-3 px-4 text-sm text-gray-400">{idx + 1}</td>
-                                    <td className="py-3 px-4 font-medium text-gray-800">{student.fullName}</td>
-                                    <td className="py-3 px-4">
-                                        <code className="bg-gray-100 px-2 py-0.5 rounded text-sm text-gray-600">
-                                            {student.username}
-                                        </code>
-                                    </td>
-                                    <td className="py-3 px-4 text-sm text-gray-500">
-                                        {student.parentPhone || '—'}
-                                    </td>
-                                    <td className="py-3 px-4">
-                                        <div className="flex items-center justify-end gap-1">
-                                            <button
-                                                onClick={() => handleResetPassword(student.id)}
-                                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                                                title="Đặt lại mật khẩu"
-                                            >
-                                                <KeyRound className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    if (confirm(`Xóa học sinh "${student.fullName}"?`)) {
-                                                        store.removeStudent(student.id, classroom.id);
-                                                    }
-                                                }}
-                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                                                title="Xóa học sinh"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                <ResponsiveDataView
+                    items={filteredStudents}
+                    keyExtractor={(student) => student.id}
+                    renderDesktop={() => (
+                        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-gray-100 bg-gray-50/50">
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">#</th>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Họ tên</th>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Tài khoản</th>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">SĐT phụ huynh</th>
+                                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredStudents.map((student, idx) => (
+                                        <tr key={student.id} className="border-b border-gray-50 hover:bg-orange-50/30 transition-colors">
+                                            <td className="py-3 px-4 text-sm text-gray-400">{idx + 1}</td>
+                                            <td className="py-3 px-4 font-medium text-gray-800">{student.fullName}</td>
+                                            <td className="py-3 px-4">
+                                                <code className="bg-gray-100 px-2 py-0.5 rounded text-sm text-gray-600">
+                                                    {student.username}
+                                                </code>
+                                            </td>
+                                            <td className="py-3 px-4 text-sm text-gray-500">
+                                                {student.parentPhone || '—'}
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <button
+                                                        onClick={() => handleResetPassword(student.id)}
+                                                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                                                        title="Đặt lại mật khẩu"
+                                                    >
+                                                        <KeyRound className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (confirm(`Xóa học sinh "${student.fullName}"?`)) {
+                                                                store.removeStudent(student.id, classroom.id);
+                                                            }
+                                                        }}
+                                                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                                        title="Xóa học sinh"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                    renderMobileCard={(student, idx) => (
+                        <div className="space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div>
+                                    <p className="text-xs text-slate-400">#{idx + 1}</p>
+                                    <p className="text-sm font-bold text-slate-800">{student.fullName}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => handleResetPassword(student.id)}
+                                        className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 inline-flex items-center justify-center"
+                                        title="Đặt lại mật khẩu"
+                                    >
+                                        <KeyRound className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm(`Xóa học sinh "${student.fullName}"?`)) {
+                                                store.removeStudent(student.id, classroom.id);
+                                            }
+                                        }}
+                                        className="h-10 w-10 rounded-lg bg-red-50 text-red-600 inline-flex items-center justify-center"
+                                        title="Xóa học sinh"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="text-sm text-slate-600">
+                                <p className="mb-1">
+                                    <span className="font-semibold text-slate-500">Tài khoản:</span>{' '}
+                                    <code className="bg-gray-100 px-2 py-0.5 rounded text-xs text-gray-700">{student.username}</code>
+                                </p>
+                                <p>
+                                    <span className="font-semibold text-slate-500">SĐT phụ huynh:</span> {student.parentPhone || '—'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                />
             )}
 
             {/* Reset Password Result Toast */}
@@ -612,7 +657,7 @@ const AddStudentModal: React.FC<{
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
             <div
-                className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto"
+                className="bg-white w-full h-dvh md:h-auto md:max-h-[90vh] md:max-w-lg rounded-none md:rounded-2xl shadow-xl p-5 md:p-6 md:mx-4 overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between mb-4">

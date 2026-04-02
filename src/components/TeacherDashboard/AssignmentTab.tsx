@@ -8,7 +8,7 @@ import {
     ClipboardList, CalendarClock, Send, Trash2, X, Loader2,
     Clock, CheckCircle2, BookOpen, Users, Edit3, Check
 } from 'lucide-react';
-import { Button } from '../common';
+import { Button, ResponsiveDataView } from '../common';
 
 // ==========================================
 // ASSIGNMENT TAB (Main)
@@ -343,27 +343,41 @@ const AssignmentTrackingSection: React.FC<{
                 </div>
             )}
 
-            {/* Table */}
+            {/* Table / Mobile Cards */}
             {!isLoading && sorted.length > 0 && (
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50/50">
-                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Đề bài</th>
-                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Đối tượng</th>
-                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Hạn nộp</th>
-                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Trạng thái</th>
-                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Tiến độ</th>
-                                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sorted.map((a) => (
-                                <AssignmentRow key={a.id} assignment={a} onDelete={() => onDelete(a.id)} onUpdateDeadline={onUpdateDeadline} onUpdateStatus={onUpdateStatus} />
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                <ResponsiveDataView
+                    items={sorted}
+                    keyExtractor={(assignment) => assignment.id}
+                    renderDesktop={() => (
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-gray-100 bg-gray-50/50">
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Đề bài</th>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Đối tượng</th>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Hạn nộp</th>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Trạng thái</th>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Tiến độ</th>
+                                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sorted.map((a) => (
+                                        <AssignmentRow key={a.id} assignment={a} onDelete={() => onDelete(a.id)} onUpdateDeadline={onUpdateDeadline} onUpdateStatus={onUpdateStatus} />
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                    renderMobileCard={(assignment) => (
+                        <AssignmentCardRow
+                            assignment={assignment}
+                            onDelete={() => onDelete(assignment.id)}
+                            onUpdateDeadline={onUpdateDeadline}
+                            onUpdateStatus={onUpdateStatus}
+                        />
+                    )}
+                />
             )}
         </div>
     );
@@ -513,6 +527,118 @@ const AssignmentRow: React.FC<{
                 </button>
             </td>
         </tr>
+    );
+};
+
+const AssignmentCardRow: React.FC<{
+    assignment: Assignment;
+    onDelete: () => void;
+    onUpdateDeadline: (assignmentId: string, newDeadline: string) => Promise<boolean>;
+    onUpdateStatus: (assignmentId: string, newStatus: 'OPEN' | 'CLOSED') => Promise<boolean>;
+}> = ({ assignment, onDelete, onUpdateDeadline, onUpdateStatus }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editDeadline, setEditDeadline] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    const isOpen = assignment.status === 'OPEN';
+    const deadlineDate = new Date(assignment.deadline);
+    const submitted = assignment.submittedCount ?? 0;
+    const total = assignment.totalStudents ?? 0;
+    const progress = total > 0 ? Math.round((submitted / total) * 100) : 0;
+
+    const getTimeRemaining = () => {
+        if (!isOpen) return null;
+        const diff = deadlineDate.getTime() - Date.now();
+        if (diff <= 0) return 'Đã hết hạn';
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const days = Math.floor(hours / 24);
+        if (days > 0) return `Còn ${days} ngày`;
+        return `Còn ${hours} giờ`;
+    };
+
+    const timeRemaining = getTimeRemaining();
+
+    const handleEditClick = () => {
+        setEditDeadline(deadlineDate.toISOString().slice(0, 16));
+        setIsEditing(true);
+    };
+
+    const handleReopenClick = () => {
+        const defaultNew = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        setEditDeadline(defaultNew.toISOString().slice(0, 16));
+        setIsEditing(true);
+    };
+
+    const handleSave = async () => {
+        if (!editDeadline) return;
+        setIsSaving(true);
+        const newDeadlineISO = new Date(editDeadline).toISOString();
+        const ok = await onUpdateDeadline(assignment.id, newDeadlineISO);
+        if (ok && !isOpen && new Date(editDeadline) > new Date()) {
+            await onUpdateStatus(assignment.id, 'OPEN');
+        }
+        setIsSaving(false);
+        if (ok) setIsEditing(false);
+    };
+
+    return (
+        <div className="space-y-3">
+            <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-semibold text-gray-800 line-clamp-2">{assignment.quizTitle || assignment.quizId}</p>
+                <button
+                    onClick={onDelete}
+                    className="h-9 w-9 shrink-0 rounded-lg border border-red-100 bg-red-50 text-red-500 inline-flex items-center justify-center"
+                    title="Xóa bài giao"
+                >
+                    <Trash2 className="w-4 h-4" />
+                </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+                <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded border border-gray-200">
+                    Lớp {assignment.className || assignment.classId}
+                </span>
+                {assignment.studentName ? (
+                    <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+                        👤 {assignment.studentName}
+                    </span>
+                ) : (
+                    <span className="text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200">
+                        👥 Toàn lớp
+                    </span>
+                )}
+            </div>
+
+            <div className="space-y-2 rounded-xl bg-slate-50 p-3">
+                <p className="text-xs font-semibold text-slate-500 uppercase">Hạn nộp</p>
+                {isEditing ? (
+                    <DeadlineEditor
+                        editDeadline={editDeadline}
+                        setEditDeadline={setEditDeadline}
+                        onSave={handleSave}
+                        onCancel={() => setIsEditing(false)}
+                        isSaving={isSaving}
+                    />
+                ) : (
+                    <DeadlineDisplay deadlineDate={deadlineDate} onEdit={handleEditClick} />
+                )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+                <AssignmentStatusBadge
+                    isOpen={isOpen}
+                    timeRemaining={timeRemaining}
+                    onToggle={() => {
+                        if (isOpen) {
+                            onUpdateStatus(assignment.id, 'CLOSED');
+                        } else {
+                            handleReopenClick();
+                        }
+                    }}
+                />
+                <AssignmentProgress submitted={submitted} total={total} progress={progress} />
+            </div>
+        </div>
     );
 };
 

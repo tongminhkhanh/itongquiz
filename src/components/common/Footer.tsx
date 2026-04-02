@@ -13,9 +13,9 @@ const Footer: React.FC<Props> = ({ onNavigate, showPublicLinks = true }) => {
     const currentYear = new Date().getFullYear();
 
     return (
-        <footer className="bg-white border-t border-slate-200 pt-16 pb-8 px-4">
+        <footer className="bg-white border-t border-slate-200 pt-10 md:pt-16 pb-8 px-4 sm:px-6">
             <div className="max-w-7xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 mb-10 md:mb-12">
                     <div className="col-span-1 md:col-span-1">
                         <div className="flex items-center gap-2 mb-4">
                             <span className="text-2xl font-black text-slate-800 tracking-tight">
@@ -25,14 +25,14 @@ const Footer: React.FC<Props> = ({ onNavigate, showPublicLinks = true }) => {
                         <p className="text-slate-500 text-sm leading-relaxed mb-6">
                             Nền tảng luyện tập các môn học chính khóa dành cho học sinh tiểu học.
                         </p>
-                        <div className="flex gap-4">
-                            <a href="#" className="p-2 bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition-all">
+                        <div className="flex gap-3">
+                            <a href="#" className="p-2.5 bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition-all">
                                 <Globe className="w-5 h-5" />
                             </a>
-                            <a href="#" className="p-2 bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition-all">
+                            <a href="#" className="p-2.5 bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition-all">
                                 <Mail className="w-5 h-5" />
                             </a>
-                            <a href="#" className="p-2 bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition-all">
+                            <a href="#" className="p-2.5 bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition-all">
                                 <Phone className="w-5 h-5" />
                             </a>
                         </div>

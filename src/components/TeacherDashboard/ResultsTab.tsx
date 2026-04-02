@@ -26,6 +26,7 @@ import {
     filterResultsByDateRange,
     searchResultsByName
 } from '../../utils/statisticsUtils';
+import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 
 interface ResultsTabProps {
     results: StudentResult[];
@@ -34,6 +35,7 @@ interface ResultsTabProps {
 }
 
 const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) => {
+    const { isMobile } = useResponsiveLayout();
     const PAGE_SIZE = 5;
 
     // State for filters and modals
@@ -250,8 +252,8 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
     return (
         <div className="space-y-6">
             {/* Top Filter Bar */}
-            <div className="bg-white rounded-xl border p-4 shadow-sm">
-                <div className="flex flex-wrap items-center gap-4">
+            <div className="bg-white rounded-xl border p-3 md:p-4 shadow-sm">
+                <div className="flex flex-wrap items-center gap-3 md:gap-4">
                     {/* Date Range Filter */}
                     <DateRangeFilter value={dateRange} onChange={setDateRange} />
 
@@ -259,7 +261,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                     <select
                         value={activeQuizId}
                         onChange={(e) => setActiveQuizId(e.target.value)}
-                        className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                        className="px-3 md:px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm w-full sm:w-auto"
                     >
                         <option value="all">Tất cả bài kiểm tra</option>
                         {availableQuizzes.map(quiz => (
@@ -273,7 +275,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                     <select
                         value={resultsHook.filterClass}
                         onChange={(e) => resultsHook.setFilterClass(e.target.value)}
-                        className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                        className="px-3 md:px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm w-full sm:w-auto"
                     >
                         <option value="All">Tất cả lớp</option>
                         {resultsHook.availableClasses.map(cls => (
@@ -282,7 +284,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                     </select>
 
                     {/* Search */}
-                    <div className="relative flex-1 max-w-xs">
+                    <div className="relative w-full sm:flex-1 sm:max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
@@ -293,7 +295,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                         />
                     </div>
 
-                    <div className="flex items-center gap-2 ml-auto">
+                    <div className={`flex items-center gap-2 ${isMobile ? 'w-full justify-end' : 'ml-auto'}`}>
                         {/* Refresh Button */}
                         <Button
                             onClick={resultsHook.handleRefresh}

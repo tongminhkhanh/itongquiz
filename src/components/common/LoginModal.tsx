@@ -109,13 +109,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                className="relative w-full max-w-[420px] bg-white rounded-[32px] p-8 pt-10 shadow-2xl overflow-visible"
+                className="relative w-full max-w-[420px] bg-white rounded-[28px] md:rounded-[32px] p-5 md:p-8 pt-8 md:pt-10 shadow-2xl overflow-visible"
                 style={{
                     boxShadow: '0 20px 50px rgba(0,0,0,0.15)'
                 }}
             >
                 {/* Mascot Peeking */}
-                <div className="absolute -top-[60px] left-1/2 -translate-x-1/2 w-[120px] h-[120px] flex items-center justify-center z-10 pointer-events-none">
+                <div className="absolute -top-[60px] left-1/2 -translate-x-1/2 w-[120px] h-[120px] hidden sm:flex items-center justify-center z-10 pointer-events-none">
                     <span className="text-[80px] filter drop-shadow-xl transform hover:scale-110 transition-transform cursor-pointer">🐝</span>
                 </div>
 
@@ -168,7 +168,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="w-full pl-[52px] pr-4 h-14 border-2 border-slate-200 rounded-2xl focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all font-bold text-slate-700 bg-slate-50 focus:bg-white"
-                                    placeholder={activeTab === 'student' ? "Tên đăng nhập..." : "Username..."}
+                                    placeholder="Tài Khoản"
                                     autoFocus
                                 />
                             </div>

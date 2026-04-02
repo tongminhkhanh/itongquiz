@@ -19,3 +19,6 @@ export {
     shuffleArray,
     formatTime
 } from './useIoeQuiz';
+
+export { useResponsiveLayout } from './useResponsiveLayout';
+export type { ResponsiveLayoutState } from './useResponsiveLayout';

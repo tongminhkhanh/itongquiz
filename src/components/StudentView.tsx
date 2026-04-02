@@ -8,6 +8,7 @@ import {
   ResultScreen,
   QuestionRenderer
 } from './student';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { validateAnswersOnServer } from '../services/quizValidationService';
 import { useClassroomStore } from '../stores/useClassroomStore';
 import { useGamificationStore } from '../stores/useGamificationStore';
@@ -21,6 +22,7 @@ interface Props {
 }
 
 const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
+  const { isMobile } = useResponsiveLayout();
 
   // Get student session from store (if logged in via Student Portal)
   const classroomStore = useClassroomStore();
@@ -797,6 +799,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     }
     return !!answers[q.id];
   };
+  const answeredCount = shuffledQuestions.filter((q) => isQuestionAnswered(q)).length;
 
   // ACCESS CODE VIEW
   if (step === 'code') {
@@ -853,9 +856,9 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
   // QUIZ TAKING VIEW
   return (
-    <div className="min-h-screen bg-gray-100 font-sans">
+    <div className="min-h-dvh bg-gray-100 font-sans">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b px-6 py-4 flex justify-between items-center sticky top-0 z-20">
+      <div className="bg-white shadow-sm border-b px-3 md:px-6 py-3 md:py-4 flex justify-between items-center sticky top-0 z-20">
         <div className="flex items-center gap-3">
           {session?.avatar && (
             <img
@@ -873,9 +876,9 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-4 md:p-6 flex flex-col md:flex-row gap-6">
+      <div className="max-w-7xl mx-auto p-3 md:p-6 flex flex-col md:flex-row gap-4 md:gap-6">
         {/* Questions */}
-        <div className="flex-1 space-y-6 pb-32 md:pb-0">
+        <div className="flex-1 space-y-4 md:space-y-6 pb-24 md:pb-0">
           {questionsOnCurrentPage.map((q, index) => (
             <QuestionRenderer
               key={q.id}
@@ -889,7 +892,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
           {/* Pagination Navigation */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-4 py-6 bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 py-4 md:py-6 bg-white rounded-xl shadow-sm border border-gray-200 px-3">
               <button
                 onClick={() => {
                   setCurrentPage(prev => Math.max(1, prev - 1));
@@ -940,6 +943,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         </div>
 
         {/* Sidebar */}
+        {!isMobile && (
         <div className="w-full md:w-80 flex-shrink-0">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sticky top-24">
             <div className="text-center mb-6">
@@ -952,7 +956,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
             <div className="mb-6">
               <p className="text-sm font-bold text-gray-700 mb-3 flex justify-between">
                 <span>Danh sách câu hỏi</span>
-                <span className="text-gray-400 font-normal">{Object.keys(answers).length}/{shuffledQuestions.length}</span>
+                <span className="text-gray-400 font-normal">{answeredCount}/{shuffledQuestions.length}</span>
               </p>
               {/* Page indicator */}
               {totalPages > 1 && (
@@ -1012,12 +1016,13 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
             </button>
           </div>
         </div>
+        )}
       </div>
 
       {/* Submit Confirmation Modal */}
       <SubmitConfirmModal
         isOpen={showConfirmModal}
-        unansweredCount={shuffledQuestions.length - Object.keys(answers).length}
+        unansweredCount={shuffledQuestions.length - answeredCount}
         onConfirm={() => {
           setShowConfirmModal(false);
           handleSubmit();
@@ -1025,16 +1030,26 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
         onCancel={() => setShowConfirmModal(false)}
       />
 
-      {/* Mobile Submit Button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-10 flex justify-center md:hidden">
-        <button
-          onClick={() => setShowConfirmModal(true)}
-          disabled={isSubmitting}
-          className={`font-bold py-3 px-12 rounded-full shadow-lg text-lg transform transition-transform ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700 text-white hover:scale-105'}`}
-        >
-          {isSubmitting ? 'Đang nộp...' : 'NỘP BÀI'}
-        </button>
-      </div>
+      {/* Mobile Bottom Action Bar */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 p-3 pb-safe z-30">
+          <div className="max-w-7xl mx-auto flex items-center gap-2">
+            <div className="flex-1 rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">
+              {quiz.isPractice || quiz.timeLimit === 0 ? 'Tự do' : `Thời gian: ${formatTime(timeLeft)}`}
+            </div>
+            <div className="flex-1 rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600 text-center">
+              {answeredCount}/{shuffledQuestions.length} câu
+            </div>
+            <button
+              onClick={() => setShowConfirmModal(true)}
+              disabled={isSubmitting}
+              className={`min-w-[120px] font-bold py-2.5 px-4 rounded-xl text-sm shadow-lg transition-all ${isSubmitting ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-orange-600 hover:bg-orange-700 text-white'}`}
+            >
+              {isSubmitting ? 'Đang nộp...' : 'Nộp bài'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -13,6 +13,7 @@ import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import AvatarSelectorModal from '../common/AvatarSelectorModal';
 import MathSpan from '../common/MathSpan';
 import { StudentFloatingSidebar } from '../gamification/StudentFloatingSidebar';
+import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 
 // --- Subject Config (Reused from HomePage) ---
 export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color: string; desc: string; showOnHome?: boolean }> = {
@@ -123,6 +124,7 @@ const resolveCorrectLabel = (correctAnswer: unknown, options: string[]): string 
 };
 
 const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = [] }) => {
+    const { isMobile } = useResponsiveLayout();
     // --- Stores ---
     const classroomStore = useClassroomStore();
     const quizStore = useQuizStore();
@@ -455,28 +457,28 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             : 'Đang tải câu hỏi điểm danh...';
 
     return (
-        <div className="min-h-screen bg-[#F4F7FC] font-sans text-slate-800 flex flex-col items-center">
+        <div className="min-h-dvh bg-[#F4F7FC] font-sans text-slate-800 flex flex-col items-center">
 
             {/* --- NAVBAR --- */}
             <header className="w-full bg-white shadow-sm border-b border-slate-100 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 md:px-8 h-20 flex items-center justify-between">
+                <div className="max-w-7xl mx-auto px-3 md:px-8 h-16 md:h-20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <img src="/school-logo.png" alt="School logo iTong Quiz" className="w-10 h-10 object-contain drop-shadow-md" />
-                        <span className="text-2xl font-black tracking-tight text-slate-800">
+                        <span className="text-xl md:text-2xl font-black tracking-tight text-slate-800">
                             ÍtOng<span className="text-orange-500">Quiz</span>
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-3 md:gap-8">
+                    <div className="flex items-center gap-2 md:gap-8">
                         {/* Gamification Stats */}
-                        <div className="flex items-center gap-2.5 md:gap-4">
-                            <div className="flex items-center gap-1.5 bg-amber-50 px-2.5 md:px-3 py-1.5 rounded-full border border-amber-200">
+                        <div className="flex items-center gap-2 md:gap-4">
+                            <div className="flex items-center gap-1.5 bg-amber-50 px-2 md:px-3 py-1.5 rounded-full border border-amber-200">
                                 <span className="text-amber-500 font-bold flex items-center gap-1 text-sm md:text-base">
                                     <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" /> {pet?.level || 1}
                                 </span>
                                 <span className="hidden md:inline text-xs uppercase font-bold text-amber-600">Cấp bậc</span>
                             </div>
-                            <div className="flex items-center gap-1.5 bg-yellow-50 px-2.5 md:px-3 py-1.5 rounded-full border border-yellow-200">
+                            <div className="flex items-center gap-1.5 bg-yellow-50 px-2 md:px-3 py-1.5 rounded-full border border-yellow-200">
                                 <span className="text-yellow-600 font-bold flex items-center gap-1 text-sm md:text-base">
                                     <Star className="w-3.5 h-3.5 md:w-4 md:h-4 fill-yellow-500" /> {coins}
                                 </span>
@@ -486,6 +488,12 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
                         {/* User Profile */}
                         <div className="flex items-center gap-3 border-l pl-3 md:pl-4 border-slate-200">
+                            <button
+                                onClick={handleLogout}
+                                className="sm:hidden h-9 px-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 bg-white"
+                            >
+                                Đăng xuất
+                            </button>
                             <div className="flex flex-col items-end hidden sm:flex">
                                 <span className="font-bold text-sm leading-tight text-slate-700">{studentSession.fullName}</span>
                                 <span className="text-xs text-slate-500 font-medium">{studentSession.className || 'Học sinh'}</span>
@@ -519,12 +527,12 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             </header>
 
             {/* --- MAIN CONTENT --- */}
-            <main className="w-full max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 flex-1 flex flex-col gap-10">
+            <main className="w-full max-w-7xl mx-auto px-3 md:px-8 py-5 md:py-12 flex-1 flex flex-col gap-7 md:gap-10">
 
                 {/* --- WELCOME BANNER --- */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                    className="w-full bg-gradient-to-r from-indigo-600 to-blue-500 rounded-[32px] p-8 md:p-12 relative overflow-hidden shadow-lg shadow-indigo-200"
+                    className="w-full bg-gradient-to-r from-indigo-600 to-blue-500 rounded-[24px] md:rounded-[32px] p-5 sm:p-6 md:p-12 relative overflow-hidden shadow-lg shadow-indigo-200"
                 >
                     <div className="absolute right-0 top-0 w-1/2 h-full opacity-10 pointer-events-none">
                         <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -537,15 +545,15 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                         </svg>
                     </div>
 
-                    <div className="relative z-10 max-w-2xl flex flex-col md:flex-row items-center gap-8">
-                        <div className="w-24 h-24 md:w-32 md:h-32 bg-white/20 backdrop-blur-md rounded-full shadow-inner flex items-center justify-center flex-shrink-0">
-                            <img src={`${FLUENT_CDN}/Graduation%20cap/3D/graduation_cap_3d.png`} alt="Mũ cử nhân đại diện cho sự học tập" className="w-20 md:w-28 filter drop-shadow-md" />
+                    <div className="relative z-10 max-w-2xl flex flex-col md:flex-row items-center gap-5 md:gap-8">
+                        <div className="w-20 h-20 md:w-32 md:h-32 bg-white/20 backdrop-blur-md rounded-full shadow-inner flex items-center justify-center flex-shrink-0">
+                            <img src={`${FLUENT_CDN}/Graduation%20cap/3D/graduation_cap_3d.png`} alt="Mũ cử nhân đại diện cho sự học tập" className="w-16 md:w-28 filter drop-shadow-md" />
                         </div>
                         <div className="text-center md:text-left text-white">
-                            <h1 className="text-3xl md:text-4xl font-black mb-2">Chào ngày mới, {studentSession.fullName.split(' ').pop()}! 👋</h1>
-                            <p className="text-indigo-100 text-lg font-medium mb-6">Hôm nay em muốn chinh phục thử thách nào? Hãy chọn một bài tập và bắt đầu nhé!</p>
+                            <h1 className="text-2xl md:text-4xl font-black mb-2">Chào ngày mới, {studentSession.fullName.split(' ').pop()}! 👋</h1>
+                            <p className="text-indigo-100 text-sm md:text-lg font-medium mb-4 md:mb-6">Hôm nay em muốn chinh phục thử thách nào? Hãy chọn một bài tập và bắt đầu nhé!</p>
 
-                            <div className="flex items-center justify-center md:justify-start gap-4">
+                            <div className="flex items-center justify-center md:justify-start gap-2 md:gap-4">
                                 <div
                                     role="button"
                                     tabIndex={0}
@@ -553,7 +561,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' || e.key === ' ') openAttendanceModal();
                                     }}
-                                    className={`backdrop-blur-sm rounded-2xl px-5 py-2.5 text-sm font-black flex items-center gap-2 cursor-pointer transition-all duration-200 ${attendanceClaimed
+                                    className={`backdrop-blur-sm rounded-2xl px-4 md:px-5 py-2.5 text-xs md:text-sm font-black flex items-center gap-2 cursor-pointer transition-all duration-200 ${attendanceClaimed
                                         ? 'bg-gradient-to-r from-emerald-400/70 to-teal-300/70 text-white ring-2 ring-emerald-200/70 shadow-[0_8px_24px_rgba(16,185,129,0.35)]'
                                         : 'bg-gradient-to-r from-amber-300 via-yellow-300 to-lime-300 text-slate-900 ring-2 ring-yellow-100 shadow-[0_10px_28px_rgba(251,191,36,0.45)] hover:scale-105 hover:shadow-[0_12px_36px_rgba(251,191,36,0.55)] animate-pulse'
                                         }`}
@@ -746,7 +754,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 flex items-center justify-center"
+                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-0 md:p-4 flex items-end md:items-center justify-center"
                         onClick={() => !isSubmittingAttendance && setIsAttendanceModalOpen(false)}
                     >
                         <motion.div
@@ -755,7 +763,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
                             transition={{ duration: 0.2 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-2xl bg-white rounded-3xl p-6 md:p-8 shadow-2xl"
+                            className="w-full h-dvh md:h-auto md:max-w-2xl bg-white rounded-none md:rounded-3xl p-4 md:p-8 shadow-2xl overflow-y-auto"
                         >
                             <div className="flex items-start justify-between gap-4 mb-5">
                                 <div>
@@ -864,7 +872,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             />
 
             {/* Bảng Vàng Ít Ong Sidebar - Floating */}
-            <StudentFloatingSidebar />
+            {!isMobile && <StudentFloatingSidebar />}
         </div>
     );
 };

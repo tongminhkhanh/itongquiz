@@ -144,7 +144,7 @@ const TeacherDashboard: React.FC = () => {
                     </div>
 
                     {/* Right side: Search, Notifications, Profile */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 md:gap-4">
                         <div className="hidden md:flex relative">
                             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                             <input
@@ -154,7 +154,7 @@ const TeacherDashboard: React.FC = () => {
                             />
                         </div>
 
-                        <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full relative transition-colors">
+                        <button className="hidden sm:inline-flex p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full relative transition-colors">
                             <Bell className="w-5 h-5" />
                             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full border-2 border-white"></span>
                         </button>
@@ -194,7 +194,7 @@ const TeacherDashboard: React.FC = () => {
                 </header>
 
                 {/* Content View */}
-                <main className="flex-1 p-5 lg:p-10 overflow-x-hidden">
+                <main className="flex-1 p-3 sm:p-5 lg:p-10 overflow-x-hidden">
                     <ErrorBoundary onReset={() => setActiveTab('overview')}>
                         <Suspense fallback={
                             <div className="flex items-center justify-center py-20 h-full">

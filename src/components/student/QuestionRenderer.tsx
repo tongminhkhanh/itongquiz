@@ -201,7 +201,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
 
     return (
-        <div ref={containerRef} id={`question-${index}`} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 scroll-mt-24">
+        <div ref={containerRef} id={`question-${index}`} className="question-renderer bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200 scroll-mt-24">
             {/* Question Header */}
             <div className="mb-4">
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Câu hỏi {index + 1}</h3>
@@ -432,7 +432,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
                     return (
                         <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                                 <div className="space-y-3">
                                     <p className="font-bold text-blue-600 text-center">Cột A</p>
                                     {(q.pairs ?? []).map((pair) => {
@@ -853,7 +853,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                             )}
                             {/* Options - hiển thị dạng hình nếu có optionImages */}
                             {hasOptionImages ? (
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {((q as any).options || []).map((opt: string, idx: number) => {
                                         const label = String.fromCharCode(65 + idx);
                                         const isSelected = answers[q.id] === label;

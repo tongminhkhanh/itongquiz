@@ -132,10 +132,10 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     const wrongCount = displayQuestions.filter(q => q.isCorrect === false).length;
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4">
+            <div className="bg-white w-full h-dvh md:h-auto md:max-h-[90vh] md:max-w-4xl rounded-none md:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
                 {/* Header - Blue Theme */}
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 md:p-6">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             {/* Score Badge */}
@@ -172,7 +172,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 </div>
 
                 {/* Filter Bar */}
-                <div className="flex items-center gap-2 px-6 py-3 border-b bg-gray-50">
+                <div className="flex items-center gap-2 px-4 md:px-6 py-3 border-b bg-gray-50 overflow-x-auto">
                     <Filter className="w-4 h-4 text-gray-400" />
                     <button
                         onClick={() => setFilterMode('all')}
@@ -204,7 +204,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-4 md:p-6">
                     {/* Warning if quiz was deleted and no snapshots */}
                     {!hasAnyData && (
                         <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl mb-4">

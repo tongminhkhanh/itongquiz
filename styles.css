@@ -2739,6 +2739,22 @@ canvas {
   height: auto;
 }
 
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+.min-h-dvh {
+  min-height: 100dvh;
+}
+
+.h-dvh {
+  height: 100dvh;
+}
+
 @media (max-width: 768px) {
   /* Fix mobile browser viewport jumps (address bar show/hide) */
   .min-h-screen,
@@ -2797,6 +2813,29 @@ canvas {
 
   .chatbot-window {
     bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .question-renderer button,
+  .question-renderer [role="button"],
+  .question-renderer input,
+  .question-renderer select,
+  .question-renderer textarea {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 767px), (prefers-reduced-motion: reduce) {
+  .light-particle,
+  .animate-float-3d,
+  .animate-bounce-slow,
+  .animate-pulse-slow,
+  .shadow-3d-premium {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .shadow-3d-premium {
+    filter: none !important;
   }
 }
 
