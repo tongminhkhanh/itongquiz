@@ -73,6 +73,13 @@ export interface LeaderboardEntry {
     avatar: string;
 }
 
+export interface TopGoldStudent {
+    username: string;
+    fullName: string;
+    avatar: string;
+    coins: number;
+}
+
 // --- Pet Selection (for registration / onboarding) ---
 
 export interface PetOption {

@@ -40,6 +40,7 @@ interface ClassroomStore {
     // Student actions
     fetchStudents: (classId: string) => Promise<void>;
     addStudent: (payload: CreateStudentPayload) => Promise<Student | null>;
+    addStudentsBulk: (payloads: CreateStudentPayload[], classId: string) => Promise<classroomService.BatchStudentResult | null>;
     removeStudent: (studentId: string, classId: string) => Promise<boolean>;
     resetPassword: (studentId: string) => Promise<string | null>;
 
@@ -158,6 +159,35 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
             return null;
         } catch (err) {
             set({ error: 'Lỗi khi thêm học sinh.', isLoading: false });
+            return null;
+        }
+    },
+
+    addStudentsBulk: async (payloads, classId) => {
+        set({ isLoading: true, error: null });
+        try {
+            const result = await classroomService.addStudentsBatch(payloads);
+            if (result && result.successes.length > 0) {
+                set((s) => {
+                    const existing = s.students[classId] || [];
+                    return {
+                        students: {
+                            ...s.students,
+                            [classId]: [...existing, ...result.successes],
+                        },
+                        isLoading: false,
+                    };
+                });
+                return result;
+            }
+            if (result && result.successes.length === 0) {
+                set({ isLoading: false });
+                return result;
+            }
+            set({ error: 'Không thể thêm học sinh hàng loạt.', isLoading: false });
+            return null;
+        } catch (err: any) {
+            set({ error: err.message || 'Lỗi khi thêm học sinh hàng loạt.', isLoading: false });
             return null;
         }
     },

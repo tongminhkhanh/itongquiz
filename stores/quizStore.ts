@@ -190,6 +190,15 @@ export const useQuizStore = create<QuizState>()(
                         parsed.correctWordIndexes = parsed.correctWordIndexes || parsed.correct_word_indexes;
                         parsed.text = parsed.text || parsed.text_field;
 
+                        // Fix legacy escaped fractions (e.g. "'1/2" -> "1/2")
+                        // Only remove quotes if it matches the legacy escape pattern to avoid cutting real quotes
+                        if (typeof parsed.question === 'string' && /^'\d+\s*\/\s*\d+/.test(parsed.question)) {
+                            parsed.question = parsed.question.substring(1);
+                        }
+                        if (typeof parsed.mainQuestion === 'string' && /^'\d+\s*\/\s*\d+/.test(parsed.mainQuestion)) {
+                            parsed.mainQuestion = parsed.mainQuestion.substring(1);
+                        }
+
                         // DATA UNMAPPING: Reconstruct specific question types from generic DB columns
                         const qType = parsed.type;
                         if (qType === 'IMAGE_QUESTION') {

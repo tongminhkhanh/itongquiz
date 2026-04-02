@@ -99,6 +99,64 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         });
     }
 
+    // POST /api/students/batch
+    if (path === '/api/students/batch' && method === 'POST') {
+        const body = await parseBody(request);
+        if (!body || !Array.isArray(body.students)) return errorResponse('Invalid JSON body');
+
+        if (body.students.length === 0) {
+            return jsonResponse({ status: 'success', data: { successCount: 0, errorCount: 0, successes: [], errors: [] }});
+        }
+
+        // 1. Get existing usernames to avoid duplicates
+        const usernames = body.students.map((s: any) => s.username);
+        // SQLite has a limit on variables, but 50-100 is fine.
+        const placeholders = usernames.map(() => '?').join(',');
+        const existingResults = await db.prepare(
+            `SELECT username FROM students WHERE username IN (${placeholders})`
+        ).bind(...usernames).all();
+        
+        const existingUsernames = new Set(existingResults.results.map((r: any) => r.username));
+
+        const stmts = [];
+        const successList = [];
+        const errorList = [];
+
+        for (const student of body.students) {
+            if (existingUsernames.has(student.username)) {
+                errorList.push({ username: student.username, fullName: student.fullName, reason: 'Tên đăng nhập đã tồn tại' });
+                continue;
+            }
+
+            const pwdHash = await hashPassword(student.password);
+            const sId = generateId('s');
+            const createdAt = new Date().toISOString();
+            
+            // In D1, batch expects an array of statement objects. 
+            // Return from db.prepare(...) is the statement.
+            stmts.push(db.prepare(
+                'INSERT INTO students (id, full_name, username, password_hash, class_id, parent_phone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            ).bind(sId, student.fullName, student.username, pwdHash, student.classId, student.parentPhone || '', createdAt));
+
+            successList.push({ id: sId, fullName: student.fullName, username: student.username, classId: student.classId, parentPhone: student.parentPhone || '', createdAt });
+            // Add to Set to prevent duplicates within the same batch payload
+            existingUsernames.add(student.username);
+        }
+
+        if (stmts.length > 0) {
+            try {
+                await db.batch(stmts);
+            } catch (dbErr: any) {
+                return errorResponse(`Database batch error: ${dbErr.cause?.message || dbErr.message}`);
+            }
+        }
+
+        return jsonResponse({
+            status: 'success',
+            data: { successCount: successList.length, errorCount: errorList.length, successes: successList, errors: errorList }
+        });
+    }
+
     // DELETE /api/students/:id
     if (path.startsWith('/api/students/') && !path.includes('/reset-password') && !path.includes('/avatar') && method === 'DELETE') {
         const studentId = extractIdFromPath(path, '/api/students');

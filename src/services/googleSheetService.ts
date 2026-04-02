@@ -144,16 +144,10 @@ export const fetchResultAnswers = async (resultId: string | number): Promise<Rec
     }
 };
 
-// Helper to escape values for Google Sheets (prevent auto-formatting like 1/10 -> Date)
+// Helper to escape values for Google Sheets (No longer needed for D1 SQLite DB)
 const escapeSheetValue = (val: any): string => {
     if (val === undefined || val === null) return '';
-    const strVal = String(val);
-    // If it looks like a fraction or math expression that Sheets might reinterpret
-    // check for pattern: number/number
-    if (/^\d+\s*\/\s*\d+/.test(strVal)) {
-        return `'${strVal}`;
-    }
-    return strVal;
+    return String(val);
 };
 
 // Helper to unescape values from Google Sheets

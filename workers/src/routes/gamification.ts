@@ -143,5 +143,23 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
         return jsonResponse({ status: 'success', data: leaderboard });
     }
 
+    // GET /api/leaderboard/top-gold
+    if (path === '/api/leaderboard/top-gold' && method === 'GET') {
+        const topGold = await db.prepare(`
+            SELECT username, full_name, avatar, coins
+            FROM students
+            ORDER BY coins DESC
+            LIMIT 10
+        `).all();
+
+        const leaderboard = topGold.results.map((s: any) => ({
+            username: s.username,
+            fullName: s.full_name || s.username,
+            avatar: s.avatar || '',
+            coins: Number(s.coins) || 0,
+        }));
+        return jsonResponse({ status: 'success', data: leaderboard });
+    }
+
     return errorResponse('Not found: ' + path, 404);
 }

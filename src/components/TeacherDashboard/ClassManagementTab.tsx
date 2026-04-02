@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { Classroom, Student, CreateStudentPayload } from '../../types/classroom.types';
 import {
     Plus, Users, Trash2, ChevronLeft, Copy, Check, RefreshCw,
-    Loader2, X, Eye, EyeOff, KeyRound, UserPlus, Phone, Search
+    Loader2, X, Eye, EyeOff, KeyRound, UserPlus, Phone, Search,
+    Upload, Download, FileSpreadsheet, AlertCircle
 } from 'lucide-react';
 import { Button } from '../common';
+import * as XLSX from 'xlsx';
 
 // ==========================================
 // CLASS MANAGEMENT TAB (Main View)
@@ -426,6 +428,11 @@ const ClassDetailView: React.FC<{
                         const result = await store.addStudent(payload);
                         if (result) setShowAddModal(false);
                     }}
+                    onAddBatch={async (payloads) => {
+                        const result = await store.addStudentsBulk(payloads, classroom.id);
+                        if (result) setShowAddModal(false);
+                        return result;
+                    }}
                     isLoading={store.isLoading}
                     error={store.error}
                 />
@@ -442,14 +449,24 @@ const AddStudentModal: React.FC<{
     classId: string;
     onClose: () => void;
     onAdd: (payload: CreateStudentPayload) => Promise<void>;
+    onAddBatch: (payloads: CreateStudentPayload[]) => Promise<any>;
     isLoading: boolean;
     error: string | null;
-}> = ({ classId, onClose, onAdd, isLoading, error }) => {
+}> = ({ classId, onClose, onAdd, onAddBatch, isLoading, error }) => {
+    const [activeTab, setActiveTab] = useState<'manual' | 'excel'>('manual');
+
+    // --- State for Manual Tab ---
     const [fullName, setFullName] = useState('');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [parentPhone, setParentPhone] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+
+    // --- State for Excel Tab ---
+    const [parsedData, setParsedData] = useState<CreateStudentPayload[] | null>(null);
+    const [parseError, setParseError] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Auto-generate username from full name
     useEffect(() => {
@@ -459,7 +476,6 @@ const AddStudentModal: React.FC<{
             const lastInitial = parts[0]?.[0] || '';
             const mid = parts.length > 2 ? parts.slice(1, -1).map(p => p[0]).join('') : '';
             const suffix = Math.floor(Math.random() * 900 + 100);
-            // Remove Vietnamese diacritics
             const clean = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
             setUsername(clean(`${firstName}.${lastInitial}${mid}.${suffix}`));
         }
@@ -471,9 +487,9 @@ const AddStudentModal: React.FC<{
         let pw = '';
         for (let i = 0; i < 6; i++) pw += chars[Math.floor(Math.random() * chars.length)];
         setPassword(pw);
-    }, []);
+    }, [activeTab]); // regen when switching tabs
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmitManual = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!fullName.trim() || !username.trim() || !password.trim()) return;
         await onAdd({
@@ -485,16 +501,140 @@ const AddStudentModal: React.FC<{
         });
     };
 
+    // --- Excel Handling ---
+    const handleDownloadTemplate = () => {
+        const ws = XLSX.utils.aoa_to_sheet([
+            ['Họ và tên *', 'Tên đăng nhập (để trống tự tạo)', 'Mật khẩu (để trống tự tạo)', 'SĐT phụ huynh'],
+            ['Nguyễn Văn A', 'a.nv.101', 'xyz123', '0987654321'],
+            ['Trần Thị B', '', '', ''],
+            ['Lê Minh C', '', '', '']
+        ]);
+
+        // Auto size columns a bit
+        ws['!cols'] = [{ wch: 20 }, { wch: 30 }, { wch: 25 }, { wch: 15 }];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'HocSinh');
+        XLSX.writeFile(wb, 'Mau_Them_Hoc_Sinh.xlsx');
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        setParseError(null);
+        setParsedData(null);
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const bstr = evt.target?.result;
+                const wb = XLSX.read(bstr, { type: 'binary' });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                // array of object arrays
+                const data: any[] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+                // validate
+                if (data.length <= 1) {
+                    setParseError('File trống hoặc không có dữ liệu (cần ít nhất 1 dòng dữ liệu không tính tiêu đề).');
+                    setIsUploading(false);
+                    return;
+                }
+
+                const students: CreateStudentPayload[] = [];
+                for (let i = 1; i < data.length; i++) {
+                    const row = data[i];
+                    if (!row || row.length === 0 || !row[0] || (typeof row[0] === 'string' && !row[0].trim())) continue; // Skip empty rows
+
+                    const fullNameRow = String(row[0]).trim();
+                    let usernameRow = row[1] ? String(row[1]).trim() : '';
+                    let passwordRow = row[2] ? String(row[2]).trim() : '';
+                    const phoneRow = row[3] ? String(row[3]).trim() : '';
+
+                    // Generate if empty
+                    if (!usernameRow) {
+                        const parts = fullNameRow.toLowerCase().split(/\s+/);
+                        const firstName = parts[parts.length - 1] || '';
+                        const lastInitial = parts[0]?.[0] || '';
+                        const mid = parts.length > 2 ? parts.slice(1, -1).map(p => p[0]).join('') : '';
+                        const suffix = Math.floor(Math.random() * 900 + 100);
+                        const clean = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+                        usernameRow = clean(`${firstName}.${lastInitial}${mid}.${suffix}${i}`);
+                    }
+
+                    if (!passwordRow) {
+                        const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+                        for (let k = 0; k < 6; k++) passwordRow += chars[Math.floor(Math.random() * chars.length)];
+                    }
+
+                    students.push({
+                        fullName: fullNameRow,
+                        username: usernameRow,
+                        password: passwordRow,
+                        classId,
+                        parentPhone: phoneRow,
+                    });
+                }
+
+                if (students.length === 0) {
+                    setParseError('Không tìm thấy dữ liệu học sinh hợp lệ.');
+                } else {
+                    setParsedData(students);
+                }
+            } catch (err: any) {
+                setParseError('Lỗi đọc file Excel: ' + (err.message || 'Unknown error.'));
+            } finally {
+                setIsUploading(false);
+                if (fileInputRef.current) fileInputRef.current.value = ''; // reset
+            }
+        };
+        reader.onerror = () => {
+            setParseError('Lỗi trình duyệt khi đọc file.');
+            setIsUploading(false);
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    const handleSubmitExcel = async () => {
+        if (!parsedData || parsedData.length === 0) return;
+        const res = await onAddBatch(parsedData);
+        if (res) {
+            if (res.errorCount > 0) {
+                alert(`Đã thêm thành công ${res.successCount} học sinh.\nBỏ qua ${res.errorCount} học sinh do bị trùng Tên đăng nhập.`);
+            } else {
+                alert(`Đã thêm thành công tất cả ${res.successCount} học sinh.`);
+            }
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
             <div
                 className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold text-gray-800">Thêm học sinh</h2>
                     <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
                         <X className="w-5 h-5 text-gray-500" />
+                    </button>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
+                    <button
+                        className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'manual' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+                        onClick={() => setActiveTab('manual')}
+                    >
+                        Nhập thủ công
+                    </button>
+                    <button
+                        className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'excel' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+                        onClick={() => setActiveTab('excel')}
+                    >
+                        Nhập từ Excel
                     </button>
                 </div>
 
@@ -504,90 +644,174 @@ const AddStudentModal: React.FC<{
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Full Name */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Họ và tên <span className="text-red-400">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            placeholder="H?c sinh m?u 299c47"
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                            autoFocus
-                        />
-                    </div>
-
-                    {/* Username */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Tên đăng nhập <span className="text-red-400">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            placeholder="an.nv.123"
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-mono"
-                        />
-                        <p className="text-xs text-gray-400 mt-1">Tự động tạo từ tên. Có thể chỉnh sửa.</p>
-                    </div>
-
-                    {/* Password */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Mật khẩu <span className="text-red-400">*</span>
-                        </label>
-                        <div className="relative">
+                {activeTab === 'manual' ? (
+                    <form onSubmit={handleSubmitManual} className="space-y-4">
+                        {/* Full Name */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Họ và tên <span className="text-red-400">*</span>
+                            </label>
                             <input
-                                type={showPassword ? 'text' : 'password'}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-mono pr-10"
+                                type="text"
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                                placeholder="H?c sinh m?u 299c47"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                                autoFocus
                             />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                            >
-                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
                         </div>
-                        <p className="text-xs text-gray-400 mt-1">Mật khẩu sẽ được mã hóa khi lưu. Ghi lại để gửi cho HS.</p>
-                    </div>
 
-                    {/* Parent Phone */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            SĐT phụ huynh <span className="text-gray-400">(không bắt buộc)</span>
-                        </label>
-                        <input
-                            type="tel"
-                            value={parentPhone}
-                            onChange={(e) => setParentPhone(e.target.value)}
-                            placeholder="0987654321"
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                        />
-                    </div>
+                        {/* Username */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Tên đăng nhập <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="an.nv.123"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-mono"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">Tự động tạo từ tên. Có thể chỉnh sửa.</p>
+                        </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-3 pt-2">
-                        <Button onClick={onClose} variant="secondary" className="flex-1">
-                            Hủy
-                        </Button>
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            className="flex-1"
-                            disabled={!fullName.trim() || !username.trim() || !password.trim() || isLoading}
-                            icon={isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                        >
-                            {isLoading ? 'Đang thêm...' : 'Thêm HS'}
-                        </Button>
+                        {/* Password */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Mật khẩu <span className="text-red-400">*</span>
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-mono pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                            <p className="text-xs text-gray-400 mt-1">Mật khẩu sẽ được mã hóa khi lưu. Ghi lại để gửi cho HS.</p>
+                        </div>
+
+                        {/* Parent Phone */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                SĐT phụ huynh <span className="text-gray-400">(không bắt buộc)</span>
+                            </label>
+                            <input
+                                type="tel"
+                                value={parentPhone}
+                                onChange={(e) => setParentPhone(e.target.value)}
+                                placeholder="0987654321"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                            />
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-3 pt-2">
+                            <Button onClick={onClose} variant="secondary" className="flex-1">
+                                Hủy
+                            </Button>
+                            <Button
+                                type="submit"
+                                variant="primary"
+                                className="flex-1"
+                                disabled={!fullName.trim() || !username.trim() || !password.trim() || isLoading}
+                                icon={isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                            >
+                                {isLoading ? 'Đang thêm...' : 'Thêm HS'}
+                            </Button>
+                        </div>
+                    </form>
+                ) : (
+                    <div className="space-y-6">
+                        {/* Download Template */}
+                        <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex items-center justify-between">
+                            <div>
+                                <h3 className="font-semibold text-orange-900 text-sm">Tải file mẫu</h3>
+                                <p className="text-orange-700 text-xs mt-1">Sử dụng định dạng chuẩn để tránh lỗi</p>
+                            </div>
+                            <Button variant="secondary" onClick={handleDownloadTemplate} icon={<Download className="w-4 h-4" />} className="bg-white">
+                                Tải xuống
+                            </Button>
+                        </div>
+
+                        {/* Dropzone / Upload Area */}
+                        <div>
+                            <input
+                                type="file"
+                                accept=".xlsx, .xls"
+                                className="hidden"
+                                ref={fileInputRef}
+                                onChange={handleFileUpload}
+                            />
+                            
+                            {!parsedData ? (
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${parseError ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-orange-400 hover:bg-orange-50'}`}
+                                >
+                                    {isUploading ? (
+                                        <div className="flex flex-col items-center">
+                                            <Loader2 className="w-8 h-8 text-orange-500 animate-spin mb-3" />
+                                            <p className="text-gray-600 font-medium">Đang đọc file...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center">
+                                            <FileSpreadsheet className={`w-8 h-8 mb-3 ${parseError ? 'text-red-400' : 'text-gray-400'}`} />
+                                            <p className="text-gray-700 font-medium mb-1">Chọn file Excel tải lên</p>
+                                            <p className="text-gray-400 text-sm">Hỗ trợ .xlsx, .xls</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="border border-green-200 bg-green-50 rounded-xl p-6 text-center">
+                                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                        <Check className="w-6 h-6 text-green-600" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-green-800 mb-1">
+                                        Đã tìm thấy {parsedData.length} học sinh
+                                    </h3>
+                                    <p className="text-green-600 text-sm mb-4">
+                                        Dữ liệu hợp lệ, sẵn sàng để tải lên hệ thống.
+                                    </p>
+                                    <Button variant="outline" onClick={() => setParsedData(null)} className="text-sm bg-white">
+                                        Chọn file khác
+                                    </Button>
+                                </div>
+                            )}
+                            
+                            {parseError && (
+                                <div className="flex items-center gap-2 mt-3 text-red-500 text-sm">
+                                    <AlertCircle className="w-4 h-4" />
+                                    <span>{parseError}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-3 pt-2">
+                            <Button onClick={onClose} variant="secondary" className="flex-1">
+                                Hủy
+                            </Button>
+                            <Button
+                                onClick={handleSubmitExcel}
+                                variant="primary"
+                                className="flex-1"
+                                disabled={!parsedData || isLoading}
+                                icon={isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                            >
+                                {isLoading ? 'Đang thêm...' : 'Tải lên & Thêm'}
+                            </Button>
+                        </div>
                     </div>
-                </form>
+                )}
             </div>
         </div>
     );

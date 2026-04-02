@@ -5,6 +5,14 @@ import { callApi } from "./apiAdapter";
 
 export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux' | 'localhost' | 'native-ocr';
 
+export const AI_CORE_SUBJECT_IDS = [
+  'toan',
+  'tieng-viet',
+  'tieng-anh',
+  'tu-nhien-xa-hoi',
+  'tin-hoc',
+] as const;
+
 export interface QuizGenerationOptions {
   title: string;
   questionCount: number;
@@ -202,6 +210,17 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     - Tieu de bai kiem tra: "${title}"
     - Chu de: "${topic}"
     - SO CAU: ${count} (KHONG DUOC THAY DOI)
+
+    METADATA AI BAT BUOC O CAP ROOT JSON:
+    - detectedCategory: CHI DUOC PHEP LA 1 TRONG 5 MA SAU:
+      "toan" | "tieng-viet" | "tieng-anh" | "tu-nhien-xa-hoi" | "tin-hoc"
+    - detectedLesson: Ten bai hoc tom tat gon (VD: "Bai 15: Phep cong phan so")
+    - suggestedTags: Mang 3-5 hashtag lien quan (chu thuong, khong dau, dung "_" thay dau cach)
+      VD: ["phan_so", "on_tap", "luyen_tap"]
+    - Neu khong xac dinh chac chan, de rong:
+      detectedCategory: ""
+      detectedLesson: ""
+      suggestedTags: []
     
     ${difficultyInstructions}
     ${imageInstructions}
@@ -234,6 +253,12 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
        - Phân số: Viết liền không cách (ví dụ: 1/2, 3/4).
        - Phép chia: Viết có khoảng cách (ví dụ: 10 / 2, 15 / 3).
        - Phép nhân: Viết có khoảng cách (ví dụ: 5 * 3).
+    8. ROOT JSON PHAI CO DAY DU CAC TRUONG:
+       - title
+       - detectedCategory
+       - detectedLesson
+       - suggestedTags
+       - questions
     
     📐 QUY TẮC LATEX - BẮT BUỘC 100% TUÂN THỦ:
     
@@ -594,10 +619,123 @@ const extractPlaceholdersFromLatex = (text: string): string => {
   });
 };
 
+const stripVietnameseDiacritics = (value: string): string => {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+};
+
+const normalizeCategoryKey = (value: string): string => {
+  return stripVietnameseDiacritics(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+};
+
+const CATEGORY_ALIAS_TO_CORE: Record<string, (typeof AI_CORE_SUBJECT_IDS)[number]> = {
+  toan: 'toan',
+  math: 'toan',
+  mathematics: 'toan',
+  'toan-hoc': 'toan',
+  'tieng-viet': 'tieng-viet',
+  tiengviet: 'tieng-viet',
+  'ngu-van': 'tieng-viet',
+  van: 'tieng-viet',
+  'tieng-anh': 'tieng-anh',
+  tienganh: 'tieng-anh',
+  english: 'tieng-anh',
+  'tu-nhien-xa-hoi': 'tu-nhien-xa-hoi',
+  'tu-nhien-va-xa-hoi': 'tu-nhien-xa-hoi',
+  'khoa-hoc': 'tu-nhien-xa-hoi',
+  'khoa-hoc-xa-hoi': 'tu-nhien-xa-hoi',
+  'tin-hoc': 'tin-hoc',
+  tinhoc: 'tin-hoc',
+  it: 'tin-hoc',
+};
+
+const normalizeDetectedCategory = (raw: unknown): string | undefined => {
+  if (typeof raw !== 'string') return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+
+  const normalized = normalizeCategoryKey(trimmed);
+  const mapped = CATEGORY_ALIAS_TO_CORE[normalized];
+  if (!mapped) return undefined;
+
+  return mapped;
+};
+
+const normalizeDetectedLesson = (raw: unknown): string | undefined => {
+  if (typeof raw !== 'string') return undefined;
+  const cleaned = raw.replace(/\s+/g, ' ').trim();
+  if (!cleaned) return undefined;
+  return cleaned.slice(0, 180);
+};
+
+const normalizeTag = (raw: string): string => {
+  const normalized = stripVietnameseDiacritics(raw)
+    .toLowerCase()
+    .replace(/^#+/g, '')
+    .trim()
+    .replace(/[^a-z0-9\s_-]/g, ' ')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return normalized.slice(0, 40);
+};
+
+const normalizeSuggestedTags = (raw: unknown): string[] => {
+  const source = Array.isArray(raw)
+    ? raw
+    : typeof raw === 'string'
+      ? raw.split(',')
+      : [];
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const item of source) {
+    const value = normalizeTag(String(item ?? ''));
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    result.push(value);
+    if (result.length >= 5) break;
+  }
+
+  return result;
+};
+
 // Validate and fix quiz data, especially CATEGORIZATION questions
 // maxQuestions: Optional limit - if AI returns more questions than requested, slice to this limit
 const validateAndFixQuiz = (quiz: any, maxQuestions?: number): any => {
-  if (!quiz || !quiz.questions) {
+  if (!quiz || typeof quiz !== 'object') {
+    return quiz;
+  }
+
+  const detectedCategory = normalizeDetectedCategory(quiz.detectedCategory);
+  if (detectedCategory) {
+    quiz.detectedCategory = detectedCategory;
+  } else {
+    delete quiz.detectedCategory;
+  }
+
+  const detectedLesson = normalizeDetectedLesson(quiz.detectedLesson);
+  if (detectedLesson) {
+    quiz.detectedLesson = detectedLesson;
+  } else {
+    delete quiz.detectedLesson;
+  }
+
+  const suggestedTags = normalizeSuggestedTags(quiz.suggestedTags);
+  if (suggestedTags.length > 0) {
+    quiz.suggestedTags = suggestedTags;
+  } else {
+    delete quiz.suggestedTags;
+  }
+
+  if (!quiz.questions) {
     return quiz;
   }
 

@@ -50,6 +50,7 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         // --- Students ---
         case 'get_students': method = 'GET'; path = '/api/students'; urlParams.append('classId', payload.classId); if (payload.role) urlParams.append('role', payload.role); break;
         case 'add_student': method = 'POST'; path = '/api/students'; break;
+        case 'add_students_batch': method = 'POST'; path = '/api/students/batch'; break;
         case 'delete_student': method = 'DELETE'; path = `/api/students/${payload.studentId}`; break;
         case 'reset_student_password': method = 'POST'; path = `/api/students/${payload.studentId}/reset-password`; break;
         case 'student_login': method = 'POST'; path = '/api/student-login'; break;
@@ -71,6 +72,7 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'update_game_state': method = 'POST'; path = '/api/game-state'; break;
         case 'buy_shop_item': method = 'POST'; path = '/api/shop/buy'; break;
         case 'get_leaderboard': method = 'GET'; path = '/api/leaderboard'; break;
+        case 'get_top_gold_leaderboard': method = 'GET'; path = '/api/leaderboard/top-gold'; break;
 
         // --- Announcements ---
         case 'get_announcement': method = 'GET'; path = '/api/announcements'; break;

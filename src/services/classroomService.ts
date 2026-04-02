@@ -90,6 +90,25 @@ export const addStudent = async (payload: CreateStudentPayload): Promise<Student
     return null;
 };
 
+export interface BatchStudentResult {
+    successCount: number;
+    errorCount: number;
+    successes: Student[];
+    errors: { username: string; fullName: string; reason: string }[];
+}
+
+/**
+ * Add multiple students to a class
+ */
+export const addStudentsBatch = async (students: CreateStudentPayload[]): Promise<BatchStudentResult> => {
+    const res = await callGasApi<BatchStudentResult>('add_students_batch', { students });
+    if (res.status === 'success' && res.data) {
+        return res.data;
+    }
+    console.error('[ClassroomService] addStudentsBatch failed:', res.message);
+    throw new Error(res.message || 'Lỗi khi thêm học sinh hàng loạt');
+};
+
 /**
  * Delete a student
  */

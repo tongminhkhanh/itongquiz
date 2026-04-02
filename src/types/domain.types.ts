@@ -260,6 +260,10 @@ export interface Quiz {
     topic?: string; // Subject/Topic name
     classLevel: string; // 1, 2, 3, 4, 5
     category?: string; // 'vioedu' | 'trang-nguyen' | 'on-tap'
+    tags?: string[]; // User-defined tags for filtering/search
+    detectedCategory?: string; // AI detected subject category (core 5 subjects)
+    detectedLesson?: string; // AI detected lesson title
+    suggestedTags?: string[]; // AI suggested hashtags
     examCode?: string; // Mã đề thi, VD: "Mã 01", "Vòng 1"
     timeLimit: number; // in minutes
     questions: Question[];

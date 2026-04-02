@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import AvatarSelectorModal from '../common/AvatarSelectorModal';
 import MathSpan from '../common/MathSpan';
+import { StudentFloatingSidebar } from '../gamification/StudentFloatingSidebar';
 
 // --- Subject Config (Reused from HomePage) ---
 export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color: string; desc: string; showOnHome?: boolean }> = {
@@ -736,6 +737,9 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 onClose={() => setIsAvatarModalOpen(false)}
                 currentAvatar={studentSession.avatar}
             />
+
+            {/* Bảng Vàng Ít Ong Sidebar - Floating */}
+            <StudentFloatingSidebar />
         </div>
     );
 };

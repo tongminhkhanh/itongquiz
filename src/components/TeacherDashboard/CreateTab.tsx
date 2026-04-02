@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, QuestionType, ImageLibraryItem } from '../../types';
 import { Card, Button } from '../common';
 import { FileText, Sparkles, Upload, X, FileCheck, Copy, Check, Link2, BookOpen, Search, Zap, Users, Calendar, Hash, ChevronDown, ChevronUp, Settings, Clock, Wand2, Eye, EyeOff, Lock, Unlock, Edit3, Tag } from 'lucide-react';
-import { AIProvider, generateQuiz, QuizGenerationOptions } from '../../services/geminiService';
+import { AIProvider, AI_CORE_SUBJECT_IDS, generateQuiz, QuizGenerationOptions } from '../../services/geminiService';
 import { generateTrangNguyenQuiz, TRANG_NGUYEN_TOPICS } from '../../services/trangNguyenGeminiService';
 import { searchTrangNguyenQuestions, enrichPromptWithSearchResults } from '../../services/trangNguyenSearchService';
 import { QuestionTypeSelector, DifficultyLevelSelector, ImageLibrary, AIProviderSelector } from '../teacher/QuizCreator';
@@ -67,6 +67,54 @@ interface CreateTabProps {
     onSuccess: () => void;
 }
 
+const AI_CORE_CATEGORY_SET = new Set<string>(AI_CORE_SUBJECT_IDS);
+
+const normalizeTagValue = (value: string): string => {
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/^#+/g, '')
+        .trim()
+        .replace(/[^a-z0-9\s_-]/g, ' ')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 40);
+};
+
+const normalizeTags = (source: unknown): string[] => {
+    const values = Array.isArray(source)
+        ? source
+        : typeof source === 'string'
+            ? source.split(',')
+            : [];
+
+    const seen = new Set<string>();
+    const tags: string[] = [];
+    for (const raw of values) {
+        const normalized = normalizeTagValue(String(raw ?? ''));
+        if (!normalized || seen.has(normalized)) continue;
+        seen.add(normalized);
+        tags.push(normalized);
+        if (tags.length >= 5) break;
+    }
+    return tags;
+};
+
+const normalizeAiCategory = (value: unknown): string | null => {
+    if (typeof value !== 'string') return null;
+    const normalized = value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    if (!normalized || !AI_CORE_CATEGORY_SET.has(normalized)) return null;
+    return normalized;
+};
+
 const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSuccess }) => {
     // Auth store - to get teacher name and class
     const authStore = useAuthStore();
@@ -83,6 +131,9 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     const [category, setCategory] = useState('toan'); // Default: Toán Học
     const [tags, setTags] = useState<string[]>([]);
     const [tagInput, setTagInput] = useState('');
+    const [aiDetectedCategory, setAiDetectedCategory] = useState<string | null>(null);
+    const [aiDetectedLesson, setAiDetectedLesson] = useState('');
+    const [aiSuggestedTags, setAiSuggestedTags] = useState<string[]>([]);
     const [content, setContent] = useState('');
     const [manualTimeLimit, setManualTimeLimit] = useState<number | ''>('');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -176,9 +227,16 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             setCategory(editingQuiz.category || 'toan');
             // Load tags from editingQuiz
             const rawTags = (editingQuiz as any).tags;
-            const parsedTags: string[] = typeof rawTags === 'string' ? (rawTags ? JSON.parse(rawTags) : []) : (rawTags || []);
-            setTags(parsedTags);
+            const parsedTags: string[] = typeof rawTags === 'string'
+                ? (() => {
+                    try { return rawTags ? JSON.parse(rawTags) : []; } catch { return []; }
+                })()
+                : (rawTags || []);
+            setTags(parsedTags.map((tag) => String(tag ?? '').replace(/^#/, '').trim()).filter(Boolean));
             setTagInput('');
+            setAiDetectedCategory(normalizeAiCategory((editingQuiz as any).detectedCategory));
+            setAiDetectedLesson(typeof (editingQuiz as any).detectedLesson === 'string' ? (editingQuiz as any).detectedLesson : '');
+            setAiSuggestedTags(normalizeTags((editingQuiz as any).suggestedTags));
             // We don't restore selectedTypes/difficultyLevels from quiz yet as it's complex to reverse engineer
         } else {
             // Reset form for new quiz
@@ -196,6 +254,9 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             setCategory('toan'); // Default: Toán Học
             setTags([]);
             setTagInput('');
+            setAiDetectedCategory(null);
+            setAiDetectedLesson('');
+            setAiSuggestedTags([]);
         }
     }, [editingQuiz, isClassLocked, lockedClass]);
 
@@ -263,7 +324,11 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     useEffect(() => {
         if (generatedQuiz) {
             const currentTags = (generatedQuiz as any).tags;
-            const currentTagsArr: string[] = typeof currentTags === 'string' ? (currentTags ? JSON.parse(currentTags) : []) : (currentTags || []);
+            const currentTagsArr: string[] = typeof currentTags === 'string'
+                ? (() => {
+                    try { return currentTags ? JSON.parse(currentTags) : []; } catch { return []; }
+                })()
+                : (currentTags || []);
             if (JSON.stringify(currentTagsArr) !== JSON.stringify(tags)) {
                 setGeneratedQuiz({ ...generatedQuiz, tags } as any);
             }
@@ -282,6 +347,29 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
         return code;
     };
 
+    const addTagToState = (rawValue: string) => {
+        const normalizedTag = normalizeTagValue(rawValue);
+        if (!normalizedTag) return;
+        setTags((prev) => {
+            const normalizedExisting = new Set(prev.map((tag) => normalizeTagValue(tag)));
+            return normalizedExisting.has(normalizedTag) ? prev : [...prev, normalizedTag];
+        });
+    };
+
+    const handleApplyAiCategory = () => {
+        if (!aiDetectedCategory) return;
+        setCategory(aiDetectedCategory);
+    };
+
+    const handleApplyAiTitleSuggestion = () => {
+        if (!aiDetectedLesson) return;
+        setQuizTitle(aiDetectedLesson);
+    };
+
+    const getCategoryLabel = (categoryId: string): string => {
+        return QUIZ_CATEGORIES.find((cat) => cat.id === categoryId)?.name || categoryId;
+    };
+
     // Handle manual quiz creation (no AI)
     const handleCreateManual = () => {
         const quiz: Quiz = {
@@ -296,6 +384,10 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             requireCode: requireCode,
             showOnHome: showOnHome,
             category: category,
+            tags,
+            detectedCategory: aiDetectedCategory || undefined,
+            detectedLesson: aiDetectedLesson || undefined,
+            suggestedTags: aiSuggestedTags.length > 0 ? aiSuggestedTags : undefined,
         };
         setGeneratedQuiz(quiz);
     };
@@ -339,6 +431,9 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
 
         setError(null);
         setIsGenerating(true);
+        setAiDetectedCategory(null);
+        setAiDetectedLesson('');
+        setAiSuggestedTags([]);
 
         try {
             const isPdfMode = (quizMode as any) === 'pdf';
@@ -379,6 +474,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     requireCode: requireCode,
                     category: 'trang-nguyen',
                     showOnHome: showOnHome,
+                    tags,
                 };
 
                 setGeneratedQuiz(quiz);
@@ -427,6 +523,16 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                 (step) => setGenerationStep(step)
             );
 
+            const detectedCategory = normalizeAiCategory((result as any).detectedCategory);
+            const detectedLesson = typeof (result as any).detectedLesson === 'string'
+                ? (result as any).detectedLesson.trim()
+                : '';
+            const suggestedTags = normalizeTags((result as any).suggestedTags);
+
+            setAiDetectedCategory(detectedCategory);
+            setAiDetectedLesson(detectedLesson);
+            setAiSuggestedTags(suggestedTags);
+
             const quiz: Quiz = {
                 id: editingQuiz?.id || `quiz-${Date.now()}`,
                 title: result.title || options.title,
@@ -441,7 +547,11 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                 accessCode: requireCode ? accessCode.toUpperCase() : undefined,
                 requireCode: requireCode,
                 showOnHome: showOnHome,
-                category: category, // Lưu danh mục
+                category: category,
+                tags,
+                detectedCategory: detectedCategory || undefined,
+                detectedLesson: detectedLesson || undefined,
+                suggestedTags: suggestedTags.length > 0 ? suggestedTags : undefined,
             };
 
             setGeneratedQuiz(quiz);
@@ -558,6 +668,9 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
             setGeneratedQuiz(null);
             setTags([]);
             setTagInput('');
+            setAiDetectedCategory(null);
+            setAiDetectedLesson('');
+            setAiSuggestedTags([]);
 
             onSuccess();
         } catch (err: any) {
@@ -718,16 +831,69 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                 onKeyDown={e => {
                                     if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
                                         e.preventDefault();
-                                        const newTag = tagInput.trim().replace(/^#/, '');
-                                        if (newTag && !tags.includes(newTag)) {
-                                            setTags([...tags, newTag]);
-                                        }
+                                        addTagToState(tagInput);
                                         setTagInput('');
                                     }
                                 }}
-                                placeholder="Gõ tag rồi nhấn Enter (VD: GiuaKy, NangCao)"
+                                placeholder="Gõ tag rồi nhấn Enter (VD: #phan_so, #on_tap)"
                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40"
                             />
+
+                            {(aiDetectedCategory || aiDetectedLesson || aiSuggestedTags.length > 0) && (
+                                <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50/70 p-2.5 space-y-2">
+                                    <p className="text-xs font-semibold text-emerald-700">
+                                        AI đã gợi ý các tag liên quan. Bạn có thể bấm để áp dụng nhanh.
+                                    </p>
+
+                                    {aiDetectedCategory && (
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-xs text-slate-600">
+                                                Môn học gợi ý: <strong>{getCategoryLabel(aiDetectedCategory)}</strong>
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={handleApplyAiCategory}
+                                                className="px-2 py-1 rounded-md text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700"
+                                            >
+                                                Áp dụng gợi ý AI
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {aiDetectedLesson && (
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-xs text-slate-600">
+                                                Tên bài học gợi ý: <strong>{aiDetectedLesson}</strong>
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={handleApplyAiTitleSuggestion}
+                                                className="px-2 py-1 rounded-md text-xs font-semibold bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                                            >
+                                                Áp dụng gợi ý AI
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {aiSuggestedTags.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {aiSuggestedTags.map((tag) => (
+                                                <button
+                                                    key={tag}
+                                                    type="button"
+                                                    onClick={() => addTagToState(tag)}
+                                                    className={`px-2 py-1 rounded-full text-xs font-semibold border transition-colors ${tags.includes(tag)
+                                                        ? 'bg-blue-100 border-blue-300 text-blue-700'
+                                                        : 'bg-white border-emerald-300 text-emerald-700 hover:bg-emerald-100'
+                                                        }`}
+                                                >
+                                                    #{tag}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </Section>
