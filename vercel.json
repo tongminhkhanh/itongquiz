@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/api/cliproxy/:path*", "destination": "https://api.thitong.site/v1/:path*" },
+    { "source": "/api/deepseek/:path*", "destination": "https://api.deepseek.com/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

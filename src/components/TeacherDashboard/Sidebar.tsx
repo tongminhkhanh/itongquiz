@@ -42,30 +42,30 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     const navItems = useMemo(() => {
         const baseItems: Array<{ id: string; label: string; icon: React.ReactNode }> = [
-            { id: 'overview', label: 'Tong quan', icon: <Home className="w-5 h-5" /> },
-            { id: 'create', label: 'Tao de moi', icon: <PlusCircle className="w-5 h-5" /> },
-            { id: 'manage', label: 'De kiem tra', icon: <List className="w-5 h-5" /> },
-            { id: 'results', label: 'Ket qua', icon: <FileText className="w-5 h-5" /> },
-            { id: 'classes', label: 'Lop hoc', icon: <GraduationCap className="w-5 h-5" /> },
-            { id: 'assignments', label: 'Giao bai', icon: <ClipboardList className="w-5 h-5" /> },
+            { id: 'overview', label: 'Tổng quan', icon: <Home className="w-5 h-5" /> },
+            { id: 'create', label: 'Tạo đề mới', icon: <PlusCircle className="w-5 h-5" /> },
+            { id: 'manage', label: 'Đề kiểm tra', icon: <List className="w-5 h-5" /> },
+            { id: 'results', label: 'Kết quả', icon: <FileText className="w-5 h-5" /> },
+            { id: 'classes', label: 'Lớp học', icon: <GraduationCap className="w-5 h-5" /> },
+            { id: 'assignments', label: 'Giao bài', icon: <ClipboardList className="w-5 h-5" /> },
         ];
 
         if (isGiftShopEnabled) {
-            baseItems.push({ id: 'gift-shop', label: 'Tiem tap hoa', icon: <Gift className="w-5 h-5" /> });
+            baseItems.push({ id: 'gift-shop', label: 'Tiệm tạp hóa', icon: <Gift className="w-5 h-5" /> });
         }
 
         return baseItems;
     }, [isGiftShopEnabled]);
 
     const ioeItems = [
-        { id: 'ioe-manage', label: 'IOE Quan ly', icon: <Globe className="w-5 h-5" /> },
-        { id: 'ioe', label: 'IOE Tao de', icon: <Globe className="w-4 h-4 ml-1" /> },
-        { id: 'ioe-results', label: 'IOE Ket qua', icon: <Globe className="w-4 h-4 ml-1" /> },
+        { id: 'ioe-manage', label: 'IOE Quản lý', icon: <Globe className="w-5 h-5" /> },
+        { id: 'ioe', label: 'IOE Tạo đề', icon: <Globe className="w-4 h-4 ml-1" /> },
+        { id: 'ioe-results', label: 'IOE Kết quả', icon: <Globe className="w-4 h-4 ml-1" /> },
     ];
 
     const settingItems = [
-        { id: 'announcements', label: 'Thong bao', icon: <Megaphone className="w-5 h-5" /> },
-        { id: 'teachers', label: 'Giao vien', icon: <Users className="w-5 h-5" /> },
+        { id: 'announcements', label: 'Thông báo', icon: <Megaphone className="w-5 h-5" /> },
+        { id: 'teachers', label: 'Giáo viên', icon: <Users className="w-5 h-5" /> },
     ];
 
     const NavGroup = ({
@@ -150,9 +150,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
 
                 <div className="flex-1 py-5 px-2 custom-scrollbar">
-                    <NavGroup title="Chinh" items={navItems} groupKey="main" />
-                    <NavGroup title="Tieng Anh IOE" items={ioeItems} groupKey="ioe" adminOnly={true} />
-                    <NavGroup title="He thong" items={settingItems} groupKey="system" adminOnly={true} />
+                    <NavGroup title="Chính" items={navItems} groupKey="main" />
+                    <NavGroup title="Tiếng Anh IOE" items={ioeItems} groupKey="ioe" adminOnly={true} />
+                    <NavGroup title="Hệ thống" items={settingItems} groupKey="system" adminOnly={true} />
                 </div>
             </aside>
         </>
