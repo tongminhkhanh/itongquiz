@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { callApi } from '../../services/apiAdapter';
 import { UserPlus, Pencil, Trash2, X, Save, Loader2, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { ResponsiveDataView } from '../common';
+import { useAuthStore } from '../../../stores/authStore';
 
 // Teacher data from D1
 interface TeacherRecord {
@@ -30,6 +31,7 @@ const EMPTY_FORM: TeacherForm = {
 };
 
 const TeacherManagementTab: React.FC = () => {
+    const authStore = useAuthStore();
     const [teachers, setTeachers] = useState<TeacherRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -84,7 +86,10 @@ const TeacherManagementTab: React.FC = () => {
         if (!confirm(`Xác nhận xóa tài khoản "${fullName}" (${username})?`)) return;
 
         try {
-            const result = await callApi<{ status: string; message: string }>('delete_teacher', { username });
+            const result = await callApi<{ status: string; message: string }>('delete_teacher', {
+                username,
+                actorUsername: authStore.username || '',
+            });
             if (result.status === 'success') {
                 setTeachers(prev => prev.filter(t => t.username !== username));
             } else {
@@ -112,6 +117,7 @@ const TeacherManagementTab: React.FC = () => {
                     fullName: form.fullName,
                     role: form.role,
                     teacherClass: form.teacherClass,
+                    actorUsername: authStore.username || '',
                 });
                 if (result.status === 'error') { alert(result.message); return; }
             } else {
@@ -122,6 +128,7 @@ const TeacherManagementTab: React.FC = () => {
                     fullName: form.fullName,
                     role: form.role,
                     teacherClass: form.teacherClass,
+                    actorUsername: authStore.username || '',
                 });
                 if (result.status === 'error') { alert(result.message); return; }
             }

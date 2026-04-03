@@ -15,17 +15,27 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
     // GET /api/classes
     if (path === '/api/classes' && method === 'GET') {
         const teacherUsername = url.searchParams.get('teacherUsername');
-        let query = 'SELECT * FROM classes';
+        let query = `
+            SELECT
+                c.*,
+                t.full_name AS teacher_full_name
+            FROM classes c
+            LEFT JOIN teachers t ON t.username = c.teacher_username
+        `;
         const params: any[] = [];
         if (teacherUsername) {
-            query += ' WHERE teacher_username = ?';
+            query += ' WHERE c.teacher_username = ?';
             params.push(teacherUsername);
         }
         const rows = await db.prepare(query).bind(...params).all();
         return jsonResponse({
             status: 'success',
             data: rows.results.map((r: any) => ({
-                id: r.id, name: r.name, teacherUsername: r.teacher_username, createdAt: r.created_at,
+                id: r.id,
+                name: r.name,
+                teacherUsername: r.teacher_username,
+                teacherFullName: r.teacher_full_name || '',
+                createdAt: r.created_at,
             })),
         });
     }
@@ -39,9 +49,20 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         const createdAt = new Date().toISOString();
         await db.prepare('INSERT INTO classes (id, name, teacher_username, created_at) VALUES (?, ?, ?, ?)')
             .bind(id, body.name, body.teacherUsername, createdAt).run();
+
+        const teacher = await db.prepare('SELECT full_name FROM teachers WHERE username = ?')
+            .bind(body.teacherUsername || '')
+            .first<any>();
+
         return jsonResponse({
             status: 'success',
-            data: { id, name: body.name, teacherUsername: body.teacherUsername, createdAt },
+            data: {
+                id,
+                name: body.name,
+                teacherUsername: body.teacherUsername,
+                teacherFullName: teacher?.full_name || '',
+                createdAt,
+            },
         });
     }
 

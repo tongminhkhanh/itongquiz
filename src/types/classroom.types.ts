@@ -10,6 +10,7 @@ export interface Classroom {
     id: string;
     name: string;              // e.g., "Lớp 5A"
     teacherUsername: string;    // Username of the teacher who created the class
+    teacherFullName?: string;
     createdAt: string;         // ISO timestamp
 }
 

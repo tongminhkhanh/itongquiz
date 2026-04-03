@@ -16,7 +16,11 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'get_teachers': method = 'GET'; path = '/api/teachers'; break;
         case 'create_teacher': method = 'POST'; path = '/api/teachers'; break;
         case 'update_teacher': method = 'PUT'; path = `/api/teachers/${encodeURIComponent(payload.username)}`; break;
-        case 'delete_teacher': method = 'DELETE'; path = `/api/teachers/${encodeURIComponent(payload.username)}`; break;
+        case 'delete_teacher':
+            method = 'DELETE';
+            path = `/api/teachers/${encodeURIComponent(payload.username)}`;
+            if (payload.actorUsername) urlParams.append('actorUsername', payload.actorUsername);
+            break;
         case 'login': method = 'POST'; path = '/api/login'; break;
 
         // --- Quizzes ---

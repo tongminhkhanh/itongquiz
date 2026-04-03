@@ -158,6 +158,9 @@ const ClassCard: React.FC<{
                 </button>
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-1">{classroom.name}</h3>
+            <p className="text-sm text-gray-500 mb-1">
+                GV phụ trách: {classroom.teacherFullName || classroom.teacherUsername || 'Chưa gán'}
+            </p>
             <p className="text-sm text-gray-400">
                 Tạo ngày {new Date(classroom.createdAt).toLocaleDateString('vi-VN')}
             </p>

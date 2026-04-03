@@ -7,10 +7,18 @@
 
 import { Env } from '../types';
 import { jsonResponse, errorResponse, hashPassword } from '../utils/response';
-import { parseBody, extractIdFromPath } from '../utils/helpers';
+import { parseBody } from '../utils/helpers';
+
+const isAdminActor = async (db: D1Database, actorUsername: string): Promise<boolean> => {
+    const username = String(actorUsername || '').trim();
+    if (!username) return false;
+    const actor = await db.prepare('SELECT role FROM teachers WHERE username = ?').bind(username).first<any>();
+    return String(actor?.role || '').trim().toLowerCase() === 'admin';
+};
 
 export async function handleTeacherRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
+    const url = new URL(request.url);
 
     // GET /api/teachers
     if (path === '/api/teachers' && method === 'GET') {
@@ -23,7 +31,9 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        const { username, password, fullName, role, teacherClass } = body;
+        const { username, password, fullName, role, teacherClass, actorUsername } = body;
+        if (!actorUsername) return errorResponse('Missing actorUsername');
+        if (!(await isAdminActor(db, actorUsername))) return errorResponse('Forbidden', 403);
         if (!username || !password || !fullName) {
             return errorResponse('Missing required fields: username, password, fullName');
         }
@@ -52,7 +62,9 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        const { password, fullName, role, teacherClass } = body;
+        const { password, fullName, role, teacherClass, actorUsername } = body;
+        if (!actorUsername) return errorResponse('Missing actorUsername');
+        if (!(await isAdminActor(db, actorUsername))) return errorResponse('Forbidden', 403);
 
         // Build dynamic SET clause
         const updates: string[] = [];
@@ -79,6 +91,9 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
     if (path.startsWith('/api/teachers/') && method === 'DELETE') {
         const targetUsername = decodeURIComponent(path.split('/api/teachers/')[1]);
         if (!targetUsername) return errorResponse('Missing username');
+        const actorUsername = String(url.searchParams.get('actorUsername') || '').trim();
+        if (!actorUsername) return errorResponse('Missing actorUsername');
+        if (!(await isAdminActor(db, actorUsername))) return errorResponse('Forbidden', 403);
 
         await db.prepare('DELETE FROM teachers WHERE username = ?').bind(targetUsername).run();
         return jsonResponse({ status: 'success', message: `Đã xóa tài khoản "${targetUsername}".` });
