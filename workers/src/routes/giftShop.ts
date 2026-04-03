@@ -135,6 +135,31 @@ const getOrderById = async (db: D1Database, orderId: string): Promise<GiftOrderR
     `).bind(orderId).first<GiftOrderRow>();
 };
 
+const resolveActorAccess = async (
+    db: D1Database,
+    actorUsername: string
+): Promise<{ isAdmin: boolean; teacherClass: string }> => {
+    const username = String(actorUsername || '').trim();
+    if (!username) {
+        return { isAdmin: false, teacherClass: '' };
+    }
+
+    const teacher = await db.prepare(`
+        SELECT role, class
+        FROM teachers
+        WHERE username = ?
+        LIMIT 1
+    `).bind(username).first<any>();
+
+    if (!teacher) {
+        return { isAdmin: false, teacherClass: '' };
+    }
+
+    const isAdmin = String(teacher.role || '').trim().toLowerCase() === 'admin';
+    const teacherClass = String(teacher.class || '').trim();
+    return { isAdmin, teacherClass };
+};
+
 const ensureCanManageOrder = (order: GiftOrderRow, actorIsAdmin: boolean, actorTeacherClass: string) => {
     if (actorIsAdmin) return;
     if (!actorTeacherClass || actorTeacherClass !== order.class_id) {
@@ -279,15 +304,22 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
     if (path === '/api/gift-shop/orders' && method === 'GET') {
         const studentId = String(url.searchParams.get('studentId') || '').trim();
         const classId = String(url.searchParams.get('classId') || '').trim();
-        const actorIsAdmin = toBool(url.searchParams.get('actorIsAdmin'));
-        const actorTeacherClass = String(url.searchParams.get('actorTeacherClass') || '').trim();
+        const actorUsername = String(url.searchParams.get('actorUsername') || '').trim();
+        const actorAccess = await resolveActorAccess(
+            db,
+            actorUsername
+        );
         const status = normalizeStatus(url.searchParams.get('status'));
 
-        if (!actorIsAdmin && actorTeacherClass && classId && classId !== actorTeacherClass) {
+        if (!actorAccess.isAdmin && !actorAccess.teacherClass) {
+            return errorResponse('Teacher class assignment not found', 403);
+        }
+
+        if (!actorAccess.isAdmin && classId && classId !== actorAccess.teacherClass) {
             return errorResponse('Forbidden', 403);
         }
 
-        const effectiveClassId = !actorIsAdmin && actorTeacherClass ? actorTeacherClass : classId;
+        const effectiveClassId = actorAccess.isAdmin ? classId : actorAccess.teacherClass;
         const conditions: string[] = [];
         const params: unknown[] = [];
 
@@ -477,14 +509,16 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
         if (!body) return errorResponse('Invalid JSON body');
 
         const actorUsername = String(body.username || '').trim() || 'system';
-        const actorIsAdmin = toBool(body.isAdmin);
-        const actorTeacherClass = String(body.teacherClass || '').trim();
+        const actorAccess = await resolveActorAccess(
+            db,
+            actorUsername
+        );
 
         const order = await getOrderById(db, orderId);
         if (!order) return errorResponse('Order not found', 404);
 
         try {
-            ensureCanManageOrder(order, actorIsAdmin, actorTeacherClass);
+            ensureCanManageOrder(order, actorAccess.isAdmin, actorAccess.teacherClass);
         } catch (error: any) {
             return errorResponse(error.message || 'Forbidden', 403);
         }
@@ -525,14 +559,16 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
 
         const reason = String(body.reason || '').trim() || 'Cancelled by staff';
         const actorUsername = String(body.username || '').trim() || 'system';
-        const actorIsAdmin = toBool(body.isAdmin);
-        const actorTeacherClass = String(body.teacherClass || '').trim();
+        const actorAccess = await resolveActorAccess(
+            db,
+            actorUsername
+        );
 
         const order = await getOrderById(db, orderId);
         if (!order) return errorResponse('Order not found', 404);
 
         try {
-            ensureCanManageOrder(order, actorIsAdmin, actorTeacherClass);
+            ensureCanManageOrder(order, actorAccess.isAdmin, actorAccess.teacherClass);
         } catch (error: any) {
             return errorResponse(error.message || 'Forbidden', 403);
         }
