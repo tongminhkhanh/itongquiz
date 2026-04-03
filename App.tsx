@@ -8,6 +8,7 @@ import { fetchIoeQuizzes, saveIoeResult } from './src/services/ioeSheetService';
 import { useAuthStore } from './stores/authStore';
 import { useQuizStore } from './stores/quizStore';
 import { useClassroomStore } from './src/stores/useClassroomStore';
+import { ChatBot } from './src/components/ChatBot';
 
 // Lazy load main views
 const StudentView = React.lazy(() => import('./src/components/StudentView'));
@@ -279,6 +280,7 @@ const App: React.FC = () => {
     };
 
     const showPublicFooterLinks = !authStore.isLoggedIn && !classroomStore.studentSession;
+    const showChatbot = quizStore.view !== 'student';
 
     const renderRootView = () => {
         if (quizStore.view === 'shop') {
@@ -408,6 +410,7 @@ const App: React.FC = () => {
                 />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            {showChatbot && <ChatBot />}
             <Analytics />
         </>
     );

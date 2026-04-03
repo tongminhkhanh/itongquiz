@@ -41,6 +41,7 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         // --- AI Tutor ---
         case 'ai_tutor_diagnose': method = 'POST'; path = '/api/ai-tutor/diagnose'; break;
         case 'ai_chat': method = 'POST'; path = '/api/ai/chat'; break;
+        case 'ask_help_rag': method = 'POST'; path = '/api/help/ask'; break;
 
         // --- Practice Library ---
         case 'get_practice_topics': method = 'GET'; path = '/api/practice/topics'; break;

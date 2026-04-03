@@ -1,39 +1,24 @@
-/**
- * ChatBot.tsx - Component Chatbot nổi góc dưới-phải.
- * Hướng dẫn người dùng sử dụng ứng dụng Quiz IOE.
- */
-
-import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Trash2, Loader2, Bot, User } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Bot, Loader2, MessageCircle, Send, Trash2, User, X } from 'lucide-react';
 import { useChatStore } from '../../stores/useChatStore';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const ChatBot: React.FC = () => {
-    const {
-        isOpen,
-        messages,
-        isLoading,
-        toggleChat,
-        sendMessage,
-        clearHistory,
-    } = useChatStore();
+    const { isOpen, messages, isLoading, toggleChat, sendMessage, clearHistory } = useChatStore();
 
     const [input, setInput] = useState('');
+    const [includeSourcesRequested, setIncludeSourcesRequested] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Scroll to bottom when new messages arrive
     useEffect(() => {
         if (messagesEndRef.current) {
             messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [messages]);
 
-    // Focus input when chat opens
     useEffect(() => {
-        if (isOpen && inputRef.current) {
-            inputRef.current.focus();
-        }
+        if (isOpen && inputRef.current) inputRef.current.focus();
     }, [isOpen]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -42,7 +27,7 @@ const ChatBot: React.FC = () => {
         if (!trimmed || isLoading) return;
 
         setInput('');
-        await sendMessage(trimmed);
+        await sendMessage(trimmed, { includeSources: includeSourcesRequested });
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -54,7 +39,6 @@ const ChatBot: React.FC = () => {
 
     return (
         <>
-            {/* Floating Action Button */}
             <AnimatePresence>
                 {!isOpen && (
                     <motion.button
@@ -73,7 +57,6 @@ const ChatBot: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Chat Window */}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
@@ -83,7 +66,6 @@ const ChatBot: React.FC = () => {
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                         className="chatbot-window"
                     >
-                        {/* Header */}
                         <div className="chatbot-header">
                             <div className="chatbot-header-info">
                                 <Bot size={24} className="chatbot-header-icon" />
@@ -101,33 +83,28 @@ const ChatBot: React.FC = () => {
                                 >
                                     <Trash2 size={18} />
                                 </button>
-                                <button
-                                    onClick={toggleChat}
-                                    className="chatbot-action-btn chatbot-close-btn"
-                                    title="Đóng"
-                                >
+                                <button onClick={toggleChat} className="chatbot-action-btn chatbot-close-btn" title="Đóng">
                                     <X size={20} />
                                 </button>
                             </div>
                         </div>
 
-                        {/* Messages */}
                         <div className="chatbot-messages">
                             {messages.length === 0 && (
                                 <div className="chatbot-welcome">
                                     <Bot size={48} className="chatbot-welcome-icon" />
-                                    <h4>Xin chào! 👋</h4>
-                                    <p>Tôi là trợ lý AI, sẵn sàng giúp bạn sử dụng ứng dụng Quiz IOE.</p>
+                                    <h4>Xin chào!</h4>
+                                    <p>Tôi là trợ lý AI, sẵn sàng giúp bạn sử dụng hệ thống iTongQuiz.</p>
                                     <div className="chatbot-suggestions">
                                         <span className="chatbot-suggestion-label">Gợi ý:</span>
                                         {[
                                             'Cách tạo đề IOE?',
                                             'Hướng dẫn làm bài quiz',
-                                            'Giáo viên Dashboard',
+                                            'Cách phân quyền giáo viên',
                                         ].map((suggestion) => (
                                             <button
                                                 key={suggestion}
-                                                onClick={() => sendMessage(suggestion)}
+                                                onClick={() => sendMessage(suggestion, { includeSources: false })}
                                                 className="chatbot-suggestion-btn"
                                             >
                                                 {suggestion}
@@ -148,17 +125,27 @@ const ChatBot: React.FC = () => {
                                         {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                                     </div>
                                     <div className="chatbot-message-content">
-                                        {msg.content}
+                                        <p>{msg.content}</p>
+                                        {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
+                                            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2">
+                                                <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">Nguồn tham khảo</p>
+                                                <ul className="space-y-1">
+                                                    {msg.sources.map((source, sourceIdx) => (
+                                                        <li key={`${source.sourcePath}-${sourceIdx}`} className="text-xs leading-snug text-slate-700">
+                                                            <p className="font-semibold">{source.title}</p>
+                                                            <p className="text-slate-500">{source.sourcePath}</p>
+                                                            <p>{source.snippet}</p>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
                                     </div>
                                 </motion.div>
                             ))}
 
                             {isLoading && (
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="chatbot-message assistant"
-                                >
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="chatbot-message assistant">
                                     <div className="chatbot-message-avatar">
                                         <Bot size={16} />
                                     </div>
@@ -172,25 +159,31 @@ const ChatBot: React.FC = () => {
                             <div ref={messagesEndRef} />
                         </div>
 
-                        {/* Input */}
-                        <form onSubmit={handleSubmit} className="chatbot-input-form">
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder="Nhập câu hỏi của bạn..."
-                                className="chatbot-input"
-                                disabled={isLoading}
-                            />
-                            <button
-                                type="submit"
-                                className="chatbot-send-btn"
-                                disabled={!input.trim() || isLoading}
-                            >
-                                <Send size={20} />
-                            </button>
+                        <form onSubmit={handleSubmit} className="chatbot-input-form flex-col">
+                            <label className="mb-1 flex items-center gap-2 text-xs text-slate-600">
+                                <input
+                                    type="checkbox"
+                                    checked={includeSourcesRequested}
+                                    onChange={(e) => setIncludeSourcesRequested(e.target.checked)}
+                                    disabled={isLoading}
+                                />
+                                Kèm nguồn tham khảo
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    ref={inputRef}
+                                    type="text"
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="Nhập câu hỏi của bạn..."
+                                    className="chatbot-input"
+                                    disabled={isLoading}
+                                />
+                                <button type="submit" className="chatbot-send-btn" disabled={!input.trim() || isLoading}>
+                                    <Send size={20} />
+                                </button>
+                            </div>
                         </form>
                     </motion.div>
                 )}

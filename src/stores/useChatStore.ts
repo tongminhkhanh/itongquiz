@@ -15,7 +15,7 @@ interface ChatState {
     toggleChat: () => void;
     openChat: () => void;
     closeChat: () => void;
-    sendMessage: (content: string) => Promise<void>;
+    sendMessage: (content: string, options?: { includeSources?: boolean }) => Promise<void>;
     clearHistory: () => void;
 }
 
@@ -31,7 +31,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     closeChat: () => set({ isOpen: false }),
 
-    sendMessage: async (content: string) => {
+    sendMessage: async (content: string, options = {}) => {
         const userMessage: ChatMessage = { role: 'user', content };
 
         // Add user message immediately
@@ -43,9 +43,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         try {
             const history = get().messages;
-            const response = await generateChatResponse(content, history.slice(0, -1)); // Exclude the just-added message
+            const response = await generateChatResponse(content, history.slice(0, -1), options); // Exclude the just-added message
 
-            const assistantMessage: ChatMessage = { role: 'assistant', content: response };
+            const assistantMessage: ChatMessage = {
+                role: 'assistant',
+                content: response.answer,
+                sources: response.sources,
+                confidence: response.confidence,
+                fallbackReason: response.fallbackReason,
+            };
 
             set((state) => ({
                 messages: [...state.messages, assistantMessage],

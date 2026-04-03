@@ -6,7 +6,9 @@
         "dev": "wrangler dev",
         "deploy": "wrangler deploy",
         "db:migrate": "wrangler d1 execute itongquiz-db --file=schema.sql --remote",
-        "db:migrate:local": "wrangler d1 execute itongquiz-db --file=schema.sql --local"
+        "db:migrate:local": "wrangler d1 execute itongquiz-db --file=schema.sql --local",
+        "rag:sync": "node scripts/rag-sync.cjs",
+        "rag:sync:remote": "node scripts/rag-sync.cjs --remote"
     },
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20241218.0",

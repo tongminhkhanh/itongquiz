@@ -662,7 +662,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                             <img src={`${FLUENT_CDN}/Graduation%20cap/3D/graduation_cap_3d.png`} alt="Mũ cử nhân đại diện cho sự học tập" className="w-16 md:w-28 filter drop-shadow-md" />
                         </div>
                         <div className="text-center md:text-left text-white">
-                            <h1 className="text-2xl md:text-4xl font-black mb-2">Chào ngày mới, {studentSession.fullName.split(' ').pop()}! 👋</h1>
+                            <h1 className="text-2xl md:text-4xl font-black mb-2">Chào ngày mới, {studentSession.fullName.split(' ').pop()}!</h1>
                             <p className="text-indigo-100 text-sm md:text-lg font-medium mb-4 md:mb-6">Hôm nay em muốn chinh phục thử thách nào? Hãy chọn một bài tập và bắt đầu nhé!</p>
 
                             <div className="flex items-center justify-center md:justify-start gap-2 md:gap-4">
@@ -757,7 +757,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                                     }`}
                                             >
                                                 {isCompleted ? (
-                                                    <>🎉 Xem kết quả</>
+                                                    <>Xem kết quả</>
                                                 ) : (
                                                     <><Play className="w-4 h-4 fill-current" /> Làm bài ngay</>
                                                 )}

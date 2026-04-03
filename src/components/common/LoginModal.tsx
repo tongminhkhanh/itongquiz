@@ -46,36 +46,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
         authStore.loginStart();
         try {
             const { callApi } = await import('../../services/apiAdapter');
-
-            // Use callApi which routes through apiAdapter (D1 Workers or GAS based on USE_D1 flag)
-            const teachers = await callApi<any[]>('get_teachers');
-
-            if (!teachers || !Array.isArray(teachers)) {
-                authStore.loginFailure();
-                setLocalError('Không thể lấy danh sách giáo viên. Vui lòng thử lại!');
-                return;
-            }
-
-            const teacher = teachers.find((t: any) => {
-                const tUsername = String(t.username || t.id || '').trim();
-                const tPassword = String(t.password || '').trim();
-                return tUsername === username && tPassword === password;
-            });
-
-            if (teacher) {
-                const tUsername = String(teacher.username || teacher.id || '').trim();
+            const result = await callApi<{ status?: string; data?: any; message?: string }>('login', { username, password });
+            if (result?.status === 'success' && result.data) {
+                const teacher = result.data;
+                const tUsername = String(teacher.username || '').trim();
                 const tFullNameRaw = String(teacher.fullName || teacher.fullname || teacher.full_name || teacher.name || '').trim();
                 const tFullName = tFullNameRaw || tUsername;
-                const isTeacherAdmin = teacher.role === 'admin';
+                const isTeacherAdmin = String(teacher.role || '').trim().toLowerCase() === 'admin';
                 const tClass = teacher.class ? String(teacher.class).trim() : undefined;
                 authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass);
                 onClose();
-            } else {
-                authStore.loginFailure();
-                setLocalError('Tên đăng nhập hoặc mật khẩu không đúng!');
+                return;
             }
+
+            authStore.loginFailure();
+            setLocalError(result?.message || 'Tên đăng nhập hoặc mật khẩu không đúng!');
         } catch (error) {
-            console.error("Login error:", error);
+            console.error('Login error:', error);
             authStore.loginFailure();
             setLocalError('Có lỗi xảy ra khi kết nối. Vui lòng thử lại!');
         }
