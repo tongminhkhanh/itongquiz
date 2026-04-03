@@ -247,6 +247,35 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
         return jsonResponse(mapCatalogItem(item));
     }
 
+    if (path.startsWith('/api/gift-shop/catalog/') && method === 'DELETE') {
+        const itemId = extractIdFromPath(path, '/api/gift-shop/catalog');
+        if (!itemId) return errorResponse('Missing catalog item ID');
+
+        const actorIsAdmin = toBool(url.searchParams.get('actorIsAdmin'));
+        if (!actorIsAdmin) return errorResponse('Forbidden', 403);
+        const actorUsername = String(url.searchParams.get('actorUsername') || '').trim() || 'admin';
+
+        const existingItem = await db.prepare('SELECT * FROM gift_catalog_items WHERE id = ?').bind(itemId).first<any>();
+        if (!existingItem) return errorResponse('Catalog item not found', 404);
+
+        const now = nowIso();
+        await db.prepare(`
+            UPDATE gift_catalog_items
+            SET is_active = 0, updated_at = ?
+            WHERE id = ?
+        `).bind(now, itemId).run();
+
+        await appendEvent(db, {
+            type: 'CATALOG_DELETED',
+            actor: actorUsername,
+            metadata: { itemId },
+        });
+
+        const item = await db.prepare('SELECT * FROM gift_catalog_items WHERE id = ?').bind(itemId).first<any>();
+        if (!item) return errorResponse('Catalog item not found', 404);
+        return jsonResponse(mapCatalogItem(item));
+    }
+
     if (path === '/api/gift-shop/orders' && method === 'GET') {
         const studentId = String(url.searchParams.get('studentId') || '').trim();
         const classId = String(url.searchParams.get('classId') || '').trim();

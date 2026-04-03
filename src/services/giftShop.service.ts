@@ -34,6 +34,12 @@ export interface GiftCatalogUpsertInput {
     actorIsAdmin?: boolean;
 }
 
+export interface GiftCatalogDeleteInput {
+    id: string;
+    actorIsAdmin?: boolean;
+    actorUsername?: string;
+}
+
 export interface GiftCancelResult {
     order: GiftOrder;
     newCoins: number;
@@ -248,6 +254,31 @@ const upsertCatalogItemMock = async (input: GiftCatalogUpsertInput): Promise<Gif
     return created;
 };
 
+const deleteCatalogItemMock = async (input: GiftCatalogDeleteInput): Promise<GiftCatalogItem> => {
+    if (!input.id.trim()) throw new Error('Thiếu mã quà để xóa.');
+    if (!input.actorIsAdmin) throw new Error('Bạn không có quyền xóa quà.');
+
+    const state = readMockState();
+    const idx = state.catalog.findIndex((x) => x.id === input.id);
+    if (idx < 0) throw new Error('Không tìm thấy quà để xóa.');
+
+    const now = nowIso();
+    const updated: GiftCatalogItem = {
+        ...state.catalog[idx],
+        isActive: false,
+        updatedAt: now,
+    };
+    state.catalog[idx] = updated;
+
+    pushEvent(state, {
+        type: 'CATALOG_DELETED',
+        actor: input.actorUsername || 'admin',
+        metadata: { itemId: updated.id },
+    });
+    saveMockState(state);
+    return updated;
+};
+
 const getOrdersMock = async (query: GiftOrderQuery): Promise<GiftOrder[]> => {
     const state = readMockState();
     return applyOrderFilters(state.orders, query).sort(
@@ -450,6 +481,17 @@ export const giftShopService = {
             return await callApi<GiftCatalogItem>('create_gift_shop_catalog_item', toApiCatalogPayload(input));
         }
         return upsertCatalogItemMock(input);
+    },
+
+    deleteCatalogItem: async (input: GiftCatalogDeleteInput): Promise<GiftCatalogItem> => {
+        if (getMode() === 'api') {
+            return await callApi<GiftCatalogItem>('delete_gift_shop_catalog_item', {
+                id: input.id,
+                actorIsAdmin: Boolean(input.actorIsAdmin),
+                actorUsername: input.actorUsername || '',
+            });
+        }
+        return deleteCatalogItemMock(input);
     },
 
     getOrders: async (query: GiftOrderQuery): Promise<GiftOrder[]> => {

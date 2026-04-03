@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { useGamificationStore } from './useGamificationStore';
 import {
     giftShopService,
+    GiftCatalogDeleteInput,
     GiftCatalogUpsertInput,
 } from '../services/giftShop.service';
 import type {
@@ -41,6 +42,7 @@ interface GiftShopStore {
     deliverOrder: (orderId: string, actor: GiftOrderActor, queryAfter?: GiftOrderQuery) => Promise<boolean>;
     cancelOrder: (orderId: string, actor: GiftOrderActor, reason: string, queryAfter?: GiftOrderQuery) => Promise<boolean>;
     saveCatalogItem: (input: GiftCatalogUpsertInput) => Promise<GiftCatalogItem | null>;
+    removeCatalogItem: (input: GiftCatalogDeleteInput) => Promise<boolean>;
     clearLastPurchase: () => void;
     clearError: () => void;
 }
@@ -191,6 +193,22 @@ export const useGiftShopStore = create<GiftShopStore>((set, get) => ({
                 error: error instanceof Error ? error.message : 'Không thể lưu danh mục quà.',
             });
             return null;
+        }
+    },
+
+    removeCatalogItem: async (input: GiftCatalogDeleteInput) => {
+        set({ isLoading: true, error: null });
+        try {
+            await giftShopService.deleteCatalogItem(input);
+            const catalog = await giftShopService.getCatalog();
+            set({ catalog, isLoading: false });
+            return true;
+        } catch (error) {
+            set({
+                isLoading: false,
+                error: error instanceof Error ? error.message : 'Không thể xóa vật phẩm.',
+            });
+            return false;
         }
     },
 

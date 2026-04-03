@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Loader2, PlusCircle, RefreshCw, XCircle } from 'lucide-react';
+import { CheckCircle2, Loader2, Pencil, PlusCircle, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useGiftShopStore } from '../../stores/useGiftShopStore';
 import type { GiftCatalogItem, GiftCategory, GiftOrderStatus } from '../../types/giftShop.types';
@@ -17,6 +17,12 @@ const STATUS_OPTIONS: Array<{ value: GiftOrderStatus | 'ALL'; label: string }> =
     { value: 'ALL', label: 'Tất cả' },
 ];
 
+const CATEGORY_LABEL_MAP: Record<GiftCategory, string> = {
+    SNACK: 'Khu Ăn Vặt',
+    SUPPLY: 'Văn Phòng Phẩm',
+    PRIVILEGE: 'Đặc Quyền Lớp',
+};
+
 const GiftShopTab: React.FC = () => {
     const authStore = useAuthStore();
     const {
@@ -31,6 +37,7 @@ const GiftShopTab: React.FC = () => {
         deliverOrder,
         cancelOrder,
         saveCatalogItem,
+        removeCatalogItem,
         clearError,
     } = useGiftShopStore();
 
@@ -42,6 +49,7 @@ const GiftShopTab: React.FC = () => {
         priceCoins: '',
         imageUrl: '',
     });
+    const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
     const actor = useMemo(
         () => ({
@@ -85,22 +93,18 @@ const GiftShopTab: React.FC = () => {
         await cancelOrder(orderId, actor, reason, query);
     };
 
-    const handleQuickPriceUpdate = async (item: GiftCatalogItem) => {
-        const newPrice = window.prompt(`Nhập giá mới cho "${item.name}" (xu):`, String(item.priceCoins));
-        if (!newPrice) return;
-        const parsed = Number(newPrice);
-        if (!Number.isFinite(parsed) || parsed <= 0) {
-            alert('Giá xu không hợp lệ.');
-            return;
-        }
-        await saveCatalogItem({
-            id: item.id,
+    const resetAdminForm = () => {
+        setForm({ name: '', category: 'SNACK', priceCoins: '', imageUrl: '' });
+        setEditingItemId(null);
+    };
+
+    const handleStartEditItem = (item: GiftCatalogItem) => {
+        setEditingItemId(item.id);
+        setForm({
             name: item.name,
             category: item.category,
-            priceCoins: Math.floor(parsed),
+            priceCoins: String(item.priceCoins),
             imageUrl: item.imageUrl,
-            isActive: item.isActive,
-            actorIsAdmin: actor.isAdmin,
         });
     };
 
@@ -112,6 +116,7 @@ const GiftShopTab: React.FC = () => {
             return;
         }
         const created = await saveCatalogItem({
+            id: editingItemId || undefined,
             name: form.name.trim(),
             category: form.category,
             priceCoins: Math.floor(price),
@@ -120,7 +125,22 @@ const GiftShopTab: React.FC = () => {
             actorIsAdmin: actor.isAdmin,
         });
         if (created) {
-            setForm({ name: '', category: 'SNACK', priceCoins: '', imageUrl: '' });
+            resetAdminForm();
+        }
+    };
+
+    const handleDeleteItem = async (item: GiftCatalogItem) => {
+        const ok = window.confirm(`Xóa vật phẩm "${item.name}" khỏi danh mục?`);
+        if (!ok) return;
+
+        const removed = await removeCatalogItem({
+            id: item.id,
+            actorIsAdmin: actor.isAdmin,
+            actorUsername: actor.username,
+        });
+
+        if (removed && editingItemId === item.id) {
+            resetAdminForm();
         }
     };
 
@@ -180,12 +200,23 @@ const GiftShopTab: React.FC = () => {
                             className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 md:col-span-3"
                             placeholder="Link ảnh (Cloudinary/CDN)"
                         />
-                        <button
-                            type="submit"
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white font-black hover:bg-indigo-700"
-                        >
-                            <PlusCircle className="w-4 h-4" /> Thêm quà
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="submit"
+                                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white font-black hover:bg-indigo-700"
+                            >
+                                <PlusCircle className="w-4 h-4" /> {editingItemId ? 'Cập nhật quà' : 'Thêm quà'}
+                            </button>
+                            {editingItemId && (
+                                <button
+                                    type="button"
+                                    onClick={resetAdminForm}
+                                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
+                                >
+                                    Hủy sửa
+                                </button>
+                            )}
+                        </div>
                     </form>
 
                     <div className="mt-4 space-y-2">
@@ -194,15 +225,24 @@ const GiftShopTab: React.FC = () => {
                                 <img src={item.imageUrl} alt={item.name} className="w-12 h-12 rounded-lg object-contain bg-slate-50 p-1" />
                                 <div className="flex-1 min-w-0">
                                     <p className="font-bold text-slate-800 truncate">{item.name}</p>
-                                    <p className="text-xs text-slate-500">{item.category} • {item.priceCoins} Xu</p>
+                                    <p className="text-xs text-slate-500">{CATEGORY_LABEL_MAP[item.category]} • {item.priceCoins} Xu</p>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => handleQuickPriceUpdate(item)}
-                                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50"
-                                >
-                                    Sửa giá
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleStartEditItem(item)}
+                                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                                    >
+                                        <Pencil className="w-4 h-4" /> Sửa
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDeleteItem(item)}
+                                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-red-200 text-sm font-bold text-red-600 hover:bg-red-50"
+                                    >
+                                        <Trash2 className="w-4 h-4" /> Xóa
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>

@@ -78,6 +78,16 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'get_gift_shop_catalog': method = 'GET'; path = '/api/gift-shop/catalog'; break;
         case 'create_gift_shop_catalog_item': method = 'POST'; path = '/api/gift-shop/catalog'; break;
         case 'update_gift_shop_catalog_item': method = 'PUT'; path = `/api/gift-shop/catalog/${encodeURIComponent(payload.id)}`; break;
+        case 'delete_gift_shop_catalog_item':
+            method = 'DELETE';
+            path = `/api/gift-shop/catalog/${encodeURIComponent(payload.id)}`;
+            if (typeof payload.actorIsAdmin !== 'undefined') {
+                urlParams.append('actorIsAdmin', String(payload.actorIsAdmin));
+            }
+            if (payload.actorUsername) {
+                urlParams.append('actorUsername', String(payload.actorUsername));
+            }
+            break;
         case 'purchase_gift_shop_item': method = 'POST'; path = '/api/gift-shop/purchase'; break;
         case 'get_gift_shop_orders':
             method = 'GET';

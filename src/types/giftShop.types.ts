@@ -100,7 +100,8 @@ export interface GiftShopEventLog {
     | 'ORDER_CANCELLED'
     | 'WALLET_REFUNDED'
     | 'CATALOG_UPDATED'
-    | 'CATALOG_CREATED';
+    | 'CATALOG_CREATED'
+    | 'CATALOG_DELETED';
     orderId?: string;
     studentId?: string;
     actor?: string;
