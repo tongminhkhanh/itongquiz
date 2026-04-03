@@ -49,6 +49,7 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         // --- Classroom ---
         case 'get_classes': method = 'GET'; path = '/api/classes'; if (payload.teacherUsername) urlParams.append('teacherUsername', payload.teacherUsername); break;
         case 'create_class': method = 'POST'; path = '/api/classes'; break;
+        case 'transfer_class_teacher': method = 'PATCH'; path = `/api/classes/${encodeURIComponent(payload.classId)}/teacher`; break;
         case 'delete_class': method = 'DELETE'; path = `/api/classes/${payload.classId}`; break;
 
         // --- Students ---

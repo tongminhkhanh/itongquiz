@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { Classroom, Student, CreateStudentPayload } from '../../types/classroom.types';
+import { callApi } from '../../services/apiAdapter';
 import {
     Plus, Users, Trash2, ChevronLeft, Copy, Check, RefreshCw,
     Loader2, X, Eye, EyeOff, KeyRound, UserPlus, Phone, Search,
@@ -9,6 +10,13 @@ import {
 } from 'lucide-react';
 import { Button, ResponsiveDataView } from '../common';
 import * as XLSX from 'xlsx';
+
+interface TeacherRecord {
+    username: string;
+    full_name: string;
+    role: string;
+    class: string;
+}
 
 // ==========================================
 // CLASS MANAGEMENT TAB (Main View)
@@ -19,6 +27,12 @@ const ClassManagementTab: React.FC = () => {
     const store = useClassroomStore();
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedClass, setSelectedClass] = useState<Classroom | null>(null);
+    const [transferClassroom, setTransferClassroom] = useState<Classroom | null>(null);
+    const [teachers, setTeachers] = useState<TeacherRecord[]>([]);
+    const [transferTeacherUsername, setTransferTeacherUsername] = useState('');
+    const [isLoadingTeachers, setIsLoadingTeachers] = useState(false);
+    const [isTransferring, setIsTransferring] = useState(false);
+    const [transferError, setTransferError] = useState<string | null>(null);
 
     // Load classes on mount
     useEffect(() => {
@@ -28,6 +42,66 @@ const ClassManagementTab: React.FC = () => {
             store.fetchClasses(authStore.username);
         }
     }, [authStore.username, authStore.isAdmin]);
+
+    const openTransferModal = async (classroom: Classroom) => {
+        if (!authStore.isAdmin) return;
+        setTransferClassroom(classroom);
+        setTransferTeacherUsername(classroom.teacherUsername || '');
+        setTransferError(null);
+        setIsLoadingTeachers(true);
+        try {
+            const data = await callApi<TeacherRecord[]>('get_teachers');
+            if (Array.isArray(data)) {
+                const teacherList = data.filter((t) => {
+                    const isAdminRole = String(t.role || '').trim().toLowerCase() === 'admin';
+                    return !isAdminRole || t.username === classroom.teacherUsername;
+                });
+                setTeachers(teacherList);
+            } else {
+                setTeachers([]);
+            }
+        } catch (err: any) {
+            setTransferError(err.message || 'Cannot load teacher list.');
+            setTeachers([]);
+        } finally {
+            setIsLoadingTeachers(false);
+        }
+    };
+
+    const handleTransferTeacher = async () => {
+        if (!transferClassroom || !authStore.username) return;
+        if (!transferTeacherUsername.trim()) {
+            setTransferError('Please choose a teacher.');
+            return;
+        }
+        if (transferTeacherUsername === transferClassroom.teacherUsername) {
+            setTransferError('Teacher is already assigned to this class.');
+            return;
+        }
+
+        setIsTransferring(true);
+        setTransferError(null);
+        try {
+            const res = await callApi<{ status: string; message?: string }>('transfer_class_teacher', {
+                classId: transferClassroom.id,
+                teacherUsername: transferTeacherUsername,
+                actorUsername: authStore.username,
+            });
+            if (res.status !== 'success') {
+                setTransferError(res.message || 'Cannot transfer teacher.');
+                return;
+            }
+
+            await store.fetchClasses();
+            setTransferClassroom(null);
+            setTransferTeacherUsername('');
+            setTeachers([]);
+        } catch (err: any) {
+            setTransferError(err.message || 'Cannot transfer teacher.');
+        } finally {
+            setIsTransferring(false);
+        }
+    };
 
     // If a class is selected, show detail view
     if (selectedClass) {
@@ -98,7 +172,9 @@ const ClassManagementTab: React.FC = () => {
                         <ClassCard
                             key={cls.id}
                             classroom={cls}
+                            isAdmin={authStore.isAdmin}
                             onClick={() => setSelectedClass(cls)}
+                            onTransfer={() => openTransferModal(cls)}
                             onDelete={() => {
                                 if (confirm(`Xóa lớp "${cls.name}"? Tất cả học sinh và bài tập trong lớp sẽ bị xóa.`)) {
                                     store.removeClass(cls.id);
@@ -124,6 +200,25 @@ const ClassManagementTab: React.FC = () => {
                     isLoading={store.isLoading}
                 />
             )}
+
+            {transferClassroom && (
+                <TransferTeacherModal
+                    classroom={transferClassroom}
+                    teachers={teachers}
+                    selectedTeacherUsername={transferTeacherUsername}
+                    onSelectTeacher={setTransferTeacherUsername}
+                    onClose={() => {
+                        if (isTransferring) return;
+                        setTransferClassroom(null);
+                        setTransferTeacherUsername('');
+                        setTransferError(null);
+                    }}
+                    onSubmit={handleTransferTeacher}
+                    isLoadingTeachers={isLoadingTeachers}
+                    isSaving={isTransferring}
+                    error={transferError}
+                />
+            )}
         </div>
     );
 };
@@ -134,9 +229,11 @@ const ClassManagementTab: React.FC = () => {
 
 const ClassCard: React.FC<{
     classroom: Classroom;
+    isAdmin: boolean;
     onClick: () => void;
+    onTransfer: () => void;
     onDelete: () => void;
-}> = ({ classroom, onClick, onDelete }) => {
+}> = ({ classroom, isAdmin, onClick, onTransfer, onDelete }) => {
     return (
         <div
             className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-lg hover:border-orange-200 transition-all cursor-pointer group"
@@ -146,16 +243,30 @@ const ClassCard: React.FC<{
                 <div className="p-2.5 bg-orange-50 rounded-xl group-hover:bg-orange-100 transition-colors">
                     <Users className="w-6 h-6 text-orange-500" />
                 </div>
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete();
-                    }}
-                    className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                    title="Xóa lớp"
-                >
-                    <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    {isAdmin && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onTransfer();
+                            }}
+                            className="p-1.5 text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg"
+                            title="Transfer teacher"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                        </button>
+                    )}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                        }}
+                        className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                        title="Delete class"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-1">{classroom.name}</h3>
             <p className="text-sm text-gray-500 mb-1">
@@ -164,6 +275,101 @@ const ClassCard: React.FC<{
             <p className="text-sm text-gray-400">
                 Tạo ngày {new Date(classroom.createdAt).toLocaleDateString('vi-VN')}
             </p>
+        </div>
+    );
+};
+
+// ==========================================
+// TRANSFER TEACHER MODAL (Admin)
+// ==========================================
+
+const TransferTeacherModal: React.FC<{
+    classroom: Classroom;
+    teachers: TeacherRecord[];
+    selectedTeacherUsername: string;
+    onSelectTeacher: (username: string) => void;
+    onClose: () => void;
+    onSubmit: () => Promise<void>;
+    isLoadingTeachers: boolean;
+    isSaving: boolean;
+    error: string | null;
+}> = ({
+    classroom,
+    teachers,
+    selectedTeacherUsername,
+    onSelectTeacher,
+    onClose,
+    onSubmit,
+    isLoadingTeachers,
+    isSaving,
+    error,
+}) => {
+    const submitDisabled = isLoadingTeachers || isSaving || !selectedTeacherUsername.trim();
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+            <div
+                className="bg-white w-full h-dvh md:h-auto md:max-h-[90vh] md:max-w-md rounded-none md:rounded-2xl shadow-xl p-5 md:p-6 md:mx-4 overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800">Chuyển giáo viên</h2>
+                        <p className="text-sm text-gray-500 mt-1">Lớp: {classroom.name}</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
+                        <X className="w-5 h-5 text-gray-500" />
+                    </button>
+                </div>
+
+                {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-600 text-sm mb-4">
+                        {error}
+                    </div>
+                )}
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Giáo viên mới</label>
+                        <select
+                            value={selectedTeacherUsername}
+                            onChange={(e) => onSelectTeacher(e.target.value)}
+                            disabled={isLoadingTeachers || isSaving}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none disabled:bg-gray-50"
+                        >
+                            <option value="">-- Select teacher --</option>
+                            {teachers.map((teacher) => (
+                                <option key={teacher.username} value={teacher.username}>
+                                    {teacher.full_name} ({teacher.username})
+                                    {teacher.class ? ` - Class: ${teacher.class}` : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {isLoadingTeachers && (
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Loading teachers...
+                        </div>
+                    )}
+
+                    <div className="flex gap-3 pt-2">
+                        <Button onClick={onClose} variant="secondary" className="flex-1" disabled={isSaving}>
+                            Hủy
+                        </Button>
+                        <Button
+                            onClick={onSubmit}
+                            variant="primary"
+                            className="flex-1"
+                            disabled={submitDisabled}
+                            icon={isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                        >
+                            {isSaving ? 'Đang chuyển...' : 'Xác nhận'}
+                        </Button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
