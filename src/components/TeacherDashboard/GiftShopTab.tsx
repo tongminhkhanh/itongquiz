@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Loader2, Pencil, PlusCircle, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useGiftShopStore } from '../../stores/useGiftShopStore';
+import { giftShopService } from '../../services/giftShop.service';
 import type { GiftCatalogItem, GiftCategory, GiftOrderStatus } from '../../types/giftShop.types';
 
 const CATEGORY_OPTIONS: Array<{ value: GiftCategory; label: string }> = [
@@ -50,6 +51,7 @@ const GiftShopTab: React.FC = () => {
         imageUrl: '',
     });
     const [editingItemId, setEditingItemId] = useState<string | null>(null);
+    const giftShopMode = giftShopService.getMode();
 
     const actor = useMemo(
         () => ({
@@ -322,7 +324,7 @@ const GiftShopTab: React.FC = () => {
 
             {authStore.isAdmin && (
                 <section className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5">
-                    <h3 className="text-lg font-black text-slate-800 mb-3">Audit log (mock)</h3>
+                    <h3 className="text-lg font-black text-slate-800 mb-3">Audit log ({giftShopMode})</h3>
                     <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                         {eventLogs.length === 0 ? (
                             <p className="text-sm text-slate-500">Chưa có sự kiện.</p>

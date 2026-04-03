@@ -45,7 +45,7 @@ export interface GiftCancelResult {
     newCoins: number;
 }
 
-const DEFAULT_MODE: GiftShopMode = 'mock';
+const DEFAULT_MODE: GiftShopMode = 'api';
 const MOCK_STORAGE_KEY = StorageKeys.GIFT_SHOP_MOCK_STATE;
 const EVENT_LIMIT = 500;
 const LEDGER_LIMIT = 1000;
