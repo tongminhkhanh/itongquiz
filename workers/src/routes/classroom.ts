@@ -4,7 +4,7 @@
 import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
 import { mapAssignment, mapAssignments, hashSHA256, parseBody, extractIdFromPath } from '../utils/helpers';
-import { generateId, generateRandomPassword, hashPassword } from '../utils/response';
+import { generateId, hashPassword } from '../utils/response';
 
 export async function handleClassroomRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
@@ -158,11 +158,48 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
     }
 
     // DELETE /api/students/:id
-    if (path.startsWith('/api/students/') && !path.includes('/reset-password') && !path.includes('/avatar') && method === 'DELETE') {
+    if (
+        path.startsWith('/api/students/')
+        && !path.includes('/reset-password')
+        && !path.includes('/change-password')
+        && !path.includes('/avatar')
+        && method === 'DELETE'
+    ) {
         const studentId = extractIdFromPath(path, '/api/students');
         if (!studentId) return errorResponse('Missing student ID');
 
         await db.prepare('DELETE FROM students WHERE id = ?').bind(studentId).run();
+        return jsonResponse({ status: 'success' });
+    }
+
+    // POST /api/students/:id/change-password
+    if (path.match(/\/api\/students\/[^/]+\/change-password/) && method === 'POST') {
+        const parts = path.split('/');
+        const studentId = parts[3]; // /api/students/{id}/change-password
+        if (!studentId) return errorResponse('Missing student ID');
+
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+
+        const currentPassword = String(body.currentPassword || '').trim();
+        const newPassword = String(body.newPassword || '').trim();
+        if (!currentPassword || !newPassword) {
+            return errorResponse('Missing currentPassword or newPassword');
+        }
+        if (newPassword.length < 6) {
+            return errorResponse('Mật khẩu mới phải từ 6 ký tự.', 400);
+        }
+
+        const student = await db.prepare('SELECT id, password_hash FROM students WHERE id = ?').bind(studentId).first<any>();
+        if (!student) return errorResponse('Student not found', 404);
+
+        const currentHash = await hashPassword(currentPassword);
+        if (String(student.password_hash || '') !== currentHash) {
+            return errorResponse('Mật khẩu cũ không đúng.', 400);
+        }
+
+        const newHash = await hashPassword(newPassword);
+        await db.prepare('UPDATE students SET password_hash = ? WHERE id = ?').bind(newHash, studentId).run();
         return jsonResponse({ status: 'success' });
     }
 
@@ -172,11 +209,29 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         const studentId = parts[3]; // /api/students/{id}/reset-password
         if (!studentId) return errorResponse('Missing student ID');
 
-        const newPwd = generateRandomPassword();
-        const hash = await hashPassword(newPwd);
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
 
+        const actorUsername = String(body.actorUsername || '').trim();
+        const newPassword = String(body.newPassword || '').trim();
+        if (!actorUsername) return errorResponse('Missing actorUsername');
+        if (!newPassword) return errorResponse('Missing newPassword');
+        if (newPassword.length < 6) {
+            return errorResponse('Mật khẩu mới phải từ 6 ký tự.', 400);
+        }
+
+        const actor = await db.prepare('SELECT role FROM teachers WHERE username = ?').bind(actorUsername).first<any>();
+        const actorRole = String(actor?.role || '').toLowerCase();
+        if (actorRole !== 'admin') {
+            return errorResponse('Forbidden', 403);
+        }
+
+        const student = await db.prepare('SELECT id FROM students WHERE id = ?').bind(studentId).first<any>();
+        if (!student) return errorResponse('Student not found', 404);
+
+        const hash = await hashPassword(newPassword);
         await db.prepare('UPDATE students SET password_hash = ? WHERE id = ?').bind(hash, studentId).run();
-        return jsonResponse({ status: 'success', data: { newPassword: newPwd } });
+        return jsonResponse({ status: 'success' });
     }
 
     // PUT /api/students/:id/avatar

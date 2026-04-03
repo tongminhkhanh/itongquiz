@@ -22,10 +22,12 @@ const ClassManagementTab: React.FC = () => {
 
     // Load classes on mount
     useEffect(() => {
-        if (authStore.username) {
+        if (authStore.isAdmin) {
+            store.fetchClasses();
+        } else if (authStore.username) {
             store.fetchClasses(authStore.username);
         }
-    }, [authStore.username]);
+    }, [authStore.username, authStore.isAdmin]);
 
     // If a class is selected, show detail view
     if (selectedClass) {
@@ -227,12 +229,12 @@ const ClassDetailView: React.FC<{
     classroom: Classroom;
     onBack: () => void;
 }> = ({ classroom, onBack }) => {
+    const authStore = useAuthStore();
     const store = useClassroomStore();
     const students = store.students[classroom.id] || [];
     const [showAddModal, setShowAddModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [copiedId, setCopiedId] = useState<string | null>(null);
-    const [resetResult, setResetResult] = useState<{ studentId: string; password: string } | null>(null);
 
     useEffect(() => {
         store.fetchStudents(classroom.id);
@@ -257,12 +259,29 @@ const ClassDetailView: React.FC<{
 
     // Handle reset password
     const handleResetPassword = async (studentId: string) => {
-        if (!confirm('Đặt lại mật khẩu cho học sinh này?')) return;
-        const newPassword = await store.resetPassword(studentId);
-        if (newPassword) {
-            setResetResult({ studentId, password: newPassword });
+        if (!authStore.isAdmin) {
+            alert('Chỉ Admin mới được đặt lại mật khẩu học sinh.');
+            return;
+        }
+        if (!authStore.username) {
+            alert('Không xác định được tài khoản admin.');
+            return;
+        }
+
+        const input = window.prompt('Nhập mật khẩu mới cho học sinh (tối thiểu 6 ký tự):', '');
+        if (input === null) return;
+        const newPassword = input.trim();
+        if (newPassword.length < 6) {
+            alert('Mật khẩu mới phải từ 6 ký tự.');
+            return;
+        }
+        if (!confirm('Xác nhận đặt lại mật khẩu học sinh này?')) return;
+
+        const ok = await store.resetPassword(studentId, newPassword, authStore.username);
+        if (ok) {
+            alert('Đặt lại mật khẩu thành công.');
         } else {
-            alert('Lỗi khi đặt lại mật khẩu.');
+            alert(store.error || 'Lỗi khi đặt lại mật khẩu.');
         }
     };
 
@@ -367,13 +386,15 @@ const ClassDetailView: React.FC<{
                                             </td>
                                             <td className="py-3 px-4">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    <button
-                                                        onClick={() => handleResetPassword(student.id)}
-                                                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                                                        title="Đặt lại mật khẩu"
-                                                    >
-                                                        <KeyRound className="w-4 h-4" />
-                                                    </button>
+                                                    {authStore.isAdmin && (
+                                                        <button
+                                                            onClick={() => handleResetPassword(student.id)}
+                                                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                                                            title="Đặt lại mật khẩu"
+                                                        >
+                                                            <KeyRound className="w-4 h-4" />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => {
                                                             if (confirm(`Xóa học sinh "${student.fullName}"?`)) {
@@ -401,13 +422,15 @@ const ClassDetailView: React.FC<{
                                     <p className="text-sm font-bold text-slate-800">{student.fullName}</p>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => handleResetPassword(student.id)}
-                                        className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 inline-flex items-center justify-center"
-                                        title="Đặt lại mật khẩu"
-                                    >
-                                        <KeyRound className="w-4 h-4" />
-                                    </button>
+                                    {authStore.isAdmin && (
+                                        <button
+                                            onClick={() => handleResetPassword(student.id)}
+                                            className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 inline-flex items-center justify-center"
+                                            title="Đặt lại mật khẩu"
+                                        >
+                                            <KeyRound className="w-4 h-4" />
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => {
                                             if (confirm(`Xóa học sinh "${student.fullName}"?`)) {
@@ -433,35 +456,6 @@ const ClassDetailView: React.FC<{
                         </div>
                     )}
                 />
-            )}
-
-            {/* Reset Password Result Toast */}
-            {resetResult && (
-                <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-2xl p-4 max-w-sm z-50 animate-in slide-in-from-bottom">
-                    <div className="flex items-start justify-between mb-2">
-                        <p className="font-semibold">🔑 Mật khẩu mới</p>
-                        <button onClick={() => setResetResult(null)} className="text-green-200 hover:text-white">
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
-                    <div className="bg-green-700/50 rounded-lg p-2 flex items-center justify-between">
-                        <code className="text-lg font-mono tracking-wider">{resetResult.password}</code>
-                        <button
-                            onClick={() => {
-                                navigator.clipboard.writeText(resetResult.password);
-                                setCopiedId(resetResult.studentId);
-                                setTimeout(() => setCopiedId(null), 2000);
-                            }}
-                            className="p-1.5 hover:bg-green-600 rounded-lg"
-                        >
-                            {copiedId === resetResult.studentId
-                                ? <Check className="w-4 h-4" />
-                                : <Copy className="w-4 h-4" />
-                            }
-                        </button>
-                    </div>
-                    <p className="text-green-200 text-xs mt-2">Gửi mật khẩu này cho học sinh. Chỉ hiển thị một lần!</p>
-                </div>
             )}
 
             {/* Add Student Modal */}

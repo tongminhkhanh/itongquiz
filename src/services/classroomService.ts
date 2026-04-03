@@ -33,8 +33,9 @@ const callGasApi = async <T = any>(action: string, payload: Record<string, any> 
 /**
  * Get all classes for a teacher
  */
-export const getClasses = async (teacherUsername: string): Promise<Classroom[]> => {
-    const res = await callGasApi<Classroom[]>('get_classes', { teacherUsername });
+export const getClasses = async (teacherUsername?: string): Promise<Classroom[]> => {
+    const payload = teacherUsername ? { teacherUsername } : {};
+    const res = await callGasApi<Classroom[]>('get_classes', payload);
     if (res.status === 'success' && Array.isArray(res.data)) {
         return res.data;
     }
@@ -118,14 +119,41 @@ export const deleteStudent = async (studentId: string): Promise<boolean> => {
 };
 
 /**
- * Reset student password (generates new random password, hashes & stores, returns plain text)
+ * Reset student password (admin only)
  */
-export const resetStudentPassword = async (studentId: string): Promise<string | null> => {
-    const res = await callGasApi<{ newPassword: string }>('reset_student_password', { studentId });
-    if (res.status === 'success' && res.data) {
-        return res.data.newPassword;
+export const resetStudentPassword = async (
+    studentId: string,
+    newPassword: string,
+    actorUsername: string
+): Promise<boolean> => {
+    const res = await callGasApi('reset_student_password', {
+        studentId,
+        newPassword,
+        actorUsername,
+    });
+    if (res.status !== 'success') {
+        throw new Error(res.message || 'Không thể đặt lại mật khẩu.');
     }
-    return null;
+    return true;
+};
+
+/**
+ * Student changes their own password
+ */
+export const changeStudentPassword = async (
+    studentId: string,
+    currentPassword: string,
+    newPassword: string
+): Promise<boolean> => {
+    const res = await callGasApi('change_student_password', {
+        studentId,
+        currentPassword,
+        newPassword,
+    });
+    if (res.status !== 'success') {
+        throw new Error(res.message || 'Không thể đổi mật khẩu.');
+    }
+    return true;
 };
 
 /**

@@ -53,6 +53,7 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'add_students_batch': method = 'POST'; path = '/api/students/batch'; break;
         case 'delete_student': method = 'DELETE'; path = `/api/students/${payload.studentId}`; break;
         case 'reset_student_password': method = 'POST'; path = `/api/students/${payload.studentId}/reset-password`; break;
+        case 'change_student_password': method = 'POST'; path = `/api/students/${payload.studentId}/change-password`; break;
         case 'student_login': method = 'POST'; path = '/api/student-login'; break;
         case 'update_student_avatar': method = 'PUT'; path = `/api/students/${payload.studentId}/avatar`; break;
 

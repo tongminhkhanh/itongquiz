@@ -7,7 +7,7 @@ import { getAvatarUrl } from '../../config/avatars';
 import { getAllAssignments } from '../../services/classroomService';
 import { Assignment } from '../../types/classroom.types';
 import { Quiz } from '../../types';
-import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Camera, Gift } from 'lucide-react';
+import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Camera, Gift, KeyRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import AvatarSelectorModal from '../common/AvatarSelectorModal';
@@ -143,6 +143,12 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const [isSubmittingAttendance, setIsSubmittingAttendance] = useState(false);
     const [attendanceClaimed, setAttendanceClaimed] = useState(false);
     const [attendanceDaysInWeek, setAttendanceDaysInWeek] = useState<string[]>([]);
+    const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmNewPassword, setConfirmNewPassword] = useState('');
+    const [changePasswordError, setChangePasswordError] = useState('');
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
 
     // --- Fetch Data ---
     useEffect(() => {
@@ -350,6 +356,67 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         }
     };
 
+    const openChangePasswordModal = () => {
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+        setChangePasswordError('');
+        setIsChangePasswordModalOpen(true);
+    };
+
+    const closeChangePasswordModal = () => {
+        if (isChangingPassword) return;
+        setIsChangePasswordModalOpen(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+        setChangePasswordError('');
+    };
+
+    const handleChangePasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setChangePasswordError('');
+
+        if (!currentPassword || !newPassword || !confirmNewPassword) {
+            setChangePasswordError('Vui lòng nhập đầy đủ thông tin.');
+            return;
+        }
+        if (newPassword.length < 6) {
+            setChangePasswordError('Mật khẩu mới phải từ 6 ký tự.');
+            return;
+        }
+        if (newPassword !== confirmNewPassword) {
+            setChangePasswordError('Mật khẩu mới nhập lại chưa khớp.');
+            return;
+        }
+        if (!studentSession?.studentId) {
+            setChangePasswordError('Không xác định được tài khoản học sinh.');
+            return;
+        }
+
+        setIsChangingPassword(true);
+        try {
+            const ok = await classroomStore.changeMyPassword(
+                studentSession.studentId,
+                currentPassword,
+                newPassword
+            );
+            if (!ok) {
+                setChangePasswordError(classroomStore.error || 'Không thể đổi mật khẩu.');
+                return;
+            }
+
+            alert('Đổi mật khẩu thành công.');
+            setIsChangePasswordModalOpen(false);
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmNewPassword('');
+            setChangePasswordError('');
+        } finally {
+            setIsChangingPassword(false);
+        }
+    };
+
     const handleOpenGiftShop = () => {
         if (!giftShopEnabled) return;
         quizStore.setView('shop');
@@ -497,7 +564,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                 className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs md:text-sm font-black hover:bg-indigo-100 transition-colors"
                             >
                                 <Gift className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                <span className="hidden md:inline">Tiem Tap Hoa</span>
+                                <span className="hidden md:inline">Tiệm Tạp Hóa</span>
                             </button>
                         )}
 
@@ -531,6 +598,10 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tài khoản</p>
                                         <p className="text-sm font-bold text-slate-700 block sm:hidden truncate">{studentSession.fullName}</p>
                                     </div>
+                                    <button onClick={openChangePasswordModal} className="w-full text-left px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2">
+                                        <KeyRound className="w-4 h-4 text-slate-500" />
+                                        Đổi mật khẩu
+                                    </button>
                                     <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">
                                         Đăng xuất
                                     </button>
@@ -876,6 +947,107 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                 )}
                             </div>
                         </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {isChangePasswordModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-0 md:p-4 flex items-end md:items-center justify-center"
+                        onClick={closeChangePasswordModal}
+                    >
+                        <motion.form
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={(e) => e.stopPropagation()}
+                            onSubmit={handleChangePasswordSubmit}
+                            className="w-full h-dvh md:h-auto md:max-w-md bg-white rounded-none md:rounded-3xl p-4 md:p-6 shadow-2xl overflow-y-auto"
+                        >
+                            <div className="flex items-start justify-between gap-4 mb-5">
+                                <div>
+                                    <p className="text-xs font-black text-indigo-500 uppercase tracking-wider mb-1">Tài khoản</p>
+                                    <h3 className="text-xl font-black text-slate-800">Đổi mật khẩu</h3>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={closeChangePasswordModal}
+                                    className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                                >
+                                    Đóng
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                        Mật khẩu cũ
+                                    </label>
+                                    <input
+                                        type="password"
+                                        value={currentPassword}
+                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                        placeholder="Nhập mật khẩu hiện tại"
+                                        autoFocus
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                        Mật khẩu mới
+                                    </label>
+                                    <input
+                                        type="password"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                        placeholder="Tối thiểu 6 ký tự"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                        Nhập lại mật khẩu mới
+                                    </label>
+                                    <input
+                                        type="password"
+                                        value={confirmNewPassword}
+                                        onChange={(e) => setConfirmNewPassword(e.target.value)}
+                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                        placeholder="Nhập lại mật khẩu mới"
+                                    />
+                                </div>
+                            </div>
+
+                            {changePasswordError && (
+                                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold px-4 py-3">
+                                    {changePasswordError}
+                                </div>
+                            )}
+
+                            <div className="mt-6 flex items-center justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={closeChangePasswordModal}
+                                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isChangingPassword}
+                                    className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    {isChangingPassword ? 'Đang lưu...' : 'Lưu mật khẩu'}
+                                </button>
+                            </div>
+                        </motion.form>
                     </motion.div>
                 )}
             </AnimatePresence>

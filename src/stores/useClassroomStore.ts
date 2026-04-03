@@ -33,7 +33,7 @@ interface ClassroomStore {
     error: string | null;
 
     // Class actions
-    fetchClasses: (teacherUsername: string) => Promise<void>;
+    fetchClasses: (teacherUsername?: string) => Promise<void>;
     addClass: (payload: CreateClassPayload) => Promise<Classroom | null>;
     removeClass: (classId: string) => Promise<boolean>;
 
@@ -42,7 +42,8 @@ interface ClassroomStore {
     addStudent: (payload: CreateStudentPayload) => Promise<Student | null>;
     addStudentsBulk: (payloads: CreateStudentPayload[], classId: string) => Promise<classroomService.BatchStudentResult | null>;
     removeStudent: (studentId: string, classId: string) => Promise<boolean>;
-    resetPassword: (studentId: string) => Promise<string | null>;
+    resetPassword: (studentId: string, newPassword: string, actorUsername: string) => Promise<boolean>;
+    changeMyPassword: (studentId: string, currentPassword: string, newPassword: string) => Promise<boolean>;
 
     // Assignment actions
     fetchAssignments: (classId: string) => Promise<void>;
@@ -212,15 +213,35 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
         }
     },
 
-    resetPassword: async (studentId) => {
+    resetPassword: async (studentId, newPassword, actorUsername) => {
         set({ isLoading: true, error: null });
         try {
-            const newPassword = await classroomService.resetStudentPassword(studentId);
+            const ok = await classroomService.resetStudentPassword(studentId, newPassword, actorUsername);
+            if (!ok) {
+                set({ isLoading: false, error: 'Không thể đặt lại mật khẩu.' });
+                return false;
+            }
             set({ isLoading: false });
-            return newPassword;
-        } catch (err) {
-            set({ error: 'Lỗi khi đặt lại mật khẩu.', isLoading: false });
-            return null;
+            return true;
+        } catch (err: any) {
+            set({ error: err?.message || 'Lỗi khi đặt lại mật khẩu.', isLoading: false });
+            return false;
+        }
+    },
+
+    changeMyPassword: async (studentId, currentPassword, newPassword) => {
+        set({ isLoading: true, error: null });
+        try {
+            const ok = await classroomService.changeStudentPassword(studentId, currentPassword, newPassword);
+            if (!ok) {
+                set({ isLoading: false, error: 'Không thể đổi mật khẩu.' });
+                return false;
+            }
+            set({ isLoading: false });
+            return true;
+        } catch (err: any) {
+            set({ error: err?.message || 'Lỗi khi đổi mật khẩu.', isLoading: false });
+            return false;
         }
     },
 
