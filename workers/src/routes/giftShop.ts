@@ -310,16 +310,21 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
             actorUsername
         );
         const status = normalizeStatus(url.searchParams.get('status'));
+        const hasStudentScope = Boolean(studentId);
+        const hasStaffScope = actorAccess.isAdmin || Boolean(actorAccess.teacherClass);
 
-        if (!actorAccess.isAdmin && !actorAccess.teacherClass) {
+        // Allow student self-history requests (studentId only), while preserving teacher/admin rules.
+        if (!hasStudentScope && !hasStaffScope) {
             return errorResponse('Teacher class assignment not found', 403);
         }
 
-        if (!actorAccess.isAdmin && classId && classId !== actorAccess.teacherClass) {
+        if (!actorAccess.isAdmin && actorAccess.teacherClass && classId && classId !== actorAccess.teacherClass) {
             return errorResponse('Forbidden', 403);
         }
 
-        const effectiveClassId = actorAccess.isAdmin ? classId : actorAccess.teacherClass;
+        const effectiveClassId = actorAccess.isAdmin
+            ? classId
+            : (actorAccess.teacherClass || '');
         const conditions: string[] = [];
         const params: unknown[] = [];
 
