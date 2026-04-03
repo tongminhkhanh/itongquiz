@@ -5,7 +5,7 @@ import { callApi } from '../src/services/apiAdapter';
 import { prepareQuizForSave } from '../src/services/googleSheetService';
 import { cacheService } from '../src/services/CacheService';
 
-type ViewType = 'home' | 'student' | 'teacher_login' | 'teacher_dash' | 'student_portal';
+type ViewType = 'home' | 'student' | 'teacher_login' | 'teacher_dash' | 'student_portal' | 'shop';
 
 interface QuizState {
     // State

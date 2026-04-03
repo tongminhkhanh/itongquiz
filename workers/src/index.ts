@@ -13,6 +13,7 @@ import { handleAnnouncementRoutes } from './routes/announcements';
 import { handleAiTutorRoutes } from './routes/aiTutor';
 import { handleAiProxy } from './routes/aiProxy';
 import { handlePracticeRoutes } from './routes/practice';
+import { handleGiftShopRoutes } from './routes/giftShop';
 import { Env } from './types';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
 
@@ -59,6 +60,8 @@ export default {
                 response = await handleAiProxy(request, env, path, method);
             } else if (path.startsWith('/api/practice')) {
                 response = await handlePracticeRoutes(request, env, path, method);
+            } else if (path.startsWith('/api/gift-shop')) {
+                response = await handleGiftShopRoutes(request, env, path, method);
             } else if (path === '/api/health') {
                 response = jsonResponse({ status: 'ok', timestamp: new Date().toISOString() });
             }

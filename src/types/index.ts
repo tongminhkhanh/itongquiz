@@ -7,4 +7,5 @@
 export * from './domain.types';
 export * from './ui.types';
 export * from './classroom.types';
+export * from './giftShop.types';
 

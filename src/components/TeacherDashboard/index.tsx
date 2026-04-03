@@ -22,12 +22,14 @@ const AnnouncementSettings = React.lazy(() => import('./AnnouncementSettings'));
 const ClassManagementTab = React.lazy(() => import('./ClassManagementTab'));
 const AssignmentTab = React.lazy(() => import('./AssignmentTab'));
 const TeacherManagementTab = React.lazy(() => import('./TeacherManagementTab'));
+const GiftShopTab = React.lazy(() => import('./GiftShopTab'));
 
 const TeacherDashboard: React.FC = () => {
     // --- STORES ---
     const authStore = useAuthStore();
     const quizStore = useQuizStore();
     const navigate = useNavigate();
+    const isGiftShopFeatureEnabled = String(import.meta.env.VITE_FEATURE_GIFT_SHOP_V2 || 'false').toLowerCase() === 'true';
 
     // 🔐 ANTI-CHEAT: Disable answer stripping for teacher views
     // Also force reload quizzes from server to get fresh data with answers
@@ -50,6 +52,12 @@ const TeacherDashboard: React.FC = () => {
     // Tab state (Default to 'overview' now instead of 'results')
     const [activeTab, setActiveTab] = useState<string>('overview');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    useEffect(() => {
+        if (!isGiftShopFeatureEnabled && activeTab === 'gift-shop') {
+            setActiveTab('overview');
+        }
+    }, [isGiftShopFeatureEnabled, activeTab]);
 
     // Editing state
     const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
@@ -85,6 +93,7 @@ const TeacherDashboard: React.FC = () => {
             case 'ioe-results': return 'Kết quả IOE';
             case 'announcements': return 'Cài đặt & Thông báo';
             case 'teachers': return 'Quản lý Giáo viên';
+            case 'gift-shop': return 'Tiệm Tạp Hóa';
             default: return 'Bảng điều khiển';
         }
     };
@@ -128,6 +137,7 @@ const TeacherDashboard: React.FC = () => {
                     if (tab === 'create') setEditingQuiz(null); // Clear editing state when creating new
                     setActiveTab(tab);
                 }}
+                isGiftShopEnabled={isGiftShopFeatureEnabled}
                 onLogout={handleLogout}
                 isMobileOpen={isMobileMenuOpen}
                 setIsMobileOpen={setIsMobileMenuOpen}
@@ -276,6 +286,10 @@ const TeacherDashboard: React.FC = () => {
 
                             {activeTab === 'teachers' && (
                                 <TeacherManagementTab />
+                            )}
+
+                            {activeTab === 'gift-shop' && isGiftShopFeatureEnabled && (
+                                <GiftShopTab />
                             )}
 
                         </Suspense>

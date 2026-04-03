@@ -74,6 +74,27 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'get_leaderboard': method = 'GET'; path = '/api/leaderboard'; break;
         case 'get_top_gold_leaderboard': method = 'GET'; path = '/api/leaderboard/top-gold'; break;
 
+        // --- Gift Shop ---
+        case 'get_gift_shop_catalog': method = 'GET'; path = '/api/gift-shop/catalog'; break;
+        case 'create_gift_shop_catalog_item': method = 'POST'; path = '/api/gift-shop/catalog'; break;
+        case 'update_gift_shop_catalog_item': method = 'PUT'; path = `/api/gift-shop/catalog/${encodeURIComponent(payload.id)}`; break;
+        case 'purchase_gift_shop_item': method = 'POST'; path = '/api/gift-shop/purchase'; break;
+        case 'get_gift_shop_orders':
+            method = 'GET';
+            path = '/api/gift-shop/orders';
+            if (payload.studentId) urlParams.append('studentId', payload.studentId);
+            if (payload.classId) urlParams.append('classId', payload.classId);
+            if (payload.status) urlParams.append('status', payload.status);
+            if (payload.actorUsername) urlParams.append('actorUsername', payload.actorUsername);
+            if (payload.actorTeacherClass) urlParams.append('actorTeacherClass', payload.actorTeacherClass);
+            if (typeof payload.actorIsAdmin !== 'undefined') {
+                urlParams.append('actorIsAdmin', String(payload.actorIsAdmin));
+            }
+            break;
+        case 'deliver_gift_shop_order': method = 'PATCH'; path = `/api/gift-shop/orders/${encodeURIComponent(payload.orderId)}/deliver`; break;
+        case 'cancel_gift_shop_order': method = 'PATCH'; path = `/api/gift-shop/orders/${encodeURIComponent(payload.orderId)}/cancel`; break;
+        case 'get_gift_shop_event_logs': method = 'GET'; path = '/api/gift-shop/events'; break;
+
         // --- Announcements ---
         case 'get_announcement': method = 'GET'; path = '/api/announcements'; break;
         case 'save_announcement': method = 'POST'; path = '/api/announcements'; break;

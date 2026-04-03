@@ -13,6 +13,7 @@ import { useClassroomStore } from './src/stores/useClassroomStore';
 const StudentView = React.lazy(() => import('./src/components/StudentView'));
 const IoeStudentView = React.lazy(() => import('./src/components/IoeStudentView'));
 const TeacherDashboard = React.lazy(() => import('./src/components/TeacherDashboard'));
+const GiftShop = React.lazy(() => import('./src/components/gamification/GiftShop'));
 const HomePage = React.lazy(() => import('./src/components/HomePage/HomePage'));
 const PrivacyPolicy = React.lazy(() => import('./src/components/legal/PrivacyPolicy'));
 const TermsOfService = React.lazy(() => import('./src/components/legal/TermsOfService'));
@@ -146,6 +147,7 @@ const App: React.FC = () => {
     const classroomStore = useClassroomStore();
     const location = useLocation();
     const navigate = useNavigate();
+    const isGiftShopFeatureEnabled = String(import.meta.env.VITE_FEATURE_GIFT_SHOP_V2 || 'false').toLowerCase() === 'true';
 
     const [ioeQuizzes, setIoeQuizzes] = useState<Quiz[]>([]);
     const [ioeLoading, setIoeLoading] = useState(false);
@@ -211,6 +213,10 @@ const App: React.FC = () => {
         } else if (quizStore.view === 'student_portal') {
             title = 'Cổng học sinh - ItOng Quiz';
             robots = 'noindex, nofollow, noarchive';
+        } else if (quizStore.view === 'shop' && isGiftShopFeatureEnabled) {
+            title = 'Tiệm Tạp Hóa Ít Ong - ItOng Quiz';
+            description = 'Đổi quà bằng xu và quản lý voucher trong hệ thống ItOng Quiz.';
+            robots = 'noindex, nofollow, noarchive';
         }
 
         const canonicalUrl = getCanonicalUrl(pathname, quizStore.view, quizStore.selectedQuiz);
@@ -247,6 +253,7 @@ const App: React.FC = () => {
         quizStore.selectedQuiz?.classLevel,
         quizStore.selectedQuiz?.category,
         quizStore.selectedQuiz?.questions?.length,
+        isGiftShopFeatureEnabled,
     ]);
 
     useEffect(() => {
@@ -274,6 +281,19 @@ const App: React.FC = () => {
     const showPublicFooterLinks = !authStore.isLoggedIn && !classroomStore.studentSession;
 
     const renderRootView = () => {
+        if (quizStore.view === 'shop') {
+            if (!isGiftShopFeatureEnabled || !classroomStore.studentSession) {
+                quizStore.setView('home');
+                return null;
+            }
+
+            return (
+                <Suspense fallback={<PageLoading />}>
+                    <GiftShop />
+                </Suspense>
+            );
+        }
+
         if (quizStore.view === 'teacher_dash') {
             if (!authStore.isLoggedIn) {
                 quizStore.setView('home');

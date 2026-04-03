@@ -7,7 +7,7 @@ import { getAvatarUrl } from '../../config/avatars';
 import { getAllAssignments } from '../../services/classroomService';
 import { Assignment } from '../../types/classroom.types';
 import { Quiz } from '../../types';
-import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Camera } from 'lucide-react';
+import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Camera, Gift } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import AvatarSelectorModal from '../common/AvatarSelectorModal';
@@ -128,6 +128,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const quizStore = useQuizStore();
     const { pet, coins, updateGameState } = useGamificationStore();
     const studentSession = classroomStore.studentSession;
+    const giftShopEnabled = String(import.meta.env.VITE_FEATURE_GIFT_SHOP_V2 || 'false').toLowerCase() === 'true';
 
     // --- State ---
     const [isLoadingTasks, setIsLoadingTasks] = useState(true);
@@ -349,6 +350,11 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         }
     };
 
+    const handleOpenGiftShop = () => {
+        if (!giftShopEnabled) return;
+        quizStore.setView('shop');
+    };
+
     const pickRandomAttendanceQuestion = () => {
         if (attendanceQuestionPool.length === 0) return null;
 
@@ -483,6 +489,17 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                 <span className="hidden md:inline text-xs uppercase font-bold text-yellow-700">Xu</span>
                             </div>
                         </div>
+
+                        {giftShopEnabled && (
+                            <button
+                                type="button"
+                                onClick={handleOpenGiftShop}
+                                className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs md:text-sm font-black hover:bg-indigo-100 transition-colors"
+                            >
+                                <Gift className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                <span className="hidden md:inline">Tiem Tap Hoa</span>
+                            </button>
+                        )}
 
                         {/* User Profile */}
                         <div className="flex items-center gap-3 border-l pl-3 md:pl-4 border-slate-200">
