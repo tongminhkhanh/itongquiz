@@ -4,6 +4,152 @@ import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
 import { mapPetData, mapShopItem, parseBody } from '../utils/helpers';
 
+const ATTENDANCE_BASE_REWARD = { exp: 50, coins: 50 };
+
+const getBangkokDateKey = (date = new Date()): string => {
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(date);
+};
+
+const parseDateKeyToUtc = (dateKey: string): Date => {
+    const [year, month, day] = String(dateKey || '').split('-').map((v) => Number(v || 0));
+    return new Date(Date.UTC(year, (month || 1) - 1, day || 1));
+};
+
+const formatUtcDateKey = (date: Date): string => {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const getWeekStartDateKey = (dateKey: string): string => {
+    const date = parseDateKeyToUtc(dateKey);
+    const dayOfWeek = date.getUTCDay(); // 0=Sun, 1=Mon ... 6=Sat
+    const offsetToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    date.setUTCDate(date.getUTCDate() + offsetToMonday);
+    return formatUtcDateKey(date);
+};
+
+const getAttendanceMultiplier = (attendanceDayNumber: number): number => {
+    if (attendanceDayNumber === 3) return 2;
+    if (attendanceDayNumber === 5) return 3;
+    if (attendanceDayNumber === 7) return 5;
+    return 1;
+};
+
+const calculateAttendanceStreak = (days: string[], endDateKey: string): number => {
+    if (!endDateKey || days.length === 0) return 0;
+
+    const daySet = new Set(days);
+    let streak = 0;
+    const cursor = parseDateKeyToUtc(endDateKey);
+
+    while (daySet.has(formatUtcDateKey(cursor))) {
+        streak += 1;
+        cursor.setUTCDate(cursor.getUTCDate() - 1);
+    }
+
+    return streak;
+};
+
+const ensureAttendanceTable = async (db: D1Database): Promise<void> => {
+    await db.prepare(`
+        CREATE TABLE IF NOT EXISTS attendance_claims (
+            id TEXT PRIMARY KEY,
+            username TEXT NOT NULL,
+            claim_date TEXT NOT NULL,
+            reward_exp INTEGER NOT NULL,
+            reward_coins INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    `).run();
+
+    await db.prepare(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_user_date
+        ON attendance_claims(username, claim_date)
+    `).run();
+
+    await db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_attendance_user_week
+        ON attendance_claims(username, claim_date DESC)
+    `).run();
+};
+
+const getWeekClaimDates = async (
+    db: D1Database,
+    username: string,
+    weekStartDateKey: string,
+    todayDateKey: string
+): Promise<string[]> => {
+    const rows = await db.prepare(`
+        SELECT claim_date
+        FROM attendance_claims
+        WHERE username = ?
+          AND claim_date >= ?
+          AND claim_date <= ?
+        ORDER BY claim_date ASC
+    `).bind(username, weekStartDateKey, todayDateKey).all<any>();
+
+    return rows.results.map((r: any) => String(r.claim_date || '').trim()).filter(Boolean);
+};
+
+const applyGameStateReward = async (
+    db: D1Database,
+    username: string,
+    addExp: number,
+    addCoins: number
+): Promise<{
+    newLevel: number;
+    newExp: number;
+    newExpToNext: number;
+    newCoins: number;
+    leveledUp: boolean;
+    mood: string;
+} | null> => {
+    const student = await db.prepare('SELECT coins FROM students WHERE username = ?').bind(username).first<any>();
+    if (!student) return null;
+
+    await db.prepare('UPDATE students SET coins = coins + ? WHERE username = ?').bind(addCoins, username).run();
+    const updatedStu = await db.prepare('SELECT coins FROM students WHERE username = ?').bind(username).first<any>();
+
+    let petRow = await db.prepare('SELECT * FROM user_pets WHERE username = ?').bind(username).first<any>();
+    if (!petRow) {
+        await db.prepare(
+            'INSERT INTO user_pets (username, pet_id, pet_name, level, exp, exp_to_next, mood, items, last_active) VALUES (?, ?, ?, 1, 0, 100, ?, ?, ?)'
+        ).bind(username, 'cat_01', 'Mèo Con', 'happy', '[]', new Date().toISOString()).run();
+        petRow = { level: 1, exp: 0, exp_to_next: 100 };
+    }
+
+    let newExp = Number(petRow.exp) + addExp;
+    let newLevel = Number(petRow.level) || 1;
+    let leveledUp = false;
+    let newExpToNext = Number(petRow.exp_to_next) || 100;
+
+    while (newExp >= newExpToNext) {
+        newExp -= newExpToNext;
+        newLevel += 1;
+        leveledUp = true;
+        newExpToNext = 100 + (newLevel - 1) * 20;
+    }
+
+    await db.prepare('UPDATE user_pets SET level = ?, exp = ?, exp_to_next = ?, mood = ?, last_active = ? WHERE username = ?')
+        .bind(newLevel, newExp, newExpToNext, 'excited', new Date().toISOString(), username).run();
+
+    return {
+        newLevel,
+        newExp,
+        newExpToNext,
+        newCoins: Number(updatedStu?.coins) || 0,
+        leveledUp,
+        mood: 'excited',
+    };
+};
+
 export async function handleGamificationRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
     const url = new URL(request.url);
@@ -37,53 +183,131 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
         });
     }
 
-    // GET /api/game-state?username=X (alias for get pet data via POST body)
-    // POST /api/game-state - Update game state (add exp + coins)
-    if (path === '/api/game-state' || path.startsWith('/api/game-state')) {
-        if (method === 'POST') {
-            const body = await parseBody(request);
-            if (!body) return errorResponse('Invalid JSON body');
-            if (!body.username) return errorResponse('Missing username');
+    // GET /api/game-state/attendance-status?username=X
+    if (path === '/api/game-state/attendance-status' && method === 'GET') {
+        const username = String(url.searchParams.get('username') || '').trim();
+        if (!username) return errorResponse('Missing username');
 
-            const addExp = Number(body.addExp) || 0;
-            const addCoins = Number(body.addCoins) || 0;
+        await ensureAttendanceTable(db);
 
-            // Update coins
-            await db.prepare('UPDATE students SET coins = coins + ? WHERE username = ?').bind(addCoins, body.username).run();
-            const updatedStu = await db.prepare('SELECT coins FROM students WHERE username = ?').bind(body.username).first<any>();
+        const todayDateKey = getBangkokDateKey();
+        const weekStartDateKey = getWeekStartDateKey(todayDateKey);
+        const weekClaimDates = await getWeekClaimDates(db, username, weekStartDateKey, todayDateKey);
+        const claimedToday = weekClaimDates.includes(todayDateKey);
+        const streakDays = calculateAttendanceStreak(weekClaimDates, todayDateKey);
+        const attendanceDayNumber = claimedToday ? weekClaimDates.length : (weekClaimDates.length + 1);
+        const multiplier = getAttendanceMultiplier(attendanceDayNumber);
 
-            // Update pet EXP
-            let petRow = await db.prepare('SELECT * FROM user_pets WHERE username = ?').bind(body.username).first<any>();
-            if (!petRow) {
-                await db.prepare(
-                    'INSERT INTO user_pets (username, pet_id, pet_name, level, exp, exp_to_next, mood, items, last_active) VALUES (?, ?, ?, 1, 0, 100, ?, ?, ?)'
-                ).bind(body.username, 'cat_01', 'Mèo Con', 'happy', '[]', new Date().toISOString()).run();
-                return jsonResponse({
-                    status: 'success',
-                    data: { newLevel: 1, newExp: addExp, newCoins: updatedStu?.coins || 0, leveledUp: false, mood: 'excited' },
-                });
-            }
+        return jsonResponse({
+            status: 'success',
+            data: {
+                claimedToday,
+                claimDates: weekClaimDates,
+                streakDays,
+                attendanceDayNumber,
+                nextRewardExp: ATTENDANCE_BASE_REWARD.exp * multiplier,
+                nextRewardCoins: ATTENDANCE_BASE_REWARD.coins * multiplier,
+                todayDateKey,
+                weekStartDateKey,
+            },
+        });
+    }
 
-            let newExp = Number(petRow.exp) + addExp;
-            let newLevel = Number(petRow.level);
-            let leveledUp = false;
-            let newExpToNext = Number(petRow.exp_to_next) || 100;
+    // POST /api/game-state/attendance-claim
+    if (path === '/api/game-state/attendance-claim' && method === 'POST') {
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
 
-            while (newExp >= newExpToNext) {
-                newExp -= newExpToNext;
-                newLevel++;
-                leveledUp = true;
-                newExpToNext = 100 + (newLevel - 1) * 20;
-            }
+        const username = String(body.username || '').trim();
+        if (!username) return errorResponse('Missing username');
 
-            await db.prepare('UPDATE user_pets SET level = ?, exp = ?, exp_to_next = ?, mood = ?, last_active = ? WHERE username = ?')
-                .bind(newLevel, newExp, newExpToNext, 'excited', new Date().toISOString(), body.username).run();
+        await ensureAttendanceTable(db);
+
+        const todayDateKey = getBangkokDateKey();
+        const weekStartDateKey = getWeekStartDateKey(todayDateKey);
+
+        const existingClaim = await db.prepare(`
+            SELECT id
+            FROM attendance_claims
+            WHERE username = ?
+              AND claim_date = ?
+            LIMIT 1
+        `).bind(username, todayDateKey).first<any>();
+
+        if (existingClaim) {
+            const weekClaimDates = await getWeekClaimDates(db, username, weekStartDateKey, todayDateKey);
+            const streakDays = calculateAttendanceStreak(weekClaimDates, todayDateKey);
 
             return jsonResponse({
                 status: 'success',
-                data: { newLevel, newExp, newExpToNext, newCoins: updatedStu?.coins || 0, leveledUp, mood: 'excited' },
+                data: {
+                    claimed: false,
+                    alreadyClaimed: true,
+                    claimDates: weekClaimDates,
+                    streakDays,
+                    attendanceDayNumber: weekClaimDates.length,
+                    multiplier: getAttendanceMultiplier(weekClaimDates.length),
+                    awardedExp: 0,
+                    awardedCoins: 0,
+                    message: 'Hôm nay bạn đã điểm danh rồi.',
+                    todayDateKey,
+                    weekStartDateKey,
+                },
             });
         }
+
+        const weekClaimDatesBefore = await getWeekClaimDates(db, username, weekStartDateKey, todayDateKey);
+        const attendanceDayNumber = weekClaimDatesBefore.length + 1;
+        const multiplier = getAttendanceMultiplier(attendanceDayNumber);
+        const awardedExp = ATTENDANCE_BASE_REWARD.exp * multiplier;
+        const awardedCoins = ATTENDANCE_BASE_REWARD.coins * multiplier;
+        const claimId = `att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+        await db.prepare(`
+            INSERT INTO attendance_claims (id, username, claim_date, reward_exp, reward_coins, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `).bind(claimId, username, todayDateKey, awardedExp, awardedCoins, new Date().toISOString()).run();
+
+        const gameState = await applyGameStateReward(db, username, awardedExp, awardedCoins);
+        if (!gameState) {
+            await db.prepare('DELETE FROM attendance_claims WHERE id = ?').bind(claimId).run();
+            return errorResponse('Student not found', 404);
+        }
+
+        const weekClaimDates = await getWeekClaimDates(db, username, weekStartDateKey, todayDateKey);
+        const streakDays = calculateAttendanceStreak(weekClaimDates, todayDateKey);
+
+        return jsonResponse({
+            status: 'success',
+            data: {
+                ...gameState,
+                claimed: true,
+                alreadyClaimed: false,
+                claimDates: weekClaimDates,
+                streakDays,
+                attendanceDayNumber,
+                multiplier,
+                awardedExp,
+                awardedCoins,
+                todayDateKey,
+                weekStartDateKey,
+            },
+        });
+    }
+
+    // POST /api/game-state - Update game state (add exp + coins)
+    if (path === '/api/game-state' && method === 'POST') {
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+        if (!body.username) return errorResponse('Missing username');
+
+        const addExp = Number(body.addExp) || 0;
+        const addCoins = Number(body.addCoins) || 0;
+
+        const result = await applyGameStateReward(db, String(body.username), addExp, addCoins);
+        if (!result) return errorResponse('Student not found', 404);
+
+        return jsonResponse({ status: 'success', data: result });
     }
 
     // POST /api/shop/buy

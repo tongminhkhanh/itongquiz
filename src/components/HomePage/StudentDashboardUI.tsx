@@ -5,6 +5,7 @@ import { useQuizStore } from '../../../stores/quizStore';
 import { useGamificationStore } from '../../stores/useGamificationStore';
 import { getAvatarUrl } from '../../config/avatars';
 import { getAllAssignments } from '../../services/classroomService';
+import { callApi } from '../../services/apiAdapter';
 import { Assignment } from '../../types/classroom.types';
 import { Quiz } from '../../types';
 import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Camera, Gift, KeyRound } from 'lucide-react';
@@ -32,7 +33,6 @@ interface StudentDashboardUIProps {
 
 const ASSIGNMENTS_PER_PAGE = 5;
 const ATTENDANCE_REWARD = { exp: 50, coins: 50 };
-const ATTENDANCE_WEEKLY_STORAGE_PREFIX = 'student-attendance-weekly';
 
 interface AttendanceQuestion {
     id: string;
@@ -40,6 +40,29 @@ interface AttendanceQuestion {
     question: string;
     options: string[];
     correctLabel: string;
+}
+
+interface AttendanceStatusData {
+    claimedToday: boolean;
+    claimDates: string[];
+    streakDays: number;
+    attendanceDayNumber: number;
+    nextRewardExp: number;
+    nextRewardCoins: number;
+    todayDateKey: string;
+    weekStartDateKey: string;
+}
+
+interface AttendanceClaimData {
+    claimed: boolean;
+    alreadyClaimed: boolean;
+    claimDates: string[];
+    streakDays: number;
+    attendanceDayNumber: number;
+    multiplier: number;
+    awardedExp: number;
+    awardedCoins: number;
+    message?: string;
 }
 
 const getLocalDateKey = () => {
@@ -126,7 +149,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     // --- Stores ---
     const classroomStore = useClassroomStore();
     const quizStore = useQuizStore();
-    const { pet, coins, updateGameState } = useGamificationStore();
+    const { pet, coins } = useGamificationStore();
     const studentSession = classroomStore.studentSession;
     const giftShopEnabled = String(import.meta.env.VITE_FEATURE_GIFT_SHOP_V2 || 'false').toLowerCase() === 'true';
 
@@ -263,11 +286,6 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
     const attendanceTodayKey = useMemo(() => getLocalDateKey(), [studentSession?.username]);
 
-    const attendanceWeekStorageKey = useMemo(() => {
-        if (!studentSession?.username) return '';
-        return `${ATTENDANCE_WEEKLY_STORAGE_PREFIX}:${studentSession.username}:${getWeekStartDateKey()}`;
-    }, [studentSession?.username]);
-
     const attendanceQuestionPool = useMemo<AttendanceQuestion[]>(() => {
         const allQuizzes = [...quizStore.quizzes, ...ioeQuizzes];
 
@@ -310,33 +328,38 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     }, [assignmentPage, totalAssignmentPages]);
 
     useEffect(() => {
-        if (!attendanceWeekStorageKey) {
+        const loadAttendanceStatus = async () => {
+            if (!studentSession?.username) {
+                setAttendanceClaimed(false);
+                setAttendanceDaysInWeek([]);
+                return;
+            }
+
+            try {
+                const res = await callApi<{ status: 'success' | 'error'; data?: AttendanceStatusData; message?: string }>(
+                    'get_attendance_status',
+                    { username: studentSession.username }
+                );
+
+                if (res?.status === 'success' && res.data) {
+                    const claimDates = Array.isArray(res.data.claimDates)
+                        ? Array.from(new Set(res.data.claimDates.map((d) => String(d || '').trim()).filter(Boolean)))
+                        : [];
+
+                    setAttendanceDaysInWeek(claimDates);
+                    setAttendanceClaimed(Boolean(res.data.claimedToday));
+                    return;
+                }
+            } catch (err) {
+                console.error('Failed to load attendance status:', err);
+            }
+
             setAttendanceClaimed(false);
             setAttendanceDaysInWeek([]);
-            return;
-        }
+        };
 
-        try {
-            const raw = localStorage.getItem(attendanceWeekStorageKey);
-            const parsed = raw ? JSON.parse(raw) : [];
-            const savedDays = Array.isArray(parsed)
-                ? Array.from(
-                    new Set(
-                        parsed
-                            .filter((value): value is string => typeof value === 'string')
-                            .map((value) => value.trim())
-                            .filter(Boolean)
-                    )
-                )
-                : [];
-
-            setAttendanceDaysInWeek(savedDays);
-            setAttendanceClaimed(savedDays.includes(attendanceTodayKey));
-        } catch {
-            setAttendanceClaimed(false);
-            setAttendanceDaysInWeek([]);
-        }
-    }, [attendanceWeekStorageKey, attendanceTodayKey]);
+        loadAttendanceStatus();
+    }, [studentSession?.username, attendanceTodayKey]);
 
     if (!studentSession) return null;
 
@@ -477,36 +500,39 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
         setIsSubmittingAttendance(true);
         try {
-            const attendanceDayNumber = attendanceDaysInWeek.length + 1;
-            const multiplier = getAttendanceMultiplier(attendanceDayNumber);
-            const attendanceReward = {
-                exp: ATTENDANCE_REWARD.exp * multiplier,
-                coins: ATTENDANCE_REWARD.coins * multiplier,
-            };
+            const res = await callApi<{ status: 'success' | 'error'; data?: AttendanceClaimData; message?: string }>(
+                'claim_daily_attendance',
+                { username: studentSession.username }
+            );
 
-            const ok = await updateGameState(studentSession.username, attendanceReward.exp, attendanceReward.coins);
-            if (!ok) {
+            if (res?.status !== 'success' || !res.data) {
                 setAttendanceResult('wrong');
-                setAttendanceMessage('Trả lời đúng nhưng chưa cộng thưởng được. Em thử lại sau nhé!');
+                setAttendanceMessage(res?.message || 'Không thể cộng thưởng lúc này. Em thử lại sau nhé!');
                 return;
             }
 
-            const updatedDays = attendanceDaysInWeek.includes(attendanceTodayKey)
-                ? attendanceDaysInWeek
-                : [...attendanceDaysInWeek, attendanceTodayKey];
-
-            if (attendanceWeekStorageKey) {
-                localStorage.setItem(attendanceWeekStorageKey, JSON.stringify(updatedDays));
+            if (res.data.alreadyClaimed || !res.data.claimed) {
+                setAttendanceClaimed(true);
+                setAttendanceDaysInWeek(Array.isArray(res.data.claimDates) ? res.data.claimDates : attendanceDaysInWeek);
+                setAttendanceResult('wrong');
+                setAttendanceMessage(res.data.message || 'Hôm nay em đã điểm danh rồi. Mai quay lại nhé!');
+                return;
             }
+
+            const updatedDays = Array.isArray(res.data.claimDates) ? res.data.claimDates : attendanceDaysInWeek;
             setAttendanceDaysInWeek(updatedDays);
             setAttendanceClaimed(true);
             setAttendanceResult('correct');
-            const streakDays = calculateAttendanceStreak(updatedDays, attendanceTodayKey);
-            const bonusText = multiplier > 1 ? ` (x${multiplier} ngày ${attendanceDayNumber})` : '';
-            setAttendanceMessage(`Chính xác! Em nhận +${attendanceReward.coins} Xu và +${attendanceReward.exp} EXP${bonusText}. Bạn đã điểm danh liên tục ${streakDays} ngày.`);
-        } catch {
+            const bonusText = res.data.multiplier > 1 ? ` (x${res.data.multiplier} ngày ${res.data.attendanceDayNumber})` : '';
+            setAttendanceMessage(
+                `Chính xác! Em nhận +${res.data.awardedCoins} Xu và +${res.data.awardedExp} EXP${bonusText}. Bạn đã điểm danh liên tục ${res.data.streakDays} ngày.`
+            );
+
+            await useGamificationStore.getState().fetchPetData(studentSession.username);
+        } catch (err) {
+            console.error('Attendance claim failed:', err);
             setAttendanceResult('wrong');
-            setAttendanceMessage('Trả lời đúng nhưng hệ thống chưa cộng thưởng. Em thử lại sau nhé!');
+            setAttendanceMessage('Không thể cộng thưởng lúc này. Em thử lại sau nhé!');
         } finally {
             setIsSubmittingAttendance(false);
         }

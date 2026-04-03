@@ -76,6 +76,8 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         // --- Gamification ---
         case 'get_pet_data': method = 'GET'; path = `/api/pets`; urlParams.append('username', payload.username); break;
         case 'update_game_state': method = 'POST'; path = '/api/game-state'; break;
+        case 'get_attendance_status': method = 'GET'; path = '/api/game-state/attendance-status'; urlParams.append('username', payload.username); break;
+        case 'claim_daily_attendance': method = 'POST'; path = '/api/game-state/attendance-claim'; break;
         case 'buy_shop_item': method = 'POST'; path = '/api/shop/buy'; break;
         case 'get_leaderboard': method = 'GET'; path = '/api/leaderboard'; break;
         case 'get_top_gold_leaderboard': method = 'GET'; path = '/api/leaderboard/top-gold'; break;

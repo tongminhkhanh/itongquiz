@@ -106,6 +106,16 @@ CREATE TABLE IF NOT EXISTS user_pets (
   last_active TEXT DEFAULT ''
 );
 
+-- Daily attendance claims (server-side anti-duplicate)
+CREATE TABLE IF NOT EXISTS attendance_claims (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  claim_date TEXT NOT NULL,
+  reward_exp INTEGER NOT NULL,
+  reward_coins INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
+
 -- Shop Items
 CREATE TABLE IF NOT EXISTS shop_items (
   item_id TEXT PRIMARY KEY,
@@ -193,6 +203,8 @@ CREATE INDEX IF NOT EXISTS idx_results_quiz_id ON results(quiz_id);
 CREATE INDEX IF NOT EXISTS idx_results_student ON results(student_name);
 CREATE INDEX IF NOT EXISTS idx_classes_teacher ON classes(teacher_username);
 CREATE INDEX IF NOT EXISTS idx_results_submitted_at ON results(submitted_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_user_date ON attendance_claims(username, claim_date);
+CREATE INDEX IF NOT EXISTS idx_attendance_user_week ON attendance_claims(username, claim_date DESC);
 CREATE INDEX IF NOT EXISTS idx_gift_catalog_active ON gift_catalog_items(is_active);
 CREATE INDEX IF NOT EXISTS idx_gift_orders_status ON gift_orders(status);
 CREATE INDEX IF NOT EXISTS idx_gift_orders_student ON gift_orders(student_id);
