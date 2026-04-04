@@ -53,6 +53,13 @@ const getOrCreateSessionId = (): string => {
     }
 };
 
+const stripBoldMarkers = (value: string): string => {
+    return String(value || '')
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*\*/g, '')
+        .trim();
+};
+
 export async function generateChatResponse(
     query: string,
     _history: ChatMessage[],
@@ -72,7 +79,7 @@ export async function generateChatResponse(
     }
 
     return {
-        answer: String(response.data.answer || '').trim(),
+        answer: stripBoldMarkers(String(response.data.answer || '')),
         confidence: Number(response.data.confidence || 0),
         sources: Array.isArray(response.data.sources) ? response.data.sources : undefined,
         fallbackReason: response.data.fallbackReason,
