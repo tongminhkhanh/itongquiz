@@ -19,13 +19,26 @@ const AssignmentTab: React.FC = () => {
     const store = useClassroomStore();
     const quizStore = useQuizStore();
 
+    const refreshAssignments = async () => {
+        if (!authStore.username) return;
+        if (authStore.isAdmin) {
+            await store.fetchAllAssignments();
+            return;
+        }
+        await store.fetchTeacherAssignments(authStore.username);
+    };
+
     // Load data on mount
     useEffect(() => {
-        if (authStore.username) {
-            store.fetchClasses(authStore.username);
-            store.fetchTeacherAssignments(authStore.username);
+        if (!authStore.username) return;
+        if (authStore.isAdmin) {
+            store.fetchClasses();
+            store.fetchAllAssignments();
+            return;
         }
-    }, [authStore.username]);
+        store.fetchClasses(authStore.username);
+        store.fetchTeacherAssignments(authStore.username);
+    }, [authStore.username, authStore.isAdmin]);
 
     return (
         <div className="space-y-8">
@@ -45,9 +58,8 @@ const AssignmentTab: React.FC = () => {
                 quizzes={quizStore.quizzes}
                 onCreateAssignment={async (payload) => {
                     const result = await store.addAssignment(payload);
-                    if (result && authStore.username) {
-                        // Refresh assignment list after creation
-                        await store.fetchTeacherAssignments(authStore.username);
+                    if (result) {
+                        await refreshAssignments();
                     }
                     return !!result;
                 }}
@@ -60,22 +72,22 @@ const AssignmentTab: React.FC = () => {
                 onDelete={async (id) => {
                     if (confirm('Xóa bài giao này?')) {
                         const ok = await store.removeAssignment(id);
-                        if (ok && authStore.username) {
-                            await store.fetchTeacherAssignments(authStore.username);
+                        if (ok) {
+                            await refreshAssignments();
                         }
                     }
                 }}
                 onUpdateDeadline={async (assignmentId, newDeadline) => {
                     const ok = await store.updateAssignmentDeadline(assignmentId, newDeadline);
-                    if (ok && authStore.username) {
-                        await store.fetchTeacherAssignments(authStore.username);
+                    if (ok) {
+                        await refreshAssignments();
                     }
                     return ok;
                 }}
                 onUpdateStatus={async (assignmentId, newStatus) => {
                     const ok = await store.updateAssignmentStatus(assignmentId, newStatus);
-                    if (ok && authStore.username) {
-                        await store.fetchTeacherAssignments(authStore.username);
+                    if (ok) {
+                        await refreshAssignments();
                     }
                     return ok;
                 }}

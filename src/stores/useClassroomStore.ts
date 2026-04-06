@@ -48,6 +48,7 @@ interface ClassroomStore {
     // Assignment actions
     fetchAssignments: (classId: string) => Promise<void>;
     fetchTeacherAssignments: (teacherUsername: string) => Promise<void>;
+    fetchAllAssignments: () => Promise<void>;
     addAssignment: (payload: CreateAssignmentPayload) => Promise<Assignment | null>;
     removeAssignment: (assignmentId: string) => Promise<boolean>;
     updateAssignmentDeadline: (assignmentId: string, newDeadline: string) => Promise<boolean>;
@@ -266,6 +267,16 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
             set({ assignments, isLoading: false });
         } catch (err) {
             set({ error: 'Không thể tải danh sách bài giao.', isLoading: false });
+        }
+    },
+
+    fetchAllAssignments: async () => {
+        set({ isLoading: true, error: null });
+        try {
+            const assignments = await classroomService.getAllAssignments();
+            set({ assignments, isLoading: false });
+        } catch (err) {
+            set({ error: 'Khong the tai toan bo danh sach bai giao.', isLoading: false });
         }
     },
 

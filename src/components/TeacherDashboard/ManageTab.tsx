@@ -109,7 +109,9 @@ const QuickAssignModal: React.FC<{
 
     // Fetch classes on mount
     useEffect(() => {
-        if (authStore.username) {
+        if (authStore.isAdmin) {
+            classroomStore.fetchClasses();
+        } else if (authStore.username) {
             classroomStore.fetchClasses(authStore.username);
         }
         // Set default deadline to tomorrow
@@ -117,7 +119,7 @@ const QuickAssignModal: React.FC<{
         tomorrow.setDate(tomorrow.getDate() + 1);
         tomorrow.setHours(23, 59, 0, 0);
         setDeadline(tomorrow.toISOString().slice(0, 16));
-    }, []);
+    }, [authStore.isAdmin, authStore.username]);
 
     const handleSubmit = async () => {
         if (!selectedClassId || !deadline) return;
