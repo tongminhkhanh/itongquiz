@@ -193,6 +193,13 @@ CREATE TABLE IF NOT EXISTS announcements (
   updated_at TEXT DEFAULT ''
 );
 
+-- System settings (global toggles)
+CREATE TABLE IF NOT EXISTS system_settings (
+  setting_key TEXT PRIMARY KEY,
+  setting_value TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 -- RAG documents metadata
 CREATE TABLE IF NOT EXISTS rag_documents (
   id TEXT PRIMARY KEY,

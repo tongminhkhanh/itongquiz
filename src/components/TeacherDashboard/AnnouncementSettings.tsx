@@ -1,24 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import { getAnnouncement, saveAnnouncement, Announcement } from '../../services/announcementService';
+import { getSystemSettings, saveSystemSettings } from '../../services/systemSettingsService';
+import { useAuthStore } from '../../../stores/authStore';
 
 /**
  * Admin UI for managing marquee announcement
  */
 const AnnouncementSettings: React.FC = () => {
+    const authStore = useAuthStore();
     const [content, setContent] = useState('');
     const [isActive, setIsActive] = useState(false);
+    const [aiAssistantEnabled, setAiAssistantEnabled] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isSavingSystem, setIsSavingSystem] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     useEffect(() => {
-        const fetchAnnouncement = async () => {
+        const fetchData = async () => {
             try {
-                const data = await getAnnouncement();
-                if (data) {
-                    setContent(data.content || '');
-                    setIsActive(data.isActive);
+                const [announcementData, settingsData] = await Promise.all([
+                    getAnnouncement(),
+                    getSystemSettings(),
+                ]);
+
+                if (announcementData) {
+                    setContent(announcementData.content || '');
+                    setIsActive(announcementData.isActive);
                 }
+                setAiAssistantEnabled(Boolean(settingsData.aiAssistantEnabled));
             } catch (error) {
                 // Error handled in UI if needed
             } finally {
@@ -26,7 +36,7 @@ const AnnouncementSettings: React.FC = () => {
             }
         };
 
-        fetchAnnouncement();
+        fetchData();
     }, []);
 
     const handleSave = async () => {
@@ -44,6 +54,33 @@ const AnnouncementSettings: React.FC = () => {
             setMessage({ type: 'error', text: 'Lỗi kết nối!' });
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleSaveSystemSettings = async () => {
+        if (!authStore.username) {
+            setMessage({ type: 'error', text: 'Không xác định được tài khoản admin.' });
+            return;
+        }
+
+        setIsSavingSystem(true);
+        setMessage(null);
+
+        try {
+            const success = await saveSystemSettings({
+                actorUsername: authStore.username,
+                aiAssistantEnabled,
+            });
+
+            if (success) {
+                setMessage({ type: 'success', text: 'Đã lưu cài đặt Trợ lý AI thành công!' });
+            } else {
+                setMessage({ type: 'error', text: 'Lỗi khi lưu cài đặt Trợ lý AI!' });
+            }
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Lỗi kết nối khi lưu cài đặt hệ thống!' });
+        } finally {
+            setIsSavingSystem(false);
         }
     };
 
@@ -97,6 +134,41 @@ const AnnouncementSettings: React.FC = () => {
                 <p className="mt-1 text-xs text-gray-500">
                     Thông báo sẽ chạy từ phải sang trái ở đầu trang Home
                 </p>
+            </div>
+
+            {/* AI Assistant Settings */}
+            <div className="mb-6 border-t border-gray-200 pt-6">
+                <div className="flex items-center gap-3 mb-3">
+                    <span className="text-2xl">🤖</span>
+                    <h4 className="text-base font-semibold text-gray-800">Cài đặt Trợ lý AI</h4>
+                </div>
+                <div className="flex items-center gap-3 mb-3">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={aiAssistantEnabled}
+                            onChange={(e) => setAiAssistantEnabled(e.target.checked)}
+                            className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                    <span className={`font-medium ${aiAssistantEnabled ? 'text-indigo-600' : 'text-gray-500'}`}>
+                        {aiAssistantEnabled ? 'Trợ lý AI: Đang bật' : 'Trợ lý AI: Đã tắt'}
+                    </span>
+                </div>
+                <p className="text-xs text-gray-500 mb-4">
+                    Khi tắt, nút chat trợ lý AI sẽ ẩn khỏi giao diện người dùng toàn hệ thống.
+                </p>
+                <button
+                    onClick={handleSaveSystemSettings}
+                    disabled={isSavingSystem}
+                    className={`px-6 py-2.5 rounded-lg font-medium text-white transition-all ${isSavingSystem
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-slate-700 hover:bg-slate-800 active:scale-95'
+                        }`}
+                >
+                    {isSavingSystem ? 'Đang lưu cài đặt...' : '💾 Lưu cài đặt Trợ lý AI'}
+                </button>
             </div>
 
             {/* Message */}

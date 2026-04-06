@@ -5,6 +5,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 
 import { Quiz } from './src/types';
 import { fetchIoeQuizzes, saveIoeResult } from './src/services/ioeSheetService';
+import { getSystemSettings } from './src/services/systemSettingsService';
 import { useAuthStore } from './stores/authStore';
 import { useQuizStore } from './stores/quizStore';
 import { useClassroomStore } from './src/stores/useClassroomStore';
@@ -152,6 +153,7 @@ const App: React.FC = () => {
 
     const [ioeQuizzes, setIoeQuizzes] = useState<Quiz[]>([]);
     const [ioeLoading, setIoeLoading] = useState(false);
+    const [aiAssistantEnabled, setAiAssistantEnabled] = useState(true);
 
     const loadIoeData = async (forceRefresh = false) => {
         if (ioeLoading) return;
@@ -177,6 +179,33 @@ const App: React.FC = () => {
             loadIoeData(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const loadSystemSettings = async () => {
+            try {
+                const settings = await getSystemSettings();
+                setAiAssistantEnabled(Boolean(settings.aiAssistantEnabled));
+            } catch {
+                setAiAssistantEnabled(true);
+            }
+        };
+
+        loadSystemSettings();
+
+        const handleSettingsUpdated = (event: Event) => {
+            const customEvent = event as CustomEvent<{ aiAssistantEnabled?: boolean }>;
+            if (typeof customEvent.detail?.aiAssistantEnabled === 'boolean') {
+                setAiAssistantEnabled(customEvent.detail.aiAssistantEnabled);
+                return;
+            }
+            loadSystemSettings();
+        };
+
+        window.addEventListener('itongquiz:system-settings-updated', handleSettingsUpdated);
+        return () => {
+            window.removeEventListener('itongquiz:system-settings-updated', handleSettingsUpdated);
+        };
     }, []);
 
     useEffect(() => {
@@ -280,7 +309,7 @@ const App: React.FC = () => {
     };
 
     const showPublicFooterLinks = !authStore.isLoggedIn && !classroomStore.studentSession;
-    const showChatbot = quizStore.view !== 'student';
+    const showChatbot = aiAssistantEnabled && quizStore.view !== 'student';
 
     const renderRootView = () => {
         if (quizStore.view === 'shop') {

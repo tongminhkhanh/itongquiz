@@ -117,6 +117,8 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         // --- Announcements ---
         case 'get_announcement': method = 'GET'; path = '/api/announcements'; break;
         case 'save_announcement': method = 'POST'; path = '/api/announcements'; break;
+        case 'get_system_settings': method = 'GET'; path = '/api/system-settings'; break;
+        case 'save_system_settings': method = 'POST'; path = '/api/system-settings'; break;
 
         default: break; // Fallback to root path for undefined actions (though they shouldn't occur)
     }
