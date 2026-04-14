@@ -17,6 +17,7 @@ export type { TabItem, TabsProps } from './Tabs';
 export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as QuestionReview } from './QuestionReview';
 export { default as MathSpan } from './MathSpan';
+export { default as NewlineMathText } from './NewlineMathText';
 export { default as ExplanationContent } from './ExplanationContent';
 export { default as Footer } from './Footer';
 export { default as ResponsiveDataView } from './ResponsiveDataView';

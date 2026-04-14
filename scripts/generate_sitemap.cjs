@@ -4,7 +4,7 @@ const path = require('path');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const OUTPUT_FILE = path.join(ROOT_DIR, 'public', 'sitemap.xml');
-const DEFAULT_SITE_URL = 'https://thitong.site';
+const DEFAULT_SITE_URL = 'https://www.thitong.site';
 const DEFAULT_CATEGORIES = ['vioedu', 'trang-nguyen', 'ioe', 'on-tap'];
 
 function loadEnvFile(filePath) {

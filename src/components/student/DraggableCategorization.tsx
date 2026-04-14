@@ -14,6 +14,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { RefreshCcw, GripVertical } from 'lucide-react';
 import { MathSpan } from '../common';
+import NewlineMathText from '../common/NewlineMathText';
 
 // Color palette for categories
 const CATEGORY_COLORS = [
@@ -115,9 +116,11 @@ function DroppableCategory({ category, children, isHighlighted, isOver, color }:
                     : `border-gray-200 bg-white`
                 }`}
         >
-            <p className={`font-bold text-sm mb-3 ${color.text}`}>
-                {category.name}
-            </p>
+            <NewlineMathText
+                content={category.name}
+                as="p"
+                className={`font-bold text-sm mb-3 ${color.text} quiz-text-preserve-block`}
+            />
             <div className="flex flex-wrap gap-2 min-h-[40px]">
                 {children}
             </div>
@@ -253,7 +256,7 @@ const DraggableCategorization: React.FC<Props> = ({
                 {instruction && (
                     <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
                         <p className="text-sm text-amber-800">
-                            📝 <em>{instruction}</em>
+                            📝 <em><NewlineMathText content={instruction} as="span" className="quiz-text-preserve-inline" /></em>
                         </p>
                     </div>
                 )}

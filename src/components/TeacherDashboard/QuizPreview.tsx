@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, Question, QuestionType } from '../../types';
-import { Card, Button, Modal } from '../common';
+import { Card, Button, Modal, NewlineMathText } from '../common';
 import { Save, PlusCircle, Edit3, Trash2, X, FileDown, Bold, Italic, Sparkles, Loader2, RefreshCw } from 'lucide-react';
-import { formatMathText } from '../../utils/formatters';
 import GeometryPreview from './GeometryPreview';
 import { renderMathJax } from '../../hooks/useMathJax';
 import TikZPreview from '../common/TikZPreview';
@@ -992,9 +991,11 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 Câu {idx + 1}:
                                             </span>
                                             <div className="flex-1">
-                                                <p className="text-gray-800 font-medium" style={{ whiteSpace: 'pre-line' }}>
-                                                    <span>{formatMathText(fixReorderQuestion((q as any).question || (q as any).mainQuestion || ''))}</span>
-                                                </p>
+                                                <NewlineMathText
+                                                    content={fixReorderQuestion((q as any).question || (q as any).mainQuestion || '')}
+                                                    as="div"
+                                                    className="text-gray-800 font-medium quiz-text-preserve-block"
+                                                />
                                             </div>
                                         </div>
 
@@ -1116,7 +1117,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 return (
                                                     <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${isCorrect ? 'bg-green-100 text-green-800 font-semibold' : 'text-gray-600'}`}>
                                                         <span className={`font-bold ${isCorrect ? 'text-green-700' : 'text-gray-500'}`}>{letter}.</span>
-                                                        <span>{formatMathText(cleanOpt)}</span>
+                                                        <NewlineMathText content={cleanOpt} as="span" className="quiz-text-preserve-inline flex-1" />
                                                         {isCorrect && <span className="ml-auto text-green-600">✓</span>}
                                                     </div>
                                                 );
@@ -1135,7 +1136,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 return (
                                                     <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${isCorrect ? 'bg-green-100 text-green-800 font-semibold' : 'text-gray-600'}`}>
                                                         <span className={`font-bold ${isCorrect ? 'text-green-700' : 'text-gray-500'}`}>{letter}.</span>
-                                                        <span>{formatMathText(cleanOpt)}</span>
+                                                        <NewlineMathText content={cleanOpt} as="span" className="quiz-text-preserve-inline flex-1" />
                                                         {isCorrect && <span className="ml-auto text-green-600">✓</span>}
                                                     </div>
                                                 );
@@ -1149,7 +1150,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                             {((q as any).items || []).map((item: any, i: number) => (
                                                 <div key={i} className="flex items-center justify-between px-3 py-1.5 bg-gray-50 rounded-lg text-sm">
                                                     <span className="text-gray-700">
-                                                        {String.fromCharCode(97 + i)}. {formatMathText(String(item?.statement ?? item?.text ?? item?.content ?? ''))}
+                                                        {String.fromCharCode(97 + i)}. <NewlineMathText content={String(item?.statement ?? item?.text ?? item?.content ?? '')} as="span" className="quiz-text-preserve-inline" />
                                                     </span>
                                                     <span className={`font-bold px-2 py-0.5 rounded ${toBoolean(item?.isCorrect ?? item?.isTrue ?? item?.correct ?? item?.answer) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                         {toBoolean(item?.isCorrect ?? item?.isTrue ?? item?.correct ?? item?.answer) ? 'Đ' : 'S'}
@@ -1163,7 +1164,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                     {q.type === QuestionType.SHORT_ANSWER && (
                                         <div className="ml-8">
                                             <p className="text-sm text-gray-600">
-                                                Đáp án: <span className="font-bold text-green-700">{formatMathText((q as any).correctAnswer)}</span>
+                                                Đáp án: <NewlineMathText content={(q as any).correctAnswer} as="span" className="font-bold text-green-700 quiz-text-preserve-inline" />
                                             </p>
                                         </div>
                                     )}
@@ -1173,9 +1174,9 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                         <div className="ml-8 space-y-1">
                                             {((q as any).pairs || []).map((pair: any, i: number) => (
                                                 <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg text-sm">
-                                                    <span className="text-gray-800 font-medium">{formatMathText(pair.left)}</span>
+                                                    <NewlineMathText content={pair.left} as="span" className="text-gray-800 font-medium quiz-text-preserve-inline" />
                                                     <span className="text-gray-400">→</span>
-                                                    <span className="text-green-700 font-semibold">{formatMathText(pair.right)}</span>
+                                                    <NewlineMathText content={pair.right} as="span" className="text-green-700 font-semibold quiz-text-preserve-inline" />
                                                 </div>
                                             ))}
                                         </div>
@@ -1207,7 +1208,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 return (
                                                     <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${isCorrect ? 'bg-green-100 text-green-800 font-semibold' : 'text-gray-600'}`}>
                                                         <span className="font-bold">{letter}.</span>
-                                                        <span>{formatMathText(cleanOpt)}</span>
+                                                        <NewlineMathText content={cleanOpt} as="span" className="quiz-text-preserve-inline flex-1" />
                                                         {isCorrect && <span className="ml-auto text-green-600">✓</span>}
                                                     </div>
                                                 );
@@ -1221,7 +1222,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                             {(q as any).image && (
                                                 <img src={(q as any).image} alt="Question" className="max-h-48 rounded-lg object-contain border" />
                                             )}
-                                            <div className="text-sm text-gray-700 leading-relaxed flex flex-wrap items-center gap-y-1">
+                                            <div className="text-sm text-gray-700 leading-relaxed quiz-text-preserve-block">
                                                 {((q as any).text || "").split(/(\[\d+\])/g).map((part: string, idx: number) => {
                                                     const match = part.match(/\[(\d+)\]/);
                                                     if (match) {
@@ -1239,7 +1240,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                             );
                                                         }
                                                     }
-                                                    return <span key={idx}>{formatMathText(part)}</span>;
+                                                    return <NewlineMathText key={idx} content={part} as="span" className="quiz-text-preserve-inline" />;
                                                 })}
                                             </div>
                                         </div>
@@ -1249,7 +1250,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                     {q.type === QuestionType.UNDERLINE && (
                                         <div className="ml-8 space-y-2">
                                             <p className="text-sm text-gray-600 mb-2">
-                                                <strong>Câu:</strong> {(q as any).sentence}
+                                                <strong>Câu:</strong> <NewlineMathText content={(q as any).sentence} as="span" className="quiz-text-preserve-inline" />
                                             </p>
                                             <div className="flex flex-wrap gap-2">
                                                 {((q as any).words || []).map((word: string, i: number) => {
@@ -1262,7 +1263,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                                 : 'bg-gray-100 text-gray-600'
                                                                 }`}
                                                         >
-                                                            {word}
+                                                            <NewlineMathText content={word} as="span" className="quiz-text-preserve-inline" />
                                                             {isCorrect && <span className="ml-1 text-green-600">✓</span>}
                                                         </span>
                                                     );
@@ -1276,7 +1277,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                         <div className="ml-8 space-y-3">
                                             {((q as any).instruction) && (
                                                 <p className="text-sm text-amber-700 italic bg-amber-50 p-2 rounded">
-                                                    {(q as any).instruction}
+                                                    <NewlineMathText content={(q as any).instruction} as="span" className="quiz-text-preserve-inline" />
                                                 </p>
                                             )}
                                             {((q as any).categories || []).map((cat: any) => {
@@ -1284,7 +1285,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 return (
                                                     <div key={cat.id} className="border rounded-lg p-3 bg-gray-50">
                                                         <p className="font-bold text-indigo-700 text-sm mb-2">
-                                                            {cat.name}
+                                                            <NewlineMathText content={cat.name} as="span" className="quiz-text-preserve-inline" />
                                                         </p>
                                                         <div className="flex flex-wrap gap-2">
                                                             {itemsInCat.length === 0 ? (
@@ -1292,7 +1293,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                             ) : (
                                                                 itemsInCat.map((item: any) => (
                                                                     <span key={item.id} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
-                                                                        {item.content}
+                                                                        <NewlineMathText content={item.content} as="span" className="quiz-text-preserve-inline" />
                                                                     </span>
                                                                 ))
                                                             )}
@@ -1312,7 +1313,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                             <div className="flex flex-wrap gap-2">
                                                                 {itemsWithNoCategory.map((item: any) => (
                                                                     <span key={item.id} className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-medium">
-                                                                        {item.content}
+                                                                        <NewlineMathText content={item.content} as="span" className="quiz-text-preserve-inline" />
                                                                     </span>
                                                                 ))}
                                                             </div>
@@ -1335,7 +1336,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                     return correctOrder.map((idx: number, pos: number) => (
                                                         <div key={pos} className="flex items-center gap-2">
                                                             <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">{pos + 1}</span>
-                                                            <span className="text-sm text-gray-700">{items[idx] || ''}</span>
+                                                            <NewlineMathText content={items[idx] || ''} as="span" className="text-sm text-gray-700 quiz-text-preserve-inline" />
                                                         </div>
                                                     ));
                                                 })()}
@@ -1346,14 +1347,16 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                     {/* DRAG_DROP */}
                                     {q.type === QuestionType.DRAG_DROP && (
                                         <div className="ml-8 space-y-2">
-                                            <p className="text-sm text-gray-600">
-                                                {((q as any).text || '').replace(/\[([^\]]+)\]/g, '[ ___ ]')}
-                                            </p>
+                                            <NewlineMathText
+                                                content={((q as any).text || '').replace(/\[([^\]]+)\]/g, '[ ___ ]')}
+                                                as="p"
+                                                className="text-sm text-gray-600 quiz-text-preserve-block"
+                                            />
                                             <div className="flex flex-wrap gap-1">
                                                 <span className="text-sm text-gray-500 mr-2">Đáp án:</span>
                                                 {((q as any).blanks || []).map((blank: string, i: number) => (
                                                     <span key={i} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
-                                                        {blank}
+                                                        <NewlineMathText content={blank} as="span" className="quiz-text-preserve-inline" />
                                                     </span>
                                                 ))}
                                             </div>
@@ -1362,7 +1365,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                     <span className="text-sm text-gray-500 mr-2">Gây nhiễu:</span>
                                                     {((q as any).distractors || []).map((d: string, i: number) => (
                                                         <span key={i} className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs">
-                                                            {d}
+                                                            <NewlineMathText content={d} as="span" className="quiz-text-preserve-inline" />
                                                         </span>
                                                     ))}
                                                 </div>
@@ -1383,10 +1386,10 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                             </div>
                                             <p className="text-sm">
                                                 <span className="text-gray-500">Đáp án:</span>
-                                                <span className="font-bold text-green-700 ml-2">{(q as any).correctWord}</span>
+                                                <NewlineMathText content={(q as any).correctWord} as="span" className="font-bold text-green-700 ml-2 quiz-text-preserve-inline" />
                                             </p>
                                             {(q as any).hint && (
-                                                <p className="text-xs text-amber-600 italic">💡 Gợi ý: {(q as any).hint}</p>
+                                                <p className="text-xs text-amber-600 italic">💡 Gợi ý: <NewlineMathText content={(q as any).hint} as="span" className="quiz-text-preserve-inline" /></p>
                                             )}
                                         </div>
                                     )}
@@ -1396,12 +1399,12 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                         <div className="ml-8 space-y-2">
                                             <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
                                                 {((q as any).riddleLines || []).map((line: string, i: number) => (
-                                                    <p key={i} className="text-amber-900 italic text-sm">{line}</p>
+                                                    <p key={i} className="text-amber-900 italic text-sm"><NewlineMathText content={line} as="span" className="quiz-text-preserve-inline" /></p>
                                                 ))}
                                             </div>
                                             <p className="text-sm">
-                                                <span className="text-gray-500">{(q as any).answerLabel || 'Đáp án'}:</span>
-                                                <span className="font-bold text-green-700 ml-2">{(q as any).correctAnswer}</span>
+                                                <span className="text-gray-500"><NewlineMathText content={(q as any).answerLabel || 'Đáp án'} as="span" className="quiz-text-preserve-inline" />:</span>
+                                                <NewlineMathText content={(q as any).correctAnswer} as="span" className="font-bold text-green-700 ml-2 quiz-text-preserve-inline" />
                                             </p>
                                         </div>
                                     )}
@@ -1410,16 +1413,20 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                     {q.type === QuestionType.ERROR_CORRECTION && (
                                         <div className="ml-8 space-y-2">
                                             <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                                <p className="text-sm text-blue-900 whitespace-pre-line">{(q as any).passage}</p>
+                                                <NewlineMathText
+                                                    content={(q as any).passage}
+                                                    as="p"
+                                                    className="text-sm text-blue-900 quiz-text-preserve-block"
+                                                />
                                             </div>
                                             <div className="flex gap-4 text-sm">
                                                 <p>
                                                     <span className="text-gray-500">Từ sai:</span>
-                                                    <span className="font-bold text-red-600 ml-1">{(q as any).wrongWord}</span>
+                                                    <NewlineMathText content={(q as any).wrongWord} as="span" className="font-bold text-red-600 ml-1 quiz-text-preserve-inline" />
                                                 </p>
                                                 <p>
                                                     <span className="text-gray-500">Sửa lại:</span>
-                                                    <span className="font-bold text-green-700 ml-1">{(q as any).correctWord}</span>
+                                                    <NewlineMathText content={(q as any).correctWord} as="span" className="font-bold text-green-700 ml-1 quiz-text-preserve-inline" />
                                                 </p>
                                             </div>
                                         </div>
@@ -1530,7 +1537,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                 {editQuestionText && editQuestionText.includes('$') && (
                                     <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
                                         <span className="text-xs text-blue-600 block mb-1">📐 Preview:</span>
-                                        <span className="text-gray-800">{formatMathText(editQuestionText)}</span>
+                                        <NewlineMathText content={editQuestionText} as="div" className="text-gray-800 quiz-text-preserve-block" />
                                     </div>
                                 )}
                             </div>
@@ -1598,7 +1605,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
                                                 {/* Preview if has LaTeX */}
                                                 {opt && opt.includes('$') && (
                                                     <div className="ml-8 text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">
-                                                        <span>{formatMathText(opt)}</span>
+                                                        <NewlineMathText content={opt} as="span" className="quiz-text-preserve-inline" />
                                                     </div>
                                                 )}
                                             </div>

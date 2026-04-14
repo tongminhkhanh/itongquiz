@@ -4,6 +4,7 @@ import { CheckCircle, RefreshCcw } from 'lucide-react';
 import GeometryRenderer, { GeometryData } from '../common/GeometryRenderer';
 import { renderMathJax } from '../../hooks/useMathJax';
 import DraggableCategorization from './DraggableCategorization';
+import NewlineMathText from '../common/NewlineMathText';
 
 interface QuestionRendererProps {
     question: Question;
@@ -280,7 +281,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                         if (hasLatex) {
                             return (
                                 <div className="space-y-4">
-                                    <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm quiz-text-preserve-block">
                                         <MathSpan content={questionText} />
                                     </div>
 
@@ -330,7 +331,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                         // Normal Inline rendering (for non-Latex text)
                         return (
                             <div className="space-y-4">
-                                <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm quiz-text-preserve-block">
                                     {parts.map((part, idx) => {
                                         if (/^\[blank\]$|\[_+\]$|^_{3,}$|^\[\d+\]$/.test(part)) {
                                             const currentIdx = blankIndex;
@@ -353,7 +354,14 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                 />
                                             );
                                         }
-                                        return <MathSpan key={idx} content={part} />;
+                                        return (
+                                            <NewlineMathText
+                                                key={`short-${idx}`}
+                                                content={part}
+                                                as="span"
+                                                className="quiz-text-preserve-inline"
+                                            />
+                                        );
                                     })}
                                 </div>
 
@@ -648,19 +656,28 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                 }`}
                                         >
                                             <div className="flex items-center justify-center h-full w-full text-base">
-                                                {filledWord || '...'}
+                                                {filledWord ? (
+                                                    <NewlineMathText content={filledWord} as="span" className="quiz-text-preserve-inline" />
+                                                ) : '...'}
                                             </div>
                                         </span>
                                     );
                                 }
-                                return <MathSpan key={`${tIdx}-${pIdx}`} content={part} />;
+                                return (
+                                    <NewlineMathText
+                                        key={`${tIdx}-${pIdx}`}
+                                        content={part}
+                                        as="span"
+                                        className="quiz-text-preserve-inline"
+                                    />
+                                );
                             });
                         }
                     };
 
                     return (
                         <div className="space-y-6">
-                            <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap items-center gap-y-2">
+                            <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm quiz-text-preserve-block">
                                 {tokens.map((token, tIdx) => renderToken(token, tIdx))}
                             </div>
 
@@ -683,7 +700,9 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                                             : 'bg-white border-dashed border-gray-300 text-gray-300'
                                                         }`}
                                                 >
-                                                    {filledWord || '...'}
+                                                    {filledWord ? (
+                                                        <NewlineMathText content={filledWord} as="span" className="quiz-text-preserve-inline" />
+                                                    ) : '...'}
                                                 </div>
                                             </div>
                                         );
@@ -990,7 +1009,14 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                         );
                                     }
                                 }
-                                return <MathSpan key={`${tIdx}-${pIdx}`} content={part} />;
+                                return (
+                                    <NewlineMathText
+                                        key={`${tIdx}-${pIdx}`}
+                                        content={part}
+                                        as="span"
+                                        className="quiz-text-preserve-inline"
+                                    />
+                                );
                             });
                         }
                     };
@@ -1001,7 +1027,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                 <img src={(q as any).image} alt="Question" className="w-full max-h-64 object-contain rounded-lg mb-4 bg-gray-50 border border-gray-100" />
                             )}
 
-                            <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap items-center gap-y-2">
+                            <div className="text-lg leading-loose font-medium text-gray-800 bg-white p-4 rounded-xl border border-gray-200 shadow-sm quiz-text-preserve-block">
                                 {tokens.map((token, tIdx) => renderToken(token, tIdx))}
                             </div>
 
@@ -1165,7 +1191,9 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                         <div className="space-y-4">
                             {/* Hint */}
                             {hint && (
-                                <p className="text-sm text-gray-500 italic">💡 Gợi ý: {hint}</p>
+                                <p className="text-sm text-gray-500 italic">
+                                    💡 Gợi ý: <NewlineMathText content={hint} as="span" className="quiz-text-preserve-inline" />
+                                </p>
                             )}
 
                             {/* Current word being built */}
@@ -1240,7 +1268,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                                 <div className="text-lg text-amber-900 leading-relaxed">
                                     {riddleLines.map((line: string, i: number) => (
                                         <p key={i} className="mb-1 italic">
-                                            {line}
+                                            <NewlineMathText content={line} as="span" className="quiz-text-preserve-inline" />
                                         </p>
                                     ))}
                                 </div>
@@ -1248,7 +1276,9 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
                             {/* Single Answer Input */}
                             <div className="flex items-center gap-3 bg-indigo-50 p-3 rounded-lg border border-indigo-200">
-                                <span className="text-indigo-700 font-medium whitespace-nowrap">{answerLabel}:</span>
+                                <span className="text-indigo-700 font-medium whitespace-nowrap">
+                                    <NewlineMathText content={answerLabel} as="span" className="quiz-text-preserve-inline" />:
+                                </span>
                                 <input
                                     type="text"
                                     value={currentAnswer}

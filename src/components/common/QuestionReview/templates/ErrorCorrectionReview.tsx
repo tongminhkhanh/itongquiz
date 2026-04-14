@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import MathContent from '../MathContent';
+import NewlineMathText from '../../NewlineMathText';
 
 interface ErrorCorrectionReviewProps {
     question: any;
@@ -43,11 +44,17 @@ const ErrorCorrectionReview: React.FC<ErrorCorrectionReviewProps> = memo(({ ques
 
                 return (
                     <span key={idx} className={`error-correction-item ${isItemCorrect ? 'correct' : 'wrong'}`}>
-                        <span className="error-word">{errorId}</span>
+                        <span className="error-word">
+                            <NewlineMathText content={errorId} as="span" className="quiz-text-preserve-inline" />
+                        </span>
                         <div className="correction-info">
-                            <span className="student-fix">Bé sửa: {safeRender(sAns)}</span>
+                            <span className="student-fix">
+                                Bé sửa: <NewlineMathText content={safeRender(sAns)} as="span" className="quiz-text-preserve-inline" />
+                            </span>
                             {!isItemCorrect && cAns && (
-                                <span className="correct-fix">(Đúng: {safeRender(cAns)})</span>
+                                <span className="correct-fix">
+                                    (Đúng: <NewlineMathText content={safeRender(cAns)} as="span" className="quiz-text-preserve-inline" />)
+                                </span>
                             )}
                         </div>
                     </span>
@@ -62,10 +69,16 @@ const ErrorCorrectionReview: React.FC<ErrorCorrectionReviewProps> = memo(({ ques
             <div className="content-display">
                 {renderContent() || (
                     <div className="simple-correction">
-                        <span className="error-label">Lỗi: {question.wrongWord}</span>
-                        <span className="student-fix">Bé sửa: {safeRender(Object.values(studentResponse)[0] || studentAnswer)}</span>
+                        <span className="error-label">
+                            Lỗi: <NewlineMathText content={question.wrongWord} as="span" className="quiz-text-preserve-inline" />
+                        </span>
+                        <span className="student-fix">
+                            Bé sửa: <NewlineMathText content={safeRender(Object.values(studentResponse)[0] || studentAnswer)} as="span" className="quiz-text-preserve-inline" />
+                        </span>
                         {question.correctWord && (
-                            <span className="correct-fix">(Đúng: {question.correctWord})</span>
+                            <span className="correct-fix">
+                                (Đúng: <NewlineMathText content={question.correctWord} as="span" className="quiz-text-preserve-inline" />)
+                            </span>
                         )}
                     </div>
                 )}

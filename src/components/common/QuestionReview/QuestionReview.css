@@ -89,6 +89,21 @@
     min-height: 1.5em;
 }
 
+/* Preserve teacher-authored line breaks in review templates */
+.question-review-card .option-text,
+.question-review-card .value,
+.question-review-card .category-header,
+.question-review-card .category-item span,
+.question-review-card .missed-label,
+.question-review-card .student-fix,
+.question-review-card .correct-fix,
+.question-review-card .error-label,
+.question-review-card .tf-item-val {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
 .mathjax-skeleton {
     opacity: 0.9;
     transition: opacity 0.3s ease;
@@ -477,6 +492,7 @@
     background: #fcfcfc;
     border-radius: 8px;
     border: 1px solid #f3f4f6;
+    white-space: pre-wrap;
 }
 
 .inline-drop-review,

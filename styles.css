@@ -2901,3 +2901,16 @@ canvas {
 .light-particle {
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
 }
+
+/* Shared newline-preserving text classes for quiz UI */
+.quiz-text-preserve-block {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.quiz-text-preserve-inline {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}

@@ -229,14 +229,21 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     - ${typesDescription}
     
     ${options?.isPdfMode ? `
-    🔴🔴🔴 CHẾ ĐỘ TẠO ĐỀ TỪ FILE PDF 🔴🔴🔴
-    ✅ SỬ DỤNG nội dung file làm NGUỒN CHÍNH.
-    ✅ NẾU file là đề thi có sẵn: Ưu tiên TRÍCH XUẤT NGUYÊN VĂN câu hỏi từ file.
-    ✅ NẾU file là tài liệu học tập (lý thuyết, bài đọc): HÃY TỰ TẠO câu hỏi mới dựa trên nội dung đó.
-    ✅ ĐƯỢC PHÉP sử dụng kiến thức bên ngoài hoặc Search để:
-       - Giải đáp án nếu file không có.
-       - Tạo câu hỏi mới nếu file không đủ số lượng.
-       - Làm rõ các nội dung mờ, khó đọc.
+    [PDF MODE - OCR FIRST]
+    - Use OCR content below as the PRIMARY source.
+    - If the file already has questions: keep the original wording as much as possible.
+    - If the file is lesson text: create questions based on that text.
+    - External knowledge is allowed only to fill missing answers or unclear snippets.
+    - DO NOT ignore OCR content and switch to default topic templates.
+
+    OCR CONTENT FROM FILE (PRIMARY SOURCE):
+    ${content ? `"${content}"` : '[ERROR: missing OCR content]'}
+
+    OCR GROUNDING RULES:
+    1. Detect subject from OCR text itself, not from generic examples in this prompt.
+    2. If OCR is Vietnamese language content (reading/spelling/grammar/punctuation), generate Vietnamese-language questions.
+    3. If OCR has no clear math expressions, do NOT generate math questions.
+    4. External knowledge can fill gaps only, never change the original subject of the file.
     ` : `
     NỘI DUNG THAM KHẢO:
     ${content ? `"${content}"` : "Không có nội dung cụ thể. Hãy tự động sinh câu hỏi dựa trên kiến thức chuẩn của sách giáo khoa Tiểu học Việt Nam phù hợp với Chủ đề và Lớp học đã nêu trên."}
@@ -487,12 +494,15 @@ const fixLatexInText = (text: string): string => {
   // 4. Convert display math $$ to inline math $
   result = result.replace(/\$\$([^$]+)\$\$/g, '$$$1$$');
 
-  // 5. Remove newlines that break formulas
-  result = result.replace(/\n/g, ' ');
-  result = result.replace(/\\n/g, ' ');
+  // 5. Normalize line breaks only inside inline LaTeX blocks.
+  // Keep paragraph newlines outside math so DRAG_DROP/DROPDOWN line breaks are preserved.
+  result = result.replace(/\$([^$]+)\$/g, (_match: string, inner: string) => {
+    const normalizedInner = inner.replace(/\r?\n/g, ' ').replace(/\\n/g, ' ');
+    return `$${normalizedInner}$`;
+  });
 
   // 6. Collapse multiple spaces
-  result = result.replace(/\s+/g, ' ');
+  result = result.replace(/[^\S\n]+/g, ' ');
 
   // 7. Fix common broken patterns like "$\frac" without proper closing
   result = result.replace(/(\$\\frac\{[^}]+\}\{[^}]+\})(?!\$)(\s*[^$\d{])/g, '$1$$$2');
@@ -1238,9 +1248,15 @@ const generateWithOpenAI = async (
 
   const userContent: any[] = [{ type: 'text', text: promptText }];
 
-  // Handle Attached File (if image) - PRIORITIZE for quiz generation
-  if (file && file.type.startsWith('image/')) {
+  // Handle Attached File (image/PDF) - PRIORITIZE for quiz generation
+  if (file) {
     const base64Data = await fileToBase64(file);
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+    if (isPdf && !isLlmMux) {
+      throw new Error('Provider hiện tại chưa hỗ trợ đọc PDF trong chế độ này. Vui lòng chọn AI Provider = LLM-Mux để tạo đề từ PDF.');
+    }
+
     userContent.unshift({
       type: 'text',
       text: `⚠️ TÀI LIỆU ĐÍNH KÈM (Attached File) - ƯU TIÊN CAO NHẤT:
@@ -1252,15 +1268,27 @@ const generateWithOpenAI = async (
 3. Tất cả câu hỏi phải liên quan trực tiếp đến kiến thức trong tài liệu.
 4. Không tự bịa nội dung ngoài tài liệu trừ khi cần bổ sung.
 5. Nếu là ảnh chụp bài học, hãy đọc văn bản trong ảnh và tạo câu hỏi từ đó.
+6. Nếu là PDF, phải trích xuất nội dung văn bản từ PDF trước khi sinh câu hỏi.
 
 Tài liệu đính kèm:`
     });
-    userContent.splice(1, 0, {
-      type: 'image_url',
-      image_url: {
-        url: `data:${file.type};base64,${base64Data}`
-      }
-    });
+
+    if (isPdf) {
+      userContent.splice(1, 0, {
+        type: 'input_file',
+        file_data: `data:${file.type};base64,${base64Data}`,
+        filename: file.name
+      });
+    } else if (file.type.startsWith('image/')) {
+      userContent.splice(1, 0, {
+        type: 'image_url',
+        image_url: {
+          url: `data:${file.type};base64,${base64Data}`
+        }
+      });
+    } else {
+      throw new Error(`Định dạng file chưa hỗ trợ: ${file.type || 'unknown'}. Chỉ hỗ trợ PDF hoặc ảnh.`);
+    }
   }
 
   // Handle Image Library
@@ -1468,8 +1496,14 @@ const generateWithOpenAIResilient = async (
 
   const userContent: any[] = [{ type: 'text', text: promptText }];
 
-  if (file && file.type.startsWith('image/')) {
+  if (file) {
     const base64Data = await fileToBase64(file);
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+    if (isPdf && !isLlmMux) {
+      throw new Error('Provider hiện tại chưa hỗ trợ đọc PDF trong chế độ này. Vui lòng chọn AI Provider = LLM-Mux để tạo đề từ PDF.');
+    }
+
     userContent.unshift({
       type: 'text',
       text: `TAI LIEU DINH KEM (Attached File) - UU TIEN CAO NHAT:
@@ -1481,15 +1515,27 @@ YEU CAU BAT BUOC:
 3. Tat ca cau hoi phai lien quan truc tiep den kien thuc trong tai lieu.
 4. Khong tu bia noi dung ngoai tai lieu tru khi can bo sung.
 5. Neu la anh chup bai hoc, hay doc van ban trong anh va tao cau hoi tu do.
+6. Neu la PDF, phai trich xuat noi dung van ban tu file de tao cau hoi.
 
 Tai lieu dinh kem:`
     });
-    userContent.splice(1, 0, {
-      type: 'image_url',
-      image_url: {
-        url: `data:${file.type};base64,${base64Data}`
-      }
-    });
+
+    if (isPdf) {
+      userContent.splice(1, 0, {
+        type: 'input_file',
+        file_data: `data:${file.type};base64,${base64Data}`,
+        filename: file.name
+      });
+    } else if (file.type.startsWith('image/')) {
+      userContent.splice(1, 0, {
+        type: 'image_url',
+        image_url: {
+          url: `data:${file.type};base64,${base64Data}`
+        }
+      });
+    } else {
+      throw new Error(`Dinh dang file chua ho tro: ${file.type || 'unknown'}. Chi ho tro PDF hoac anh.`);
+    }
   }
 
   if (imageLibrary && imageLibrary.length > 0) {
@@ -1909,7 +1955,8 @@ QUY TẮC QUAN TRỌNG:
 
   // ========== LLM-MUX (OpenAI-compatible API) ==========
   if (actualProvider === 'llm-mux') {
-    const baseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || (import.meta as any).env.VITE_CLIPROXY_API || 'http://localhost:8317/v1';
+    const configuredBaseUrl = (import.meta as any).env.VITE_LLM_MUX_BASE_URL || (import.meta as any).env.VITE_CLIPROXY_API || '';
+    const baseUrl = resolvePublicProviderBaseUrl(configuredBaseUrl, 'https://api.thitong.site/v1');
     const envKey = (import.meta as any).env.VITE_LLM_MUX_API_KEY || (import.meta as any).env.VITE_CLIPROXY_TOKEN || '';
     const apiKey = (customApiKey || envKey || '').trim();
 
@@ -1944,14 +1991,41 @@ QUY TẮC QUAN TRỌNG:
       content: userContent
     });
 
+    let targetUrl = API_URL.endsWith('/chat/completions') ? API_URL : `${baseUrl}/chat/completions`;
+
+    if ((targetUrl.includes('localhost') || targetUrl.includes('127.0.0.1')) &&
+      window.location.hostname !== 'localhost' &&
+      window.location.hostname !== '127.0.0.1') {
+      targetUrl = targetUrl
+        .replace('localhost', window.location.hostname)
+        .replace('127.0.0.1', window.location.hostname);
+    }
+
+    let fetchUrl = shouldUseCliproxyDevProxy(targetUrl) ? '/api/cliproxy/chat/completions' : targetUrl;
+    let fetchHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (apiKey) {
+      fetchHeaders.Authorization = `Bearer ${apiKey}`;
+    }
+
+    const WORKERS_API_URL = (import.meta as any).env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+    const workerToken = (import.meta as any).env.VITE_API_SECRET_TOKEN || '';
+    if (!apiKey && workerToken) {
+      fetchUrl = `${WORKERS_API_URL}/api/ai/chat`;
+      fetchHeaders = {
+        'Content-Type': 'application/json',
+        'X-API-Token': workerToken,
+        'x-target-url': targetUrl,
+        'x-target-token': '',
+      };
+    }
+
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(fetchUrl, {
         method: 'POST',
-        mode: 'cors', // Explicitly enable CORS
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
+        headers: fetchHeaders,
         body: JSON.stringify({
           model: MODEL_NAME,
           messages: messages,
@@ -1966,7 +2040,7 @@ QUY TẮC QUAN TRỌNG:
       }
 
       const data = await response.json();
-      const text = data.choices?.[0]?.message?.content;
+      const text = extractAIContent(data) || data?.choices?.[0]?.message?.content;
       if (!text) throw new Error("AI trả về dữ liệu rỗng.");
 
       return text.trim();

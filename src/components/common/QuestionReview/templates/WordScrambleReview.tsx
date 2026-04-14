@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import NewlineMathText from '../../NewlineMathText';
 
 interface WordScrambleReviewProps {
     question: any;
@@ -34,12 +35,16 @@ const WordScrambleReview: React.FC<WordScrambleReviewProps> = memo(({ question, 
             <div className={`result-box ${status}`}>
                 <div className="row">
                     <span className="label">Bạn đã ghép:</span>
-                    <span className="value">{studentWord || '(Chưa ghép)'}</span>
+                    <span className="value">
+                        <NewlineMathText content={studentWord || '(Chưa ghép)'} as="span" className="quiz-text-preserve-inline" />
+                    </span>
                 </div>
                 {status !== 'correct' && (
                     <div className="row correct-row">
                         <span className="label">Đáp án đúng:</span>
-                        <span className="value">{safeRender(question.correctWord)}</span>
+                        <span className="value">
+                            <NewlineMathText content={safeRender(question.correctWord)} as="span" className="quiz-text-preserve-inline" />
+                        </span>
                     </div>
                 )}
             </div>

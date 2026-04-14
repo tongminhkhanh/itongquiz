@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import MathContent from '../MathContent';
+import NewlineMathText from '../../NewlineMathText';
 import { CheckCircle, XCircle } from 'lucide-react';
 
 interface CategorizationReviewProps {
@@ -84,7 +84,9 @@ const CategorizationReview: React.FC<CategorizationReviewProps> = memo(({ questi
 
                     return (
                         <div key={idx} className="category-column">
-                            <div className="category-header">{catName}</div>
+                            <div className="category-header">
+                                <NewlineMathText content={catName} as="span" className="quiz-text-preserve-inline" />
+                            </div>
                             <div className="category-items">
                                 {/* Show what student placed here */}
                                 {studentItems.length > 0 ? (
@@ -97,7 +99,7 @@ const CategorizationReview: React.FC<CategorizationReviewProps> = memo(({ questi
                                                 ) : (
                                                     <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
                                                 )}
-                                                <span>{item}</span>
+                                                <NewlineMathText content={item} as="span" className="quiz-text-preserve-inline" />
                                             </div>
                                         );
                                     })
@@ -108,7 +110,9 @@ const CategorizationReview: React.FC<CategorizationReviewProps> = memo(({ questi
                                 {/* Show missed correct items */}
                                 {correctItems.filter(ci => !studentItems.includes(ci)).map((missed, mIdx) => (
                                     <div key={`missed-${mIdx}`} className="category-item missed">
-                                        <span className="missed-label">↳ {missed}</span>
+                                        <span className="missed-label">
+                                            ↳ <NewlineMathText content={missed} as="span" className="quiz-text-preserve-inline" />
+                                        </span>
                                     </div>
                                 ))}
                             </div>

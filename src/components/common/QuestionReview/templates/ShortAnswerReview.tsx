@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import MathContent from '../MathContent';
+import NewlineMathText from '../../NewlineMathText';
 
 interface ShortAnswerReviewProps {
     question: any;
@@ -8,15 +8,20 @@ interface ShortAnswerReviewProps {
 }
 
 const ShortAnswerReview: React.FC<ShortAnswerReviewProps> = memo(({ question, studentAnswer, status }) => {
+    const studentValue = typeof studentAnswer === 'object' && studentAnswer !== null
+        ? JSON.stringify(studentAnswer)
+        : (studentAnswer || '(Bỏ trống)');
+    const correctValue = typeof question.correctAnswer === 'object' && question.correctAnswer !== null
+        ? JSON.stringify(question.correctAnswer)
+        : question.correctAnswer;
+
     return (
         <div className="short-answer-review-template">
             <div className={`answer-box ${status}`}>
                 <div className="answer-row">
                     <span className="label">Câu trả lời của bạn:</span>
                     <span className="value">
-                        {typeof studentAnswer === 'object' && studentAnswer !== null
-                            ? JSON.stringify(studentAnswer)
-                            : (studentAnswer || '(Bỏ trống)')}
+                        <NewlineMathText content={studentValue} as="span" className="quiz-text-preserve-inline" />
                     </span>
                 </div>
 
@@ -24,9 +29,7 @@ const ShortAnswerReview: React.FC<ShortAnswerReviewProps> = memo(({ question, st
                     <div className="answer-row correct-row">
                         <span className="label">Đáp án đúng:</span>
                         <span className="value">
-                            {typeof question.correctAnswer === 'object' && question.correctAnswer !== null
-                                ? JSON.stringify(question.correctAnswer)
-                                : question.correctAnswer}
+                            <NewlineMathText content={correctValue} as="span" className="quiz-text-preserve-inline" />
                         </span>
                     </div>
                 )}

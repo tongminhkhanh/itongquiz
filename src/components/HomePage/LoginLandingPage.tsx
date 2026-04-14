@@ -131,6 +131,12 @@ const LoginLandingPage: React.FC = () => {
                         >
                             Liên hệ
                         </button>
+                        <button
+                            onClick={() => window.open('https://cdth.vercel.app/', '_blank')}
+                            className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-semibold text-white hover:bg-white/20 transition whitespace-nowrap"
+                        >
+                            Chuyển Đổi YCCĐ
+                        </button>
                     </div>
                     <button
                         type="button"
@@ -146,6 +152,7 @@ const LoginLandingPage: React.FC = () => {
                         <button onClick={() => { navigate('/'); setIsMobileNavOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-white hover:bg-white/15">Trang chủ</button>
                         <button onClick={() => { navigate('/about'); setIsMobileNavOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-white hover:bg-white/15">Giới thiệu</button>
                         <button onClick={() => { navigate('/contact'); setIsMobileNavOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-white hover:bg-white/15">Liên hệ</button>
+                        <button onClick={() => { window.open('https://cdth.vercel.app/', '_blank'); setIsMobileNavOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-white hover:bg-white/15">Chuyển Đổi YCCĐ</button>
                     </div>
                 )}
             </div>

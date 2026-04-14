@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, QuestionType, ImageLibraryItem } from '../../types';
 import { Card, Button } from '../common';
 import { FileText, Sparkles, Upload, X, FileCheck, Copy, Check, Link2, BookOpen, Search, Zap, Users, Calendar, Hash, ChevronDown, ChevronUp, Settings, Clock, Wand2, Eye, EyeOff, Lock, Unlock, Edit3, Tag } from 'lucide-react';
-import { AIProvider, AI_CORE_SUBJECT_IDS, generateQuiz, QuizGenerationOptions } from '../../services/geminiService';
+import { AIProvider, AI_CORE_SUBJECT_IDS, extractTextFromPdf, generateQuiz, QuizGenerationOptions } from '../../services/geminiService';
 import { generateTrangNguyenQuiz, TRANG_NGUYEN_TOPICS } from '../../services/trangNguyenGeminiService';
 import { searchTrangNguyenQuestions, enrichPromptWithSearchResults } from '../../services/trangNguyenSearchService';
 import { QuestionTypeSelector, DifficultyLevelSelector, ImageLibrary, AIProviderSelector } from '../teacher/QuizCreator';
@@ -66,6 +66,9 @@ interface CreateTabProps {
     onUpdateQuiz: (quiz: Quiz) => Promise<void>;
     onSuccess: () => void;
 }
+
+type QuizMode = 'exam' | 'practice' | 'pdf';
+const MAX_OCR_CONTENT_LENGTH = 60000;
 
 const AI_CORE_CATEGORY_SET = new Set<string>(AI_CORE_SUBJECT_IDS);
 
@@ -142,7 +145,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     const [error, setError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [customPrompt, setCustomPrompt] = useState('');
-    const [quizMode, setQuizMode] = useState<'exam' | 'practice'>('practice');
+    const [quizMode, setQuizMode] = useState<QuizMode>('practice');
     const [aiProvider, setAiProvider] = useState<AIProvider>(() =>
         (localStorage.getItem('ai_provider') as AIProvider) || 'llm-mux'
     );
@@ -393,8 +396,10 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     };
 
     // Handle quiz generation
-    const handleGenerate = async () => {
-        const isPdfMode = (quizMode as any) === 'pdf';
+    const handleGenerate = async (modeOverride?: QuizMode) => {
+        const activeQuizMode: QuizMode = modeOverride ?? quizMode;
+        const isPdfMode = activeQuizMode === 'pdf';
+        setQuizMode(activeQuizMode);
 
         // Validate based on mode
         if (isPdfMode) {
@@ -436,9 +441,11 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
         setAiSuggestedTags([]);
 
         try {
-            const isPdfMode = (quizMode as any) === 'pdf';
             const isTrangNguyen = category === 'trang-nguyen';
-            const titlePrefix = isPdfMode ? 'Đề từ PDF' : (quizMode === 'exam' ? 'Kiểm tra' : 'Ôn tập');
+            const titlePrefix = isPdfMode ? 'Đề từ PDF' : (activeQuizMode === 'exam' ? 'Kiểm tra' : 'Ôn tập');
+            let generationContent = content;
+            let generationFile: File | undefined = uploadedFile || undefined;
+            let generationTopic = topic;
 
             // ===== TRẠNG NGUYÊN MODE =====
             if (isTrangNguyen) {
@@ -483,14 +490,44 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             }
 
             // ===== STANDARD MODE =====
+            if (isPdfMode && uploadedFile) {
+                setGenerationStep('generating');
+
+                const ocrProvider: AIProvider =
+                    aiProvider === 'gemini' || aiProvider === 'llm-mux' || aiProvider === 'native-ocr'
+                        ? aiProvider
+                        : 'llm-mux';
+
+                const extractedText = await extractTextFromPdf(uploadedFile, ocrProvider);
+                const normalizedOcr = extractedText?.trim();
+
+                if (!normalizedOcr || normalizedOcr.length < 120) {
+                    throw new Error('OCR không đọc được đủ nội dung từ file. Vui lòng thử file rõ hơn hoặc chọn file khác.');
+                }
+
+                const clippedOcr = normalizedOcr.length > MAX_OCR_CONTENT_LENGTH
+                    ? `${normalizedOcr.slice(0, MAX_OCR_CONTENT_LENGTH)}\n\n[Đã cắt bớt nội dung OCR vì quá dài]`
+                    : normalizedOcr;
+
+                generationContent = [
+                    content.trim(),
+                    `=== NỘI DUNG OCR TỪ FILE (NGUỒN CHÍNH) ===\n${clippedOcr}\n=== HẾT NỘI DUNG OCR ===`,
+                ]
+                    .filter(Boolean)
+                    .join('\n\n');
+
+                generationFile = undefined;
+                generationTopic = topic || uploadedFile.name.replace(/\.[^/.]+$/, '');
+            }
+
             // Special prompt for PDF mode
             let finalCustomPrompt = customPrompt.trim() || undefined;
             if (isPdfMode) {
-                finalCustomPrompt = `⛔ CHẾ ĐỘ TẠO ĐỀ TỪ PDF - BẮT BUỘC TUÂN THỦ:
-1. ĐỌC KỸ TOÀN BỘ NỘI DUNG trong file đính kèm.
+                finalCustomPrompt = `⛔ CHẾ ĐỘ TẠO ĐỀ TỪ PDF (OCR) - BẮT BUỘC TUÂN THỦ:
+1. ĐỌC KỸ TOÀN BỘ NỘI DUNG OCR trong phần "NỘI DUNG OCR TỪ FILE (NGUỒN CHÍNH)".
 2. NẾU FILE CÓ CÂU HỎI: COPY NGUYÊN VĂN tất cả câu hỏi, đáp án - KHÔNG ĐƯỢC sửa đổi.
-3. NẾU FILE LÀ BÀI HỌC: Tạo câu hỏi DỰA TRÊN nội dung trong file.
-4. KHÔNG ĐƯỢC tự bịa nội dung ngoài file.
+3. NẾU FILE LÀ BÀI HỌC: Tạo câu hỏi DỰA TRÊN nội dung OCR.
+4. KHÔNG ĐƯỢC tự bịa nội dung ngoài phần OCR trừ khi giáo viên yêu cầu.
 ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.trim()}` : ''}`;
             }
 
@@ -508,15 +545,15 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     name: img.name,
                     data: img.data,
                 })),
-                customPrompt: isPdfMode ? finalCustomPrompt : (quizMode === 'exam' ? customPrompt.trim() : (customPrompt.trim() || undefined)),
+                customPrompt: isPdfMode ? finalCustomPrompt : (activeQuizMode === 'exam' ? customPrompt.trim() : (customPrompt.trim() || undefined)),
                 isPdfMode: isPdfMode, // Flag để AI biết chỉ dùng nội dung từ PDF
             };
 
             const result = await generateQuiz(
-                topic,
+                generationTopic,
                 classLevel,
-                content,
-                uploadedFile, // Pass PDF/image file for AI to read
+                generationContent,
+                generationFile,
                 options,
                 undefined,
                 aiProvider,
@@ -571,7 +608,6 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                 ? `${customPrompt}\n\nYêu cầu đặc biệt: Sinh lại duy nhất một câu hỏi dựa trên câu hỏi sau, thay đổi nội dung, số liệu, tên gọi nhưng PHẢI GIỮ NGUYÊN dạng bài, độ khó và chủ đề. Tôn trọng tuyệt đối các quy tắc format JSON và LaTeX quy định trong hệ thống.\nCâu hỏi gốc:\n${JSON.stringify(question)}`
                 : `Yêu cầu đặc biệt: Sinh lại duy nhất một câu hỏi dựa trên câu hỏi sau, thay đổi nội dung, số liệu, tên gọi nhưng PHẢI GIỮ NGUYÊN dạng bài, độ khó và chủ đề. Tôn trọng tuyệt đối các quy tắc format JSON và LaTeX quy định trong hệ thống.\nCâu hỏi gốc:\n${JSON.stringify(question)}`;
 
-            const isPdfMode = (quizMode as any) === 'pdf';
             const options: QuizGenerationOptions = {
                 title: quizTitle || `Sinh lại câu hỏi: ${topic || 'Bài kiểm tra'}`,
                 questionCount: 1,
@@ -730,18 +766,25 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     toggleSection={toggleSection}
                 >
                     <div className="space-y-3">
-                        {/* Topic - Required */}
+                        {/* Topic */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                Chủ đề bài học <span className="text-red-500">*</span>
+                                Chủ đề bài học {!uploadedFile && <span className="text-red-500">*</span>}
                             </label>
                             <input
                                 type="text"
                                 value={topic}
                                 onChange={e => setTopic(e.target.value)}
-                                placeholder="VD: Động vật rừng xanh, Phép cộng có nhớ..."
+                                placeholder={uploadedFile
+                                    ? "Có thể để trống khi tạo đề từ PDF/Ảnh"
+                                    : "VD: Động vật rừng xanh, Phép cộng có nhớ..."}
                                 className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all text-sm"
                             />
+                            {uploadedFile && (
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Đã tải file: hệ thống sẽ ưu tiên nội dung OCR từ file, chủ đề chỉ là tùy chọn bổ sung.
+                                </p>
+                            )}
                         </div>
 
                         {/* Title */}
@@ -1188,7 +1231,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     {category === 'trang-nguyen' && (
                         <div className="space-y-2">
                             <button
-                                onClick={() => { setTnSearchMode('search'); setQuizMode('practice'); handleGenerate(); }}
+                                onClick={() => { setTnSearchMode('search'); handleGenerate('practice'); }}
                                 disabled={!topic.trim() || questionCount === 0 || isGenerating}
                                 className={`w-full py-3.5 px-6 rounded-xl font-bold text-white text-base flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${isGenerating && tnSearchMode === 'search'
                                     ? 'bg-gradient-to-r from-purple-400 to-pink-400 animate-pulse'
@@ -1202,7 +1245,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                 }
                             </button>
                             <button
-                                onClick={() => { setTnSearchMode('quick'); setQuizMode('practice'); handleGenerate(); }}
+                                onClick={() => { setTnSearchMode('quick'); handleGenerate('practice'); }}
                                 disabled={!topic.trim() || questionCount === 0 || isGenerating}
                                 className={`w-full py-3.5 px-6 rounded-xl font-bold text-white text-base flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${isGenerating && tnSearchMode === 'quick'
                                     ? 'bg-gradient-to-r from-blue-400 to-cyan-400 animate-pulse'
@@ -1223,20 +1266,20 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                         <>
                             {uploadedFile && (
                                 <Button
-                                    onClick={() => { setQuizMode('pdf' as any); handleGenerate(); }}
-                                    loading={isGenerating && (quizMode as any) === 'pdf'}
+                                    onClick={() => handleGenerate('pdf')}
+                                    loading={isGenerating && quizMode === 'pdf'}
                                     disabled={!uploadedFile || questionCount === 0}
                                     className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                                     size="lg"
                                     variant="primary"
                                     icon={<FileText className="w-5 h-5" />}
                                 >
-                                    {isGenerating && (quizMode as any) === 'pdf' ? (generationStep === 'reviewing' ? '🤖 Đang duyệt & soát lỗi...' : 'Đang đọc PDF...') : `📄 TẠO ĐỀ TỪ FILE: ${uploadedFile.name.substring(0, 20)}...`}
+                                    {isGenerating && quizMode === 'pdf' ? (generationStep === 'reviewing' ? '🤖 Đang duyệt & soát lỗi...' : 'Đang đọc PDF...') : `📄 TẠO ĐỀ TỪ FILE: ${uploadedFile.name.substring(0, 20)}...`}
                                 </Button>
                             )}
                             <div className="grid grid-cols-2 gap-3">
                                 <button
-                                    onClick={() => { setQuizMode('exam'); handleGenerate(); }}
+                                    onClick={() => handleGenerate('exam')}
                                     disabled={!topic.trim() || questionCount === 0 || !customPrompt.trim() || isGenerating}
                                     className={`py-3.5 px-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm ${isGenerating && quizMode === 'exam'
                                         ? 'bg-gradient-to-r from-orange-400 to-red-400 animate-pulse'
@@ -1247,7 +1290,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                                     {isGenerating && quizMode === 'exam' ? (generationStep === 'reviewing' ? '🤖 Đang duyệt & soát lỗi...' : 'Đang tạo bản thảo...') : '📝 Ra đề THI'}
                                 </button>
                                 <button
-                                    onClick={() => { setQuizMode('practice'); handleGenerate(); }}
+                                    onClick={() => handleGenerate('practice')}
                                     disabled={!topic.trim() || questionCount === 0 || isGenerating}
                                     className={`py-3.5 px-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm ${isGenerating && quizMode === 'practice'
                                         ? 'bg-gradient-to-r from-emerald-400 to-teal-400 animate-pulse'

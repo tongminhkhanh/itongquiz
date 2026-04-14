@@ -8,4 +8,4 @@ Disallow: /*?*token=
 Disallow: /*?*auth=
 
 # Sitemap
-Sitemap: https://thitong.site/sitemap.xml
+Sitemap: https://www.thitong.site/sitemap.xml
