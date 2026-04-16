@@ -1,37 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useQuizStore } from '../../../stores/quizStore';
-import { Loader2, User, Lock, GraduationCap, Apple, CheckCircle2, Menu, X } from 'lucide-react';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { Loader2, GraduationCap, UserRound, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AnnouncementMarquee from '../common/AnnouncementMarquee';
+
+type SavedLoginAccount = {
+    username: string;
+    role: 'student' | 'teacher';
+    savedAt: string;
+};
+
+const SAVED_LOGIN_KEY = 'itongquiz_saved_login_v1';
 
 const LoginLandingPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'student' | 'teacher'>('student');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [localError, setLocalError] = useState('');
-    const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
-    const mouseX = useMotionValue(0);
-    const mouseY = useMotionValue(0);
-
-    const springConfig = { damping: 25, stiffness: 120 };
-    const xSpring = useSpring(mouseX, springConfig);
-    const ySpring = useSpring(mouseY, springConfig);
-
-    const layer0_X = useTransform(xSpring, [-500, 500], [10, -10]);
-    const layer0_Y = useTransform(ySpring, [-400, 400], [10, -10]);
-
-    const layer2_X = useTransform(xSpring, [-500, 500], [15, -15]);
-    const layer2_Y = useTransform(ySpring, [-400, 400], [15, -15]);
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        const { clientX, clientY } = e;
-        mouseX.set(clientX - window.innerWidth / 2);
-        mouseY.set(clientY - window.innerHeight / 2);
-    };
+    useEffect(() => {
+        const link = document.createElement('link');
+        link.href = 'https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap';
+        link.rel = 'stylesheet';
+        document.head.appendChild(link);
+        return () => { document.head.removeChild(link); };
+    }, []);
 
     const authStore = useAuthStore();
     const classroomStore = useClassroomStore();
@@ -40,20 +35,29 @@ const LoginLandingPage: React.FC = () => {
 
     const isLoading = activeTab === 'teacher' ? authStore.isLoggingIn : classroomStore.isLoading;
 
+    const askToSaveAccount = (rawUsername: string, role: 'student' | 'teacher') => {
+        const normalizedUsername = rawUsername.trim();
+        if (!normalizedUsername) return;
+        try {
+            const existingRaw = localStorage.getItem(SAVED_LOGIN_KEY);
+            const existing = existingRaw ? JSON.parse(existingRaw) as Partial<SavedLoginAccount> : null;
+            if (existing?.username === normalizedUsername && existing?.role === role) return;
+            const message = existing?.username
+                ? `Bạn có muốn cập nhật tài khoản thành "${normalizedUsername}" không?`
+                : `Bạn có muốn lưu tài khoản "${normalizedUsername}" cho lần sau không?`;
+            if (!window.confirm(message)) return;
+            const payload: SavedLoginAccount = { username: normalizedUsername, role, savedAt: new Date().toISOString() };
+            localStorage.setItem(SAVED_LOGIN_KEY, JSON.stringify(payload));
+        } catch (error) {
+            console.warn('Could not persist login account:', error);
+        }
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLocalError('');
-
-        if (!username || !password) {
-            setLocalError('Vui lòng nhập đầy đủ thông tin!');
-            return;
-        }
-
-        if (activeTab === 'teacher') {
-            await handleTeacherLogin();
-        } else {
-            await handleStudentLogin();
-        }
+        if (!username || !password) { setLocalError('Vui lòng nhập đầy đủ thông tin!'); return; }
+        if (activeTab === 'teacher') { await handleTeacherLogin(); } else { await handleStudentLogin(); }
     };
 
     const handleTeacherLogin = async () => {
@@ -61,7 +65,6 @@ const LoginLandingPage: React.FC = () => {
         try {
             const { callApi } = await import('../../services/apiAdapter');
             const result = await callApi<{ status?: string; data?: any; message?: string }>('login', { username, password });
-
             if (result?.status === 'success' && result.data) {
                 const teacher = result.data;
                 const tUsername = String(teacher.username || '').trim();
@@ -70,10 +73,10 @@ const LoginLandingPage: React.FC = () => {
                 const isTeacherAdmin = String(teacher.role || '').trim().toLowerCase() === 'admin';
                 const tClass = teacher.class ? String(teacher.class).trim() : undefined;
                 authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass);
+                askToSaveAccount(tUsername || username, 'teacher');
                 quizStore.setView('teacher_dash');
                 return;
             }
-
             authStore.loginFailure();
             setLocalError(result?.message || 'Tên đăng nhập hoặc mật khẩu không đúng!');
         } catch (error) {
@@ -86,281 +89,454 @@ const LoginLandingPage: React.FC = () => {
     const handleStudentLogin = async () => {
         const success = await classroomStore.loginStudent({ username, password });
         if (success) {
+            askToSaveAccount(username, 'student');
             quizStore.setView('home');
         } else {
             setLocalError('Tên đăng nhập hoặc mật khẩu học sinh không đúng!');
         }
     };
 
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(SAVED_LOGIN_KEY);
+            if (!raw) return;
+            const saved = JSON.parse(raw) as Partial<SavedLoginAccount>;
+            if (typeof saved.username === 'string' && saved.username.trim()) setUsername(saved.username.trim());
+            if (saved.role === 'teacher' || saved.role === 'student') setActiveTab(saved.role);
+        } catch (error) {
+            console.warn('Could not load saved login account:', error);
+        }
+    }, []);
+
+    const features = [
+        { avatar: "/avatar1.png", text: <>Ngân hàng <strong>10,000+</strong> câu hỏi trắc nghiệm đa dạng.</> },
+        { avatar: "/avatar2.png", text: <>Báo cáo điểm số, <strong>thống kê chi tiết</strong> tự động.</> },
+        { avatar: "/avatar3.png", text: <>Giao diện <strong>điều khiển trực quan</strong>, dễ dùng cho mọi người.</> },
+    ];
+
     return (
-        <div
-            onMouseMove={handleMouseMove}
-            className="min-h-dvh w-full flex flex-col lg:flex-row bg-slate-50 font-sans overflow-x-hidden"
-        >
-            <div className="absolute top-0 left-0 z-30 w-full lg:w-[60%] p-3 md:p-5">
-                <div className="rounded-2xl border border-white/25 bg-white/15 backdrop-blur-xl px-4 py-3 flex items-center justify-between">
+        <div className="landing-container">
+            <style>{`
+                .landing-container {
+                    min-height: 100vh;
+                    display: flex;
+                    flex-direction: column;
+                    position: relative;
+                    font-family: 'Baloo 2', sans-serif;
+                    background-image: url('/meadow-bg.png');
+                    background-size: cover;
+                    background-position: center bottom;
+                    background-repeat: no-repeat;
+                }
+                .header-inner {
+                    padding: 20px 48px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    z-index: 10;
+                }
+                .main-layout {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 40px;
+                    padding: 20px 80px 60px;
+                    max-width: 1280px;
+                    margin: 0 auto;
+                    width: 100%;
+                    z-index: 10;
+                }
+                .hero-section {
+                    flex: 1;
+                    max-width: 540px;
+                    background: transparent;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 32px;
+                }
+                .app-footer {
+                    padding: 16px 32px;
+                    text-align: center;
+                    font-size: 0.85rem;
+                    color: #1e293b;
+                    font-weight: 500;
+                    width: 100%;
+                    position: relative;
+                    margin-top: auto;
+                }
+
+                .login-card {
+                    background: #ffffff;
+                    border-radius: 32px;
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 20px 25px -5px rgba(0, 0, 0, 0.04);
+                    position: relative;
+                    overflow: visible;
+                }
+                
+                .login-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0; left: 0; right: 0; bottom: 0;
+                    border-radius: 32px;
+                    border: 2px solid rgba(255, 255, 255, 0.5);
+                    pointer-events: none;
+                }
+
+                .leaf-decor-top {
+                    position: absolute;
+                    top: -15px;
+                    left: 20px;
+                    width: 70px;
+                    height: 70px;
+                    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M30,90 C10,70 10,30 30,10 C50,-10 90,-10 90,30 C90,60 60,95 30,90 Z' fill='%23dcfce7' opacity='0.7'/%3E%3C/svg%3E") no-repeat center/contain;
+                    z-index: 0;
+                }
+                
+                .leaf-decor-bottom {
+                    position: absolute;
+                    bottom: 0;
+                    right: 40px;
+                    width: 150px;
+                    height: 150px;
+                    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M80,10 C100,30 100,70 80,90 C60,110 20,110 20,70 C20,40 50,5 80,10 Z' fill='%23dcfce7' opacity='0.5'/%3E%3C/svg%3E") no-repeat center/contain;
+                    z-index: 0;
+                }
+
+                .role-tab {
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    border-radius: 20px;
+                    cursor: pointer;
+                    font-weight: 700;
+                    font-size: 0.95rem;
+                }
+                
+                .role-tab.active {
+                    background: #ffffff;
+                    color: #064E3B; /* Darker green text */
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                }
+                
+                .role-tab:not(.active) {
+                    color: #064E3B;
+                    background: transparent;
+                }
+
+                .role-tab:not(.active):hover {
+                    background: rgba(255,255,255,0.3);
+                }
+
+                .switcher-container {
+                    background: #22c55e;
+                    border-radius: 20px;
+                    padding: 4px;
+                    display: flex;
+                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+                }
+
+                .form-input {
+                    width: 100%;
+                    padding: 12px 14px 12px 42px;
+                    border: 2px solid #f3f4f6;
+                    border-radius: 14px;
+                    font-family: 'Baloo 2', sans-serif;
+                    font-size: 0.95rem;
+                    color: #1f2937;
+                    background: #f9fafb;
+                    transition: all 0.2s ease;
+                    outline: none;
+                }
+                
+                .form-input:focus {
+                    border-color: #22c55e;
+                    background: #ffffff;
+                    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+                }
+                
+                .form-input::placeholder { color: #9ca3af; font-weight: 500; }
+                
+                .submit-btn {
+                    width: 100%;
+                    padding: 14px;
+                    background: #16a34a; /* Tailwind green-600 */
+                    color: white;
+                    font-family: 'Baloo 2', sans-serif;
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    border: none;
+                    border-radius: 14px;
+                    cursor: pointer;
+                    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.2s;
+                    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+                }
+                
+                .submit-btn:hover:not(:disabled) {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4);
+                    background: #15803d;
+                }
+                
+                .submit-btn:active:not(:disabled) {
+                    transform: translateY(1px);
+                    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+                }
+                
+                .submit-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+                
+                .header-nav-btn {
+                    font-family: 'Baloo 2', sans-serif;
+                    font-weight: 600;
+                    color: #1e3a8a; /* Indigo-900 */
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    transition: color 0.2s;
+                    font-size: 1rem;
+                }
+                
+                .header-nav-btn:hover { color: #2563eb; }
+                
+                .cta-btn {
+                    background: #ffffff;
+                    color: #16a34a; /* Green-600 */
+                    border-radius: 9999px;
+                    padding: 8px 18px;
+                    font-family: 'Baloo 2', sans-serif;
+                    font-weight: 700;
+                    font-size: 0.95rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    transition: all 0.2s;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+                }
+                
+                .cta-btn:hover { background: #fafafa; transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+                
+                .feature-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    font-size: 1rem;
+                    color: #1e293b; /* slate-800 */
+                    font-weight: 500;
+                }
+                
+                @media (max-width: 900px) {
+                    .nav-links { display: none !important; }
+                    .header-inner { padding: 16px 24px; }
+                }
+
+                @media (max-width: 768px) {
+                    .hero-text h1 { font-size: 2.2rem !important; margin-bottom: 8px !important; line-height: 1.2 !important; white-space: normal !important; word-break: normal !important; }
+                    .main-layout { flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px 16px 40px; gap: 24px; }
+                    .login-card-wrapper { order: 1; width: 100%; max-width: 500px; padding: 0; }
+                    .hero-section { order: 2; width: 100%; text-align: center; align-items: center; max-width: 100%; }
+                    .hero-text p { margin: 0 auto; font-size: 0.95rem; line-height: 1.5; white-space: normal; max-width: 100%; }
+                    .feature-list-container { display: none !important; } /* Hide features on mobile */
+                    
+                    .login-card { padding: 24px 20px 20px; }
+                    .form-input { padding: 10px 12px 10px 36px; font-size: 0.9rem; }
+                    .submit-btn { padding: 12px; font-size: 1rem; }
+                    .role-tab { padding: 8px 10px; font-size: 0.9rem; }
+                    
+                    .header-inner { flex-direction: column; padding: 16px; gap: 12px; }
+                    .header-nav-container { justify-content: center; width: 100%; }
+                    .cta-btn { width: 100%; justify-content: center; padding: 12px; font-size: 1rem; }
+                    
+                    .app-footer { padding: 10px; font-size: 0.75rem; border-top: 1px solid rgba(255,255,255,0.2); }
+                }
+
+                @media (max-width: 480px) {
+                    .hero-text h1 { font-size: 1.8rem !important; }
+                    .login-card { padding: 20px 16px; border-radius: 20px; }
+                    .login-card::before { border-radius: 20px; }
+                    .leaf-decor-top { width: 35px; height: 35px; left: 5px; top: -5px; }
+                    .leaf-decor-bottom { right: 5px; width: 70px; height: 70px; }
+                    .switcher-container { margin-bottom: 20px; }
+                }
+            `}</style>
+
+            {/* ====== HEADER ====== */}
+            <header className="header-inner">
+                {/* Logo */}
+                <div className="header-logo-container" onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                    <img
+                        src="/shool-logo1.png"
+                        alt="ítOngQuiz logo"
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/school-logo.png'; }}
+                        style={{ width: 44, height: 44, objectFit: 'contain' }}
+                    />
+                    <span style={{ fontWeight: 800, fontSize: '1.4rem', color: '#1e3a8a' }}>
+                        ítong<span style={{ color: '#22c55e' }}>Quiz</span>
+                    </span>
+                </div>
+
+                {/* Nav & CTA */}
+                <div className="header-nav-container" style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+                    <nav className="nav-links" style={{ display: 'flex', gap: 24 }}>
+                        <button className="header-nav-btn" onClick={() => navigate('/')}>Trang chủ</button>
+                        <button className="header-nav-btn" onClick={() => navigate('/about')}>Giới thiệu</button>
+                        <button className="header-nav-btn" onClick={() => navigate('/contact')}>Liên hệ</button>
+                    </nav>
                     <button
-                        onClick={() => navigate('/')}
-                        className="flex items-center gap-2 md:gap-3 text-white hover:text-cyan-100 transition-colors shrink-0"
+                        className="cta-btn"
+                        onClick={() => window.open('https://cdth.vercel.app/', '_blank')}
                     >
-                        <img
-                            src="/school-logo.png"
-                            alt="Logo Trường"
-                            className="w-8 h-8 md:w-10 md:h-10 drop-shadow-lg"
-                        />
-                        <span className="text-xl md:text-2xl font-black tracking-tight">
-                            ÍtOng<span className="text-yellow-300">Quiz</span>
-                        </span>
-                    </button>
-                    <div className="hidden sm:flex items-center gap-1 md:gap-2">
-                        <button
-                            onClick={() => navigate('/')}
-                            className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-semibold text-white hover:bg-white/20 transition whitespace-nowrap"
-                        >
-                            Trang chủ
-                        </button>
-                        <button
-                            onClick={() => navigate('/about')}
-                            className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-semibold text-white hover:bg-white/20 transition whitespace-nowrap"
-                        >
-                            Giới thiệu
-                        </button>
-                        <button
-                            onClick={() => navigate('/contact')}
-                            className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-semibold text-white hover:bg-white/20 transition whitespace-nowrap"
-                        >
-                            Liên hệ
-                        </button>
-                        <button
-                            onClick={() => window.open('https://cdth.vercel.app/', '_blank')}
-                            className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-semibold text-white hover:bg-white/20 transition whitespace-nowrap"
-                        >
-                            Chuyển Đổi YCCĐ
-                        </button>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => setIsMobileNavOpen((prev) => !prev)}
-                        className="sm:hidden w-11 h-11 rounded-xl bg-white/10 text-white border border-white/20 flex items-center justify-center"
-                        aria-label="Mở menu điều hướng"
-                    >
-                        {isMobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                        Chuyển Đổi YCCĐ <ArrowRight size={16} />
                     </button>
                 </div>
-                {isMobileNavOpen && (
-                    <div className="sm:hidden mt-2 rounded-2xl border border-white/25 bg-slate-900/70 backdrop-blur-xl p-2 flex flex-col gap-1">
-                        <button onClick={() => { navigate('/'); setIsMobileNavOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-white hover:bg-white/15">Trang chủ</button>
-                        <button onClick={() => { navigate('/about'); setIsMobileNavOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-white hover:bg-white/15">Giới thiệu</button>
-                        <button onClick={() => { navigate('/contact'); setIsMobileNavOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-white hover:bg-white/15">Liên hệ</button>
-                        <button onClick={() => { window.open('https://cdth.vercel.app/', '_blank'); setIsMobileNavOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-white hover:bg-white/15">Chuyển Đổi YCCĐ</button>
-                    </div>
-                )}
-            </div>
+            </header>
 
-            <div className="lg:w-[60%] w-full relative overflow-hidden flex flex-col justify-center pt-28 md:pt-32 lg:pt-28 px-5 py-8 md:px-10 md:py-14 lg:p-24 bg-gradient-to-br from-indigo-900 via-blue-800 to-teal-500 text-white">
-                <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
-                    <div className="absolute top-[-10%] right-[-5%] w-[40vw] h-[40vw] rounded-full blur-[100px] bg-blue-400 hidden md:block"></div>
-                    <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px] bg-teal-400 hidden md:block"></div>
-                </div>
-
-                <motion.div style={{ x: layer0_X, y: layer0_Y }} className="absolute inset-0 pointer-events-none overflow-hidden hidden md:block">
-                    {[...Array(15)].map((_, i) => (
-                        <div
-                            key={i}
-                            className="light-particle"
-                            style={{
-                                top: `${Math.random() * 100}%`,
-                                left: `${Math.random() * 100}%`,
-                                width: `${Math.random() * 6 + 2}px`,
-                                height: `${Math.random() * 6 + 2}px`,
-                                animation: `particle-pulse ${Math.random() * 4 + 2}s infinite ${Math.random() * 2}s`,
-                                opacity: Math.random() * 0.5 + 0.1
-                            }}
-                        />
-                    ))}
-                </motion.div>
-
-                <div className="relative z-10 max-w-2xl">
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black leading-tight mb-5 md:mb-6 text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-100">
-                        Khơi Dậy Tiềm Năng Tri Thức
-                    </h1>
-
-                    <p className="text-base sm:text-lg md:text-xl text-blue-100 mb-7 md:mb-10 max-w-lg leading-relaxed font-medium">
-                        Nền tảng kiểm tra trực tuyến thông minh, giúp giáo viên quản lý lớp học hiệu quả và học sinh ôn luyện hứng thú mỗi ngày.
-                    </p>
-
-                    <ul className="space-y-3 md:space-y-4 text-sm sm:text-base md:text-lg text-white/90">
-                        <li className="flex items-center gap-3">
-                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                                <CheckCircle2 className="w-5 h-5 text-teal-300" />
-                            </span>
-                            Ngân hàng <strong className="text-white">10,000+ câu hỏi</strong> trắc nghiệm đa dạng.
-                        </li>
-                        <li className="flex items-center gap-3">
-                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                                <CheckCircle2 className="w-5 h-5 text-teal-300" />
-                            </span>
-                            Báo cáo điểm số, <strong className="text-white">thống kê chi tiết</strong> tự động.
-                        </li>
-                        <li className="flex items-center gap-3">
-                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                                <CheckCircle2 className="w-5 h-5 text-teal-300" />
-                            </span>
-                            Giao diện <strong className="text-white">hiện đại, thân thiện</strong> cho học sinh.
-                        </li>
-                    </ul>
-                </div>
-
-                <div className="absolute inset-0 z-0 pointer-events-none">
-                    <motion.div
-                        style={{ x: layer2_X, y: layer2_Y }}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 1.2, delay: 0.5, ease: 'easeOut' }}
-                        className="absolute bottom-[-20px] right-[-40px] w-[50%] max-w-[450px] z-10 hidden md:block"
-                    >
-                        <img
-                            src="/assets/student-hero.png"
-                            alt="Học sinh"
-                            className="w-full h-auto shadow-3d-premium"
-                        />
-                    </motion.div>
-                </div>
-
-                <div className="absolute top-0 right-0 h-full w-40 hero-edge-fade pointer-events-none hidden md:block z-20"></div>
-            </div>
-
-            <div className="lg:w-[40%] w-full flex items-center justify-center px-4 py-6 md:p-8 relative">
-                <div className="absolute top-3 left-3 right-3 md:top-4 md:left-8 md:right-8 z-20">
-                    <AnnouncementMarquee variant="compact" />
-                </div>
-
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="w-full max-w-[460px] bg-white rounded-3xl p-5 sm:p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.08)] relative z-10 mt-8 lg:mt-0"
-                >
-                    <div className="text-center mb-8">
-                        <h2 className="text-2xl font-black text-slate-800">
-                            {activeTab === 'student' ? 'Chào mừng em!' : 'Kính chào Thầy/Cô!'}
-                        </h2>
-                        <p className="text-slate-500 font-medium mt-2">
-                            {activeTab === 'student' ? 'Đăng nhập để vào lớp học ảo của em' : 'Đăng nhập vào bảng điều khiển quản lý'}
+            {/* ====== MAIN ====== */}
+            <main className="main-layout">
+                {/* ---- LEFT: Hero ---- */}
+                <section className="hero-section">
+                    <div className="hero-text">
+                        <h1 style={{
+                            fontSize: '4.2rem',
+                            fontWeight: 800,
+                            lineHeight: 1.1,
+                            color: '#1e3a8a', /* Dark Blue */
+                            marginBottom: 20,
+                        }}>
+                            Khơi Dậy Tiềm Năng Tri Thức
+                        </h1>
+                        <p style={{ fontSize: '1.05rem', color: '#1e293b', lineHeight: 1.6, maxWidth: 460, fontWeight: 500, margin: 0 }}>
+                            Nền tảng kiểm tra trực tuyến thông minh, giúp giáo viên quản lý lớp học hiệu quả và học sinh ôn luyện hứng thú mỗi ngày.
                         </p>
                     </div>
 
-                    <div className="bg-slate-100/80 p-1.5 rounded-full flex relative mb-8">
-                        <div
-                            className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-white rounded-full shadow transition-all duration-300 ease-out"
-                            style={{ left: activeTab === 'student' ? '6px' : 'calc(50%)' }}
-                        />
-                        <button
-                            type="button"
-                            onClick={() => { setActiveTab('student'); setLocalError(''); }}
-                            className={`flex-[1] flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-bold transition-colors relative z-10 ${
-                                activeTab === 'student' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                        >
-                            <GraduationCap className="w-4 h-4" /> Học sinh
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setActiveTab('teacher'); setLocalError(''); }}
-                            className={`flex-[1] flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-bold transition-colors relative z-10 ${
-                                activeTab === 'teacher' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                        >
-                            <Apple className="w-4 h-4" /> Giáo viên
-                        </button>
+                    <div className="feature-list-container hidden md:flex flex-col gap-5">
+                        {features.map((f, i) => (
+                            <div key={i} className="feature-item flex items-center gap-3">
+                                <img 
+                                    src={f.avatar} 
+                                    alt={`Feature aspect ${i+1}`}
+                                    style={{
+                                        width: 48, 
+                                        height: 48, 
+                                        borderRadius: '50%',
+                                        objectFit: 'cover',
+                                        backgroundColor: '#fff',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                        border: '2px solid #fff'
+                                    }} 
+                                />
+                                <span style={{flex: 1}}>{f.text}</span>
+                            </div>
+                        ))}
                     </div>
+                </section>
 
-                    <form onSubmit={handleLogin} className="space-y-5">
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
-                                {activeTab === 'student' ? 'Tên đăng nhập' : 'Tên tài khoản'}
-                            </label>
-                            <div className="relative group">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">
-                                    <User className="w-5 h-5" />
-                                </div>
-                                <input
-                                    type="text"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    className="w-full pl-12 pr-4 h-14 border-2 border-slate-200 rounded-2xl focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-semibold text-slate-700 bg-slate-50 focus:bg-white"
-                                    placeholder="Tài Khoản"
-                                    autoFocus
-                                />
-                            </div>
+                {/* ---- RIGHT: Login Card ---- */}
+                <div className="login-card-wrapper" style={{ width: '100%', maxWidth: 440 }}>
+                    <div className="login-card" style={{ padding: '40px 40px 32px' }}>
+                        <div className="leaf-decor-top"></div>
+                        <div className="leaf-decor-bottom"></div>
+
+                        {/* Card Header */}
+                        <div style={{ textAlign: 'center', marginBottom: 24, position: 'relative', zIndex: 1 }}>
+                            <h2 style={{ fontWeight: 800, fontSize: '1.8rem', color: '#111827', marginBottom: 4 }}>
+                                {activeTab === 'student' ? 'Chào mừng em!' : 'Chào Thầy/Cô!'}
+                            </h2>
+                            <p style={{ color: '#6b7280', fontSize: '0.95rem', fontWeight: 500 }}>
+                                {activeTab === 'student' ? 'Đăng nhập để vào lớp học ảo của em' : 'Truy cập bảng điều khiển quản lý'}
+                            </p>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
-                                Mật khẩu
-                            </label>
-                            <div className="relative group">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">
-                                    <Lock className="w-5 h-5" />
-                                </div>
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-12 pr-4 h-14 border-2 border-slate-200 rounded-2xl focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-semibold text-slate-700 bg-slate-50 focus:bg-white"
-                                    placeholder="••••••••"
-                                />
-                            </div>
-                        </div>
-
-                        {localError && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-medium flex items-center gap-2"
+                        {/* Role Toggle */}
+                        <div className="switcher-container" style={{ marginBottom: 28, position: 'relative', zIndex: 1 }} data-purpose="role-switcher">
+                            <button
+                                className={`role-tab ${activeTab === 'student' ? 'active' : ''}`}
+                                style={{ flex: 1, padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: 'none' }}
+                                onClick={() => { setActiveTab('student'); setLocalError(''); }}
                             >
-                                <span className="text-lg leading-none">⚠️</span>
-                                {localError}
-                            </motion.div>
-                        )}
+                                <GraduationCap size={18} /> Học sinh
+                            </button>
+                            <button
+                                className={`role-tab ${activeTab === 'teacher' ? 'active' : ''}`}
+                                style={{ flex: 1, padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: 'none' }}
+                                onClick={() => { setActiveTab('teacher'); setLocalError(''); }}
+                            >
+                                <UserRound size={18} /> Giáo viên
+                            </button>
+                        </div>
 
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full h-14 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white rounded-2xl font-bold text-lg shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
-                        >
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Đang xử lý...
-                                </>
-                            ) : (
-                                'Đăng nhập ngay'
+                        {/* Form */}
+                        <form onSubmit={handleLogin} style={{ position: 'relative', zIndex: 1 }}>
+                            {/* Username */}
+                            <div style={{ marginBottom: 20 }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#111827', marginBottom: 8, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                    Tên đăng nhập
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <UserRound size={18} color="#9ca3af" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        placeholder={activeTab === 'student' ? 'Mã học sinh' : 'Tài khoản giáo viên'}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Password */}
+                            <div style={{ marginBottom: 28 }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#111827', marginBottom: 8, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                    Mật khẩu
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                    </svg>
+                                    <input
+                                        type="password"
+                                        className="form-input"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder={activeTab === 'student' ? 'Mật khẩu học sinh' : '••••••••'}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Error */}
+                            {localError && (
+                                <div style={{ background: '#fef2f2', color: '#dc2626', padding: '12px 16px', borderRadius: 12, borderLeft: '4px solid #dc2626', fontSize: '0.9rem', fontWeight: 600, marginBottom: 20 }}>
+                                    ⚠️ {localError}
+                                </div>
                             )}
-                        </button>
-                    </form>
 
-                    <p className="text-center text-sm text-slate-400 mt-8 font-medium">
-                        Cần hỗ trợ? Hãy{' '}
-                        <a
-                            href="mailto:sample_user_baf53feb@gmail.com"
-                            className="text-blue-600 hover:text-blue-700 underline decoration-blue-400 underline-offset-2 font-semibold"
-                        >
-                            liên hệ
-                        </a>{' '}
-                        với Quản trị viên nhà trường.
-                    </p>
-                </motion.div>
+                            {/* Submit */}
+                            <button type="submit" className="submit-btn" disabled={isLoading}>
+                                {isLoading ? (
+                                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                        <Loader2 className="animate-spin" size={20} /> Đang xử lý...
+                                    </span>
+                                ) : 'Đăng nhập ngay'}
+                            </button>
+                        </form>
 
-                <div className="absolute bottom-0 right-0 opacity-5 pointer-events-none">
-                    <svg width="400" height="400" viewBox="0 0 100 100">
-                        <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" strokeWidth="0.5" />
-                        </pattern>
-                        <rect width="100" height="100" fill="url(#grid)" />
-                    </svg>
+                        {/* Support */}
+                        <p style={{ textAlign: 'center', fontSize: '0.9rem', color: '#6b7280', marginTop: 24, fontWeight: 500, position: 'relative', zIndex: 1 }}>
+                            Cần hỗ trợ?{' '}
+                            <a href="mailto:sample_user_baf53feb@gmail.com" style={{ color: '#16a34a', fontWeight: 700 }}>
+                                Liên hệ Quản trị viên
+                            </a>
+                        </p>
+                    </div>
                 </div>
-            </div>
+            </main>
+
+            {/* ====== FOOTER ====== */}
+            <footer className="app-footer">
+                <p>© {new Date().getFullYear()} itongQuiz. All rights reserved.</p>
+            </footer>
         </div>
     );
 };
