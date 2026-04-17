@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, Mail, Phone } from 'lucide-react';
+import { Globe, Mail, Phone, ExternalLink } from 'lucide-react';
 import { SCHOOL_NAME } from '../../config/constants';
 
 export type FooterRoutePath = '/' | '/about' | '/contact' | '/privacy' | '/tos';
@@ -13,68 +13,124 @@ const Footer: React.FC<Props> = ({ onNavigate, showPublicLinks = true }) => {
     const currentYear = new Date().getFullYear();
 
     return (
-        <footer className="bg-white border-t border-slate-200 pt-10 md:pt-16 pb-8 px-4 sm:px-6">
-            <div className="max-w-7xl mx-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 mb-10 md:mb-12">
-                    <div className="col-span-1 md:col-span-1">
-                        <div className="flex items-center gap-2 mb-4">
-                            <span className="text-2xl font-black text-slate-800 tracking-tight">
+        <footer 
+            className="relative pt-16 pb-12 px-6 overflow-hidden"
+            style={{ 
+                fontFamily: "'Baloo 2', sans-serif",
+                background: 'rgba(220, 252, 231, 0.6)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.3)'
+            }}
+        >
+            {/* Decorative leaf patterns (optional/subtle) */}
+            <div className="absolute top-0 left-0 w-32 h-32 opacity-5 pointer-events-none transform -translate-x-1/2 -translate-y-1/2 bg-green-900 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 right-0 w-48 h-48 opacity-5 pointer-events-none transform translate-x-1/3 translate-y-1/3 bg-green-800 rounded-full blur-3xl"></div>
+
+            <div className="max-w-7xl mx-auto relative z-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+                    {/* Brand Section */}
+                    <div className="flex flex-col gap-6">
+                        <div 
+                            className="flex items-center gap-2 cursor-pointer transition-transform hover:scale-105 active:scale-95 origin-left"
+                            onClick={() => onNavigate('/')}
+                        >
+                            <img 
+                                src="/shool-logo1-removebg.png" 
+                                alt="logo" 
+                                className="w-10 h-10 object-contain"
+                                onError={(e) => { (e.target as HTMLImageElement).src = '/school-logo.png'; }}
+                            />
+                            <span className="text-2xl font-extrabold tracking-tight">
                                 <span style={{ color: '#1e3a8a' }}>ítong</span><span style={{ color: '#FACC15' }}>Quiz</span>
                             </span>
                         </div>
-                        <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                            Nền tảng luyện tập các môn học chính khóa dành cho học sinh tiểu học.
+                        <p className="text-emerald-900/80 text-sm font-medium leading-relaxed max-w-xs">
+                            Khơi dậy tiềm năng tri thức. Nền tảng luyện tập thông minh giúp học sinh tiểu học ôn luyện hứng thú mỗi ngày.
                         </p>
-                        <div className="flex gap-3">
-                            <a href="#" className="p-2.5 bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition-all">
-                                <Globe className="w-5 h-5" />
-                            </a>
-                            <a href="#" className="p-2.5 bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition-all">
-                                <Mail className="w-5 h-5" />
-                            </a>
-                            <a href="#" className="p-2.5 bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition-all">
-                                <Phone className="w-5 h-5" />
-                            </a>
+                        <div className="flex gap-4">
+                            {[
+                                { icon: Globe, href: "#", label: "Website" },
+                                { icon: Mail, href: "mailto:sample_user_baf53feb@gmail.com", label: "Email" },
+                                { icon: Phone, href: "tel:0989999999", label: "Phone" }
+                            ].map((social, idx) => (
+                                <a 
+                                    key={idx} 
+                                    href={social.href}
+                                    className="p-3 bg-white/40 hover:bg-white/80 text-emerald-900 rounded-2xl transition-all duration-300 shadow-sm backdrop-blur-md group"
+                                    aria-label={social.label}
+                                >
+                                    <social.icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                </a>
+                            ))}
                         </div>
                     </div>
 
+                    {/* Discovery Links */}
                     <div>
-                        <h4 className="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Khám phá</h4>
+                        <h4 className="text-sm font-extrabold text-emerald-900 uppercase tracking-widest mb-8 flex items-center gap-2">
+                             Khám phá
+                        </h4>
                         <ul className="space-y-4">
-                            {showPublicLinks && (
-                                <li><button onClick={() => onNavigate('/')} className="text-slate-500 hover:text-blue-600 text-sm font-medium transition-colors">Trang chủ</button></li>
-                            )}
-                            {showPublicLinks && (
-                                <li><button onClick={() => onNavigate('/about')} className="text-slate-500 hover:text-blue-600 text-sm font-medium transition-colors">Giới thiệu</button></li>
-                            )}
-                            {showPublicLinks && (
-                                <li><button onClick={() => onNavigate('/contact')} className="text-slate-500 hover:text-blue-600 text-sm font-medium transition-colors">Liên hệ</button></li>
-                            )}
-                            <li><button className="text-slate-500 hover:text-blue-600 text-sm font-medium transition-colors">Kho ứng dụng</button></li>
-                            <li><button className="text-slate-500 hover:text-blue-600 text-sm font-medium transition-colors">Xếp hạng</button></li>
+                            {[
+                                { name: 'Trang chủ', path: '/', show: showPublicLinks },
+                                { name: 'Giới thiệu', path: '/about', show: showPublicLinks },
+                                { name: 'Liên hệ', path: '/contact', show: showPublicLinks },
+                                { name: 'Kho ứng dụng', path: null, show: true },
+                                { name: 'Bảng xếp hạng', path: null, show: true }
+                            ].map((item, idx) => (
+                                item.show && (
+                                    <li key={idx}>
+                                        <button 
+                                            onClick={() => item.path && onNavigate(item.path as FooterRoutePath)}
+                                            className="text-emerald-800/80 hover:text-emerald-900 text-[0.95rem] font-semibold transition-all hover:translate-x-1 flex items-center gap-2"
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                                            {item.name}
+                                        </button>
+                                    </li>
+                                )
+                            ))}
                         </ul>
                     </div>
 
+                    {/* Legal Links */}
                     <div>
-                        <h4 className="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Hỗ trợ và pháp lý</h4>
+                        <h4 className="text-sm font-extrabold text-emerald-900 uppercase tracking-widest mb-8">
+                            Hỗ trợ & Pháp lý
+                        </h4>
                         <ul className="space-y-4">
-                            <li><button onClick={() => onNavigate('/privacy')} className="text-slate-500 hover:text-blue-600 text-sm font-medium transition-colors">Chính sách bảo mật</button></li>
-                            <li><button onClick={() => onNavigate('/tos')} className="text-slate-500 hover:text-blue-600 text-sm font-medium transition-colors">Điều khoản sử dụng</button></li>
-                            <li><button className="text-slate-500 hover:text-blue-600 text-sm font-medium transition-colors">Trợ giúp (Trợ lý AI)</button></li>
+                            {[
+                                { name: 'Chính sách bảo mật', path: '/privacy' },
+                                { name: 'Điều khoản sử dụng', path: '/tos' },
+                                { name: 'Trợ giúp (Trợ lý AI)', path: null }
+                            ].map((item, idx) => (
+                                <li key={idx}>
+                                    <button 
+                                        onClick={() => item.path && onNavigate(item.path as FooterRoutePath)}
+                                        className="text-emerald-800/80 hover:text-emerald-900 text-[0.95rem] font-semibold transition-all hover:translate-x-1"
+                                    >
+                                        {item.name}
+                                    </button>
+                                </li>
+                            ))}
                         </ul>
                     </div>
 
+                    {/* contact info */}
                     <div>
-                        <h4 className="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Thông tin trường</h4>
-                        <p className="text-slate-600 text-sm font-semibold mb-2">{SCHOOL_NAME}</p>
-                        <p className="text-slate-500 text-xs leading-relaxed">Xã Mường La, Tỉnh Sơn La</p>
+                        <h4 className="text-sm font-extrabold text-emerald-900 uppercase tracking-widest mb-8">
+                            Trường học
+                        </h4>
+                        <div className="bg-white/30 p-5 rounded-3xl backdrop-blur-lg border border-white/40 shadow-sm transition-transform hover:-rotate-1">
+                            <p className="text-emerald-900 text-sm font-bold mb-2 flex items-center gap-2">
+                                {SCHOOL_NAME}
+                            </p>
+                            <p className="text-emerald-800/70 text-xs leading-relaxed font-semibold mb-4">
+                                Xã Mường La, Tỉnh Sơn La, Việt Nam
+                            </p>
+                        </div>
                     </div>
-                </div>
-
-                <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
-                    <p className="text-slate-400 text-xs">
-                        © {currentYear} Đội ngũ Ít Ong Quiz. Bảo lưu mọi quyền.
-                    </p>
                 </div>
             </div>
         </footer>

@@ -28,31 +28,31 @@ const AboutPage: React.FC = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,#eff6ff_35%,#f8fafc_100%)] text-slate-800">
-            <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/70 border-b border-blue-100">
-                <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
+        <div className="min-h-screen bg-[#F8FAF9] font-['Baloo_2'] text-slate-800">
+            <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/70 border-b border-green-100">
+                <div className="max-w-7xl mx-auto px-4 md:px-8 h-18 flex items-center justify-between">
                     <button
                         onClick={() => navigate('/')}
-                        className="font-black text-slate-800 tracking-tight text-lg hover:text-blue-600 transition-colors"
+                        className="font-black text-[#064E3B] tracking-tight text-xl hover:text-green-600 transition-colors"
                     >
                         ÍtOng<span className="text-orange-500">Quiz</span>
                     </button>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => navigate('/')}
-                            className="px-4 py-2 rounded-full text-sm font-semibold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition"
+                            className="px-4 py-2 rounded-full text-sm font-semibold text-slate-600 hover:text-emerald-600 hover:bg-green-50 transition"
                         >
                             Trang chủ
                         </button>
                         <button
                             onClick={() => navigate('/about')}
-                            className="px-4 py-2 rounded-full text-sm font-semibold text-blue-700 bg-blue-100"
+                            className="px-4 py-2 rounded-full text-sm font-semibold text-emerald-700 bg-green-100"
                         >
                             Giới thiệu
                         </button>
                         <button
                             onClick={() => navigate('/contact')}
-                            className="px-4 py-2 rounded-full text-sm font-semibold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition"
+                            className="px-4 py-2 rounded-full text-sm font-semibold text-slate-600 hover:text-emerald-600 hover:bg-green-50 transition"
                         >
                             Liên hệ
                         </button>
@@ -61,95 +61,87 @@ const AboutPage: React.FC = () => {
             </header>
 
             <main className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-14 space-y-12">
-                <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 p-8 md:p-12 text-white shadow-2xl">
-                    <div className="absolute -top-16 -right-12 w-52 h-52 rounded-full bg-white/20 blur-2xl" />
-                    <div className="absolute -bottom-16 -left-10 w-48 h-48 rounded-full bg-cyan-300/30 blur-2xl" />
+                <section className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-emerald-600 via-green-600 to-lime-500 p-8 md:p-14 text-white shadow-xl">
+                    <div className="absolute -top-16 -right-12 w-64 h-64 rounded-full bg-white/20 blur-3xl animate-pulse" />
+                    <div className="absolute -bottom-16 -left-10 w-48 h-48 rounded-full bg-lime-300/30 blur-2xl" />
                     <div className="relative z-10 max-w-3xl">
-                        <p className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-xs font-bold uppercase tracking-widest mb-4">
+                        <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] mb-6 backdrop-blur-md">
                             <Sparkles className="w-3.5 h-3.5" />
                             Giới thiệu nhà trường
                         </p>
-                        <h1 className="text-3xl md:text-5xl font-black leading-tight mb-4">
+                        <h1 className="text-4xl md:text-6xl font-black leading-tight mb-6 tracking-tight">
                             Trường Tiểu học Ít Ong
                         </h1>
-                        <p className="text-blue-100 text-base md:text-lg leading-relaxed">
+                        <p className="text-green-50 text-base md:text-xl leading-relaxed font-medium opacity-90">
                             Chúng tôi xây dựng môi trường học tập an toàn, nhân ái và truyền cảm hứng.
                             Học sinh được tôn trọng sự khác biệt, được khuyến khích sáng tạo và phát triển toàn diện.
                         </p>
                     </div>
                 </section>
 
-                <section className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                    <div className="rounded-2xl bg-white border border-blue-100 p-6 shadow-sm">
-                        <div className="w-11 h-11 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
-                            <School className="w-6 h-6" />
+                <section className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+                    {[
+                        { icon: School, title: 'Tầm nhìn', desc: 'Đào tạo thế hệ học sinh tự tin, có kỹ năng học tập suốt đời.', color: 'bg-emerald-100 text-emerald-600' },
+                        { icon: Flag, title: 'Sứ mệnh', desc: 'Kết hợp nền tảng số và phương pháp dạy học tích cực vì học sinh.', color: 'bg-green-100 text-green-600' },
+                        { icon: Building2, title: 'Giá trị cốt lõi', desc: 'Tôn trọng, hợp tác, kỷ luật tích cực, trách nhiệm và sáng tạo.', color: 'bg-lime-100 text-emerald-700' }
+                    ].map((item, idx) => (
+                        <div key={idx} className="rounded-[2.5rem] bg-white border border-green-50 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-lg transition-all duration-300 group">
+                            <div className={`w-14 h-14 rounded-2xl ${item.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                                <item.icon className="w-7 h-7" />
+                            </div>
+                            <h3 className="font-black text-2xl mb-3 text-[#064E3B]">{item.title}</h3>
+                            <p className="text-slate-600 text-base leading-relaxed">{item.desc}</p>
                         </div>
-                        <h3 className="font-black text-lg mb-2">Tầm nhìn</h3>
-                        <p className="text-slate-600 text-sm leading-relaxed">Đào tạo thế hệ học sinh tự tin, có kỹ năng học tập suốt đời.</p>
-                    </div>
-                    <div className="rounded-2xl bg-white border border-blue-100 p-6 shadow-sm">
-                        <div className="w-11 h-11 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4">
-                            <Flag className="w-6 h-6" />
-                        </div>
-                        <h3 className="font-black text-lg mb-2">Sứ mệnh</h3>
-                        <p className="text-slate-600 text-sm leading-relaxed">Kết hợp nền tảng số và phương pháp dạy học tích cực vì học sinh.</p>
-                    </div>
-                    <div className="rounded-2xl bg-white border border-blue-100 p-6 shadow-sm">
-                        <div className="w-11 h-11 rounded-xl bg-cyan-100 text-cyan-600 flex items-center justify-center mb-4">
-                            <Building2 className="w-6 h-6" />
-                        </div>
-                        <h3 className="font-black text-lg mb-2">Giá trị cốt lõi</h3>
-                        <p className="text-slate-600 text-sm leading-relaxed">Tôn trọng, hợp tác, kỷ luật tích cực, trách nhiệm và sáng tạo.</p>
-                    </div>
+                    ))}
                 </section>
 
-                <section className="rounded-3xl bg-white border border-slate-200 p-6 md:p-8 shadow-sm">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
-                            <CalendarDays className="w-5 h-5" />
+                <section className="rounded-[2.5rem] bg-white border border-green-50 p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                    <div className="flex items-center gap-4 mb-10">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                            <CalendarDays className="w-6 h-6" />
                         </div>
-                        <h2 className="text-2xl font-black">Hành trình phát triển</h2>
+                        <h2 className="text-3xl font-black text-[#064E3B]">Hành trình phát triển</h2>
                     </div>
-                    <div className="space-y-5">
+                    <div className="space-y-6">
                         {milestones.map((item) => (
-                            <div key={item.year} className="flex gap-4">
-                                <div className="w-20 shrink-0 text-sm font-black text-blue-600">{item.year}</div>
-                                <div className="flex-1 rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                                    <h3 className="font-bold text-slate-800 mb-1">{item.title}</h3>
-                                    <p className="text-sm text-slate-600">{item.desc}</p>
+                            <div key={item.year} className="flex flex-col md:flex-row gap-4 md:gap-8 group">
+                                <div className="w-24 shrink-0 text-xl font-black text-emerald-600 pt-1">{item.year}</div>
+                                <div className="flex-1 rounded-[1.8rem] bg-[#F0FDF4]/50 border border-green-100 p-6 group-hover:bg-[#F0FDF4] transition-colors">
+                                    <h3 className="font-bold text-lg text-slate-800 mb-2">{item.title}</h3>
+                                    <p className="text-base text-slate-600 leading-relaxed">{item.desc}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </section>
 
-                <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="rounded-3xl bg-white border border-slate-200 p-6 md:p-8 shadow-sm">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-yellow-100 text-yellow-600 flex items-center justify-center">
-                                <Trophy className="w-5 h-5" />
+                <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="rounded-[2.5rem] bg-white border border-green-50 p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="w-12 h-12 rounded-2xl bg-yellow-100 text-yellow-600 flex items-center justify-center">
+                                <Trophy className="w-6 h-6" />
                             </div>
-                            <h2 className="text-xl font-black">Bảng vàng thành tích</h2>
+                            <h2 className="text-2xl font-black text-[#064E3B]">Bảng vàng thành tích</h2>
                         </div>
-                        <ul className="space-y-3">
+                        <ul className="space-y-4">
                             {achievements.map((item) => (
-                                <li key={item} className="flex items-start gap-3 text-sm text-slate-700">
-                                    <Award className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
-                                    <span>{item}</span>
+                                <li key={item} className="flex items-start gap-4 text-base text-slate-700 bg-slate-50/50 p-4 rounded-2xl border border-transparent hover:border-green-100 transition-all">
+                                    <Award className="w-5 h-5 mt-0.5 text-amber-500 shrink-0" />
+                                    <span className="font-medium">{item}</span>
                                 </li>
                             ))}
                         </ul>
                     </div>
 
-                    <div className="rounded-3xl bg-white border border-slate-200 p-6 md:p-8 shadow-sm">
-                        <h2 className="text-xl font-black mb-4">Thư viện hình ảnh hoạt động</h2>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="rounded-[2.5rem] bg-white border border-green-50 p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                        <h2 className="text-2xl font-black mb-8 text-[#064E3B]">Thư viện hình ảnh</h2>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             {gallery.map((item) => (
                                 <div
                                     key={item}
-                                    className="aspect-square rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-3 flex items-end"
+                                    className="aspect-square rounded-[1.5rem] border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-4 flex items-end hover:shadow-md transition-shadow cursor-default"
                                 >
-                                    <p className="text-xs font-bold text-slate-700 leading-snug">{item}</p>
+                                    <p className="text-[11px] md:text-xs font-bold text-emerald-800 leading-snug">{item}</p>
                                 </div>
                             ))}
                         </div>
