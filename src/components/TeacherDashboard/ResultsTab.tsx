@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Results Tab Component - Enhanced Version
  * 
  * Comprehensive results analysis with charts, filters, and detailed views
@@ -396,7 +396,6 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                     sortField={resultsHook.sortField}
                     sortOrder={resultsHook.sortOrder}
                     onSortChange={(field) => {
-                    onSortChange={(field) => {
                         if (field === resultsHook.sortField) {
                             resultsHook.setSortOrder(resultsHook.sortOrder === 'asc' ? 'desc' : 'asc');
                         } else {
@@ -413,6 +412,10 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                             showError('Loi: ' + err.message);
                         }
                     }}
+                />
+
+                {filteredResults.length > PAGE_SIZE && (
+                    <div className="p-4 border-t flex items-center justify-between bg-gray-50">
                         <p className="text-sm text-gray-600">
                             Hiển thị {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredResults.length)} / {filteredResults.length} kết quả
                         </p>

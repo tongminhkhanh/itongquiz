@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Quiz, QuestionType, StudentResult, Question } from '../types';
 import {
     AccessCodeForm,
@@ -6,6 +6,7 @@ import {
     ResultScreen
 } from './student';
 import { formatMathText, formatHtmlText } from '../utils/formatters';
+import { playTingSound, showError } from '../utils/toast';
 
 // 🚀 Agent Skill: Hoist RegExp patterns to module level to avoid re-creation on each render
 const REORDER_QUESTION_REGEX = /^(Reorder(?:\s+the\s+words)?)\s*[:/]\s*/i;

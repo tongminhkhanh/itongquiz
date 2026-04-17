@@ -5,7 +5,7 @@
  * Reuses the same callGasApi pattern as classroomService.
  */
 
-import { UserPet, ShopItem, BuyItemResponse, LeaderboardEntry, GameStateResult, TopGoldStudent } from '../types/gamification.types';
+import { PetData as UserPet, ShopItem, PurchaseResult as BuyItemResponse, LeaderboardEntry, GameStateResult, TopGoldStudent } from '../types/gamification.types';
 import { callApi } from './apiAdapter';
 
 // Response type matching GAS API format

@@ -71,6 +71,7 @@ export const generateQuizDocx = async (quiz: Quiz) => {
                                     width: 300,
                                     height: 200,
                                 },
+                                type: 'png',
                             }),
                         ],
                         alignment: AlignmentType.CENTER,
@@ -126,9 +127,18 @@ export const generateQuizDocx = async (quiz: Quiz) => {
                 const tfRows = [
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph({ text: "Nội dung", bold: true })], width: { size: 70, type: WidthType.PERCENTAGE } }),
-                            new TableCell({ children: [new Paragraph({ text: "Đúng", bold: true, alignment: AlignmentType.CENTER })], width: { size: 15, type: WidthType.PERCENTAGE } }),
-                            new TableCell({ children: [new Paragraph({ text: "Sai", bold: true, alignment: AlignmentType.CENTER })], width: { size: 15, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ 
+                                children: [new Paragraph({ children: [new TextRun({ text: "Nội dung", bold: true })] })], 
+                                width: { size: 70, type: WidthType.PERCENTAGE } 
+                            }),
+                            new TableCell({ 
+                                children: [new Paragraph({ children: [new TextRun({ text: "Đúng", bold: true })], alignment: AlignmentType.CENTER })], 
+                                width: { size: 15, type: WidthType.PERCENTAGE } 
+                            }),
+                            new TableCell({ 
+                                children: [new Paragraph({ children: [new TextRun({ text: "Sai", bold: true })], alignment: AlignmentType.CENTER })], 
+                                width: { size: 15, type: WidthType.PERCENTAGE } 
+                            }),
                         ]
                     })
                 ];
@@ -158,8 +168,8 @@ export const generateQuizDocx = async (quiz: Quiz) => {
                 const matchRows = [
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph({ text: "Cột A", bold: true })] }),
-                            new TableCell({ children: [new Paragraph({ text: "Cột B", bold: true })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Cột A", bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Cột B", bold: true })] })] }),
                         ]
                     })
                 ];

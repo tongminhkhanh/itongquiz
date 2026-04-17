@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
@@ -70,7 +70,6 @@ const AssignmentTab: React.FC = () => {
             {/* Section 2: Assignment Tracking */}
             <AssignmentTrackingSection
                 assignments={store.assignments}
-                onDelete={async (id) => {
                 onDelete={async (id) => {
                     showConfirm({
                         message: 'Xoa bai giao nay?',

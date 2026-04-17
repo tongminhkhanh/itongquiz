@@ -38,8 +38,8 @@ const getItemImage = (item: ShopItem) => {
 
 // Map items to categories for the tabs
 const categorizeItem = (item: ShopItem): TabType => {
-    if (item.name.toLowerCase().includes('đồ ăn') || item.type === 'FOOD' || item.itemId.includes('food')) return 'Food';
-    if (item.name.toLowerCase().includes('đồ chơi') || item.type === 'TOY' || item.itemId.includes('toy')) return 'Toys';
+    if (item.name.toLowerCase().includes('đồ ăn') || item.category === 'FOOD' || item.itemId.includes('food')) return 'Food';
+    if (item.name.toLowerCase().includes('đồ chơi') || item.category === 'TOY' || item.itemId.includes('toy')) return 'Toys';
     // Default everything else to clothing/accessories
     return 'Clothing';
 };

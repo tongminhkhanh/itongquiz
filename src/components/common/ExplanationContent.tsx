@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { renderMathJax } from '../../utils';
 import { MathJax } from 'better-react-mathjax';
 
 /**

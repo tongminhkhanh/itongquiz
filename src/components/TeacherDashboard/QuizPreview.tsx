@@ -1,7 +1,8 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, Question, QuestionType } from '../../types';
 import { Card, Button, Modal, NewlineMathText } from '../common';
 import { Save, PlusCircle, Edit3, Trash2, X, FileDown, Bold, Italic, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { showError } from '../../utils/toast';
 import GeometryPreview from './GeometryPreview';
 
 import TikZPreview from '../common/TikZPreview';
@@ -12,7 +13,6 @@ import { generateSmartDistractors } from '../../services/smartDistractorService'
 const fixReorderQuestion = (text: string): string => {
     if (!text) return text;
     // Check if it's a "Reorder" question
-import { showError } from '../../utils/toast';
     const reorderMatch = text.match(/^(Reorder(?:\s+the\s+words)?)\s*[:/]\s*/i);
     if (reorderMatch) {
         const prefix = reorderMatch[1];
@@ -228,15 +228,15 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onSave, isSaving = fals
             const newQ = await onRegenerateQuestion(q);
             if (newQ && onUpdateQuestions && quiz) {
                 const updated = quiz.questions.map(existing => existing.id === q.id ? newQ : existing);
-            const newQ = await onRegenerateQuestion(q);
-            if (newQ && onUpdateQuestions && quiz) {
-                const updated = quiz.questions.map(existing => existing.id === q.id ? newQ : existing);
                 onUpdateQuestions(updated);
             }
         } catch (error) {
             console.error('Failed to regenerate question:', error);
-            showError('Loi khi sinh lai cau hoi. Vui long thu lai.');
+            showError('Lỗi khi sinh lại câu hỏi. Vui lòng thử lại.');
         } finally {
+            setIsGeneratingSingle(null);
+        }
+    };
 
     // Ref for MathJax rendering
     const previewContainerRef = useRef<HTMLDivElement>(null);

@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { Quiz, StudentResult, Question } from '../../../types';
 
 import { Home } from 'lucide-react';
 
 // Components
-import ResultTabs from './ResultTabs';
+// ResultTabs import removed
 
 // Tabs
 import OverviewTab from './tabs/OverviewTab';

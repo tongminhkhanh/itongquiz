@@ -87,7 +87,7 @@ export const useQuizCreator = (): UseQuizCreatorReturn => {
     const [classLevel, setClassLevel] = useState('3');
     const [content, setContent] = useState('');
     const [questionCount, setQuestionCount] = useState(10);
-    const [selectedTypes, setSelectedTypes] = useState(DEFAULT_SELECTED_TYPES);
+    const [selectedTypes, setSelectedTypes] = useState<Record<string, boolean>>(DEFAULT_SELECTED_TYPES);
     const [manualTimeLimit, setManualTimeLimit] = useState<number | ''>('');
     const [difficultyLevels, setDifficultyLevels] = useState(DEFAULT_DIFFICULTY);
     const [requireCode, setRequireCode] = useState(false);

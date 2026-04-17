@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { Classroom, Student, CreateStudentPayload } from '../../types/classroom.types';
@@ -865,10 +865,9 @@ const AddStudentModal: React.FC<{
         const res = await onAddBatch(parsedData);
         if (res) {
             if (res.errorCount > 0) {
-            if (res.errorCount > 0) {
-                showError(Da them thanh cong  hoc sinh. Bo qua  hoc sinh bi trung ten.);
+                showError(`Đã thêm thành công ${res.successCount} học sinh. Bỏ qua ${res.errorCount} học sinh bị lỗi hoặc trùng.`);
             } else {
-                showSuccess(Da them thanh cong tat ca  hoc sinh.);
+                showSuccess(`Đã thêm thành công tất cả học sinh.`);
             }
         }
     };
@@ -1045,7 +1044,7 @@ const AddStudentModal: React.FC<{
                                     <p className="text-green-600 text-sm mb-4">
                                         Dữ liệu hợp lệ, sẵn sàng để tải lên hệ thống.
                                     </p>
-                                    <Button variant="outline" onClick={() => setParsedData(null)} className="text-sm bg-white">
+                                    <Button variant="secondary" onClick={() => setParsedData(null)} className="text-sm bg-white">
                                         Chọn file khác
                                     </Button>
                                 </div>

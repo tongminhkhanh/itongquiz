@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, QuestionType, ImageLibraryItem } from '../../types';
 import { Card, Button } from '../common';
 import { FileText, Sparkles, Upload, X, FileCheck, Copy, Check, Link2, BookOpen, Search, Zap, Users, Calendar, Hash, ChevronDown, ChevronUp, Settings, Clock, Wand2, Eye, EyeOff, Lock, Unlock, Edit3, Tag } from 'lucide-react';
+import { showError, showSuccess } from '../../utils/toast';
 import { AIProvider, AI_CORE_SUBJECT_IDS, extractTextFromPdf, generateQuiz, QuizGenerationOptions } from '../../services/geminiService';
 import { generateTrangNguyenQuiz, TRANG_NGUYEN_TOPICS } from '../../services/trangNguyenGeminiService';
 import { searchTrangNguyenQuestions, enrichPromptWithSearchResults } from '../../services/trangNguyenSearchService';

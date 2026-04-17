@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Quiz } from '../../types';
 import { Card, Button } from '../common';
 import { fetchIoeQuizzes, deleteIoeQuiz, updateIoeQuiz } from '../../services/ioeSheetService';
@@ -68,7 +68,6 @@ const IoeManageTab: React.FC<IoeManageTabProps> = ({ onEdit }) => {
     });
 
     // Handle delete
-    const handleDelete = async (quizId: string) => {
     const handleDelete = async (quizId: string) => {
         showConfirm({
             message: 'Ban co chac muon xoa de thi IOE nay?',
