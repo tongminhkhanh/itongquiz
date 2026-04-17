@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Results Tab Component - Enhanced Version
  * 
  * Comprehensive results analysis with charts, filters, and detailed views
@@ -6,6 +6,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Quiz, StudentResult, Question } from '../../types';
+import { showError } from '../../utils/toast';
 import { Card, Button } from '../common';
 import {
     StatsCards,
@@ -395,6 +396,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                     sortField={resultsHook.sortField}
                     sortOrder={resultsHook.sortOrder}
                     onSortChange={(field) => {
+                    onSortChange={(field) => {
                         if (field === resultsHook.sortField) {
                             resultsHook.setSortOrder(resultsHook.sortOrder === 'asc' ? 'desc' : 'asc');
                         } else {
@@ -408,12 +410,9 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                         try {
                             await useQuizStore.getState().removeResult(result.id);
                         } catch (err: any) {
-                            alert('Lỗi: ' + err.message);
+                            showError('Loi: ' + err.message);
                         }
                     }}
-                />
-                {filteredResults.length > 0 && (
-                    <div className="px-4 py-3 border-t bg-gray-50 flex items-center justify-between gap-3 flex-wrap">
                         <p className="text-sm text-gray-600">
                             Hiển thị {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredResults.length)} / {filteredResults.length} kết quả
                         </p>

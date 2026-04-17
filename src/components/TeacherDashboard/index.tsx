@@ -1,4 +1,4 @@
-import React, { useState, Suspense, useEffect } from 'react';
+﻿import React, { useState, Suspense, useEffect } from 'react';
 import { Quiz } from '../../types';
 import { Button, ErrorBoundary, Footer } from '../common';
 import { Key, X, Save, Loader2, Bell, Search } from 'lucide-react';
@@ -9,6 +9,7 @@ import { cacheService } from '../../services/CacheService';
 import Sidebar from './Sidebar';
 import BottomNavigation from './BottomNavigation';
 import { useNavigate } from 'react-router-dom';
+import { showSuccess, showError } from '../../utils/toast';
 
 // Lazy load tab components
 const OverviewTab = React.lazy(() => import('./OverviewTab'));
@@ -116,9 +117,9 @@ const TeacherDashboard: React.FC = () => {
             await quizStore.modifyQuiz(updatedQuiz);
             setEditingAccessCode(null);
             setNewAccessCode('');
-            alert('Đã cập nhật mã làm bài thành công!');
+            showSuccess('Cap nhat ma lam bai thanh cong!');
         } catch (err: any) {
-            alert('Lỗi khi cập nhật: ' + (err.message || 'Unknown error'));
+            showError('Loi khi cap nhat: ' + (err.message || 'Unknown error'));
         }
     };
 

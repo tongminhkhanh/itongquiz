@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { showError, showSuccess } from '../../utils/toast';
 import { Quiz, QuestionType } from '../../types';
 import { Card, Button } from '../common';
 import { Globe, Sparkles, Zap, BookOpen, Trophy, Copy, Check, Link2, X, Search } from 'lucide-react';
@@ -665,6 +666,9 @@ const IoeTab: React.FC<IoeTabProps> = ({ onSaveQuiz, onSuccess }) => {
     const [generatedQuiz, setGeneratedQuiz] = useState<Quiz | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [searchStatus, setSearchStatus] = useState<string | null>(null); // Two-step status
+
+    // Auto-show toast on error
+    useEffect(() => { if (error) showError(error); }, [error]);
 
     // AI Provider - lưu vào localStorage (default llm-mux để dùng AI Client Pro)
     const [aiProvider] = useState<AIProvider>(() =>

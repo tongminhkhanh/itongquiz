@@ -32,7 +32,9 @@ const LandingPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-sage rounded-lg flex items-center justify-center text-white font-bold">iT</div>
-                        <span className="text-xl font-bold tracking-tight">iTongQuiz</span>
+                        <span className="text-xl font-bold tracking-tight">
+                            <span style={{ color: '#1e3a8a' }}>ítong</span><span style={{ color: '#FACC15' }}>Quiz</span>
+                        </span>
                     </div>
 
                     <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
@@ -256,7 +258,9 @@ const LandingPage: React.FC = () => {
                         <div className="flex items-center gap-2">
                             <div className="w-8 h-8 bg-sage rounded-lg flex items-center justify-center text-white font-bold">iT
                             </div>
-                            <span className="text-xl font-bold tracking-tight">iTongQuiz</span>
+                            <span className="text-xl font-bold tracking-tight">
+                                <span style={{ color: '#1e3a8a' }}>ítong</span><span style={{ color: '#FACC15' }}>Quiz</span>
+                            </span>
                         </div>
                         <p className="text-slate-500 text-sm leading-relaxed">Nền tảng giúp học sinh nắm vững kiến thức thông qua
                             học tập tương tác và trò chơi hóa hấp dẫn.</p>

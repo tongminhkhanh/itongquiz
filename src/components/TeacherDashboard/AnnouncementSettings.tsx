@@ -4,12 +4,23 @@ import { getSystemSettings, saveSystemSettings } from '../../services/systemSett
 import { useAuthStore } from '../../../stores/authStore';
 
 /**
- * Admin UI for managing marquee announcement
+ * Admin UI for managing marquee and banner announcements
  */
 const AnnouncementSettings: React.FC = () => {
     const authStore = useAuthStore();
+    
+    // Marquee States (Hệ thống cũ - Chữ chạy)
     const [content, setContent] = useState('');
     const [isActive, setIsActive] = useState(false);
+    
+    // Banner States (Hệ thống mới - LoginLandingPage)
+    const [bannerTitle, setBannerTitle] = useState('');
+    const [bannerSubtitle, setBannerSubtitle] = useState('');
+    const [bannerLink, setBannerLink] = useState('');
+    const [bannerImage, setBannerImage] = useState('');
+    const [isBannerActive, setIsBannerActive] = useState(false);
+    const [daysToLive, setDaysToLive] = useState(7);
+    
     const [aiAssistantEnabled, setAiAssistantEnabled] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -27,6 +38,13 @@ const AnnouncementSettings: React.FC = () => {
                 if (announcementData) {
                     setContent(announcementData.content || '');
                     setIsActive(announcementData.isActive);
+                    
+                    setBannerTitle(announcementData.bannerTitle || '');
+                    setBannerSubtitle(announcementData.bannerSubtitle || '');
+                    setBannerLink(announcementData.bannerLink || '');
+                    setBannerImage(announcementData.bannerImage || '');
+                    setIsBannerActive(!!announcementData.isBannerActive);
+                    setDaysToLive(announcementData.daysToLive || 7);
                 }
                 setAiAssistantEnabled(Boolean(settingsData.aiAssistantEnabled));
             } catch (error) {
@@ -43,14 +61,37 @@ const AnnouncementSettings: React.FC = () => {
         setIsSaving(true);
         setMessage(null);
 
+        // Auto-enable banner if title is provided but switch is off
+        let finalIsBannerActive = isBannerActive;
+        if (bannerTitle && !isBannerActive) {
+            console.log('Detecting banner title without active switch - Auto enabling...');
+            finalIsBannerActive = true;
+            setIsBannerActive(true);
+        }
+
+        const payload = {
+            content,
+            isActive,
+            bannerTitle,
+            bannerSubtitle,
+            bannerLink,
+            bannerImage,
+            isBannerActive: finalIsBannerActive,
+            daysToLive
+        };
+
+        console.log('Saving announcement with payload:', payload);
+
         try {
-            const success = await saveAnnouncement(content, isActive);
+            const success = await saveAnnouncement(payload);
+            
             if (success) {
-                setMessage({ type: 'success', text: 'Đã lưu thông báo thành công!' });
+                setMessage({ type: 'success', text: 'Đã lưu cấu hình thông báo thành công!' });
             } else {
                 setMessage({ type: 'error', text: 'Lỗi khi lưu thông báo!' });
             }
         } catch (error) {
+            console.error('Save announcement error:', error);
             setMessage({ type: 'error', text: 'Lỗi kết nối!' });
         } finally {
             setIsSaving(false);
@@ -103,37 +144,115 @@ const AnnouncementSettings: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-800">Quản lý Thông báo</h3>
             </div>
 
-            {/* Toggle Active */}
-            <div className="flex items-center gap-3 mb-6">
-                <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={isActive}
-                        onChange={(e) => setIsActive(e.target.checked)}
-                        className="sr-only peer"
+            {/* Section 1: Marquee Announcement (Chữ chạy) */}
+            <div className="mb-8 p-5 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-3 mb-5">
+                    <span className="text-xl">🏃‍♂️</span>
+                    <h4 className="text-base font-semibold text-slate-800">Thông báo chữ chạy (Toàn App)</h4>
+                </div>
+                
+                <div className="flex items-center gap-3 mb-5">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={isActive}
+                            onChange={(e) => setIsActive(e.target.checked)}
+                            className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                    <span className={`font-medium ${isActive ? 'text-indigo-600' : 'text-gray-500'}`}>
+                        {isActive ? 'Đang bật' : 'Đã tắt'}
+                    </span>
+                </div>
+
+                <div className="mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nội dung thông báo
+                    </label>
+                    <textarea
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="Nhập nội dung thông báo chữ chạy..."
+                        rows={2}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none transition-all"
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                </label>
-                <span className={`font-medium ${isActive ? 'text-indigo-600' : 'text-gray-500'}`}>
-                    {isActive ? 'Đang bật' : 'Đã tắt'}
-                </span>
+                </div>
             </div>
 
-            {/* Content Input */}
-            <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nội dung thông báo
-                </label>
-                <textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Nhập nội dung thông báo chữ chạy..."
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none transition-all"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                    Thông báo sẽ chạy từ phải sang trái ở đầu trang Home
-                </p>
+            {/* Section 2: Banner Announcement (Hệ thống mới) */}
+            <div className="mb-8 p-5 bg-indigo-50 rounded-xl border border-indigo-200">
+                <div className="flex items-center gap-3 mb-5">
+                    <span className="text-xl">✨</span>
+                    <h4 className="text-base font-semibold text-indigo-900">Banner nổi (Chỉ hiện ở Trang Đăng Nhập)</h4>
+                </div>
+
+                <div className="flex items-center gap-3 mb-5">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={isBannerActive}
+                            onChange={(e) => setIsBannerActive(e.target.checked)}
+                            className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                    <span className={`font-medium ${isBannerActive ? 'text-indigo-600' : 'text-gray-500'}`}>
+                        {isBannerActive ? 'Đang bật Banner' : 'Đã tắt Banner'}
+                    </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label className="block text-sm font-medium text-indigo-900 mb-1.5">Tiêu đề Banner</label>
+                        <input
+                            type="text"
+                            value={bannerTitle}
+                            onChange={(e) => setBannerTitle(e.target.value)}
+                            className="w-full px-4 py-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            placeholder="Vinh danh giáo viên xuất sắc..."
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-indigo-900 mb-1.5">URL Hình ảnh (Icon)</label>
+                        <input
+                            type="text"
+                            value={bannerImage}
+                            onChange={(e) => setBannerImage(e.target.value)}
+                            className="w-full px-4 py-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            placeholder="https://example.com/image.png"
+                        />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-indigo-900 mb-1.5">Nội dung phụ (Subtitle)</label>
+                        <input
+                            type="text"
+                            value={bannerSubtitle}
+                            onChange={(e) => setBannerSubtitle(e.target.value)}
+                            className="w-full px-4 py-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            placeholder="Chúc mừng thầy cô đã hoàn thành xuất sắc nhiệm vụ..."
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-indigo-900 mb-1.5">Đường dẫn (Link)</label>
+                        <input
+                            type="text"
+                            value={bannerLink}
+                            onChange={(e) => setBannerLink(e.target.value)}
+                            className="w-full px-4 py-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            placeholder="https://cdth.vercel.app"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-indigo-900 mb-1.5">Số ngày ghi nhớ đóng (Cookie)</label>
+                        <input
+                            type="number"
+                            value={daysToLive}
+                            onChange={(e) => setDaysToLive(parseInt(e.target.value) || 0)}
+                            className="w-full px-4 py-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        />
+                    </div>
+                </div>
             </div>
 
             {/* AI Assistant Settings */}
@@ -156,9 +275,6 @@ const AnnouncementSettings: React.FC = () => {
                         {aiAssistantEnabled ? 'Trợ lý AI: Đang bật' : 'Trợ lý AI: Đã tắt'}
                     </span>
                 </div>
-                <p className="text-xs text-gray-500 mb-4">
-                    Khi tắt, nút chat trợ lý AI sẽ ẩn khỏi giao diện người dùng toàn hệ thống.
-                </p>
                 <button
                     onClick={handleSaveSystemSettings}
                     disabled={isSavingSystem}
@@ -199,14 +315,14 @@ const AnnouncementSettings: React.FC = () => {
                         Đang lưu...
                     </span>
                 ) : (
-                    '💾 Lưu thông báo'
+                    '💾 Lưu cấu hình thông báo'
                 )}
             </button>
 
-            {/* Preview */}
+            {/* Preview Marquee */}
             {content && isActive && (
                 <div className="mt-6 pt-4 border-t border-gray-200">
-                    <p className="text-sm text-gray-600 mb-2">Xem trước:</p>
+                    <p className="text-sm text-gray-600 mb-2">Xem trước Marquee:</p>
                     <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg overflow-hidden">
                         <span className="marquee-preview">📢 {content}</span>
                     </div>

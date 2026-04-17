@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
@@ -9,6 +9,7 @@ import {
     Clock, CheckCircle2, BookOpen, Users, Edit3, Check
 } from 'lucide-react';
 import { Button, ResponsiveDataView } from '../common';
+import { showConfirm } from '../../utils/toast';
 
 // ==========================================
 // ASSIGNMENT TAB (Main)
@@ -70,12 +71,18 @@ const AssignmentTab: React.FC = () => {
             <AssignmentTrackingSection
                 assignments={store.assignments}
                 onDelete={async (id) => {
-                    if (confirm('Xóa bài giao này?')) {
-                        const ok = await store.removeAssignment(id);
-                        if (ok) {
-                            await refreshAssignments();
-                        }
-                    }
+                onDelete={async (id) => {
+                    showConfirm({
+                        message: 'Xoa bai giao nay?',
+                        confirmLabel: 'Xoa',
+                        destructive: true,
+                        onConfirm: async () => {
+                            const ok = await store.removeAssignment(id);
+                            if (ok) {
+                                await refreshAssignments();
+                            }
+                        },
+                    });
                 }}
                 onUpdateDeadline={async (assignmentId, newDeadline) => {
                     const ok = await store.updateAssignmentDeadline(assignmentId, newDeadline);

@@ -16,6 +16,12 @@ export async function handleAnnouncementRoutes(request: Request, env: Env, path:
             content: string;
             is_active: string;
             updated_at: string;
+            banner_title: string;
+            banner_subtitle: string;
+            banner_link: string;
+            banner_image: string;
+            is_banner_active: string;
+            days_to_live: number;
         }>();
         if (!row) {
             return jsonResponse({ status: 'success', announcement: null });
@@ -27,6 +33,12 @@ export async function handleAnnouncementRoutes(request: Request, env: Env, path:
                 content: row.content || '',
                 isActive: row.is_active === 'true' || row.is_active === 'TRUE',
                 updatedAt: row.updated_at,
+                bannerTitle: row.banner_title || '',
+                bannerSubtitle: row.banner_subtitle || '',
+                bannerLink: row.banner_link || '',
+                bannerImage: row.banner_image || '',
+                isBannerActive: row.is_banner_active === 'true' || row.is_banner_active === 'TRUE',
+                daysToLive: Number(row.days_to_live || 7),
             },
         });
     }
@@ -39,12 +51,42 @@ export async function handleAnnouncementRoutes(request: Request, env: Env, path:
         const existing = await db.prepare('SELECT id FROM announcements WHERE id = ?').bind('1').first();
         if (existing) {
             await db.prepare(
-                `UPDATE announcements SET content = ?, is_active = ?, updated_at = ? WHERE id = ?`
-            ).bind(body.content || '', body.isActive ? 'true' : 'false', new Date().toISOString(), '1').run();
+                `UPDATE announcements SET 
+                    content = ?, is_active = ?, updated_at = ?,
+                    banner_title = ?, banner_subtitle = ?, banner_link = ?, 
+                    banner_image = ?, is_banner_active = ?, days_to_live = ?
+                 WHERE id = ?`
+            ).bind(
+                body.content || '',
+                body.isActive ? 'true' : 'false',
+                new Date().toISOString(),
+                body.bannerTitle || '',
+                body.bannerSubtitle || '',
+                body.bannerLink || '',
+                body.bannerImage || '',
+                body.isBannerActive ? 'true' : 'false',
+                body.daysToLive || 7,
+                '1'
+            ).run();
         } else {
             await db.prepare(
-                `INSERT INTO announcements (id, content, is_active, updated_at) VALUES (?, ?, ?, ?)`
-            ).bind('1', body.content || '', body.isActive ? 'true' : 'false', new Date().toISOString()).run();
+                `INSERT INTO announcements (
+                    id, content, is_active, updated_at,
+                    banner_title, banner_subtitle, banner_link, 
+                    banner_image, is_banner_active, days_to_live
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).bind(
+                '1',
+                body.content || '',
+                body.isActive ? 'true' : 'false',
+                new Date().toISOString(),
+                body.bannerTitle || '',
+                body.bannerSubtitle || '',
+                body.bannerLink || '',
+                body.bannerImage || '',
+                body.isBannerActive ? 'true' : 'false',
+                body.daysToLive || 7
+            ).run();
         }
         return jsonResponse({ status: 'success', message: 'Announcement saved successfully' });
     }

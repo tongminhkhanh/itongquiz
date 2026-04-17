@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { renderMathJax } from '../../hooks/useMathJax';
+import React from 'react';
+import { MathJax } from 'better-react-mathjax';
 
 /**
  * ExplanationContent: Component để render nội dung giải thích từ AI

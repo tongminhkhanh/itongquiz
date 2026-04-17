@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { Quiz } from '../../types';
 import { Card, Button } from '../common';
 import { useQuizManager } from '../../hooks';
@@ -7,6 +7,7 @@ import { useQuizStore } from '../../../stores/quizStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { SUBJECT_CONFIG } from '../HomePage/StudentDashboardUI';
+import { showError, showConfirm, showSuccess } from '../../utils/toast';
 
 // Category tabs config for teacher filter
 const CATEGORY_TABS = [
@@ -263,20 +264,27 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
         }
     };
 
+
     const handleDuplicate = async (quiz: Quiz) => {
-        if (!confirm(`Nhân bản đề "${quiz.title}"?`)) return;
-        setDuplicatingId(quiz.id);
-        try {
-            const success = await quizStore.duplicateQuiz(quiz.id);
-            if (success) {
-                // Show brief feedback (quizzes already reloaded by store)
-            } else {
-                alert('Không thể nhân bản đề. Vui lòng thử lại.');
-            }
-        } finally {
-            setDuplicatingId(null);
-        }
+        showConfirm({
+            message: `Nhan ban de "${quiz.title}"?`,
+            confirmLabel: 'Nhan ban',
+            onConfirm: async () => {
+                setDuplicatingId(quiz.id);
+                try {
+                    const ok = await quizStore.duplicateQuiz(quiz.id);
+                    if (ok) {
+                        showSuccess('Nhan ban de thanh cong!');
+                    } else {
+                        showError('Khong the nhan ban de. Vui long thu lai.');
+                    }
+                } finally {
+                    setDuplicatingId(null);
+                }
+            },
+        });
     };
+
 
     return (
         <div className="space-y-4">

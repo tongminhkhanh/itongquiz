@@ -10,6 +10,13 @@ export interface Announcement {
     content: string;
     isActive: boolean;
     updatedAt: string;
+    // Banner fields
+    bannerTitle?: string;
+    bannerSubtitle?: string;
+    bannerLink?: string;
+    bannerImage?: string;
+    isBannerActive?: boolean;
+    daysToLive?: number;
 }
 
 /**
@@ -18,17 +25,35 @@ export interface Announcement {
 export const getAnnouncement = async (): Promise<Announcement | null> => {
     try {
         const data = await callApi<any>('get_announcement');
+        console.log('Raw API Response:', data);
 
+        let announcement: any = null;
         if (data && data.status === 'success') {
-            return data.announcement || null;
+            announcement = data.announcement;
+        } else if (data && data.content !== undefined) {
+            announcement = data;
         }
 
-        // If data is the announcement directly (D1 format)
-        if (data && data.content !== undefined) {
-            return data as Announcement;
-        }
+        if (!announcement) return null;
 
-        return null;
+        // Map snake_case from D1 to camelCase for Frontend
+        return {
+            ...announcement,
+            id: String(announcement.id || '1'),
+            content: announcement.content || '',
+            isActive: announcement.isActive ?? (announcement.is_active === 'true' || announcement.is_active === true || announcement.is_active === 1),
+            updatedAt: announcement.updatedAt ?? announcement.updated_at,
+            bannerTitle: announcement.bannerTitle ?? announcement.banner_title,
+            bannerSubtitle: announcement.bannerSubtitle ?? announcement.banner_subtitle,
+            bannerLink: announcement.bannerLink ?? announcement.banner_link,
+            bannerImage: announcement.bannerImage ?? announcement.banner_image,
+            isBannerActive: announcement.isBannerActive === true || 
+                            announcement.isBannerActive === 'true' || 
+                            announcement.is_banner_active === 'true' || 
+                            announcement.is_banner_active === true || 
+                            announcement.is_banner_active === 1,
+            daysToLive: Number(announcement.daysToLive ?? announcement.days_to_live ?? 7)
+        };
     } catch (error) {
         console.error('Error getting announcement:', error);
         return null;
@@ -38,9 +63,9 @@ export const getAnnouncement = async (): Promise<Announcement | null> => {
 /**
  * Save announcement (admin only)
  */
-export const saveAnnouncement = async (content: string, isActive: boolean): Promise<boolean> => {
+export const saveAnnouncement = async (params: Partial<Announcement>): Promise<boolean> => {
     try {
-        const data = await callApi<any>('save_announcement', { content, isActive });
+        const data = await callApi<any>('save_announcement', params);
 
         if (data && data.status === 'success') {
             return true;

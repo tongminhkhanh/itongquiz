@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Question, QuestionType } from '../../types';
 import { CheckCircle, RefreshCcw } from 'lucide-react';
 import GeometryRenderer, { GeometryData } from '../common/GeometryRenderer';
-import { renderMathJax } from '../../hooks/useMathJax';
+import { MathJax } from 'better-react-mathjax';
 import DraggableCategorization from './DraggableCategorization';
 import NewlineMathText from '../common/NewlineMathText';
 
@@ -37,18 +37,13 @@ const renderHtml = (text: string) => {
  * 4. React has no children to reconcile, so MathJax changes don't cause conflicts
  */
 const MathSpan: React.FC<{ content: string; className?: string }> = React.memo(({ content, className }) => {
-    const ref = useRef<HTMLSpanElement>(null);
-
-    // Use useLayoutEffect to ensure content is set BEFORE browser paint
-    React.useLayoutEffect(() => {
-        if (ref.current) {
-            ref.current.innerHTML = formatMathText(content);
-            // Trigger MathJax after setting innerHTML
-            renderMathJax(ref.current);
-        }
-    }, [content]);
-
-    return <span ref={ref} className={className} style={{ whiteSpace: 'pre-line' }} />;
+    return (
+        <span className={className} style={{ whiteSpace: 'pre-line' }}>
+            <MathJax inline dynamic>
+                {formatMathText(content)}
+            </MathJax>
+        </span>
+    );
 });
 
 
@@ -174,31 +169,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Trigger MathJax rendering when question content changes
-    useEffect(() => {
-        if (containerRef.current) {
-            // Initial render attempt
-            const timeoutId = setTimeout(() => {
-                renderMathJax(containerRef.current);
-            }, 100);
-
-            // Retry after longer delay for slow MathJax loading
-            const retryId = setTimeout(() => {
-                renderMathJax(containerRef.current);
-            }, 500);
-
-            // Final retry for very slow connections
-            const finalRetryId = setTimeout(() => {
-                renderMathJax(containerRef.current);
-            }, 1500);
-
-            return () => {
-                clearTimeout(timeoutId);
-                clearTimeout(retryId);
-                clearTimeout(finalRetryId);
-            };
-        }
-    }, [q, answers[q.id]]); // Re-render when question or answer changes
+    // MathJax rendering now handled automatically by MathJax component
 
 
     return (

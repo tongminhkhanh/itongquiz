@@ -1,5 +1,5 @@
-import React, { useMemo, useRef } from 'react';
-import { renderMathJax } from '../../../hooks/useMathJax';
+import React, { useMemo } from 'react';
+import { MathJax } from 'better-react-mathjax';
 import { formatMathText } from '../../../utils/formatters';
 
 interface MathContentProps {

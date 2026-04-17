@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Quiz, QuestionType, StudentResult, Question } from '../types';
 import {
     AccessCodeForm,
@@ -235,9 +235,13 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
             setResult(resultData);
             onSaveResult(resultData);
             setStep('result');
+            setResult(resultData);
+            onSaveResult(resultData);
+            setStep('result');
+            playTingSound();
         } catch (error: any) {
-            console.error('🚨 Submit error:', error);
-            alert('Lỗi khi nộp bài! Vui lòng thử lại. ' + (error.message || ''));
+            console.error('Submit error:', error);
+            showError('Loi khi nop bai! Vui long thu lai. ' + (error.message || ''));
         }
     }, [startTime, quiz, studentName, studentClass, answers, onSaveResult, calculateScore]);
 

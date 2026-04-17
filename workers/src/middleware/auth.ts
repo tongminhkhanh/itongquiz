@@ -17,6 +17,9 @@ export function verifyToken(request: Request, env: Env): Response | null {
     // 3. Allow public health check
     if (path === '/api/health') return null;
 
+    // 4. Allow public visual announcements
+    if (path === '/api/announcements' && method === 'GET') return null;
+
     // 4. Verify token from header for REST API routes
     const headerToken = request.headers.get('X-API-Token') || request.headers.get('Authorization')?.replace('Bearer ', '');
 

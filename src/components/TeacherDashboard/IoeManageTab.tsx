@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Quiz } from '../../types';
 import { Card, Button } from '../common';
 import { fetchIoeQuizzes, deleteIoeQuiz, updateIoeQuiz } from '../../services/ioeSheetService';
 import { Search, Trash2, Copy, Check, RefreshCw, Link2, Globe, Edit3, X, Save } from 'lucide-react';
+import { showConfirm, showSuccess, showError } from '../../utils/toast';
 
 interface IoeManageTabProps {
     onEdit?: (quiz: Quiz) => void;
@@ -68,23 +69,29 @@ const IoeManageTab: React.FC<IoeManageTabProps> = ({ onEdit }) => {
 
     // Handle delete
     const handleDelete = async (quizId: string) => {
-        if (!confirm('Bạn có chắc muốn xóa đề thi IOE này?')) return;
-
-        setDeletingId(quizId);
-        try {
-            const success = await deleteIoeQuiz(quizId);
-            if (success) {
-                setQuizzes(prev => prev.filter(q => q.id !== quizId));
-            } else {
-                alert('Không thể xóa đề thi. Vui lòng thử lại.');
+    const handleDelete = async (quizId: string) => {
+        showConfirm({
+            message: 'Ban co chac muon xoa de thi IOE nay?',
+            confirmLabel: 'Xoa',
+            destructive: true,
+            onConfirm: async () => {
+                setDeletingId(quizId);
+                try {
+                    const success = await deleteIoeQuiz(quizId);
+                    if (success) {
+                        setQuizzes(prev => prev.filter(q => q.id !== quizId));
+                        showSuccess('Da xoa de thi thanh cong');
+                    } else {
+                        showError('Khong the xoa de thi. Vui long thu lai.');
+                    }
+                } catch (error) {
+                    showError('Loi khi xoa de thi.');
+                } finally {
+                    setDeletingId(null);
+                }
             }
-        } catch (error) {
-            alert('Lỗi khi xóa đề thi.');
-        } finally {
-            setDeletingId(null);
-        }
+        });
     };
-
     // Handle copy link
     const handleCopyLink = async (quizId: string) => {
         const link = `${window.location.origin}/?quiz=${quizId}`;
@@ -397,4 +404,5 @@ const IoeManageTab: React.FC<IoeManageTabProps> = ({ onEdit }) => {
 };
 
 export default IoeManageTab;
+
 

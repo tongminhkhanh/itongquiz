@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { Classroom, Student, CreateStudentPayload } from '../../types/classroom.types';
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Button, ResponsiveDataView } from '../common';
 import * as XLSX from 'xlsx';
+import { showError, showSuccess, showConfirm } from '../../utils/toast';
 
 interface TeacherRecord {
     username: string;
@@ -176,9 +177,12 @@ const ClassManagementTab: React.FC = () => {
                             onClick={() => setSelectedClass(cls)}
                             onTransfer={() => openTransferModal(cls)}
                             onDelete={() => {
-                                if (confirm(`Xóa lớp "${cls.name}"? Tất cả học sinh và bài tập trong lớp sẽ bị xóa.`)) {
-                                    store.removeClass(cls.id);
-                                }
+                                showConfirm({
+                                    message: `Xóa lớp "${cls.name}"? Tất cả học sinh và bài tập trong lớp sẽ bị xóa.`,
+                                    confirmLabel: 'Xóa',
+                                    destructive: true,
+                                    onConfirm: () => store.removeClass(cls.id),
+                                });
                             }}
                         />
                     ))}
@@ -469,11 +473,11 @@ const ClassDetailView: React.FC<{
     // Handle reset password
     const handleResetPassword = async (studentId: string) => {
         if (!authStore.isAdmin) {
-            alert('Chỉ Admin mới được đặt lại mật khẩu học sinh.');
+            showError('Chỉ Admin mới được đặt lại mật khẩu học sinh.');
             return;
         }
         if (!authStore.username) {
-            alert('Không xác định được tài khoản admin.');
+            showError('Không xác định được tài khoản admin.');
             return;
         }
 
@@ -481,17 +485,22 @@ const ClassDetailView: React.FC<{
         if (input === null) return;
         const newPassword = input.trim();
         if (newPassword.length < 6) {
-            alert('Mật khẩu mới phải từ 6 ký tự.');
+            showError('Mật khẩu mới phải từ 6 ký tự.');
             return;
         }
-        if (!confirm('Xác nhận đặt lại mật khẩu học sinh này?')) return;
 
-        const ok = await store.resetPassword(studentId, newPassword, authStore.username);
-        if (ok) {
-            alert('Đặt lại mật khẩu thành công.');
-        } else {
-            alert(store.error || 'Lỗi khi đặt lại mật khẩu.');
-        }
+        showConfirm({
+            message: 'Xác nhận đặt lại mật khẩu học sinh này?',
+            confirmLabel: 'Đặt lại',
+            onConfirm: async () => {
+                const ok = await store.resetPassword(studentId, newPassword, authStore.username!);
+                if (ok) {
+                    showSuccess('Đặt lại mật khẩu thành công.');
+                } else {
+                    showError(store.error || 'Lỗi khi đặt lại mật khẩu.');
+                }
+            },
+        });
     };
 
     return (
@@ -606,9 +615,12 @@ const ClassDetailView: React.FC<{
                                                     )}
                                                     <button
                                                         onClick={() => {
-                                                            if (confirm(`Xóa học sinh "${student.fullName}"?`)) {
-                                                                store.removeStudent(student.id, classroom.id);
-                                                            }
+                                                            showConfirm({
+                                                                message: `Xóa học sinh "${student.fullName}"?`,
+                                                                confirmLabel: 'Xóa',
+                                                                destructive: true,
+                                                                onConfirm: () => store.removeStudent(student.id, classroom.id),
+                                                            });
                                                         }}
                                                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
                                                         title="Xóa học sinh"
@@ -642,9 +654,12 @@ const ClassDetailView: React.FC<{
                                     )}
                                     <button
                                         onClick={() => {
-                                            if (confirm(`Xóa học sinh "${student.fullName}"?`)) {
-                                                store.removeStudent(student.id, classroom.id);
-                                            }
+                                            showConfirm({
+                                                message: `Xóa học sinh "${student.fullName}"?`,
+                                                confirmLabel: 'Xóa',
+                                                destructive: true,
+                                                onConfirm: () => store.removeStudent(student.id, classroom.id),
+                                            });
                                         }}
                                         className="h-10 w-10 rounded-lg bg-red-50 text-red-600 inline-flex items-center justify-center"
                                         title="Xóa học sinh"
@@ -850,9 +865,10 @@ const AddStudentModal: React.FC<{
         const res = await onAddBatch(parsedData);
         if (res) {
             if (res.errorCount > 0) {
-                alert(`Đã thêm thành công ${res.successCount} học sinh.\nBỏ qua ${res.errorCount} học sinh do bị trùng Tên đăng nhập.`);
+            if (res.errorCount > 0) {
+                showError(Da them thanh cong  hoc sinh. Bo qua  hoc sinh bi trung ten.);
             } else {
-                alert(`Đã thêm thành công tất cả ${res.successCount} học sinh.`);
+                showSuccess(Da them thanh cong tat ca  hoc sinh.);
             }
         }
     };

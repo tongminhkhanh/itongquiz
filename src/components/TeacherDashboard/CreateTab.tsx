@@ -404,18 +404,18 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
         // Validate based on mode
         if (isPdfMode) {
             if (!uploadedFile) {
-                setError('Vui lòng tải lên file PDF hoặc ảnh');
+                showError('Vui lòng tải lên file PDF hoặc ảnh');
                 return;
             }
         } else {
             if (!topic.trim()) {
-                setError('Vui lòng nhập chủ đề bài học');
+                showError('Vui lòng nhập chủ đề bài học');
                 return;
             }
         }
 
         if (!classLevel || !classLevel.trim()) {
-            setError('Vui lòng chọn Khối lớp cho đề thi');
+            showError('Vui lòng chọn Khối lớp cho đề thi');
             return;
         }
 
@@ -424,17 +424,16 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             .map(([type]) => type as QuestionType);
 
         if (enabledTypes.length === 0) {
-            setError('Vui lòng chọn ít nhất một dạng câu hỏi');
+            showError('Vui lòng chọn ít nhất một dạng câu hỏi');
             return;
         }
 
         const questionCount = difficultyLevels.level1 + difficultyLevels.level2 + difficultyLevels.level3;
         if (questionCount === 0) {
-            setError('Tổng số câu hỏi phải lớn hơn 0');
+            showError('Tổng số câu hỏi phải lớn hơn 0');
             return;
         }
 
-        setError(null);
         setIsGenerating(true);
         setAiDetectedCategory(null);
         setAiDetectedLesson('');
@@ -594,7 +593,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
             setGeneratedQuiz(quiz);
             setGenerationStep('completed');
         } catch (err: any) {
-            setError(err.message || 'Đã xảy ra lỗi khi tạo đề');
+            showError(err.message || 'Đã xảy ra lỗi khi tạo đề');
             setGenerationStep('idle');
         } finally {
             setIsGenerating(false);
@@ -653,7 +652,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
         if (!generatedQuiz || isSaving) return;
 
         if (!classLevel || !classLevel.trim()) {
-            setError('Vui lòng chọn Khối lớp trước khi lưu đề thi');
+            showError('Vui lòng chọn Khối lớp trước khi lưu đề thi');
             return;
         }
 
@@ -710,7 +709,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
 
             onSuccess();
         } catch (err: any) {
-            setError(err.message || 'Lỗi khi lưu bài kiểm tra');
+            showError(err.message || 'Lỗi khi lưu bài kiểm tra');
         } finally {
             setIsSaving(false);
         }
@@ -721,6 +720,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
         try {
             await navigator.clipboard.writeText(savedQuizLink);
             setLinkCopied(true);
+            showSuccess('Đã sao chép link chia sẻ!');
             setTimeout(() => setLinkCopied(false), 3000);
         } catch (err) {
             // Silent catch

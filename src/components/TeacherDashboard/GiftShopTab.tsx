@@ -4,6 +4,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useGiftShopStore } from '../../stores/useGiftShopStore';
 import { giftShopService } from '../../services/giftShop.service';
 import type { GiftCatalogItem, GiftCategory, GiftOrderStatus } from '../../types/giftShop.types';
+import { showConfirm, showError } from '../../utils/toast';
 
 const CATEGORY_OPTIONS: Array<{ value: GiftCategory; label: string }> = [
     { value: 'SNACK', label: 'Khu Ăn Vặt' },
@@ -114,7 +115,7 @@ const GiftShopTab: React.FC = () => {
         e.preventDefault();
         const price = Number(form.priceCoins);
         if (!form.name.trim() || !form.imageUrl.trim() || !Number.isFinite(price) || price <= 0) {
-            alert('Vui lòng nhập đầy đủ tên, giá hợp lệ và link ảnh.');
+            showError('Vui lòng nhập đầy đủ tên, giá hợp lệ và link ảnh.');
             return;
         }
         const created = await saveCatalogItem({
@@ -132,18 +133,21 @@ const GiftShopTab: React.FC = () => {
     };
 
     const handleDeleteItem = async (item: GiftCatalogItem) => {
-        const ok = window.confirm(`Xóa vật phẩm "${item.name}" khỏi danh mục?`);
-        if (!ok) return;
-
-        const removed = await removeCatalogItem({
-            id: item.id,
-            actorIsAdmin: actor.isAdmin,
-            actorUsername: actor.username,
+        showConfirm({
+            message: `Xóa vật phẩm "${item.name}" khỏi danh mục?`,
+            confirmLabel: 'Xóa',
+            destructive: true,
+            onConfirm: async () => {
+                const removed = await removeCatalogItem({
+                    id: item.id,
+                    actorIsAdmin: actor.isAdmin,
+                    actorUsername: actor.username,
+                });
+                if (removed && editingItemId === item.id) {
+                    resetAdminForm();
+                }
+            },
         });
-
-        if (removed && editingItemId === item.id) {
-            resetAdminForm();
-        }
     };
 
     return (

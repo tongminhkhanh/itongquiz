@@ -4,6 +4,7 @@ import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import { Loader2, KeyRound, User, Lock, GraduationCap, Apple } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { showError } from '../../utils/toast';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -21,17 +22,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
     const classroomStore = useClassroomStore();
     const quizStore = useQuizStore();
 
-    // Local error state to unified handling
-    const [localError, setLocalError] = useState('');
+
 
     const isLoading = activeTab === 'teacher' ? authStore.isLoggingIn : classroomStore.isLoading;
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLocalError('');
 
         if (!username || !password) {
-            setLocalError('Vui lòng nhập đầy đủ thông tin!');
+            showError('Vui lòng nhập đầy đủ thông tin!');
             return;
         }
 
@@ -60,11 +59,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
             }
 
             authStore.loginFailure();
-            setLocalError(result?.message || 'Tên đăng nhập hoặc mật khẩu không đúng!');
+            showError(result?.message || 'Tên đăng nhập hoặc mật khẩu không đúng!');
         } catch (error) {
             console.error('Login error:', error);
             authStore.loginFailure();
-            setLocalError('Có lỗi xảy ra khi kết nối. Vui lòng thử lại!');
+            showError('Có lỗi xảy ra khi kết nối. Vui lòng thử lại!');
         }
     };
 
@@ -74,7 +73,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
             onClose();
             quizStore.setView('student_portal');
         } else {
-            setLocalError('Tên đăng nhập hoặc mật khẩu học sinh không đúng!');
+            showError('Tên đăng nhập hoặc mật khẩu học sinh không đúng!');
         }
     };
 
@@ -109,7 +108,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                 {/* Tabs */}
                 <div className="bg-slate-100 p-1 rounded-2xl flex gap-1 mb-8 relative z-0">
                     <button
-                        onClick={() => { setActiveTab('student'); setLocalError(''); }}
+                        onClick={() => setActiveTab('student')}
                         className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${activeTab === 'student'
                             ? 'bg-white text-blue-600 shadow-sm scale-[1.02]'
                             : 'text-slate-400 hover:text-slate-600'
@@ -119,7 +118,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                         Học sinh
                     </button>
                     <button
-                        onClick={() => { setActiveTab('teacher'); setLocalError(''); }}
+                        onClick={() => setActiveTab('teacher')}
                         className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${activeTab === 'teacher'
                             ? 'bg-white text-blue-600 shadow-sm scale-[1.02]'
                             : 'text-slate-400 hover:text-slate-600'
@@ -180,12 +179,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                             </div>
                         </div>
 
-                        {localError && (
-                            <div className="p-3 bg-red-50 border-l-4 border-red-400 rounded-r-xl text-red-600 text-sm font-medium flex items-center gap-2 animate-shake">
-                                <span className="text-lg">⚠️</span>
-                                {localError}
-                            </div>
-                        )}
+
 
                         <button
                             type="submit"

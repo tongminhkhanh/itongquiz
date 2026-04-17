@@ -17,8 +17,13 @@ const ALLOWED_ORIGINS = [
 
 export function corsHeaders(request: Request): Record<string, string> {
     const origin = request.headers.get('Origin') || '';
-    // Allow any origin in dev, check whitelist in prod
-    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    
+    // Check if origin is in whitelist or is from your specific network
+    const isAllowed = ALLOWED_ORIGINS.includes(normalizedOrigin) || 
+                     normalizedOrigin.includes('103.47.224.66');
+    
+    const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0];
 
     return {
         'Access-Control-Allow-Origin': allowedOrigin,

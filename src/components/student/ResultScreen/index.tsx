@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Quiz, StudentResult, Question } from '../../../types';
-import { renderMathJax } from '../../../hooks/useMathJax';
 
 import { Home } from 'lucide-react';
 
@@ -24,17 +23,7 @@ export type TabType = 'overview';
 const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentName, studentClass }) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Trigger MathJax rendering when component mounts or tab changes
-    useEffect(() => {
-        if (containerRef.current) {
-            const timeoutId = setTimeout(() => {
-                renderMathJax(containerRef.current);
-            }, 100);
-            return () => clearTimeout(timeoutId);
-        }
-    }, [quiz, answers]);
 
-    // Trigger MathJax rendering when component mounts or tab changes
 
     // Helper function to check if answer is correct 
     // PRIORITY: Use server validationDetails if available, fallback to local calculation

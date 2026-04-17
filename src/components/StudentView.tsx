@@ -14,6 +14,7 @@ import { useClassroomStore } from '../stores/useClassroomStore';
 import { useGamificationStore } from '../stores/useGamificationStore';
 import { getAvatarUrl } from '../config/avatars';
 import RewardOverlay from './gamification/RewardOverlay';
+import { showConfirm, showError, playTingSound } from '../utils/toast';
 
 interface Props {
   quiz: Quiz;
@@ -706,6 +707,8 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
       }
 
       setStep('result');
+      // 🔔 Play success sound for student
+      playTingSound();
     } catch (error: any) {
       console.error('🚨 Submit failed:', error);
       setSubmitError('Lỗi khi nộp bài! Vui lòng thử lại. ' + (error.message || ''));

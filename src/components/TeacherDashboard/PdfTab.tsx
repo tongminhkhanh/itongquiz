@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Quiz, Question, QuestionType } from '../../types';
 import { Card, Button, Modal } from '../common';
 import { Upload, FileText, Save, Loader2, X, FileCheck, Sparkles, CheckCircle, AlertCircle, Edit3, Wand2, Trash2, Bot, Lock, Clock, ListChecks } from 'lucide-react';
@@ -6,6 +6,7 @@ import { AIProvider, generateQuiz, QuizGenerationOptions, extractTextFromPdf } f
 import { AIProviderSelector } from '../teacher/QuizCreator';
 import { QUIZ_CATEGORIES } from '../../config/constants';
 import { formatHtmlText } from '../../utils/formatters';
+import { showError, showSuccess } from '../../utils/toast';
 
 interface PdfTabProps {
     onSaveQuiz: (quiz: Quiz) => Promise<void>;
@@ -93,7 +94,16 @@ const PdfTab: React.FC<PdfTabProps> = ({ onSaveQuiz, onSuccess }) => {
     const [editOptions, setEditOptions] = useState<string[]>([]);
     const [editCorrectAnswer, setEditCorrectAnswer] = useState('');
 
-    // Toggle question type selection
+    // Auto-show toast when error changes
+    useEffect(() => {
+        if (error) showError(error);
+    }, [error]);
+
+    // Auto-show toast on success
+    useEffect(() => {
+        if (successMessage) showSuccess(successMessage);
+    }, [successMessage]);
+
     const toggleQuestionType = (type: QuestionType) => {
         setSelectedQuestionTypes(prev => {
             if (prev.includes(type)) {

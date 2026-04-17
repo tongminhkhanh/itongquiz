@@ -94,7 +94,7 @@ const ChatBot: React.FC = () => {
                                 <div className="chatbot-welcome">
                                     <Bot size={48} className="chatbot-welcome-icon" />
                                     <h4>Xin chào!</h4>
-                                    <p>Tôi là trợ lý AI, sẵn sàng giúp bạn sử dụng hệ thống iTongQuiz.</p>
+                                    <p>Tôi là trợ lý AI, sẵn sàng giúp bạn sử dụng hệ thống <span style={{ color: '#1e3a8a', fontWeight: 'bold' }}>ítong</span><span style={{ color: '#FACC15', fontWeight: 'bold' }}>Quiz</span>.</p>
                                     <div className="chatbot-suggestions">
                                         <span className="chatbot-suggestion-label">Gợi ý:</span>
                                         {[

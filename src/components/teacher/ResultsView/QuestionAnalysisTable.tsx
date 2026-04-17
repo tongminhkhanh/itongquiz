@@ -7,7 +7,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { QuestionAnalysis } from '../../../utils/statisticsUtils';
 import { AlertTriangle, CheckCircle, HelpCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
-import { renderMathJax } from '../../../hooks/useMathJax';
 import MathSpan from '../../common/MathSpan';
 
 interface QuestionAnalysisTableProps {
@@ -23,13 +22,6 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [showAll, setShowAll] = useState(false);
     const tableRef = useRef<HTMLDivElement>(null);
-
-    // Render MathJax after content updates
-    useEffect(() => {
-        if (tableRef.current) {
-            renderMathJax(tableRef.current);
-        }
-    }, [analysis, showAll, sortBy, sortOrder]);
 
     // Get top missed questions
     const topMissedIds = [...analysis]

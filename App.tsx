@@ -2,6 +2,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { Loader2 } from 'lucide-react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 
 import { Quiz } from './src/types';
 import { fetchIoeQuizzes, saveIoeResult } from './src/services/ioeSheetService';
@@ -455,6 +456,21 @@ const App: React.FC = () => {
             </Routes>
             {showChatbot && <ChatBot />}
             <Analytics />
+            <Toaster
+                position="top-center"
+                containerStyle={{ top: 64 }}
+                toastOptions={{
+                    style: {
+                        fontFamily: "'Baloo 2', sans-serif",
+                        fontWeight: 600,
+                        fontSize: '0.93rem',
+                        borderRadius: '14px',
+                        padding: '12px 16px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                    },
+                    duration: 3500,
+                }}
+            />
         </>
     );
 };

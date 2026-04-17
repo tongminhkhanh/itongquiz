@@ -2,7 +2,6 @@ import React, { useRef, useLayoutEffect } from 'react';
 import { Question, QuestionType } from '../../../../types';
 import { Check, X, Minus, ChevronRight, HelpCircle } from 'lucide-react';
 import { formatMathText } from '../../../../utils/formatters';
-import { renderMathJax } from '../../../../hooks/useMathJax';
 
 import { MathSpan } from '../../../common';
 

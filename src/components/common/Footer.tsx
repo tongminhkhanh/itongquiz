@@ -19,7 +19,7 @@ const Footer: React.FC<Props> = ({ onNavigate, showPublicLinks = true }) => {
                     <div className="col-span-1 md:col-span-1">
                         <div className="flex items-center gap-2 mb-4">
                             <span className="text-2xl font-black text-slate-800 tracking-tight">
-                                ItOng<span className="text-blue-600">Quiz</span>
+                                <span style={{ color: '#1e3a8a' }}>ítong</span><span style={{ color: '#FACC15' }}>Quiz</span>
                             </span>
                         </div>
                         <p className="text-slate-500 text-sm leading-relaxed mb-6">
