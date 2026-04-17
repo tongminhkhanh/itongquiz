@@ -2,16 +2,24 @@
     "meta": {
         "schema_version": "1.1.0",
         "awf_version": "3.3.0",
-        "last_updated": "2026-03-31T08:09:00Z"
+        "last_updated": "2026-04-17T05:56:00Z"
     },
     "project": {
-        "name": "iTongQuiz",
+        "name": "ítongQuiz",
         "type": "Next.js/Vite Edu App",
         "status": "Production",
         "url": "https://www.thitong.site"
     },
+    "branding": {
+        "colors": {
+            "ítong": "#1e3a8a",
+            "Quiz": "#FACC15"
+        },
+        "typography": "Baloo 2 (700-800 weight for Logo)",
+        "casing": "ítongQuiz"
+    },
     "tech_stack": {
-        "frontend": "Vite, React 19, TailwindCSS 4, Zustand, MathJax 3",
+        "frontend": "Vite, React 19, TailwindCSS 4, Zustand, MathJax 3, react-hot-toast",
         "backend": "Cloudflare Workers, D1 Database",
         "ai_providers": "Google Gemini, Perplexity (via Cloudflare Proxy)",
         "hosting": "Vercel (Frontend), Cloudflare (Backend)"
@@ -19,36 +27,26 @@
     "database_schema": {
         "summary": "Mô hình quan hệ lưu trữ: Giáo viên, Học sinh, Đề thi, Kết quả, Phân phối đề (Assignments), và Gamification.",
         "tables": [
-            {
-                "name": "teachers",
-                "desc": "Giáo viên, lưu mật khẩu đã hash Bcrypt"
-            },
-            {
-                "name": "students",
-                "desc": "Học sinh, phân theo lớp"
-            },
-            {
-                "name": "quizzes",
-                "desc": "Kho đề thi với 14+ định dạng câu hỏi"
-            },
-            {
-                "name": "results",
-                "desc": "Lịch sử làm bài và điểm số"
-            }
+            { "name": "teachers", "desc": "Giáo viên, lưu mật khẩu đã hash Bcrypt" },
+            { "name": "students", "desc": "Học sinh, phân theo lớp" },
+            { "name": "quizzes", "desc": "Kho đề thi với 14+ định dạng câu hỏi" },
+            { "name": "results", "desc": "Lịch sử làm bài và điểm số" },
+            { "name": "announcements", "desc": "Thông báo toàn hệ thống hiển thị qua Banner" }
         ],
-        "migration_notes": "Bcrypt migration implemented on 2026-03-15."
+        "migration_notes": "Bcrypt migration (2026-03-15). Announcement system extension (2026-04-17)."
     },
     "business_rules": [
         "Giáo viên quản lý lớp và đề thi riêng",
         "Học sinh làm bài theo assignment hoặc luyện tập tự do",
         "LaTeX render chuẩn MathJax cho câu hỏi toán học",
-        "Hệ thống tiền ảo (coins) và thú cưng (pets) để tăng tương tác"
+        "Branding: Chữ 'ítong' màu xanh #1e3a8a, 'Quiz' màu vàng #FACC15",
+        "Announcement: Banner thông báo không được che các thành phần điều hướng chính."
     ],
     "knowledge_items": {
         "gotchas": [
-            "Splitting LaTeX strings for inline components breaks MathJax parsing. Use block rendering if conflict detected.",
-            "CORS errors on Production handled via Cloudflare Worker Proxy.",
-            "D1 requires migration for password hashing rollout."
+            "Branding unification is critical across multiple layout files (Login, Landing, ChatBot, Common Footer).",
+            "Announcement banners need careful padding-based positioning to avoid header element overlap.",
+            "Splitting LaTeX strings for inline components breaks MathJax parsing."
         ]
     }
 }

@@ -1,6 +1,12 @@
-# Changelog
+## [2026-04-17]
+### Added
+- **Announcement Banner Modernization**: Tích hợp icon loa thông báo tùy chỉnh (`loa.png`) và tối ưu hóa bố cục banner với lề động, không còn đè lên các thành phần Header.
+- **Unified Branding Strategy**: Thiết lập và áp dụng bộ nhận diện thương hiệu nhất quán toàn dự án: **ítong** (Xanh dương #1e3a8a) và **Quiz** (Vàng nắng #FACC15).
+- **Project-wide Logo Sync**: Đồng bộ hóa logo tại Header/Footer của Landing Page, Trang Đăng nhập, Trợ lý AI (ChatBot) và hệ thống common Footer.
 
-All notable changes to this project will be documented in this file.
+### Fixed
+- **Banner Layout Collision**: Giải quyết triệt để lỗi Banner thông báo che nội dung "itongQuiz" và menu "Trang chủ" thông qua cơ chế padding an toàn.
+- **Branding Consistency**: Khắc phục tình trạng mỗi trang dùng một màu logo khác nhau, đưa về một chuẩn duy nhất.
 
 ## [2026-03-15]
 ### Added
