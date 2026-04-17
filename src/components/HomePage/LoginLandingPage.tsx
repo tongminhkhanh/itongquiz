@@ -322,6 +322,22 @@ const LoginLandingPage: React.FC = () => {
                     font-size: 1rem;
                     color: #1e293b; /* slate-800 */
                     font-weight: 500;
+                    padding: 10px 16px;
+                    margin-left: -16px;
+                    border-radius: 24px;
+                    border: 1px solid transparent;
+                    transition: all 0.3s ease;
+                    cursor: pointer;
+                    position: relative;
+                    z-index: 50;
+                    pointer-events: auto;
+                }
+                
+                .feature-item:hover {
+                    transform: translateY(-5px) scale(1.03);
+                    background: rgba(255, 255, 255, 0.85);
+                    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.1);
+                    border-color: rgba(255, 255, 255, 0.9);
                 }
                 
                 @media (max-width: 900px) {
@@ -364,7 +380,7 @@ const LoginLandingPage: React.FC = () => {
                 {/* Logo */}
                 <div className="header-logo-container" onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                     <img
-                        src="/shool-logo1.png"
+                        src="/shool-logo1-removebg.png"
                         alt="ítOngQuiz logo"
                         onError={(e) => { (e.target as HTMLImageElement).src = '/school-logo.png'; }}
                         style={{ width: 44, height: 44, objectFit: 'contain' }}
