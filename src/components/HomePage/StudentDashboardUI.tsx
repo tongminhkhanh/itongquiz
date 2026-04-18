@@ -88,7 +88,7 @@ const parseDateKey = (dateKey: string) => {
 const getWeekStartDateKey = () => {
     const now = new Date();
     const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const dayOfWeek = monday.getDay(); // 0 = Sunday, 1 = Monday, ... 6 = Saturday
+    const dayOfWeek = monday.getDay();
     const offsetToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     monday.setDate(monday.getDate() + offsetToMonday);
     return getDateKey(monday);
@@ -103,16 +103,13 @@ const getAttendanceMultiplier = (attendanceDayNumber: number) => {
 
 const calculateAttendanceStreak = (days: string[], endDateKey: string) => {
     if (!endDateKey || days.length === 0) return 0;
-
     const daySet = new Set(days);
     let streak = 0;
     const cursor = parseDateKey(endDateKey);
-
     while (daySet.has(getDateKey(cursor))) {
         streak += 1;
         cursor.setDate(cursor.getDate() - 1);
     }
-
     return streak;
 };
 
@@ -125,23 +122,19 @@ const cleanOptionText = (value: unknown) => {
 const resolveCorrectLabel = (correctAnswer: unknown, options: string[]): string | null => {
     const raw = String(correctAnswer ?? '').trim();
     if (!raw) return null;
-
     const directLabelMatch = raw.toUpperCase().match(/^([A-Z])(?:[\.\)\:\-].*)?$/);
     if (directLabelMatch) return directLabelMatch[1];
-
     if (/^\d+$/.test(raw)) {
         const idx = Number(raw);
         if (idx >= 0 && idx < options.length) {
             return String.fromCharCode(65 + idx);
         }
     }
-
     const normalizedRaw = cleanOptionText(raw).toUpperCase();
     const optionIndex = options.findIndex((option) => cleanOptionText(option).toUpperCase() === normalizedRaw);
     if (optionIndex >= 0) {
         return String.fromCharCode(65 + optionIndex);
     }
-
     return null;
 };
 
@@ -190,18 +183,15 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         fetchAssignments();
     }, [studentSession?.studentId]);
 
-    // Fetch pet data if not loaded
     useEffect(() => {
         if (studentSession?.username && !pet) {
             useGamificationStore.getState().fetchPetData(studentSession.username);
         }
     }, [studentSession?.username, pet]);
 
-    // --- Derived Data: Assignments (Daily Quests) ---
+    // --- Derived Data ---
     const myAssignmentQuizzes = useMemo(() => {
         if (!studentSession) return [];
-
-        // Convert raw assignments to Quiz format
         const mappedAssignments = classroomStore.assignments.map(assignment => {
             const realQuiz = quizStore.quizzes.find(q => q.id === assignment.quizId) || ioeQuizzes.find(q => q.id === assignment.quizId);
             if (realQuiz) {
@@ -227,46 +217,34 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         return mappedAssignments.sort((a, b) => {
             const aAssignment = a._assignmentData;
             const bAssignment = b._assignmentData;
-
             const aAttempts = Number(aAssignment?.attemptCount) || 0;
             const bAttempts = Number(bAssignment?.attemptCount) || 0;
             const aMaxAttempts = Math.max(1, Number(aAssignment?.maxAttempts) || 1);
             const bMaxAttempts = Math.max(1, Number(bAssignment?.maxAttempts) || 1);
-
             const aCompleted = aAttempts >= aMaxAttempts;
             const bCompleted = bAttempts >= bMaxAttempts;
 
-            // Always keep not-yet-completed assignments at the top (page 1 first).
-            if (aCompleted !== bCompleted) {
-                return aCompleted ? 1 : -1;
-            }
+            if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
 
             const parseDate = (value?: string, fallback: number = 0) => {
                 const timestamp = Date.parse(value || '');
                 return Number.isFinite(timestamp) ? timestamp : fallback;
             };
 
-            // Among active assignments: nearest deadline first.
             if (!aCompleted && !bCompleted) {
                 const aDeadline = parseDate(aAssignment?.deadline, Number.MAX_SAFE_INTEGER);
                 const bDeadline = parseDate(bAssignment?.deadline, Number.MAX_SAFE_INTEGER);
-                if (aDeadline !== bDeadline) {
-                    return aDeadline - bDeadline;
-                }
+                if (aDeadline !== bDeadline) return aDeadline - bDeadline;
             }
 
-            // Otherwise: newer created assignment first.
             const aCreatedAt = parseDate(aAssignment?.createdAt, 0);
             const bCreatedAt = parseDate(bAssignment?.createdAt, 0);
-            if (aCreatedAt !== bCreatedAt) {
-                return bCreatedAt - aCreatedAt;
-            }
+            if (aCreatedAt !== bCreatedAt) return bCreatedAt - aCreatedAt;
 
             return String(a.title || '').localeCompare(String(b.title || ''), 'vi');
         });
     }, [classroomStore.assignments, studentSession, quizStore.quizzes, ioeQuizzes]);
 
-    // --- Derived Data: Public Categories ---
     const publicCategories = useMemo(() => {
         const categories = Object.keys(SUBJECT_CONFIG).filter(cat => SUBJECT_CONFIG[cat].showOnHome !== false);
         return categories.map(cat => {
@@ -288,10 +266,8 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
     const attendanceQuestionPool = useMemo<AttendanceQuestion[]>(() => {
         const allQuizzes = [...quizStore.quizzes, ...ioeQuizzes];
-
         return allQuizzes.flatMap((quiz) => {
             const sourceQuestions = Array.isArray(quiz.questions) ? quiz.questions : [];
-
             return sourceQuestions
                 .map((q: any) => {
                     const qType = String(q?.type || '').toUpperCase();
@@ -299,9 +275,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                         ? q.options.map((opt: unknown) => String(opt ?? '').trim()).filter(Boolean)
                         : [];
                     const correctLabel = resolveCorrectLabel(q?.correctAnswer, options);
-
                     if (qType !== 'MCQ' || options.length < 2 || !correctLabel) return null;
-
                     return {
                         id: `${quiz.id}-${q.id || Math.random().toString(36).slice(2)}`,
                         quizTitle: quiz.title || 'Ngân hàng câu hỏi',
@@ -322,9 +296,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     }, [myAssignmentQuizzes, assignmentPage]);
 
     useEffect(() => {
-        if (assignmentPage > totalAssignmentPages) {
-            setAssignmentPage(totalAssignmentPages);
-        }
+        if (assignmentPage > totalAssignmentPages) setAssignmentPage(totalAssignmentPages);
     }, [assignmentPage, totalAssignmentPages]);
 
     useEffect(() => {
@@ -334,18 +306,15 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 setAttendanceDaysInWeek([]);
                 return;
             }
-
             try {
                 const res = await callApi<{ status: 'success' | 'error'; data?: AttendanceStatusData; message?: string }>(
                     'get_attendance_status',
                     { username: studentSession.username }
                 );
-
                 if (res?.status === 'success' && res.data) {
                     const claimDates = Array.isArray(res.data.claimDates)
                         ? Array.from(new Set(res.data.claimDates.map((d) => String(d || '').trim()).filter(Boolean)))
                         : [];
-
                     setAttendanceDaysInWeek(claimDates);
                     setAttendanceClaimed(Boolean(res.data.claimedToday));
                     return;
@@ -353,11 +322,9 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             } catch (err) {
                 console.error('Failed to load attendance status:', err);
             }
-
             setAttendanceClaimed(false);
             setAttendanceDaysInWeek([]);
         };
-
         loadAttendanceStatus();
     }, [studentSession?.username, attendanceTodayKey]);
 
@@ -376,6 +343,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const handleLogout = () => {
         if (window.confirm('Em có chắc chắn muốn đăng xuất không?')) {
             classroomStore.logoutStudent();
+            useAuthStore.getState().logout();
         }
     };
 
@@ -399,7 +367,6 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const handleChangePasswordSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setChangePasswordError('');
-
         if (!currentPassword || !newPassword || !confirmNewPassword) {
             setChangePasswordError('Vui lòng nhập đầy đủ thông tin.');
             return;
@@ -416,7 +383,6 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             setChangePasswordError('Không xác định được tài khoản học sinh.');
             return;
         }
-
         setIsChangingPassword(true);
         try {
             const ok = await classroomStore.changeMyPassword(
@@ -428,7 +394,6 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 setChangePasswordError(classroomStore.error || 'Không thể đổi mật khẩu.');
                 return;
             }
-
             alert('Đổi mật khẩu thành công.');
             setIsChangePasswordModalOpen(false);
             setCurrentPassword('');
@@ -447,15 +412,12 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
     const pickRandomAttendanceQuestion = () => {
         if (attendanceQuestionPool.length === 0) return null;
-
         if (!attendanceQuestion || attendanceQuestionPool.length === 1) {
             return attendanceQuestionPool[Math.floor(Math.random() * attendanceQuestionPool.length)];
         }
-
         const currentId = attendanceQuestion.id;
         const candidates = attendanceQuestionPool.filter((q) => q.id !== currentId);
-        const pool = candidates.length > 0 ? candidates : attendanceQuestionPool;
-        return pool[Math.floor(Math.random() * pool.length)];
+        return (candidates.length > 0 ? candidates : attendanceQuestionPool)[Math.floor(Math.random() * (candidates.length > 0 ? candidates.length : attendanceQuestionPool.length))];
     };
 
     const openAttendanceModal = () => {
@@ -463,13 +425,11 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             alert('Hôm nay em đã điểm danh nhận thưởng rồi. Mai quay lại nhé!');
             return;
         }
-
         const randomQuestion = pickRandomAttendanceQuestion();
         if (!randomQuestion) {
             alert('Hiện chưa có câu hỏi trắc nghiệm phù hợp trong ngân hàng đề.');
             return;
         }
-
         setAttendanceQuestion(randomQuestion);
         setSelectedAttendanceAnswer(null);
         setAttendanceResult(null);
@@ -479,38 +439,27 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
     const handleAttendanceSubmit = async () => {
         if (!attendanceQuestion || !selectedAttendanceAnswer || attendanceClaimed || isSubmittingAttendance) return;
-
         const isCorrect = selectedAttendanceAnswer === attendanceQuestion.correctLabel;
-
         if (!isCorrect) {
             const correctIdx = attendanceQuestion.correctLabel.charCodeAt(0) - 65;
-            const correctText = attendanceQuestion.options[correctIdx]
-                ? ` (${cleanOptionText(attendanceQuestion.options[correctIdx])})`
-                : '';
+            const correctText = attendanceQuestion.options[correctIdx] ? ` (${cleanOptionText(attendanceQuestion.options[correctIdx])})` : '';
             setAttendanceResult('wrong');
             setAttendanceMessage(`Chưa chính xác. Đáp án đúng là ${attendanceQuestion.correctLabel}${correctText}.`);
             return;
         }
-
         if (!studentSession?.username) {
             setAttendanceResult('wrong');
             setAttendanceMessage('Không xác định tài khoản học sinh để cộng thưởng.');
             return;
         }
-
         setIsSubmittingAttendance(true);
         try {
-            const res = await callApi<{ status: 'success' | 'error'; data?: AttendanceClaimData; message?: string }>(
-                'claim_daily_attendance',
-                { username: studentSession.username }
-            );
-
+            const res = await callApi<{ status: 'success' | 'error'; data?: AttendanceClaimData; message?: string }>('claim_daily_attendance', { username: studentSession.username });
             if (res?.status !== 'success' || !res.data) {
                 setAttendanceResult('wrong');
                 setAttendanceMessage(res?.message || 'Không thể cộng thưởng lúc này. Em thử lại sau nhé!');
                 return;
             }
-
             if (res.data.alreadyClaimed || !res.data.claimed) {
                 setAttendanceClaimed(true);
                 setAttendanceDaysInWeek(Array.isArray(res.data.claimDates) ? res.data.claimDates : attendanceDaysInWeek);
@@ -518,16 +467,11 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 setAttendanceMessage(res.data.message || 'Hôm nay em đã điểm danh rồi. Mai quay lại nhé!');
                 return;
             }
-
-            const updatedDays = Array.isArray(res.data.claimDates) ? res.data.claimDates : attendanceDaysInWeek;
-            setAttendanceDaysInWeek(updatedDays);
+            setAttendanceDaysInWeek(Array.isArray(res.data.claimDates) ? res.data.claimDates : attendanceDaysInWeek);
             setAttendanceClaimed(true);
             setAttendanceResult('correct');
             const bonusText = res.data.multiplier > 1 ? ` (x${res.data.multiplier} ngày ${res.data.attendanceDayNumber})` : '';
-            setAttendanceMessage(
-                `Chính xác! Em nhận +${res.data.awardedCoins} Xu và +${res.data.awardedExp} EXP${bonusText}. Bạn đã điểm danh liên tục ${res.data.streakDays} ngày.`
-            );
-
+            setAttendanceMessage(`Chính xác! Em nhận +${res.data.awardedCoins} Xu và +${res.data.awardedExp} EXP${bonusText}. Bạn đã điểm danh liên tục ${res.data.streakDays} ngày.`);
             await useGamificationStore.getState().fetchPetData(studentSession.username);
         } catch (err) {
             console.error('Attendance claim failed:', err);
@@ -538,24 +482,13 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         }
     };
 
-    const attendanceTodayOrder = attendanceClaimed
-        ? attendanceDaysInWeek.length
-        : attendanceDaysInWeek.length + 1;
+    const attendanceTodayOrder = attendanceClaimed ? attendanceDaysInWeek.length : attendanceDaysInWeek.length + 1;
     const attendanceTodayMultiplier = getAttendanceMultiplier(attendanceTodayOrder);
-    const attendanceTodayReward = {
-        exp: ATTENDANCE_REWARD.exp * attendanceTodayMultiplier,
-        coins: ATTENDANCE_REWARD.coins * attendanceTodayMultiplier,
-    };
-
-    const attendanceBadgeText = attendanceClaimed
-        ? 'Đã điểm danh hôm nay'
-        : attendanceQuestionPool.length > 0
-            ? `Điểm danh ngày ${attendanceTodayOrder}: +${attendanceTodayReward.coins} Xu +${attendanceTodayReward.exp} EXP`
-            : 'Đang tải câu hỏi điểm danh...';
+    const attendanceTodayReward = { exp: ATTENDANCE_REWARD.exp * attendanceTodayMultiplier, coins: ATTENDANCE_REWARD.coins * attendanceTodayMultiplier };
+    const attendanceBadgeText = attendanceClaimed ? 'Đã điểm danh hôm nay' : attendanceQuestionPool.length > 0 ? `Điểm danh ngày ${attendanceTodayOrder}: +${attendanceTodayReward.coins} Xu +${attendanceTodayReward.exp} EXP` : 'Đang tải câu hỏi điểm danh...';
 
     return (
         <div className="min-h-dvh bg-[#F4F7FC] font-sans text-slate-800 flex flex-col items-center">
-
             {/* --- NAVBAR --- */}
             <header className="w-full bg-white shadow-sm border-b border-slate-100 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-3 md:px-8 h-16 md:h-20 flex items-center justify-between">
@@ -567,7 +500,6 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-8">
-                        {/* Gamification Stats */}
                         <div className="flex items-center gap-2 md:gap-4">
                             <div className="flex items-center gap-1.5 bg-amber-50 px-2 md:px-3 py-1.5 rounded-full border border-amber-200">
                                 <span className="text-amber-500 font-bold flex items-center gap-1 text-sm md:text-base">
@@ -584,53 +516,34 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                         </div>
 
                         {giftShopEnabled && (
-                            <button
-                                type="button"
-                                onClick={handleOpenGiftShop}
-                                className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs md:text-sm font-black hover:bg-indigo-100 transition-colors"
-                            >
+                            <button type="button" onClick={handleOpenGiftShop} className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs md:text-sm font-black hover:bg-indigo-100 transition-colors">
                                 <Gift className="w-3.5 h-3.5 md:w-4 md:h-4" />
                                 <span className="hidden md:inline">Tiệm Tạp Hóa</span>
                             </button>
                         )}
 
-                        {/* User Profile */}
                         <div className="flex items-center gap-3 border-l pl-3 md:pl-4 border-slate-200">
-                            <button
-                                onClick={handleLogout}
-                                className="sm:hidden h-9 px-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 bg-white"
-                            >
-                                Đăng xuất
-                            </button>
+                            <button onClick={handleLogout} className="sm:hidden h-9 px-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 bg-white">Đăng xuất</button>
                             <div className="flex flex-col items-end hidden sm:flex">
                                 <span className="font-bold text-sm leading-tight text-slate-700">{studentSession.fullName}</span>
                                 <span className="text-xs text-slate-500 font-medium">{studentSession.className || 'Học sinh'}</span>
                             </div>
                             <div className="relative group cursor-pointer" onClick={() => setIsAvatarModalOpen(true)}>
                                 <div className="relative overflow-hidden rounded-full border-2 border-indigo-100 group-hover:border-indigo-400 transition-all shadow-sm">
-                                    <img
-                                        src={studentSession.avatar ? getAvatarUrl(studentSession.avatar) : getAvatarUrl('default')}
-                                        className="w-9 h-9 md:w-10 md:h-10 object-cover group-hover:scale-110 transition-transform"
-                                        alt="Avatar"
-                                    />
-                                    {/* Camera Overlay on Hover */}
+                                    <img src={studentSession.avatar ? getAvatarUrl(studentSession.avatar) : getAvatarUrl('default')} className="w-9 h-9 md:w-10 md:h-10 object-cover group-hover:scale-110 transition-transform" alt="Avatar" />
                                     <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                         <Camera className="w-4 h-4 text-white" />
                                     </div>
                                 </div>
-                                {/* Dropdown menu simple */}
                                 <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right scale-95 group-hover:scale-100 pt-2 pb-2 z-50" onClick={(e) => e.stopPropagation()}>
                                     <div className="px-4 py-2 border-b border-slate-50 mb-1">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tài khoản</p>
                                         <p className="text-sm font-bold text-slate-700 block sm:hidden truncate">{studentSession.fullName}</p>
                                     </div>
                                     <button onClick={openChangePasswordModal} className="w-full text-left px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2">
-                                        <KeyRound className="w-4 h-4 text-slate-500" />
-                                        Đổi mật khẩu
+                                        <KeyRound className="w-4 h-4 text-slate-500" /> Đổi mật khẩu
                                     </button>
-                                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">
-                                        Đăng xuất
-                                    </button>
+                                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">Đăng xuất</button>
                                 </div>
                             </div>
                         </div>
@@ -638,46 +551,24 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 </div>
             </header>
 
-            {/* --- MAIN CONTENT --- */}
             <main className="w-full max-w-7xl mx-auto px-3 md:px-8 py-5 md:py-12 flex-1 flex flex-col gap-7 md:gap-10">
-
-                {/* --- WELCOME BANNER --- */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                    className="w-full bg-gradient-to-r from-indigo-600 to-blue-500 rounded-[24px] md:rounded-[32px] p-5 sm:p-6 md:p-12 relative overflow-hidden shadow-lg shadow-indigo-200"
-                >
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full bg-gradient-to-r from-indigo-600 to-blue-500 rounded-[24px] md:rounded-[32px] p-5 sm:p-6 md:p-12 relative overflow-hidden shadow-lg shadow-indigo-200">
                     <div className="absolute right-0 top-0 w-1/2 h-full opacity-10 pointer-events-none">
                         <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                            <defs>
-                                <pattern id="circles" width="40" height="40" patternUnits="userSpaceOnUse">
-                                    <circle cx="20" cy="20" r="4" fill="currentColor" />
-                                </pattern>
-                            </defs>
+                            <defs><pattern id="circles" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="4" fill="currentColor" /></pattern></defs>
                             <rect width="100%" height="100%" fill="url(#circles)" />
                         </svg>
                     </div>
-
                     <div className="relative z-10 max-w-2xl flex flex-col md:flex-row items-center gap-5 md:gap-8">
-                        <div className="w-20 h-20 md:w-32 md:h-32 bg-white/20 backdrop-blur-md rounded-full shadow-inner flex items-center justify-center flex-shrink-0">
-                            <img src={`${FLUENT_CDN}/Graduation%20cap/3D/graduation_cap_3d.png`} alt="Mũ cử nhân đại diện cho sự học tập" className="w-16 md:w-28 filter drop-shadow-md" />
-                        </div>
+                        <div className="w-20 h-20 md:w-32 md:h-32 bg-white/20 backdrop-blur-md rounded-full shadow-inner flex items-center justify-center flex-shrink-0"><img src={`${FLUENT_CDN}/Graduation%20cap/3D/graduation_cap_3d.png`} alt="Logo" className="w-16 md:w-28 filter drop-shadow-md" /></div>
                         <div className="text-center md:text-left text-white">
                             <h1 className="text-2xl md:text-4xl font-black mb-2">Chào ngày mới, {studentSession.fullName.split(' ').pop()}!</h1>
                             <p className="text-indigo-100 text-sm md:text-lg font-medium mb-4 md:mb-6">Hôm nay em muốn chinh phục thử thách nào? Hãy chọn một bài tập và bắt đầu nhé!</p>
-
                             <div className="flex items-center justify-center md:justify-start gap-2 md:gap-4">
-                                <div
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={openAttendanceModal}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') openAttendanceModal();
-                                    }}
+                                <div role="button" tabIndex={0} onClick={openAttendanceModal}
                                     className={`backdrop-blur-sm rounded-2xl px-4 md:px-5 py-2.5 text-xs md:text-sm font-black flex items-center gap-2 cursor-pointer transition-all duration-200 ${attendanceClaimed
-                                        ? 'bg-gradient-to-r from-emerald-400/70 to-teal-300/70 text-white ring-2 ring-emerald-200/70 shadow-[0_8px_24px_rgba(16,185,129,0.35)]'
-                                        : 'bg-gradient-to-r from-amber-300 via-yellow-300 to-lime-300 text-slate-900 ring-2 ring-yellow-100 shadow-[0_10px_28px_rgba(251,191,36,0.45)] hover:scale-105 hover:shadow-[0_12px_36px_rgba(251,191,36,0.55)] animate-pulse'
-                                        }`}
-                                >
+                                        ? 'bg-gradient-to-r from-emerald-400/70 to-teal-300/70 text-white ring-2 ring-emerald-200/70'
+                                        : 'bg-gradient-to-r from-amber-300 via-yellow-300 to-lime-300 text-slate-900 animate-pulse'}`}>
                                     <ShieldCheck className={`w-4 h-4 ${attendanceClaimed ? 'text-white' : 'text-indigo-700'}`} />
                                     <span>{attendanceBadgeText}</span>
                                 </div>
@@ -686,291 +577,76 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     </div>
                 </motion.div>
 
-
-                {/* --- DAILY QUESTS (Assignments) --- */}
                 <section>
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="bg-orange-100 p-2 rounded-xl text-orange-600">
-                            <Target className="w-6 h-6" />
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-800">Nhiệm vụ của em</h2>
-                        <span className="ml-auto text-sm font-semibold text-slate-500 flex items-center gap-1">
-                            <CalendarDays className="w-4 h-4" /> Hôm nay
-                        </span>
-                    </div>
-
-                    {isLoadingTasks ? (
-                        <div className="flex justify-center py-12">
-                            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-                        </div>
-                    ) : myAssignmentQuizzes.length > 0 ? (
+                    <div className="flex items-center gap-3 mb-6"><div className="bg-orange-100 p-2 rounded-xl text-orange-600"><Target className="w-6 h-6" /></div><h2 className="text-2xl font-black text-slate-800">Nhiệm vụ của em</h2></div>
+                    {isLoadingTasks ? <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 text-indigo-400 animate-spin" /></div> : myAssignmentQuizzes.length > 0 ? (
                         <div className="flex flex-col gap-4 md:gap-6">
                             <AnimatePresence mode="popLayout">
                                 {pagedAssignmentQuizzes.map((quiz, i) => {
                                     const assignment = quiz._assignmentData;
-                                    const attempts = assignment?.attemptCount || 0;
-                                    const maxAttempts = assignment?.maxAttempts || 1;
-                                    const isCompleted = attempts >= maxAttempts;
-
+                                    const isCompleted = (assignment?.attemptCount || 0) >= (assignment?.maxAttempts || 1);
                                     return (
-                                        <motion.div
-                                            initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
-                                            key={quiz._assignmentData?.id || quiz.id}
-                                            className={`bg-white rounded-[24px] p-4 md:p-6 border-2 shadow-[0_4px_20px_rgb(0,0,0,0.03)] transition-all group flex flex-col sm:flex-row sm:items-center gap-4 md:gap-6 ${isCompleted ? 'border-emerald-100 opacity-80' : 'border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:border-indigo-100'
-                                                }`}
-                                        >
-                                            {/* Icon & Status */}
-                                            <div className="flex sm:flex-col justify-between items-center sm:items-center w-full sm:w-20 gap-3 shrink-0">
-                                                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all ${isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-indigo-50 text-indigo-500 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white'
-                                                    }`}>
-                                                    <BookOpen className="w-6 h-6 md:w-7 md:h-7" />
-                                                </div>
-                                                {isCompleted ? (
-                                                    <span className="bg-emerald-100 text-emerald-600 text-[10px] font-black uppercase px-2 py-1 rounded-lg flex items-center gap-1 shrink-0">
-                                                        <ShieldCheck className="w-3 h-3" /> Đã xong
-                                                    </span>
-                                                ) : (
-                                                    <span className="bg-red-50 text-red-600 text-[10px] font-black uppercase px-2.5 py-1 rounded-full shrink-0">Bắt buộc</span>
-                                                )}
+                                        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} key={quiz._assignmentData?.id || quiz.id} className={`bg-white rounded-[24px] p-4 md:p-6 border-2 flex flex-col sm:flex-row sm:items-center gap-4 md:gap-6 ${isCompleted ? 'border-emerald-100 opacity-80' : 'border-slate-100'}`}>
+                                            <div className="flex sm:flex-col justify-between items-center w-full sm:w-20 gap-3 shrink-0">
+                                                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center ${isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-indigo-50 text-indigo-500'}`}><BookOpen className="w-6 h-6 md:w-7 md:h-7" /></div>
+                                                {isCompleted ? <span className="bg-emerald-100 text-emerald-600 text-[10px] font-black uppercase px-2 py-1 rounded-lg">Đã xong</span> : <span className="bg-red-50 text-red-600 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">Bắt buộc</span>}
                                             </div>
-
-                                            {/* Info */}
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className="text-lg md:text-xl font-bold text-slate-800 mb-2 line-clamp-2 leading-tight">{quiz.title}</h3>
-                                                <div className="flex items-center gap-3">
-                                                    <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                                                        <Clock className="w-3.5 h-3.5" /> {quiz.timeLimit}'
-                                                    </p>
-                                                    <p className={`text-xs font-black px-2 py-0.5 rounded-md ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
-                                                        Lượt làm: {attempts}/{maxAttempts}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* Action */}
-                                            <button
-                                                onClick={() => !isCompleted && handleStartQuiz(quiz)}
-                                                disabled={isCompleted}
-                                                className={`w-full sm:w-auto sm:min-w-[160px] font-extrabold py-3 md:py-3.5 px-4 rounded-xl md:rounded-2xl transition-all flex items-center justify-center gap-2 shrink-0 ${isCompleted
-                                                    ? 'bg-emerald-50 text-emerald-600 cursor-default'
-                                                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-100 active:scale-95'
-                                                    }`}
-                                            >
-                                                {isCompleted ? (
-                                                    <>Xem kết quả</>
-                                                ) : (
-                                                    <><Play className="w-4 h-4 fill-current" /> Làm bài ngay</>
-                                                )}
-                                            </button>
+                                            <div className="flex-1 min-w-0"><h3 className="text-lg md:text-xl font-bold text-slate-800 mb-2 line-clamp-2">{quiz.title}</h3><div className="flex items-center gap-3"><p className="text-xs font-bold text-slate-400 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {quiz.timeLimit}'</p><p className={`text-xs font-black px-2 py-0.5 rounded-md ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>Lượt làm: {assignment?.attemptCount || 0}/{assignment?.maxAttempts || 1}</p></div></div>
+                                            <button onClick={() => !isCompleted && handleStartQuiz(quiz)} disabled={isCompleted} className={`w-full sm:w-auto sm:min-w-[160px] font-extrabold py-3 md:py-3.5 px-4 rounded-xl md:rounded-2xl transition-all ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'}`}>{isCompleted ? 'Xem kết quả' : <><Play className="w-4 h-4 fill-current inline mr-2" /> Làm bài ngay</>}</button>
                                         </motion.div>
                                     );
                                 })}
                             </AnimatePresence>
-
-                            {totalAssignmentPages > 1 && (
-                                <div className="mt-2 flex items-center justify-center gap-2 flex-wrap">
-                                    <button
-                                        type="button"
-                                        onClick={() => setAssignmentPage(p => Math.max(1, p - 1))}
-                                        disabled={assignmentPage === 1}
-                                        className="px-3 py-1.5 rounded-lg text-sm font-bold border border-slate-200 bg-white text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Trước
-                                    </button>
-
-                                    {Array.from({ length: totalAssignmentPages }, (_, idx) => {
-                                        const page = idx + 1;
-                                        const isActive = page === assignmentPage;
-                                        return (
-                                            <button
-                                                key={page}
-                                                type="button"
-                                                onClick={() => setAssignmentPage(page)}
-                                                className={`w-9 h-9 rounded-lg text-sm font-bold border transition-colors ${isActive
-                                                    ? 'bg-indigo-600 border-indigo-600 text-white'
-                                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                                    }`}
-                                            >
-                                                {page}
-                                            </button>
-                                        );
-                                    })}
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setAssignmentPage(p => Math.min(totalAssignmentPages, p + 1))}
-                                        disabled={assignmentPage === totalAssignmentPages}
-                                        className="px-3 py-1.5 rounded-lg text-sm font-bold border border-slate-200 bg-white text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Sau
-                                    </button>
-                                </div>
-                            )}
                         </div>
-                    ) : (
-                        <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center flex flex-col items-center">
-                            <img src={`${FLUENT_CDN}/Party%20popper/3D/party_popper_3d.png`} alt="Pháo hoa chúc mừng hoàn thành nhiệm vụ" className="w-20 h-20 mb-4 opacity-80" />
-                            <h3 className="text-xl font-bold text-slate-700">Tuyệt vời!</h3>
-                            <p className="text-slate-500 font-medium">Em đã làm hết tất cả bài tập giáo viên giao.</p>
-                        </div>
-                    )}
+                    ) : <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center items-center flex flex-col"><img src={`${FLUENT_CDN}/Party%20popper/3D/party_popper_3d.png`} className="w-20 h-20 mb-4 opacity-80" alt="Done" /><h3 className="text-xl font-bold text-slate-700">Tuyệt vời!</h3><p className="text-slate-500 font-medium">Em đã làm hết tất cả bài tập giáo viên giao.</p></div>}
                 </section>
 
-
-                {/* --- PUBLIC LIBRARY --- */}
                 <section>
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="bg-teal-100 p-2 rounded-xl text-teal-600">
-                            <Rocket className="w-6 h-6" />
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-800">Thư viện luyện tập</h2>
-                    </div>
-
+                    <div className="flex items-center gap-3 mb-6"><div className="bg-teal-100 p-2 rounded-xl text-teal-600"><Rocket className="w-6 h-6" /></div><h2 className="text-2xl font-black text-slate-800">Thư viện luyện tập</h2></div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {publicCategories.map((cat, i) => (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
-                                key={cat.id}
-                                onClick={() => setSelectedSubject(cat.id)}
-                                className={`bg-gradient-to-br ${cat.color} p-6 rounded-3xl text-white cursor-pointer transform hover:-translate-y-1 hover:shadow-xl transition-all relative overflow-hidden group`}
-                            >
-                                {/* Decorative rings */}
-                                <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full group-hover:scale-110 transition-transform"></div>
-                                <div className="absolute -right-12 -bottom-12 w-40 h-40 bg-white/10 rounded-full group-hover:scale-110 transition-transform"></div>
-
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} key={cat.id} onClick={() => setSelectedSubject(cat.id)} className={`bg-gradient-to-br ${cat.color} p-6 rounded-3xl text-white cursor-pointer transform hover:-translate-y-1 hover:shadow-xl transition-all relative overflow-hidden group`}>
+                                <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full group-hover:scale-110"></div>
+                                <div className="absolute -right-12 -bottom-12 w-40 h-40 bg-white/10 rounded-full group-hover:scale-110"></div>
                                 <div className="relative z-10 flex flex-col h-full">
-                                    <span className="material-symbols-outlined text-4xl mb-4 opacity-90 group-hover:opacity-100 transition-opacity">{cat.icon}</span>
-                                    <h3 className="text-2xl font-black mb-1 drop-shadow-sm">{cat.title}</h3>
-                                    <p className="text-white/80 font-medium text-sm mb-6 max-w-xs">{cat.desc}</p>
-
-                                    <div className="mt-auto inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full w-fit">
-                                        <span className="font-bold">{cat.total}</span>
-                                        <span className="text-sm opacity-90">bài tập</span>
-                                    </div>
+                                    <div className="flex items-center justify-between mb-4"><span className="material-symbols-rounded text-4xl">{cat.icon}</span><span className="bg-white/20 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">{cat.total} Bài tập</span></div>
+                                    <h3 className="text-xl font-bold mb-1">{cat.title}</h3>
+                                    <p className="text-white/80 text-xs font-medium">{cat.desc}</p>
                                 </div>
                             </motion.div>
                         ))}
                     </div>
                 </section>
-
-                {/* Footer space */}
-                <div className="pb-12 text-center hidden md:block">
-                    <p className="text-slate-400 font-medium text-sm">ÍtOngQuiz © 2026 - Môi trường học tập tích cực</p>
-                </div>
+                <div className="pb-12 text-center hidden md:block"><p className="text-slate-400 font-medium text-sm">ÍtOngQuiz © 2026 - Môi trường học tập tích cực</p></div>
             </main>
 
             {/* --- MODALS --- */}
             <AnimatePresence>
                 {isAttendanceModalOpen && attendanceQuestion && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-0 md:p-4 flex items-end md:items-center justify-center"
-                        onClick={() => !isSubmittingAttendance && setIsAttendanceModalOpen(false)}
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            transition={{ duration: 0.2 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full h-dvh md:h-auto md:max-w-2xl bg-white rounded-none md:rounded-3xl p-4 md:p-8 shadow-2xl overflow-y-auto"
-                        >
-                            <div className="flex items-start justify-between gap-4 mb-5">
-                                <div>
-                                    <p className="text-xs font-black text-indigo-500 uppercase tracking-wider mb-1">Điểm danh nhận thưởng</p>
-                                    <h3 className="text-xl md:text-2xl font-black text-slate-800">Câu hỏi ngẫu nhiên</h3>
-                                    <p className="text-sm text-slate-500 mt-1">Nguồn: {attendanceQuestion.quizTitle}</p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsAttendanceModalOpen(false)}
-                                    className="text-slate-400 hover:text-slate-600 text-sm font-bold"
-                                >
-                                    Đóng
-                                </button>
-                            </div>
-
-                            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 md:p-5 mb-4">
-                                <MathSpan
-                                    content={attendanceQuestion.question || ''}
-                                    className="text-slate-800 font-semibold leading-relaxed"
-                                />
-                            </div>
-
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-0 md:p-4 flex items-end md:items-center justify-center" onClick={() => !isSubmittingAttendance && setIsAttendanceModalOpen(false)}>
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} onClick={(e) => e.stopPropagation()} className="w-full h-dvh md:h-auto md:max-w-2xl bg-white rounded-none md:rounded-3xl p-4 md:p-8 shadow-2xl overflow-y-auto">
+                            <div className="flex items-start justify-between gap-4 mb-5"><div><p className="text-xs font-black text-indigo-500 uppercase tracking-wider mb-1">Điểm danh nhận thưởng</p><h3 className="text-xl md:text-2xl font-black text-slate-800">Câu hỏi ngẫu nhiên</h3><p className="text-sm text-slate-500 mt-1">Nguồn: {attendanceQuestion.quizTitle}</p></div><button type="button" onClick={() => setIsAttendanceModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-sm font-bold">Đóng</button></div>
+                            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 md:p-5 mb-4"><MathSpan content={attendanceQuestion.question || ''} className="text-slate-800 font-semibold leading-relaxed" /></div>
                             <div className="space-y-3 mb-5">
                                 {attendanceQuestion.options.map((option, index) => {
                                     const label = String.fromCharCode(65 + index);
                                     const isSelected = selectedAttendanceAnswer === label;
                                     const isCorrectOption = attendanceResult !== null && label === attendanceQuestion.correctLabel;
                                     const isWrongSelected = attendanceResult === 'wrong' && isSelected && !isCorrectOption;
-
                                     return (
-                                        <button
-                                            key={`${attendanceQuestion.id}-${label}`}
-                                            type="button"
-                                            disabled={attendanceResult !== null || isSubmittingAttendance}
-                                            onClick={() => setSelectedAttendanceAnswer(label)}
-                                            className={`w-full text-left p-3 rounded-xl border-2 transition-colors flex items-center gap-3 ${isCorrectOption
-                                                ? 'border-emerald-400 bg-emerald-50 text-emerald-700'
-                                                : isWrongSelected
-                                                    ? 'border-red-400 bg-red-50 text-red-700'
-                                                    : isSelected
-                                                        ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
-                                                        : 'border-slate-200 hover:border-indigo-300 bg-white'
-                                                }`}
-                                        >
-                                            <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 text-xs font-black flex items-center justify-center shrink-0">
-                                                {label}
-                                            </span>
-                                            <MathSpan
-                                                content={cleanOptionText(option)}
-                                                className="font-medium text-slate-700"
-                                            />
+                                        <button key={`${attendanceQuestion.id}-${label}`} type="button" disabled={attendanceResult !== null || isSubmittingAttendance} onClick={() => setSelectedAttendanceAnswer(label)}
+                                            className={`w-full text-left p-3 rounded-xl border-2 transition-colors flex items-center gap-3 ${isCorrectOption ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : isWrongSelected ? 'border-red-400 bg-red-50 text-red-700' : isSelected ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:border-indigo-300 bg-white'}`}>
+                                            <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 text-xs font-black flex items-center justify-center shrink-0">{label}</span>
+                                            <MathSpan content={cleanOptionText(option)} className="font-medium text-slate-700" />
                                         </button>
                                     );
                                 })}
                             </div>
-
-                            {attendanceMessage && (
-                                <div className={`rounded-xl px-4 py-3 text-sm font-semibold mb-5 ${attendanceResult === 'correct'
-                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                    : 'bg-red-50 text-red-700 border border-red-200'
-                                    }`}>
-                                    {attendanceMessage}
-                                </div>
-                            )}
-
+                            {attendanceMessage && <div className={`rounded-xl px-4 py-3 text-sm font-semibold mb-5 ${attendanceResult === 'correct' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>{attendanceMessage}</div>}
                             <div className="flex items-center justify-end gap-3">
-                                {attendanceResult === 'wrong' && !attendanceClaimed && (
-                                    <button
-                                        type="button"
-                                        onClick={openAttendanceModal}
-                                        className="px-4 py-2 rounded-xl border border-indigo-200 text-indigo-600 font-bold hover:bg-indigo-50"
-                                    >
-                                        Câu khác
-                                    </button>
-                                )}
-
-                                <button
-                                    type="button"
-                                    onClick={() => setIsAttendanceModalOpen(false)}
-                                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
-                                >
-                                    Đóng
-                                </button>
-
-                                {attendanceResult === null && (
-                                    <button
-                                        type="button"
-                                        onClick={handleAttendanceSubmit}
-                                        disabled={!selectedAttendanceAnswer || isSubmittingAttendance}
-                                        className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                                    >
-                                        {isSubmittingAttendance ? 'Đang kiểm tra...' : 'Xác nhận đáp án'}
-                                    </button>
-                                )}
+                                {attendanceResult === 'wrong' && !attendanceClaimed && <button type="button" onClick={openAttendanceModal} className="px-4 py-2 rounded-xl border border-indigo-200 text-indigo-600 font-bold hover:bg-indigo-50">Câu khác</button>}
+                                <button type="button" onClick={() => setIsAttendanceModalOpen(false)} className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50">Đóng</button>
+                                {attendanceResult === null && <button type="button" onClick={handleAttendanceSubmit} disabled={!selectedAttendanceAnswer || isSubmittingAttendance} className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed">{isSubmittingAttendance ? 'Đang kiểm tra...' : 'Xác nhận đáp án'}</button>}
                             </div>
                         </motion.div>
                     </motion.div>
@@ -979,112 +655,21 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
             <AnimatePresence>
                 {isChangePasswordModalOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-0 md:p-4 flex items-end md:items-center justify-center"
-                        onClick={closeChangePasswordModal}
-                    >
-                        <motion.form
-                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            transition={{ duration: 0.2 }}
-                            onClick={(e) => e.stopPropagation()}
-                            onSubmit={handleChangePasswordSubmit}
-                            className="w-full h-dvh md:h-auto md:max-w-md bg-white rounded-none md:rounded-3xl p-4 md:p-6 shadow-2xl overflow-y-auto"
-                        >
-                            <div className="flex items-start justify-between gap-4 mb-5">
-                                <div>
-                                    <p className="text-xs font-black text-indigo-500 uppercase tracking-wider mb-1">Tài khoản</p>
-                                    <h3 className="text-xl font-black text-slate-800">Đổi mật khẩu</h3>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={closeChangePasswordModal}
-                                    className="text-slate-400 hover:text-slate-600 text-sm font-bold"
-                                >
-                                    Đóng
-                                </button>
-                            </div>
-
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-0 md:p-4 flex items-end md:items-center justify-center" onClick={closeChangePasswordModal}>
+                        <motion.form initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} onClick={(e) => e.stopPropagation()} onSubmit={handleChangePasswordSubmit} className="w-full h-dvh md:h-auto md:max-w-md bg-white rounded-none md:rounded-3xl p-4 md:p-6 shadow-2xl overflow-y-auto">
+                            <div className="flex items-start justify-between gap-4 mb-5"><div><p className="text-xs font-black text-indigo-500 uppercase tracking-wider mb-1">Tài khoản</p><h3 className="text-xl font-black text-slate-800">Đổi mật khẩu</h3></div><button type="button" onClick={closeChangePasswordModal} className="text-slate-400 hover:text-slate-600 text-sm font-bold">Đóng</button></div>
                             <div className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                        Mật khẩu cũ
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={currentPassword}
-                                        onChange={(e) => setCurrentPassword(e.target.value)}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                                        placeholder="Nhập mật khẩu hiện tại"
-                                        autoFocus
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                        Mật khẩu mới
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                                        placeholder="Tối thiểu 6 ký tự"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                        Nhập lại mật khẩu mới
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={confirmNewPassword}
-                                        onChange={(e) => setConfirmNewPassword(e.target.value)}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                                        placeholder="Nhập lại mật khẩu mới"
-                                    />
-                                </div>
+                                <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mật khẩu cũ</label><input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nhập mật khẩu hiện tại" autoFocus /></div>
+                                <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mật khẩu mới</label><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Tối thiểu 6 ký tự" /></div>
+                                <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nhập lại mật khẩu mới</label><input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nhập lại mật khẩu mới" /></div>
                             </div>
-
-                            {changePasswordError && (
-                                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold px-4 py-3">
-                                    {changePasswordError}
-                                </div>
-                            )}
-
-                            <div className="mt-6 flex items-center justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={closeChangePasswordModal}
-                                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
-                                >
-                                    Hủy
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isChangingPassword}
-                                    className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                                >
-                                    {isChangingPassword ? 'Đang lưu...' : 'Lưu mật khẩu'}
-                                </button>
-                            </div>
+                            {changePasswordError && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold px-4 py-3">{changePasswordError}</div>}
+                            <div className="mt-6 flex items-center justify-end gap-3"><button type="button" onClick={closeChangePasswordModal} className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50">Hủy</button><button type="submit" disabled={isChangingPassword} className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-60">{isChangingPassword ? 'Đang lưu...' : 'Lưu mật khẩu'}</button></div>
                         </motion.form>
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            <AvatarSelectorModal
-                isOpen={isAvatarModalOpen}
-                onClose={() => setIsAvatarModalOpen(false)}
-                currentAvatar={studentSession.avatar}
-            />
-
-            {/* Bảng Vàng Ít Ong Sidebar - Floating */}
+            <AvatarSelectorModal isOpen={isAvatarModalOpen} onClose={() => setIsAvatarModalOpen(false)} currentAvatar={studentSession.avatar} />
             <StudentFloatingSidebar />
         </div>
     );

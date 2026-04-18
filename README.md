@@ -17,4 +17,9 @@ View your app in AI Studio: https://ai.studio/apps/temp/4
    `npm install`
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
-   `npm run dev`
+   ## ⚡ Slash Commands (Antigravity Power Bundle)
+Các lệnh hỗ trợ phát triển chuyên nghiệp:
+- `/senior`: Tư duy Kỹ sư Frontend Cao cấp & Blueprints chuẩn React/TS.
+- `/clean`: Chuyên gia Clean Code & SOLID Refactoring.
+- `/flow`: Quy trình chuẩn mực, Git Commits & Quản lý Task.
+

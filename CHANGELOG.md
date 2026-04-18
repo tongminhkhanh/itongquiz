@@ -3,10 +3,14 @@
 - **Announcement Banner Modernization**: Tích hợp icon loa thông báo tùy chỉnh (`loa.png`) và tối ưu hóa bố cục banner với lề động, không còn đè lên các thành phần Header.
 - **Unified Branding Strategy**: Thiết lập và áp dụng bộ nhận diện thương hiệu nhất quán toàn dự án: **ítong** (Xanh dương #1e3a8a) và **Quiz** (Vàng nắng #FACC15).
 - **Project-wide Logo Sync**: Đồng bộ hóa logo tại Header/Footer của Landing Page, Trang Đăng nhập, Trợ lý AI (ChatBot) và hệ thống common Footer.
+- **HomePage Modular Architecture**: Tái cấu trúc file monolithic `HomePage.tsx` (700+ dòng) sang kiến trúc Controller/Router với các sub-components tách biệt (`DashboardNavbar`, `DashboardHero`, `SubjectGrid`, `DashboardDecoration`) nằm trong `src/components/HomePage/components/`.
+- **Dashboard Constants Configuration**: Tập trung hóa cấu hình môn học (`SUBJECT_CONFIG`) và các thông số giao diện vào `src/components/HomePage/constants/dashboard.constants.ts`.
 
 ### Fixed
 - **Banner Layout Collision**: Giải quyết triệt để lỗi Banner thông báo che nội dung "itongQuiz" và menu "Trang chủ" thông qua cơ chế padding an toàn.
 - **Branding Consistency**: Khắc phục tình trạng mỗi trang dùng một màu logo khác nhau, đưa về một chuẩn duy nhất.
+- **Synchronized Logout Bug**: Sửa lỗi điều hướng sai sau khi đăng xuất bằng cách đồng bộ hóa trạng thái giữa Teacher (`authStore`) và Student (`useClassroomStore`), đảm bảo xóa sạch session của cả hai vai trò cùng lúc.
+- **TypeScript Import Resolution**: Khắc phục lỗi import `SUBJECT_CONFIG` bị hỏng trong `QuizListPage.tsx` sau quá trình refactor.
 
 ## [2026-03-15]
 ### Added

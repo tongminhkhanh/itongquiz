@@ -4,7 +4,7 @@ import { Search, Clock, ChevronRight, ArrowLeft, Lock, ShieldCheck } from 'lucid
 // --- Fluent Emoji CDN Base ---
 const FLUENT_CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
 
-import { SUBJECT_CONFIG } from './HomePage';
+import { SUBJECT_CONFIG } from './constants/dashboard.constants';
 
 // --- Grade Config ---
 const GRADE_LEVELS = [

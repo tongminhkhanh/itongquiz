@@ -2,7 +2,7 @@
     "meta": {
         "schema_version": "1.1.0",
         "awf_version": "3.3.0",
-        "last_updated": "2026-04-17T05:56:00Z"
+        "last_updated": "2026-04-17T13:48:00Z"
     },
     "project": {
         "name": "ítongQuiz",
@@ -19,10 +19,22 @@
         "casing": "ítongQuiz"
     },
     "tech_stack": {
-        "frontend": "Vite, React 19, TailwindCSS 4, Zustand, MathJax 3, react-hot-toast",
+        "frontend": "Vite, React 19, TailwindCSS 4, Zustand, MathJax 3, react-hot-toast, Framer Motion",
         "backend": "Cloudflare Workers, D1 Database",
         "ai_providers": "Google Gemini, Perplexity (via Cloudflare Proxy)",
         "hosting": "Vercel (Frontend), Cloudflare (Backend)"
+    },
+    "component_architecture": {
+        "home_page": {
+            "pattern": "Controller/Router Pattern",
+            "sub_components": [
+                { "name": "DashboardNavbar", "path": "src/components/HomePage/components/DashboardNavbar.tsx", "desc": "Glass Pill navigation" },
+                { "name": "DashboardHero", "path": "src/components/HomePage/components/DashboardHero.tsx", "desc": "Title & 3D stickers" },
+                { "name": "SubjectGrid", "path": "src/components/HomePage/components/SubjectGrid.tsx", "desc": "Subject selection grid" },
+                { "name": "DashboardDecoration", "path": "src/components/HomePage/components/DashboardDecoration.tsx", "desc": "Sun/Cloud decorators" }
+            ],
+            "constants": "src/components/HomePage/constants/dashboard.constants.ts"
+        }
     },
     "database_schema": {
         "summary": "Mô hình quan hệ lưu trữ: Giáo viên, Học sinh, Đề thi, Kết quả, Phân phối đề (Assignments), và Gamification.",
@@ -46,7 +58,8 @@
         "gotchas": [
             "Branding unification is critical across multiple layout files (Login, Landing, ChatBot, Common Footer).",
             "Announcement banners need careful padding-based positioning to avoid header element overlap.",
-            "Splitting LaTeX strings for inline components breaks MathJax parsing."
+            "Splitting LaTeX strings for inline components breaks MathJax parsing.",
+            "Dual Session Persistence: Teacher and Student sessions must be cleared simultaneously on logout to ensure correct landing page redirection."
         ]
     }
 }

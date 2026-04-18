@@ -1,35 +1,36 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 HANDOVER DOCUMENT - SESSION 2026-03-13
+📋 HANDOVER DOCUMENT - ItOng Quiz Architectural Refactor
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📍 Đang làm: SEO Boost & Final Launch
-🔢 Đến bước: Hoàn thành 100% Phase SEO và Deploy
+📍 Đang làm: HomePage Architecture Refactoring & Logout Sync
+🔢 Đến bước: Dự án đã hoàn thành Phase 2 (Refactoring) & Fix lỗi Logout.
 
 ✅ ĐÃ XONG:
-   - SEO Boost (Semantic HTML, Dynamic Meta, Alt Tags) ✓
-   - Sửa lỗi JSX & Type Checking phát sinh ✓
-   - Performance Optimization (Tailwind Local, Lazy Loading) ✓
-   - Deploy Production lên Vercel thành công ✓
-   - Full Audit & Vulnerability Fix ✓
+   - Phase 01: Fix lỗi Logout Bug (Đồng bộ session Teacher & Student) ✓
+   - Phase 02: Tái cấu trúc HomePage monolithic (700+ dòng) ✓
+   - Phase 03: Module hóa UI Sticker Land thành 4 thành phần con ✓
+   - Phase 04: Chuyển hằng số cấu hình sang file riêng ✓
+   - Phase 05: Kiểm tra build & xử lý lỗi Import ✓ (0 errors)
 
 ⏳ CÒN LẠI:
-   - Task: Refactor "any" types còn sót lại trong Workers (Tiếp tục khi rảnh).
-   - Monitoring: Theo dõi hiệu quả của SEO trên Google Search Console sau 1 tuần.
+   - [ ] Kiểm tra tính nhất quán giao diện trên thiết bị di động (Mobile Responsive check cho SubjectGrid).
+   - [ ] Đồng bộ hóa bảng màu (Gradients) của StudentDashboardUI với Dashboard chung.
 
 🔧 QUYẾT ĐỊNH QUAN TRỌNG:
-   - Dùng thẻ <a> cho môn học để Google Bot có thể "lần theo" link.
-   - Thêm (view as any) trong App.tsx vì union type QuizView chưa update đầy đủ trang phụ.
-   - Giữ Vercel Analytics làm công cụ đo lường hiệu năng thực tế.
+   - Chuyển `HomePage.tsx` sang mô hình **Controller/Router Pattern** - chỉ giữ logic điều phối.
+   - Sử dụng **Global Logout Logic** để đảm bảo reset trạng thái ứng dụng hoàn toàn.
+   - Tên thương hiệu chuẩn: `ítong` (xanh) + `Quiz` (vàng).
 
 ⚠️ LƯU Ý CHO SESSION SAU:
-   - Mọi thứ đang ở trạng thái xanh (Pass 35/35 tests).
-   - Website đã live tại: https://www.thitong.site
+   - Toàn bộ hằng số Sticker Land nằm tại `src/components/HomePage/constants/dashboard.constants.ts`.
+   - `StudentDashboardUI.tsx` đã được dọn dẹp (L:679 dòng) nhưng vẫn còn logic độc lập về `SUBJECT_CONFIG`.
+   - Vercel build hiện đã ổn định.
 
 📁 FILES QUAN TRỌNG:
-   - src/components/HomePage/HomePage.tsx (SEO Structure)
-   - App.tsx (Dynamic Meta Logic)
-   - .brain/brain.json (Project Memory)
-   - .brain/session.json (Process Log)
+   - `src/components/HomePage/HomePage.tsx`
+   - `src/components/HomePage/components/` (New components)
+   - `.brain/brain.json` (Knowledge Base)
+   - `.brain/session.json` (Current Progress)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📍 Đã lưu! Để tiếp tục: Gõ /recap

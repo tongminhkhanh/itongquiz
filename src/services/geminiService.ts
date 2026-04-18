@@ -27,6 +27,31 @@ export interface QuizGenerationOptions {
   isPdfMode?: boolean; // Chế độ tạo đề từ PDF - không cần chủ đề
 }
 
+/**
+ * [AI AGENTIC SKILL: @scientific-research]
+ * Quy tắc Grounding và nghiên cứu khoa học để đảm bảo chất lượng câu hỏi.
+ */
+const SCIENTIFIC_GROUNDING_PROMPT = `
+    [SCIENTIFIC RESEARCH PHASE]:
+    Trước khi tạo mảng câu hỏi, hãy thực hiện các bước tư duy sau:
+    1. Xác định kiến thức cốt lõi (Core Facts) và các sự thật khoa học của chủ đề.
+    2. Phân tích các lỗi sai phổ biến (Misconceptions) mà học sinh lứa tuổi này thường mắc phải. Dùng chúng để tạo các phương án nhiễu (distractors) có tính thách thức cao.
+    3. Tìm kiếm các tình huống đời thường (Real-world Application) gần gũi để lồng ghép vào câu hỏi, giúp bài thi không bị khô khan.
+`;
+
+/**
+ * [AI AGENTIC SKILL: @explanation-generator]
+ * Quy tắc viết lời giải mang tính sư phạm, giúp học sinh hiểu bản chất.
+ */
+const PEDAGOGICAL_EXPLANATION_PROMPT = `
+    [EXPLANATION GENERATOR RULE]:
+    Trường "explanation" PHẢI là một bài giảng mini (2-4 câu) theo cấu trúc:
+    - ✅ Khẳng định: Xác nhận đáp án đúng và lý do chọn.
+    - 🧩 Dẫn dắt (Scaffolding): Giải thích bước đi tư duy hoặc quy tắc áp dụng (VD: "Theo quy tắc bàn tay trái...", "Vì đây là danh từ chỉ vật...").
+    - 💡 Liên hệ/Mẹo: Đưa ra một ví dụ thực tế hoặc một "mẹo nhớ" (Mnemonic/Fun Fact) giúp học sinh ghi nhớ lâu hơn.
+    - Tuyệt đối không viết kiểu "Đáp án A là đúng" một cách đơn điệu.
+`;
+
 // Build the prompt for quiz generation
 const buildPrompt = (topic: string, classLevel: string, content: string, options?: QuizGenerationOptions): string => {
   const title = options?.title || `Kiểm tra: ${topic}`;
@@ -37,7 +62,7 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
 
   // Map question types to Vietnamese descriptions for better AI understanding
   const typeDescriptions: Record<string, string> = {
-    'MCQ': 'MCQ (Trắc nghiệm chọn 1 đáp án đúng. Format: {"type": "MCQ", "question": "Nội dung câu hỏi (TUYỆT ĐỐI KHÔNG xuống dòng, dùng inline math $...$ thay vì $$...$$)", "options": ["A...", "B...", "C...", "D..."], "correctAnswer": "A", "explanation": "Giải thích..."})',
+    'MCQ': 'MCQ (Trắc nghiệm chọn 1 đáp án đúng. Format: {"type": "MCQ", "question": "Nội dung câu hỏi (TUYỆT ĐỐI KHÔNG xuống dòng, dùng inline math $...$ thay vì $$...$$)", "options": ["A...", "B...", "C...", "D..."], "correctAnswer": "A", "explanation": "✅ [Kết luận đúng]. 🧩 [Giải thích các bước/quy tắc]. 💡 [Mẹo nhớ/Liên hệ thực tế]." })',
     'TRUE_FALSE': 'TRUE_FALSE (Câu hỏi đúng sai. Format: {"type": "TRUE_FALSE", "mainQuestion": "Câu hỏi chính (1 dòng)", "items": [{"statement": "Ý 1", "isCorrect": true}, {"statement": "Ý 2", "isCorrect": false}]})',
     'SHORT_ANSWER': 'SHORT_ANSWER (Điền đáp án ngắn. Format: {"type": "SHORT_ANSWER", "question": "Câu hỏi (1 dòng)", "correctAnswer": "Đáp án đúng"})',
     'MATCHING': 'MATCHING (Nối cột. Format: {"type": "MATCHING", "question": "Câu hỏi (1 dòng)", "pairs": [{"left": "A", "right": "1"}, {"left": "B", "right": "2"}]})',
@@ -69,7 +94,7 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
     })`,
     'DROPDOWN': 'DROPDOWN (Câu hỏi điền vào chỗ trống bằng DROPDOWN. Format: {"type": "DROPDOWN", "question": "Chọn từ đúng điền vào chỗ trống", "text": "Thủ đô Việt Nam là [1]. Dân số khoảng [2] triệu người.", "blanks": [{"id": "blank-1", "options": ["Hà Nội", "TP.HCM", "Đà Nẵng"], "correctAnswer": "Hà Nội"}, {"id": "blank-2", "options": ["90", "100", "80"], "correctAnswer": "100"}]}. Trong text dùng [1], [2]... để đánh dấu vị trí dropdown. Mảng blanks chứa các dropdown tương ứng với options và correctAnswer)',
     'UNDERLINE': 'UNDERLINE (Câu hỏi gạch chân từ/cụm từ trong câu. Học sinh click vào từ để gạch chân. Format: {"type": "UNDERLINE", "question": "Gạch chân động từ trong câu sau", "sentence": "Mặt trời ngả nắng đằng tây", "words": ["Mặt trời", "ngả", "nắng", "đằng tây"], "correctWordIndexes": [1]}. Lưu ý: words là mảng các từ/cụm từ tách ra từ sentence. correctWordIndexes là mảng index các từ cần gạch chân (0-indexed). VD: Với câu trên, "ngả" ở index 1 là động từ cần gạch chân.)',
-    'CATEGORIZATION': `CATEGORIZATION (Kéo thả phân loại vào nhóm. Format: {"type": "CATEGORIZATION", "question": "Sắp xếp các đồ vật sau vào nhóm phù hợp.", "categories": [{"id": "hoc_tap", "name": "Đồ dùng học tập"}, {"id": "ca_nhan", "name": "Đồ dùng cá nhân"}], "items": [{"id": "item1", "content": "Bút chì", "categoryId": "hoc_tap"}, {"id": "item2", "content": "Thước kẻ", "categoryId": "hoc_tap"}, {"id": "item3", "content": "Bàn chải đánh răng", "categoryId": "ca_nhan"}, {"id": "item4", "content": "Khăn mặt", "categoryId": "ca_nhan"}], "explanation": "..."}.
+    'CATEGORIZATION': `CATEGORIZATION (Kéo thả phân loại vào nhóm. Format: {"type": "CATEGORIZATION", "question": "Sắp xếp các đồ vật sau vào nhóm phù hợp.", "categories": [{"id": "hoc_tap", "name": "Đồ dùng học tập"}, {"id": "ca_nhan", "name": "Đồ dùng cá nhân"}], "items": [{"id": "item1", "content": "Bút chì", "categoryId": "hoc_tap"}, {"id": "item2", "content": "Thước kẻ", "categoryId": "hoc_tap"}, {"id": "item3", "content": "Bàn chải đánh răng", "categoryId": "ca_nhan"}, {"id": "item4", "content": "Khăn mặt", "categoryId": "ca_nhan"}], "explanation": "✅ [Kết luận]. 🧩 [Dẫn dắt]. 💡 [Mẹo nhớ]." }.
       ⚠️ QUAN TRỌNG - ITEMS PHẢI CÓ CONTENT:
       - categories: Mảng 2-4 nhóm, mỗi nhóm có "id" và "name"
       - items: Mảng 4-8 mục, MỖI MỤC BẮT BUỘC CÓ:
@@ -78,7 +103,7 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
         + "categoryId": ID của nhóm mà item thuộc về
       - ❌ SAI: {"id": "item1", "content": "", "categoryId": "cat1"} - content RỖNG
       - ✅ ĐÚNG: {"id": "item1", "content": "Bút chì", "categoryId": "hoc_tap"} - content CÓ NỘI DUNG)`,
-    'WORD_SCRAMBLE': `WORD_SCRAMBLE (Sắp xếp chữ cái thành từ. Format: {"type": "WORD_SCRAMBLE", "question": "Sắp xếp các chữ sau thành một tính từ", "letters": ["k", "i", "ê", "n", "t", "r", "i"], "correctWord": "kiên trì", "explanation": "..."}.
+    'WORD_SCRAMBLE': `WORD_SCRAMBLE (Sắp xếp chữ cái thành từ. Format: {"type": "WORD_SCRAMBLE", "question": "Sắp xếp các chữ sau thành một tính từ", "letters": ["k", "i", "ê", "n", "t", "r", "i"], "correctWord": "kiên trì", "explanation": "✅ [Kết luận]. 🧩 [Dẫn dắt]. 💡 [Mẹo nhớ]." }.
       ⚠️ QUAN TRỌNG:
       - letters: Mảng các chữ cái ĐÃ XÁO TRỘN (không theo thứ tự đúng)
       - correctWord: Từ đúng khi sắp xếp lại các chữ cái
@@ -205,6 +230,9 @@ const buildPrompt = (topic: string, classLevel: string, content: string, options
 
     Tao de kiem tra cho hoc sinh Lop ${classLevel}.
     ${customPromptSection}
+    
+    ${SCIENTIFIC_GROUNDING_PROMPT}
+    ${PEDAGOGICAL_EXPLANATION_PROMPT}
     
     THONG TIN CAU HINH:
     - Tieu de bai kiem tra: "${title}"

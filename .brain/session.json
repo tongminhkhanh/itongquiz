@@ -1,26 +1,31 @@
 {
-    "updated_at": "2026-04-17T05:56:00Z",
+    "updated_at": "2026-04-17T13:48:00Z",
     "working_on": {
-        "feature": "Branding & UI Refinement",
-        "task": "Nhuộm vàng thương hiệu và tối ưu hóa Banner thông báo",
+        "feature": "HomePage Architecture & Logout Sync",
         "status": "completed",
         "files": [
-            "src/components/HomePage/LoginLandingPage.tsx",
-            "src/components/common/AnnouncementBanner.tsx",
-            "src/components/LandingPage/LandingPage.tsx",
-            "src/components/ChatBot/ChatBot.tsx",
-            "src/components/common/Footer.tsx"
+            "src/components/HomePage/HomePage.tsx",
+            "src/components/HomePage/components/DashboardNavbar.tsx",
+            "src/components/HomePage/components/DashboardHero.tsx",
+            "src/components/HomePage/components/SubjectGrid.tsx",
+            "src/components/HomePage/components/DashboardDecoration.tsx",
+            "src/components/HomePage/constants/dashboard.constants.ts",
+            "src/components/TeacherDashboard/index.tsx",
+            "src/components/HomePage/StudentDashboardUI.tsx",
+            "src/components/HomePage/QuizListPage.tsx"
         ],
-        "notes": "Đã thống nhất logo xanh-vàng trên toàn dự án và fix lỗi layout banner."
+        "notes": "Đã sửa lỗi Logout đồng bộ và module hóa HomePage monolithic."
     },
     "pending_tasks": [
-        { "task": "Full integration of react-hot-toast across all pages", "priority": "medium" }
+        { "task": "Full integration of react-hot-toast across all pages", "priority": "medium" },
+        { "task": "Unify Dashboard colors with student/teacher variants", "priority": "low" }
     ],
     "recent_changes": [
-        { "timestamp": "2026-04-17", "type": "branding", "description": "Unified ítong (blue) + Quiz (yellow) branding." },
-        { "timestamp": "2026-04-17", "type": "ui", "description": "Banner padding fix (L:220px, R:540px) and custom icon." }
+        { "timestamp": "2026-04-17", "type": "refactor", "description": "Modularized HomePage.tsx into 4 sub-components (Navbar, Hero, Grid, Decoration)." },
+        { "timestamp": "2026-04-17", "type": "bugfix", "description": "Resolved Global Logout bug (Teacher & Student session synchronization)." }
     ],
     "decisions_made": [
-        { "decision": "Dùng màu #FACC15 cho Quiz và #1e3a8a cho ítong", "reason": "Tăng nhận diện thương hiệu và sự chuyên nghiệp" }
+        { "decision": "Tách UI Sticker Land ra khỏi HomePage logic", "reason": "Giảm tải file monolithic và dễ bảo trì hơn" },
+        { "decision": "Gọi logout cả hai store (auth & classroom) khi nhấn đăng xuất", "reason": "Đảm bảo reset state hoàn toàn để chuyển hướng đúng" }
     ]
 }

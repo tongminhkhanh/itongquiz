@@ -1,9 +1,10 @@
-﻿import React, { useState, Suspense, useEffect } from 'react';
+import React, { useState, Suspense, useEffect } from 'react';
 import { Quiz } from '../../types';
 import { Button, ErrorBoundary, Footer } from '../common';
 import { Key, X, Save, Loader2, Bell, Search } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
+import { useClassroomStore } from '../../stores/useClassroomStore';
 import { setStripAnswersEnabled } from '../../services/googleSheetService';
 import { cacheService } from '../../services/CacheService';
 import Sidebar from './Sidebar';
@@ -125,6 +126,7 @@ const TeacherDashboard: React.FC = () => {
 
     const handleLogout = () => {
         authStore.logout();
+        useClassroomStore.getState().logoutStudent();
         quizStore.setView('home');
     };
 
