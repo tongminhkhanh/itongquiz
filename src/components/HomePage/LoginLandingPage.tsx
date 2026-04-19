@@ -57,33 +57,7 @@ const LoginLandingPage: React.FC = () => {
 
     const isLoading = activeTab === 'teacher' ? authStore.isLoggingIn : classroomStore.isLoading;
 
-    const askToSaveAccount = (rawUsername: string, role: 'student' | 'teacher') => {
-        const normalizedUsername = rawUsername.trim();
-        if (!normalizedUsername) return;
-        try {
-            const existingRaw = localStorage.getItem(SAVED_LOGIN_KEY);
-            const existing = existingRaw ? JSON.parse(existingRaw) as Partial<SavedLoginAccount> : null;
-            if (existing?.username === normalizedUsername && existing?.role === role) return;
-
-            const message = existing?.username
-                ? `Bạn có muốn cập nhật tài khoản thành "${normalizedUsername}" không?`
-                : `Bạn có muốn lưu tài khoản "${normalizedUsername}" cho lần sau không?`;
-
-            showConfirm({
-                message,
-                onConfirm: () => {
-                    const payload: SavedLoginAccount = { 
-                        username: normalizedUsername, 
-                        role, 
-                        savedAt: new Date().toISOString() 
-                    };
-                    localStorage.setItem(SAVED_LOGIN_KEY, JSON.stringify(payload));
-                },
-            });
-        } catch (error) {
-            console.warn('Could not persist login account:', error);
-        }
-    };
+    // askToSaveAccount has been removed as per user request to avoid annoying popups
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -113,7 +87,6 @@ const LoginLandingPage: React.FC = () => {
                 const tClass = teacher.class ? String(teacher.class).trim() : undefined;
                 
                 authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass);
-                askToSaveAccount(tUsername || username, 'teacher');
                 quizStore.setView('teacher_dash');
                 return;
             }
@@ -129,7 +102,6 @@ const LoginLandingPage: React.FC = () => {
     const handleStudentLogin = async () => {
         const success = await classroomStore.loginStudent({ username, password });
         if (success) {
-            askToSaveAccount(username, 'student');
             quizStore.setView('home');
         } else {
             showError('Tên đăng nhập hoặc mật khẩu học sinh không đúng!');
