@@ -209,7 +209,7 @@ export const fetchIoeQuizzes = async (
             // Return stale cache if network fails
             const staleCache = getStaleCachedQuizzes();
             if (staleCache) {
-                console.log('[IOE Cache] Returning stale cache due to network error');
+                // Stale cache log removed
                 return staleCache;
             }
             return [];
@@ -227,7 +227,7 @@ export const fetchIoeQuizzes = async (
         // Return stale cache if available
         const staleCache = getStaleCachedQuizzes();
         if (staleCache) {
-            console.log('[IOE Cache] Returning stale cache due to error');
+            // Stale cache log removed
             return staleCache;
         }
         return [];
@@ -357,7 +357,7 @@ export const saveIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
 };
 
 export const updateIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
-    console.log('[IOE] Updating quiz:', quiz.id);
+    // Update log removed
 
     try {
         const result = await callIoeGasApi('update_quiz', {

@@ -2,7 +2,7 @@
     "meta": {
         "schema_version": "1.1.0",
         "awf_version": "3.3.0",
-        "last_updated": "2026-04-17T13:48:00Z"
+        "last_updated": "2026-04-18T14:35:00+07:00"
     },
     "project": {
         "name": "ítongQuiz",
@@ -19,7 +19,7 @@
         "casing": "ítongQuiz"
     },
     "tech_stack": {
-        "frontend": "Vite, React 19, TailwindCSS 4, Zustand, MathJax 3, react-hot-toast, Framer Motion",
+        "frontend": "Vite, React 19, React.memo Optimization, TailwindCSS 4, Zustand, MathJax 3, react-hot-toast, Framer Motion",
         "backend": "Cloudflare Workers, D1 Database",
         "ai_providers": "Google Gemini, Perplexity (via Cloudflare Proxy)",
         "hosting": "Vercel (Frontend), Cloudflare (Backend)"
@@ -34,6 +34,34 @@
                 { "name": "DashboardDecoration", "path": "src/components/HomePage/components/DashboardDecoration.tsx", "desc": "Sun/Cloud decorators" }
             ],
             "constants": "src/components/HomePage/constants/dashboard.constants.ts"
+        },
+        "quiz_player": {
+            "pattern": "Feature-based (Modular Hook & Sub-components)",
+            "directory": "src/features/quiz-player/",
+            "logic": {
+                "hook": "useQuizPlayer.ts",
+                "scoring": "utils/quizScoring.ts"
+            },
+            "sub_components": [
+                { "name": "QuizHeader", "desc": "Timer, ProgressBar, Title" },
+                { "name": "QuizNavigation", "desc": "Question Map Grid / Question Bank" },
+                { "name": "QuizPagination", "desc": "Page controls & Submission trigger" }
+            ],
+            "optimization": "React.memo for QuestionRenderer"
+        },
+        "quiz_editor": {
+            "pattern": "Feature-based (Smart Hook & Draft Mapping)",
+            "directory": "src/features/quiz-editor/",
+            "logic": {
+                "hook": "useQuestionEditor.ts",
+                "mapper": "utils/questionDraftMapper.ts",
+                "ai_service": "hooks/useSmartDistractors.ts"
+            },
+            "sub_components": [
+                { "name": "QuestionCard", "desc": "Smart Preview/Actions card" },
+                { "name": "QuestionEditorModal", "desc": "Dispatcher for 14+ type-specific editors" }
+            ],
+            "strict_mode": "Zero Build Errors policy"
         }
     },
     "database_schema": {
@@ -52,14 +80,19 @@
         "Học sinh làm bài theo assignment hoặc luyện tập tự do",
         "LaTeX render chuẩn MathJax cho câu hỏi toán học",
         "Branding: Chữ 'ítong' màu xanh #1e3a8a, 'Quiz' màu vàng #FACC15",
-        "Announcement: Banner thông báo không được che các thành phần điều hướng chính."
+        "Academic logic: shuffleWithinLevel maintains difficulty flow (1->2->3)"
     ],
     "knowledge_items": {
+        "patterns": [
+            "Feature-based refactoring for monolithic components",
+            "State centralization in custom hooks to reduce Prop Drilling"
+        ],
         "gotchas": [
             "Branding unification is critical across multiple layout files (Login, Landing, ChatBot, Common Footer).",
             "Announcement banners need careful padding-based positioning to avoid header element overlap.",
             "Splitting LaTeX strings for inline components breaks MathJax parsing.",
-            "Dual Session Persistence: Teacher and Student sessions must be cleared simultaneously on logout to ensure correct landing page redirection."
+            "Dual Session Persistence: Teacher and Student sessions must be cleared simultaneously on logout to ensure correct landing page redirection.",
+            "Union Type check failed for Question rendering in quizScoring - always use type assertions/guards."
         ]
     }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useQuizStore } from '../../../stores/quizStore';
@@ -137,7 +137,7 @@ const LoginLandingPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col relative font-baloo bg-[url('/meadow-bg.png')] bg-cover bg-bottom bg-no-repeat transition-all duration-500">
+        <div className="min-h-screen flex flex-col relative font-baloo bg-[url('/meadow-bg.webp')] bg-cover bg-bottom bg-no-repeat transition-all duration-500">
             {/* Announcement Banner */}
             {announcement && announcement.isBannerActive && (
                 <AnnouncementBanner
@@ -153,18 +153,22 @@ const LoginLandingPage: React.FC = () => {
             <LandingHeader />
 
             <main className="flex-1 flex flex-col md:flex-row items-center justify-between gap-10 px-4 md:px-20 pb-16 max-w-[1280px] mx-auto w-full z-10">
-                <HeroSection />
+                <Suspense fallback={<div className="flex-1 h-64 animate-pulse bg-white/10 rounded-3xl" />}>
+                    <HeroSection />
+                </Suspense>
                 
-                <LoginForm 
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    username={username}
-                    setUsername={setUsername}
-                    password={password}
-                    setPassword={setPassword}
-                    isLoading={isLoading}
-                    onSubmit={handleLogin}
-                />
+                <Suspense fallback={<div className="w-full max-w-md h-96 animate-pulse bg-white/20 rounded-3xl" />}>
+                    <LoginForm 
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                        username={username}
+                        setUsername={setUsername}
+                        password={password}
+                        setPassword={setPassword}
+                        isLoading={isLoading}
+                        onSubmit={handleLogin}
+                    />
+                </Suspense>
             </main>
 
             <LandingFooter />

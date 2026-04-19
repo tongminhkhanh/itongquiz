@@ -13,9 +13,8 @@ const LandingHeader: React.FC = () => {
                 onClick={() => navigate('/')}
             >
                 <img
-                    src="/shool-logo1-removebg.png"
+                    src="/school-logo-v2.webp"
                     alt="ítOngQuiz logo"
-                    onError={(e) => { (e.target as HTMLImageElement).src = '/school-logo.png'; }}
                     className="w-11 h-11 object-contain"
                 />
                 <span className="font-extrabold text-[1.4rem]">

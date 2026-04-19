@@ -22,7 +22,7 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
     const [isExiting, setIsExiting] = useState(false);
 
     useEffect(() => {
-        console.log('Announcement Banner Check:', { id, daysToLive });
+        // Banner check log removed
         // Check if banner was recently closed
         const closedAt = localStorage.getItem(`announcement_closed_${id}`);
         if (closedAt) {
@@ -31,14 +31,14 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
             const daysInMs = daysToLive * 24 * 60 * 60 * 1000;
             
             if (now - lastClosed < daysInMs) {
-                console.log('Banner is hidden due to previous closure in localStorage');
+                // Hidden log removed
                 return; // Still in hide period
             }
         }
         
         // Show banner with a slight delay for smooth entrance
         const timer = setTimeout(() => {
-            console.log('Showing banner now!');
+            // Showing log removed
             setIsVisible(true);
         }, 500);
         return () => clearTimeout(timer);

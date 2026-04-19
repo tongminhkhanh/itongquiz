@@ -1,3 +1,32 @@
+## [2026-04-18]
+### Added
+- **StudentView Senior Refactoring**: Hoàn tất tái cấu trúc thành phần monolithic `StudentView.tsx` sang kiến trúc Feature-based hiện đại.
+- **Quiz Player Module**: Khởi tạo `src/features/quiz-player/` chứa logic lõi và các thành phần UI tách biệt.
+- **Centralized Scoring Service**: Tạo `quizScoring.ts` để quản lý logic chấm điểm tập trung cho 14+ dạng câu hỏi, giải quyết xung đột logic giữa Client và Server.
+- **Custom Hook `useQuizPlayer`**: Trích xuất toàn bộ state, logic xáo trộn (`shuffleWithinLevel`), anti-cheat và timer vào một hook duy nhất.
+- **Modular UI Components**: Phân rã giao diện thành `QuizHeader`, `QuizNavigation` (Sidebar Map), và `QuizPagination`.
+- **Performance Optimization**: Áp dụng `React.memo` cho `QuestionRenderer` để xử lý mượt mà trên thiết bị cấu hình thấp.
+- **Submit Confirmation**: Tích hợp `SubmitConfirmModal` vào luồng nộp bài bài bản.
+
+### Fixed
+- **Type Safety Errors**: Khắc phục 10+ lỗi TypeScript liên quan đến union types trong `quizScoring.ts` và props mapping trong `StudentView.tsx`.
+- **Scoring Discrepancies**: Sửa lỗi chấm điểm cho các dạng câu hỏi `ORDERING`, `UNDERLINE` và `ERROR_CORRECTION`.
+
+## [2026-04-18] - Phase 2
+### Added
+- **QuizPreview Modular Refactoring**: Tái cấu trúc toàn diện `QuizPreview.tsx` từ 3,400+ dòng xuống còn <300 dòng.
+- **Quiz Editor Feature Module**: Khởi tạo `src/features/quiz-editor/` tách biệt logic soạn thảo khỏi Dashboard.
+- **Unified Question Editor Hook**: Triển khai `useQuestionEditor.ts` quản lý toàn bộ vòng đời soạn thảo/drafting, thay thế 40+ useState phân tán.
+- **QuestionCard UI Component**: Tạo component card xem trước câu hỏi thông minh, tích hợp exhaustive rendering cho 14+ loại câu hỏi.
+- **Smart Distractor Hook**: Tách `useSmartDistractors.ts` giúp sinh đáp án nhiễu tự động qua AI một cách độc lập và ổn định.
+- **Type-Safe Editor Forms**: Xây dựng 14 form soạn thảo chuyên biệt (MCQEditor, TrueFalseEditor,...) với cơ chế Validation và Type-safety chặt chẽ.
+- **Question Draft Mapper**: Triển khai `questionDraftMapper.ts` để chuyển đổi dữ liệu hai chiều (Bidirectional Mapping) giữa Domain và Editor Drafts.
+
+### Fixed
+- **Monolithic State Management**: Loại bỏ hoàn toàn tình trạng treo lag UI khi soạn thảo đề thi dài do quá nhiều local state.
+- **Editor Propagation Bug**: Sửa lỗi không cập nhật được đáp án đúng trong các form phức tạp như `CATEGORIZATION` và `ORDERING`.
+- **Strict Mode Compatibility**: Đạt trạng thái **Zero Build Errors** với `npx tsc --noEmit` sau khi refactor.
+
 ## [2026-04-17]
 ### Added
 - **Announcement Banner Modernization**: Tích hợp icon loa thông báo tùy chỉnh (`loa.png`) và tối ưu hóa bố cục banner với lề động, không còn đè lên các thành phần Header.

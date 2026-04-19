@@ -7,9 +7,9 @@ interface Feature {
 
 const HeroSection: React.FC = () => {
     const features: Feature[] = [
-        { avatar: "/avatar1.png", text: <>Ngân hàng <strong>10,000+</strong> câu hỏi trắc nghiệm đa dạng.</> },
-        { avatar: "/avatar2.png", text: <>Báo cáo điểm số, <strong>thống kê chi tiết</strong> tự động.</> },
-        { avatar: "/avatar3.png", text: <>Giao diện <strong>điều khiển trực quan</strong>, dễ dùng cho mọi người.</> },
+        { avatar: "/avatar1.webp", text: <>Ngân hàng <strong>10,000+</strong> câu hỏi trắc nghiệm đa dạng.</> },
+        { avatar: "/avatar2.webp", text: <>Báo cáo điểm số, <strong>thống kê chi tiết</strong> tự động.</> },
+        { avatar: "/avatar3.webp", text: <>Giao diện <strong>điều khiển trực quan</strong>, dễ dùng cho mọi người.</> },
     ];
 
     return (

@@ -64,7 +64,7 @@ const AnnouncementSettings: React.FC = () => {
         // Auto-enable banner if title is provided but switch is off
         let finalIsBannerActive = isBannerActive;
         if (bannerTitle && !isBannerActive) {
-            console.log('Detecting banner title without active switch - Auto enabling...');
+            // Auto-enabling log removed
             finalIsBannerActive = true;
             setIsBannerActive(true);
         }
@@ -80,7 +80,7 @@ const AnnouncementSettings: React.FC = () => {
             daysToLive
         };
 
-        console.log('Saving announcement with payload:', payload);
+        // Save log removed
 
         try {
             const success = await saveAnnouncement(payload);

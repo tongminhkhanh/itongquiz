@@ -1157,7 +1157,7 @@ const generateWithGemini = async (
         throw error;
       }
       const delay = Math.pow(2, attempt) * 1000;
-      console.log(`Rate limited or Error (Gemini Proxy). Đang chờ ${delay / 1000}s trước khi thử lại (lần ${attempt}/${maxRetries})...`);
+      // Retry delay log removed
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -1173,7 +1173,7 @@ export const validateQuizWithAI = async (
   const reviewerBaseUrl = resolvePublicProviderBaseUrl(configuredReviewerBaseUrl, 'https://api.thitong.site/v1');
   const API_URL = `${reviewerBaseUrl}/chat/completions`;
 
-  console.log('[AI Validation Chain] Đang tiến hành duyệt và sửa lỗi JSON...');
+  // AI Validation Chain log removed
 
   const messages: any[] = [
     {
@@ -1233,7 +1233,7 @@ export const validateQuizWithAI = async (
       if (!text) throw new Error("AI Reviewer không trả về kết quả nào.");
 
       const parsedJSON = parseAndRepairJSON(text);
-      console.log('[AI Validation Chain] Đã rà soát và sửa lỗi thành công!');
+      // Success log removed
       
       return validateAndFixQuiz(parsedJSON); 
 
@@ -1349,7 +1349,7 @@ Tài liệu đính kèm:`
     response_format: { type: "json_object" }
   };
 
-  console.log(`[AIClient] Sending request to ${API_URL} with model ${currentModel}`);
+  // Request log removed
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 phút timeout cho 100 câu
@@ -1380,7 +1380,7 @@ Tài liệu đính kèm:`
   const WORKERS_API_URL = (import.meta as any).env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
   const workerToken = (import.meta as any).env.VITE_API_SECRET_TOKEN || '';
   if (!apiKey && workerToken) {
-    console.log('⚠️ [AIClient] No apiKey, falling back to Workers proxy...');
+    // Fallback log removed
     fetchUrl = `${WORKERS_API_URL}/api/ai/chat`;
     fetchHeaders = {
       'Content-Type': 'application/json',
@@ -1390,7 +1390,7 @@ Tài liệu đính kèm:`
     };
   }
 
-  console.log(`🚀 [AIClient] Calling: ${fetchUrl}`);
+  // Calling log removed
 
   try {
     const response = await fetch(fetchUrl, {
@@ -1435,7 +1435,7 @@ Tài liệu đính kèm:`
           }
         }
       }
-      console.log(`[AIClient] SSE stream complete. Content length: ${fullContent.length}`);
+      // Stream complete log removed
     } else {
       // JSON response (non-streaming)
       const data = await response.json();
@@ -1444,7 +1444,7 @@ Tài liệu đính kèm:`
         throw new Error(aiErrorMessage);
       }
       fullContent = extractAIContent(data) || '';
-      console.log(`[AIClient] JSON response from ${API_URL}`);
+      // Response log removed
     }
 
     const text = fullContent;
@@ -1832,7 +1832,7 @@ export const generateQuiz = async (
     );
 
     if (imageQuestions.length > 0) {
-      console.log(`[generateQuiz] Found ${imageQuestions.length} questions needing AI Image Generation...`);
+      // Found questions log removed
 
       // Check service first
       const isServiceAvailable = await checkImageServiceAvailability();
@@ -1843,13 +1843,13 @@ export const generateQuiz = async (
           const q = result.questions[i];
           if (q.type === 'IMAGE_QUESTION' && q.image && q.image.startsWith('IMAGE_PROMPT:')) {
             const prompt = q.image.replace('IMAGE_PROMPT:', '').trim();
-            console.log(`[generateQuiz] Generating image for Q${i + 1}: ${prompt}`);
+            // Generating image log removed
 
             // Generate!
             const imgResult = await generateImage(prompt);
 
             if (imgResult.success && imgResult.data) {
-              console.log(`[generateQuiz] ✅ Generated image for Q${i + 1}`);
+              // Success image log removed
               q.image = imgResult.data; // Replace prompt with Base64 image
             } else {
               console.error(`[generateQuiz] ❌ Failed to generate image for Q${i + 1}:`, imgResult.error);
@@ -1884,7 +1884,7 @@ export const extractTextFromPdf = async (
   provider: AIProvider = 'gemini',
   customApiKey?: string
 ): Promise<string> => {
-  console.log('extractTextFromPdf called with provider:', provider);
+  // extractText log removed
 
   // ========== NATIVE OCR (Tesseract local at localhost:8000) ==========
   if (provider === 'native-ocr') {
@@ -1910,7 +1910,7 @@ export const extractTextFromPdf = async (
         throw new Error('OCR Backend trả về lỗi');
       }
 
-      console.log(`Extracted ${data.text.length} chars using ${data.method} method from ${data.pages} pages`);
+      // Extracted info log removed
       return data.text;
 
     } catch (err: any) {
@@ -1927,9 +1927,9 @@ export const extractTextFromPdf = async (
     throw new Error('Chức năng trích xuất văn bản từ PDF chỉ hỗ trợ với Gemini, LLM-Mux hoặc Native OCR. Vui lòng chọn một trong các provider này.');
   }
 
-  console.log('Converting file to base64...');
+  // Base64 start log removed
   const base64Data = await fileToBase64(file);
-  console.log('Base64 conversion complete. Length:', base64Data.length);
+  // Base64 end log removed
   const isPDF = file.type === 'application/pdf';
 
   const ocrPrompt = `🔍 CHẾ ĐỘ TRÍCH XUẤT VĂN BẢN (OCR) - KHÔNG TRẢ VỀ JSON

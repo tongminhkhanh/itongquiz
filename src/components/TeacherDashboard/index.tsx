@@ -280,7 +280,7 @@ const TeacherDashboard: React.FC = () => {
                             )}
 
                             {activeTab === 'classes' && (
-                                <ClassManagementTab />
+                                <ClassManagementTab isAdmin={authStore.isAdmin || false} username={authStore.username || null} />
                             )}
 
                             {activeTab === 'assignments' && (

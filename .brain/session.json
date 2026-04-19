@@ -1,31 +1,31 @@
 {
-    "updated_at": "2026-04-17T13:48:00Z",
+    "updated_at": "2026-04-18T15:28:00+07:00",
     "working_on": {
-        "feature": "HomePage Architecture & Logout Sync",
+        "feature": "QuizPreview Modular Refactoring",
         "status": "completed",
         "files": [
-            "src/components/HomePage/HomePage.tsx",
-            "src/components/HomePage/components/DashboardNavbar.tsx",
-            "src/components/HomePage/components/DashboardHero.tsx",
-            "src/components/HomePage/components/SubjectGrid.tsx",
-            "src/components/HomePage/components/DashboardDecoration.tsx",
-            "src/components/HomePage/constants/dashboard.constants.ts",
-            "src/components/TeacherDashboard/index.tsx",
-            "src/components/HomePage/StudentDashboardUI.tsx",
-            "src/components/HomePage/QuizListPage.tsx"
+            "src/components/TeacherDashboard/QuizPreview.tsx",
+            "src/features/quiz-editor/hooks/useQuestionEditor.ts",
+            "src/features/quiz-editor/utils/questionDraftMapper.ts",
+            "src/features/quiz-editor/components/QuestionEditorModal/QuestionEditorModal.tsx",
+            "src/features/quiz-editor/components/QuestionCard/QuestionCard.tsx"
         ],
-        "notes": "Đã sửa lỗi Logout đồng bộ và module hóa HomePage monolithic."
+        "notes": "Hoàn tất tái cấu trúc tệp QuizPreview.tsx đồ sộ sang kiến trúc Feature-based. Code sạch, zero build errors."
     },
     "pending_tasks": [
         { "task": "Full integration of react-hot-toast across all pages", "priority": "medium" },
-        { "task": "Unify Dashboard colors with student/teacher variants", "priority": "low" }
+        { "task": "Unify Dashboard colors with student/teacher variants", "priority": "low" },
+        { "task": "Audit scoring results with Teachers for complex question types", "priority": "high" },
+        { "task": "Integrate AI Tutor directly into QuizNavigation sidebar", "priority": "medium" }
     ],
     "recent_changes": [
-        { "timestamp": "2026-04-17", "type": "refactor", "description": "Modularized HomePage.tsx into 4 sub-components (Navbar, Hero, Grid, Decoration)." },
-        { "timestamp": "2026-04-17", "type": "bugfix", "description": "Resolved Global Logout bug (Teacher & Student session synchronization)." }
+        { "timestamp": "2026-04-18", "type": "refactor", "description": "Senior Refactoring of StudentView.tsx and creation of quiz-player feature module." },
+        { "timestamp": "2026-04-18", "type": "refactor", "description": "Senior Refactoring of QuizPreview.tsx and creation of quiz-editor feature module." },
+        { "timestamp": "2026-04-18", "type": "optimization", "description": "Applied zero-error strict mode and modularized hooks/services for editor." }
     ],
     "decisions_made": [
-        { "decision": "Tách UI Sticker Land ra khỏi HomePage logic", "reason": "Giảm tải file monolithic và dễ bảo trì hơn" },
-        { "decision": "Gọi logout cả hai store (auth & classroom) khi nhấn đăng xuất", "reason": "Đảm bảo reset state hoàn toàn để chuyển hướng đúng" }
+        { "decision": "Tách logic soạn thảo sang feature module src/features/quiz-editor", "reason": "Dễ quản lý, tái sử dụng và giải phóng Dashboard khỏi tệp monolithic." },
+        { "decision": "Sử dụng useQuestionEditor hook thay vì 40+ local state", "reason": "Giảm độ phức tạp cực hạn, cải thiện hiệu năng re-render và độ ổn định code." },
+        { "decision": "Dùng Draft Mapping (questionDraftMapper.ts)", "reason": "Chống lại side-effects khi soạn thảo trực tiếp lên Domain Question objects." }
     ]
 }

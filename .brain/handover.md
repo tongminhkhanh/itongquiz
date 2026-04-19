@@ -1,36 +1,37 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 HANDOVER DOCUMENT - ItOng Quiz Architectural Refactor
+📋 HANDOVER DOCUMENT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📍 Đang làm: HomePage Architecture Refactoring & Logout Sync
-🔢 Đến bước: Dự án đã hoàn thành Phase 2 (Refactoring) & Fix lỗi Logout.
+📍 Đang làm: QuizPreview Refactor (Phase 4 - Assembly)
+🔢 Đến bước: Hoàn tất Phase 4, Đã ổn định Codebase
 
 ✅ ĐÃ XONG:
-   - Phase 01: Fix lỗi Logout Bug (Đồng bộ session Teacher & Student) ✓
-   - Phase 02: Tái cấu trúc HomePage monolithic (700+ dòng) ✓
-   - Phase 03: Module hóa UI Sticker Land thành 4 thành phần con ✓
-   - Phase 04: Chuyển hằng số cấu hình sang file riêng ✓
-   - Phase 05: Kiểm tra build & xử lý lỗi Import ✓ (0 errors)
+   - Phase 1: Kiến trúc (Mappers, Hooks, Shared UI) ✓
+   - Phase 2: Renderers (14+ Question Types) ✓
+   - Phase 3: Editor Forms & Modal Dispatcher ✓
+   - Phase 4: Tích hợp QuizPreview.tsx & Cleanup ✓
+   - Kiểm tra Type-safe: zero build errors (npx tsc --noEmit) ✓
 
 ⏳ CÒN LẠI:
-   - [ ] Kiểm tra tính nhất quán giao diện trên thiết bị di động (Mobile Responsive check cho SubjectGrid).
-   - [ ] Đồng bộ hóa bảng màu (Gradients) của StudentDashboardUI với Dashboard chung.
+   - Tích hợp react-hot-toast cho toàn bộ trang Dashboard.
+   - Thống nhất bảng màu Dashboard (Teacher/Student branding).
+   - Kiểm thử thực tế các dạng câu hỏi phức tạp với giáo viên (Ordering, Categorization).
+   - Tích hợp AI Tutor vào sidebar của QuizNavigation.
 
 🔧 QUYẾT ĐỊNH QUAN TRỌNG:
-   - Chuyển `HomePage.tsx` sang mô hình **Controller/Router Pattern** - chỉ giữ logic điều phối.
-   - Sử dụng **Global Logout Logic** để đảm bảo reset trạng thái ứng dụng hoàn toàn.
-   - Tên thương hiệu chuẩn: `ítong` (xanh) + `Quiz` (vàng).
+   - Sử dụng Feature-based directory (`src/features/quiz-editor`) để đóng gói logic soạn đề.
+   - Dùng `useQuestionEditor` hook duy nhất để quản lý draft state, tách rời khỏi Domain state của Quiz.
+   - Triển khai `questionDraftMapper` để xử lý bidirectional data flow an toàn.
 
 ⚠️ LƯU Ý CHO SESSION SAU:
-   - Toàn bộ hằng số Sticker Land nằm tại `src/components/HomePage/constants/dashboard.constants.ts`.
-   - `StudentDashboardUI.tsx` đã được dọn dẹp (L:679 dòng) nhưng vẫn còn logic độc lập về `SUBJECT_CONFIG`.
-   - Vercel build hiện đã ổn định.
+   - Hệ thống soạn thảo đề thi hiện tại đã rất modular, dễ mở rộng thêm dạng câu hỏi mới.
+   - Chạm vào `QuizPreview.tsx` giờ đây chỉ là shell, logic tập trung tại feature module.
 
 📁 FILES QUAN TRỌNG:
-   - `src/components/HomePage/HomePage.tsx`
-   - `src/components/HomePage/components/` (New components)
-   - `.brain/brain.json` (Knowledge Base)
-   - `.brain/session.json` (Current Progress)
+   - src/components/TeacherDashboard/QuizPreview.tsx (Main Integration)
+   - src/features/quiz-editor/hooks/useQuestionEditor.ts (Core Logic)
+   - src/features/quiz-editor/index.ts (Public API)
+   - task.md (Lịch sử các Phase)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📍 Đã lưu! Để tiếp tục: Gõ /recap

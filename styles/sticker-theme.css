@@ -6,10 +6,10 @@
 /* --- Base Background --- */
 .sticker-land {
     font-family: 'Baloo 2', cursive, system-ui, sans-serif;
-    background-color: #E0F2FE;
+    background-color: #F0FDF4; /* Light Green Meadow */
     background-image:
-        radial-gradient(#BAE6FD 20%, transparent 20%),
-        radial-gradient(#FEF3C7 20%, transparent 20%);
+        radial-gradient(#DCFCE7 20%, transparent 20%),
+        radial-gradient(#FFFBEB 20%, transparent 20%);
     background-size: 60px 60px;
     background-position: 0 0, 30px 30px;
     background-attachment: fixed;
@@ -165,7 +165,7 @@
 .sticker-nav__logo-text {
     font-size: 1.5rem;
     font-weight: 800;
-    color: #3B82F6;
+    color: #16A34A; /* Green Logo */
     letter-spacing: -0.02em;
     line-height: 1;
 }
@@ -198,21 +198,21 @@
 }
 
 .sticker-nav__link:hover {
-    background: #EFF6FF;
-    color: #3B82F6;
-    border-color: #DBEAFE;
+    background: #F0FDF4;
+    color: #16A34A;
+    border-color: #DCFCE7;
 }
 
 .sticker-nav__cta {
-    background: linear-gradient(to bottom, #60A5FA, #2563EB);
+    background: linear-gradient(to bottom, #22C55E, #16A34A);
     color: white;
     padding: 10px 28px;
     border-radius: 9999px;
     font-weight: 800;
     font-size: 1rem;
     border: none;
-    border-bottom: 4px solid #1D4ED8;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    border-bottom: 4px solid #15803D;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
     cursor: pointer;
     transition: all 0.15s;
 }
@@ -270,7 +270,7 @@
 }
 
 .sticker-hero__title--blue {
-    color: #3B82F6;
+    color: #15803D;
     display: inline-block;
     transition: transform 0.3s;
     cursor: default;

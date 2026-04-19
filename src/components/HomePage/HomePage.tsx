@@ -74,6 +74,13 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
         }
     }, [isStudentLoggedIn, classroomStore.studentSession?.studentId]);
 
+    // --- Auto-redirect Teachers to Dashboard ---
+    useEffect(() => {
+        if (isTeacherLoggedIn && !isStudentLoggedIn && quizStore.view === 'home') {
+            quizStore.setView('teacher_dash');
+        }
+    }, [isTeacherLoggedIn, isStudentLoggedIn, quizStore.view, quizStore]);
+
     // --- Map Assignments to Quiz Format ---
     const assignmentQuizzes = useMemo((): Quiz[] => {
         return assignments.map((assignment) => ({

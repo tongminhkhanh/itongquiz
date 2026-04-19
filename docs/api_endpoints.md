@@ -48,6 +48,12 @@ Lấy danh sách câu hỏi của một đề thi cụ thể.
 ### POST /api/validate
 Xác thực đáp án phía Server (Anti-cheat). Trả về điểm số và chi tiết đúng/sai.
 
+### 🔄 Scoring Synchronization (Client & Server)
+Hệ thống sử dụng cơ chế **Scoring Sync** giữa Client và Server:
+1. **Frontend Logic (`quizScoring.ts`)**: Thực hiện chấm điểm ngay lập tức cho UI.
+2. **Server Logic**: Kiểm tra bảo mật và lưu kết quả.
+3. **Phân giải xung đột**: Trong các trường hợp câu hỏi phức tạp (Ordering, Underline, Error Correction), logic phía Client được ưu tiên override nếu Server validation gặp quirks về format dữ liệu, đảm bảo quyền lợi tối đa cho học sinh dựa trên snapshot câu hỏi thực tế.
+
 ---
 
 ## 🏫 Classroom & Assignments
