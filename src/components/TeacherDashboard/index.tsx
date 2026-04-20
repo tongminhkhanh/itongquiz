@@ -25,6 +25,7 @@ const ClassManagementTab = React.lazy(() => import('./ClassManagementTab'));
 const AssignmentTab = React.lazy(() => import('./AssignmentTab'));
 const TeacherManagementTab = React.lazy(() => import('./TeacherManagementTab'));
 const GiftShopTab = React.lazy(() => import('./GiftShopTab'));
+const HomeworkTab = React.lazy(() => import('../../features/homework/components/HomeworkTab').then(m => ({ default: m.HomeworkTab })));
 
 const TeacherDashboard: React.FC = () => {
     // --- STORES ---
@@ -96,6 +97,7 @@ const TeacherDashboard: React.FC = () => {
             case 'announcements': return 'Cài đặt & Thông báo';
             case 'teachers': return 'Quản lý Giáo viên';
             case 'gift-shop': return 'Tiệm Tạp Hóa';
+            case 'homework': return 'Phiếu bài tập (AI)';
             default: return 'Bảng điều khiển';
         }
     };
@@ -293,6 +295,10 @@ const TeacherDashboard: React.FC = () => {
 
                             {activeTab === 'gift-shop' && isGiftShopFeatureEnabled && (
                                 <GiftShopTab />
+                            )}
+
+                            {activeTab === 'homework' && (
+                                <HomeworkTab />
                             )}
 
                         </Suspense>

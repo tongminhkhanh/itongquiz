@@ -14,6 +14,10 @@ import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import AvatarSelectorModal from '../common/AvatarSelectorModal';
 import MathSpan from '../common/MathSpan';
 import { StudentFloatingSidebar } from '../gamification/StudentFloatingSidebar';
+import { StudentHomeworkSection } from '../../features/homework/components/StudentHomeworkSection';
+import { HomeworkSubmissionModal } from '../../features/homework/components/HomeworkSubmissionModal';
+import { HomeworkAssignment } from '../../features/homework/types';
+import { useHomeworkStore } from '../../features/homework/stores/useHomeworkStore';
 
 // --- Subject Config (Reused from HomePage) ---
 export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color: string; desc: string; showOnHome?: boolean }> = {
@@ -148,6 +152,8 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
     // --- State ---
     const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+    const [selectedHw, setSelectedHw] = useState<HomeworkAssignment | null>(null);
+    const hwStore = useHomeworkStore();
     const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
     const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
     const [assignmentPage, setAssignmentPage] = useState(1);
@@ -601,6 +607,12 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     ) : <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center items-center flex flex-col"><img src={`${FLUENT_CDN}/Party%20popper/3D/party_popper_3d.png`} className="w-20 h-20 mb-4 opacity-80" alt="Done" /><h3 className="text-xl font-bold text-slate-700">Tuyệt vời!</h3><p className="text-slate-500 font-medium">Em đã làm hết tất cả bài tập giáo viên giao.</p></div>}
                 </section>
 
+                <StudentHomeworkSection 
+                    studentId={studentSession.studentId} 
+                    classId={studentSession.classId} 
+                    onSelectAssignment={setSelectedHw}
+                />
+
                 <section>
                     <div className="flex items-center gap-3 mb-6"><div className="bg-teal-100 p-2 rounded-xl text-teal-600"><Rocket className="w-6 h-6" /></div><h2 className="text-2xl font-black text-slate-800">Thư viện luyện tập</h2></div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -667,6 +679,17 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                             <div className="mt-6 flex items-center justify-end gap-3"><button type="button" onClick={closeChangePasswordModal} className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50">Hủy</button><button type="submit" disabled={isChangingPassword} className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-60">{isChangingPassword ? 'Đang lưu...' : 'Lưu mật khẩu'}</button></div>
                         </motion.form>
                     </motion.div>
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {selectedHw && (
+                    <HomeworkSubmissionModal 
+                        assignment={selectedHw}
+                        submission={hwStore.submissions.find(s => s.assignment_id === selectedHw.id)}
+                        studentId={studentSession.studentId}
+                        studentName={studentSession.fullName}
+                        onClose={() => setSelectedHw(null)}
+                    />
                 )}
             </AnimatePresence>
             <AvatarSelectorModal isOpen={isAvatarModalOpen} onClose={() => setIsAvatarModalOpen(false)} currentAvatar={studentSession.avatar} />

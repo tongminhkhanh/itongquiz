@@ -10,7 +10,7 @@ const TrueFalseRenderer: React.FC<BaseRendererProps> = ({
     answers,
     onAnswerChange,
 }) => {
-    const items = q.items ?? [];
+    const items = (q as any).items ?? [];
 
     return (
         <div className="space-y-2">

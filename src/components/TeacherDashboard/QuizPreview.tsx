@@ -17,7 +17,7 @@ interface QuizPreviewProps {
     onSave: () => void;
     isSaving?: boolean;
     onUpdateQuestions?: (questions: Question[]) => void;
-    onCreateManual?: () => void;
+    onStartManual?: () => void;
     onRegenerateQuestion?: (question: Question) => Promise<Question | null>;
 }
 
@@ -26,7 +26,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
     onSave, 
     isSaving = false, 
     onUpdateQuestions, 
-    onCreateManual, 
+    onStartManual, 
     onRegenerateQuestion 
 }) => {
     // 1. Editor Hook
@@ -195,23 +195,27 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
                                             + Dạng khác
                                         </button>
                                     </div>
-                                    {onCreateManual && (
-                                        <button
-                                            onClick={onCreateManual}
-                                            className="mt-3 w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-colors flex justify-center items-center gap-2 font-medium"
-                                        >
-                                            <PlusCircle className="w-5 h-5" />
-                                            Sinh thêm câu hỏi bằng AI
-                                        </button>
-                                    )}
                                 </div>
                             )}
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center py-12 text-gray-500">
-                        <p>Chưa có dữ liệu đề thi.</p>
-                        <p className="text-sm mt-2">Vui lòng tải lên file hoặc tạo đề thi mới.</p>
+                    <div className="text-center py-16 px-4 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
+                        <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-4">
+                            <PlusCircle className="w-8 h-8 text-slate-300" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-700 mb-2">Chưa có dữ liệu đề thi</h3>
+                        <p className="text-slate-500 max-w-xs mx-auto mb-6">
+                            Vui lòng nhập thông tin bên trái và chọn phương thức tạo đề (AI hoặc Thủ công).
+                        </p>
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={onStartManual}
+                                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md active:scale-95 text-sm"
+                            >
+                                Bắt đầu tạo đề THỦ CÔNG
+                            </button>
+                        </div>
                     </div>
                 )}
             </Card>
@@ -264,7 +268,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
 
             {/* NEW Editor Modal that handles everything else */}
             {editingQuestion && draft && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
                     <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
                         <div className="flex items-center justify-between p-4 border-b">
                             <h3 className="font-bold text-lg">{isAddMode ? 'Thêm câu hỏi mới' : 'Sửa câu hỏi'}</h3>

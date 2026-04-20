@@ -195,6 +195,25 @@ export async function handleLegacyAction(db: D1Database, action: string, body: a
         case 'start_assignment_attempt':
             return await handleStartAssignmentAttempt(db, body);
 
+        // --- Homework Center (AI-powered) ---
+        case 'get_hw_assignments':
+            return await handleGetHwAssignments(db, body);
+
+        case 'save_hw_assignment':
+            return await handleSaveHwAssignment(db, body);
+
+        case 'delete_hw_assignment': {
+            await db.prepare('DELETE FROM hw_submissions WHERE assignment_id = ?').bind(body.assignmentId).run();
+            await db.prepare('DELETE FROM hw_assignments WHERE id = ?').bind(body.assignmentId).run();
+            return jsonResponse({ status: 'success' });
+        }
+
+        case 'submit_hw':
+            return await handleSubmitHw(db, body);
+
+        case 'get_hw_submissions':
+            return await handleGetHwSubmissions(db, body);
+
         // --- Gamification ---
         case 'get_pet_data':
             return await handleGetPetData(db, body);
@@ -458,4 +477,152 @@ async function handleBuyShopItem(db: D1Database, body: any) {
     currentItems.push(body.itemId);
     await db.prepare('UPDATE user_pets SET items = ? WHERE username = ?').bind(JSON.stringify(currentItems), body.username).run();
     return jsonResponse({ status: 'success', data: { newCoins: currentCoins - price, items: currentItems, purchasedItem: { itemId: body.itemId, name: item.name, price } } });
+}
+
+// --- Homework Center Handlers ---
+
+async function handleGetHwAssignments(db: D1Database, body: any) {
+    let query = `
+        SELECT 
+             ha.*,
+            (SELECT COUNT(*) FROM students WHERE class_id = ha.class_id) as total_students,
+            (SELECT COUNT(DISTINCT student_id) FROM hw_submissions WHERE assignment_id = ha.id) as submitted_count
+        FROM hw_assignments ha
+    `;
+    const params: any[] = [];
+
+    const classId = body.classId || body.class_id;
+    const teacherId = body.teacherId || body.teacher_id;
+
+    if (classId) {
+        query += ' WHERE ha.class_id = ?';
+        params.push(classId);
+    } else if (teacherId) {
+        query += ' WHERE ha.teacher_id = ?';
+        params.push(teacherId);
+    }
+
+    const rows = await db.prepare(query).bind(...params).all();
+    return jsonResponse({ status: 'success', data: rows.results });
+}
+
+async function handleSaveHwAssignment(db: D1Database, body: any) {
+    const isNew = !body.id;
+    const id = body.id || `hw-${crypto.randomUUID().substring(0, 8)}`;
+    const now = new Date().toISOString();
+
+    const classId = body.classId || body.class_id;
+    const teacherId = body.teacherId || body.teacher_id;
+    const fileUrl = body.fileUrl || body.file_url;
+    const aiContent = body.aiContent || body.ai_content;
+
+    if (isNew) {
+        await db.prepare(`
+            INSERT INTO hw_assignments (id, title, description, subject, deadline, class_id, teacher_id, file_url, ai_content, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+            id, body.title, body.description || '', body.subject || '', 
+            body.deadline, classId, teacherId, 
+            fileUrl || '', aiContent || '', now
+        ).run();
+    } else {
+        await db.prepare(`
+            UPDATE hw_assignments 
+            SET title = ?, description = ?, subject = ?, deadline = ?, class_id = ?, file_url = ?, ai_content = ?
+            WHERE id = ?
+        `).bind(
+            body.title, body.description || '', body.subject || '', 
+            body.deadline, classId, fileUrl || '', 
+            aiContent || '', id
+        ).run();
+    }
+
+    return jsonResponse({ status: 'success', data: { id } });
+}
+
+async function handleSubmitHw(db: D1Database, body: any) {
+    const now = new Date().toISOString();
+
+    const assignmentId = body.assignmentId || body.assignment_id || '';
+    const studentId = body.studentId || body.student_id || '';
+    const studentName = body.studentName || body.student_name || '';
+    const fileUrls = body.fileUrls || body.file_urls;
+    const studentNote = body.studentNote || body.student_note;
+    const status = body.status || 'SUBMITTED';
+    const score = Number(body.score) || 0;
+    const teacherFeedback = body.teacherFeedback || body.teacher_feedback || '';
+    const aiEvaluation = body.aiEvaluation || body.ai_evaluation || '';
+
+    // Check if we should update an existing submission
+    let existingId = body.id || body.submissionId;
+
+    if (!existingId && assignmentId && studentId) {
+        const existing: any = await db.prepare('SELECT id FROM hw_submissions WHERE assignment_id = ? AND student_id = ?').bind(assignmentId, studentId).first();
+        if (existing) existingId = existing.id;
+    }
+
+    if (existingId) {
+        // UPDATE existing submission (usually for grading or re-submitting)
+        let query = 'UPDATE hw_submissions SET status = ?, score = ?, teacher_feedback = ?, ai_evaluation = ?, submitted_at = ?';
+        const params: any[] = [status, score, teacherFeedback, aiEvaluation, now];
+
+        if (fileUrls) {
+            query += ', file_urls = ?';
+            params.push(JSON.stringify(fileUrls));
+        } else {
+            // Keep existing if fileUrls not provided in body (e.g. grading only)
+        }
+
+        if (studentNote !== undefined) {
+             query += ', student_note = ?';
+             params.push(studentNote);
+        }
+
+        query += ' WHERE id = ?';
+        params.push(existingId);
+        
+        await db.prepare(query).bind(...params).run();
+        return jsonResponse({ status: 'success', data: { id: existingId } });
+    } else {
+        // INSERT new submission
+        const newId = `sub-${crypto.randomUUID().substring(0, 8)}`;
+        await db.prepare(`
+            INSERT INTO hw_submissions (id, assignment_id, student_id, student_name, status, file_urls, student_note, teacher_feedback, ai_evaluation, score, submitted_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+            newId, assignmentId, studentId, studentName, status,
+            JSON.stringify(fileUrls || []), studentNote || '', 
+            teacherFeedback, aiEvaluation, score, now
+        ).run();
+        return jsonResponse({ status: 'success', data: { id: newId } });
+    }
+}
+
+async function handleGetHwSubmissions(db: D1Database, body: any) {
+    let query = 'SELECT * FROM hw_submissions';
+    const params: any[] = [];
+
+    const assignmentId = body.assignmentId || body.assignment_id;
+    const studentId = body.studentId || body.student_id;
+
+    if (assignmentId && studentId) {
+        query += ' WHERE assignment_id = ? AND student_id = ?';
+        params.push(assignmentId, studentId);
+    } else if (assignmentId) {
+        query += ' WHERE assignment_id = ?';
+        params.push(assignmentId);
+    } else if (studentId) {
+        query += ' WHERE student_id = ?';
+        params.push(studentId);
+    }
+
+    const rows = await db.prepare(query).bind(...params).all();
+    
+    // Parse file_urls JSON
+    const mapped = rows.results.map((r: any) => ({
+        ...r,
+        file_urls: typeof r.file_urls === 'string' ? JSON.parse(r.file_urls) : r.file_urls
+    }));
+
+    return jsonResponse({ status: 'success', data: mapped });
 }

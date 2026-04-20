@@ -59,8 +59,7 @@ const AvatarSelectorModal: React.FC<AvatarSelectorModalProps> = ({ isOpen, onClo
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={onClose}
-                className="absolute inset-0"
-                style={{ backgroundColor: 'rgba(255, 251, 240, 0.85)', backdropFilter: 'blur(4px)' }}
+                className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
             />
 
             {/* Modal */}

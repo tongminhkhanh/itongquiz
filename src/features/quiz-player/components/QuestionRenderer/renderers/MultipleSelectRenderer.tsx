@@ -11,7 +11,7 @@ const MultipleSelectRenderer: React.FC<BaseRendererProps> = ({
     answers,
     onAnswerChange,
 }) => {
-    const options = q.options ?? [];
+    const options = (q as any).options ?? [];
 
     return (
         <div className="grid grid-cols-1 gap-2">

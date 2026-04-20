@@ -282,6 +282,12 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
         return <StudentDashboardUI ioeQuizzes={ioeQuizzes} />;
     }
 
+    // Nếu là giáo viên/admin đã đăng nhập và đang ở view 'home', trả về null để chờ App.tsx hoặc useEffect nội bộ chuyển hướng
+    // Điều này ngăn chặn việc hiển thị giao diện "Green Meadow" (vốn dành cho học sinh) trong giây lát.
+    if (isTeacherLoggedIn && !isStudentLoggedIn && quizStore.view === 'home') {
+        return null;
+    }
+
     return (
         <div className="sticker-land">
             <AnnouncementMarquee />

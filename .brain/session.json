@@ -1,31 +1,47 @@
 {
-    "updated_at": "2026-04-18T15:28:00+07:00",
-    "working_on": {
-        "feature": "QuizPreview Modular Refactoring",
-        "status": "completed",
-        "files": [
-            "src/components/TeacherDashboard/QuizPreview.tsx",
-            "src/features/quiz-editor/hooks/useQuestionEditor.ts",
-            "src/features/quiz-editor/utils/questionDraftMapper.ts",
-            "src/features/quiz-editor/components/QuestionEditorModal/QuestionEditorModal.tsx",
-            "src/features/quiz-editor/components/QuestionCard/QuestionCard.tsx"
-        ],
-        "notes": "Hoàn tất tái cấu trúc tệp QuizPreview.tsx đồ sộ sang kiến trúc Feature-based. Code sạch, zero build errors."
+  "updated_at": "2026-04-20T18:20:00+07:00",
+  "working_on": {
+    "feature": "Homework Security & UI Polish",
+    "task": "Completed cross-student data leakage fix and logout state cleanup.",
+    "status": "done",
+    "files": [
+      "workers/src/routes/legacy.ts",
+      "src/features/homework/stores/useHomeworkStore.ts",
+      "src/stores/useClassroomStore.ts"
+    ],
+    "notes": "Backend now uses COUNT(DISTINCT student_id) for progress and filters by BOTH assignment_id + student_id for security."
+  },
+  "pending_tasks": [
+    { "task": "Check teacher view for multiple submissions per assignment", "priority": "low" }
+  ],
+  "recent_changes": [
+    {
+      "timestamp": "2026-04-20T11:15:00Z",
+      "type": "security_fix",
+      "description": "Fixed student submission isolation by adding student_id filter to backend queries.",
+      "files": ["workers/src/routes/legacy.ts"]
     },
-    "pending_tasks": [
-        { "task": "Full integration of react-hot-toast across all pages", "priority": "medium" },
-        { "task": "Unify Dashboard colors with student/teacher variants", "priority": "low" },
-        { "task": "Audit scoring results with Teachers for complex question types", "priority": "high" },
-        { "task": "Integrate AI Tutor directly into QuizNavigation sidebar", "priority": "medium" }
-    ],
-    "recent_changes": [
-        { "timestamp": "2026-04-18", "type": "refactor", "description": "Senior Refactoring of StudentView.tsx and creation of quiz-player feature module." },
-        { "timestamp": "2026-04-18", "type": "refactor", "description": "Senior Refactoring of QuizPreview.tsx and creation of quiz-editor feature module." },
-        { "timestamp": "2026-04-18", "type": "optimization", "description": "Applied zero-error strict mode and modularized hooks/services for editor." }
-    ],
-    "decisions_made": [
-        { "decision": "Tách logic soạn thảo sang feature module src/features/quiz-editor", "reason": "Dễ quản lý, tái sử dụng và giải phóng Dashboard khỏi tệp monolithic." },
-        { "decision": "Sử dụng useQuestionEditor hook thay vì 40+ local state", "reason": "Giảm độ phức tạp cực hạn, cải thiện hiệu năng re-render và độ ổn định code." },
-        { "decision": "Dùng Draft Mapping (questionDraftMapper.ts)", "reason": "Chống lại side-effects khi soạn thảo trực tiếp lên Domain Question objects." }
-    ]
+    {
+      "timestamp": "2026-04-20T11:05:00Z",
+      "type": "bug_fix",
+      "description": "Fixed duplicate student count inflation in teacher dashboard.",
+      "files": ["workers/src/routes/legacy.ts"]
+    },
+    {
+      "timestamp": "2026-04-20T11:16:00Z",
+      "type": "refactor",
+      "description": "Implemented resetStore mechanism to clear homework data on logout.",
+      "files": ["src/features/homework/stores/useHomeworkStore.ts", "src/stores/useClassroomStore.ts"]
+    }
+  ],
+  "errors_encountered": [
+    {
+      "error": "Cross-student data leak (Tuyết visibility issue)",
+      "solution": "Added student_id filter to handleGetHwSubmissions and ensured studentSession cleanup.",
+      "resolved": true
+    }
+  ],
+  "decisions_made": [
+    { "decision": "Use COUNT(DISTINCT student_id)", "reason": "Accurately represents number of participants instead of total submissions." }
+  ]
 }

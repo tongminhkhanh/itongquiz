@@ -26,8 +26,6 @@ const GeometryRenderer: React.FC<BaseRendererProps> = ({
             <div className="w-full max-w-2xl bg-white rounded-xl shadow-inner border-2 border-gray-100 overflow-hidden">
                 <GeometryContainer
                     data={geometryData}
-                    type={geometryType}
-                    readOnly={true}
                 />
             </div>
             

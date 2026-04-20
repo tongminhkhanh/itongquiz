@@ -23,6 +23,7 @@
     "@types/papaparse": "^5.5.2",
     "@vercel/analytics": "^1.6.1",
     "better-react-mathjax": "^3.0.0",
+    "browser-image-compression": "^2.0.2",
     "canvas-confetti": "^1.9.4",
     "docx": "^9.5.1",
     "file-saver": "^2.0.5",

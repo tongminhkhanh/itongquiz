@@ -270,3 +270,38 @@ CREATE INDEX IF NOT EXISTS idx_rag_documents_source_path ON rag_documents(source
 CREATE INDEX IF NOT EXISTS idx_rag_chunks_document_id ON rag_chunks(document_id);
 CREATE INDEX IF NOT EXISTS idx_rag_chunks_chunk_index ON rag_chunks(chunk_index);
 CREATE INDEX IF NOT EXISTS idx_rag_logs_created_at ON rag_query_logs(created_at DESC);
+
+-- Homework Assignments (Teacher-created)
+CREATE TABLE IF NOT EXISTS hw_assignments (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  subject TEXT DEFAULT '',
+  deadline TEXT NOT NULL,
+  class_id TEXT NOT NULL,
+  teacher_id TEXT NOT NULL,
+  file_url TEXT DEFAULT '',
+  ai_content TEXT DEFAULT '',
+  created_at TEXT NOT NULL
+);
+
+-- Homework Submissions (Student-submitted)
+CREATE TABLE IF NOT EXISTS hw_submissions (
+  id TEXT PRIMARY KEY,
+  assignment_id TEXT NOT NULL,
+  student_id TEXT NOT NULL,
+  student_name TEXT NOT NULL,
+  status TEXT DEFAULT 'SUBMITTED', -- SUBMITTED, GRADED
+  file_urls TEXT DEFAULT '[]', -- JSON array of image links (Cloudinary)
+  student_note TEXT DEFAULT '',
+  teacher_feedback TEXT DEFAULT '',
+  ai_evaluation TEXT DEFAULT '',
+  score REAL DEFAULT 0,
+  submitted_at TEXT NOT NULL
+);
+
+-- Performance indexes for homework
+CREATE INDEX IF NOT EXISTS idx_hw_assignments_class ON hw_assignments(class_id);
+CREATE INDEX IF NOT EXISTS idx_hw_assignments_teacher ON hw_assignments(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_hw_submissions_assignment ON hw_submissions(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_hw_submissions_student ON hw_submissions(student_id);

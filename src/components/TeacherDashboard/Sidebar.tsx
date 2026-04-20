@@ -11,6 +11,7 @@ import {
     ChevronRight,
     PlusCircle,
     Gift,
+    BookText,
 } from 'lucide-react';
 import { SCHOOL_NAME } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
@@ -48,6 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             { id: 'results', label: 'Kết quả', icon: <FileText className="w-5 h-5" /> },
             { id: 'classes', label: 'Lớp học', icon: <GraduationCap className="w-5 h-5" /> },
             { id: 'assignments', label: 'Giao bài', icon: <ClipboardList className="w-5 h-5" /> },
+            { id: 'homework', label: 'Bài tập tự luận', icon: <BookText className="w-5 h-5" /> },
         ];
 
         if (isGiftShopEnabled) {

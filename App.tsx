@@ -11,6 +11,7 @@ import { useAuthStore } from './stores/authStore';
 import { useQuizStore } from './stores/quizStore';
 import { useClassroomStore } from './src/stores/useClassroomStore';
 import { ChatBot } from './src/components/ChatBot';
+import { useSeo } from './src/hooks/useSeo';
 
 // Lazy load main views
 const StudentView = React.lazy(() => import('./src/components/StudentView'));
@@ -26,118 +27,6 @@ const ContactPage = React.lazy(() => import('./src/components/schoolPage/Contact
 
 type RoutePath = '/' | '/about' | '/contact' | '/privacy' | '/tos';
 
-const DEFAULT_TITLE = 'ItOng Quiz - Nền tảng tạo đề và ôn thi cho học sinh Tiểu học Ít Ong';
-const DEFAULT_DESCRIPTION = 'ItOng Quiz giúp giáo viên tạo đề trắc nghiệm nhanh, hỗ trợ học sinh ôn thi chương trình GDPT 2018.';
-const DEFAULT_KEYWORDS = 'Ít Ong, ItOng Quiz, luyện thi tiểu học, trắc nghiệm tiểu học, GDPT 2018, ôn thi online';
-const SEO_CATEGORY_WHITELIST = new Set(['all', 'vioedu', 'trang-nguyen', 'ioe', 'on-tap', 'toan', 'tieng-viet']);
-
-const upsertMetaByName = (name: string, content: string) => {
-    let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
-    if (!tag) {
-        tag = document.createElement('meta');
-        tag.setAttribute('name', name);
-        document.head.appendChild(tag);
-    }
-    tag.setAttribute('content', content);
-};
-
-const upsertMetaByProperty = (property: string, content: string) => {
-    let tag = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement | null;
-    if (!tag) {
-        tag = document.createElement('meta');
-        tag.setAttribute('property', property);
-        document.head.appendChild(tag);
-    }
-    tag.setAttribute('content', content);
-};
-
-const upsertCanonical = (href: string) => {
-    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
-    if (!canonical) {
-        canonical = document.createElement('link');
-        canonical.setAttribute('rel', 'canonical');
-        document.head.appendChild(canonical);
-    }
-    canonical.setAttribute('href', href);
-};
-
-const upsertJsonLd = (id: string, payload: Record<string, unknown>) => {
-    let tag = document.getElementById(id) as HTMLScriptElement | null;
-    if (!tag) {
-        tag = document.createElement('script');
-        tag.id = id;
-        tag.type = 'application/ld+json';
-        document.head.appendChild(tag);
-    }
-    tag.textContent = JSON.stringify(payload);
-};
-
-const getCanonicalUrl = (pathname: string, view: string, selectedQuiz: Quiz | null): string => {
-    if (pathname !== '/') {
-        return new URL(pathname, `${window.location.origin}/`).toString();
-    }
-
-    const canonical = new URL(window.location.origin + '/');
-
-    if (view === 'student' && selectedQuiz?.id) {
-        canonical.searchParams.set('quizId', selectedQuiz.id);
-        return canonical.toString();
-    }
-
-    const params = new URLSearchParams(window.location.search);
-    const category = params.get('category');
-    if (category && SEO_CATEGORY_WHITELIST.has(category)) {
-        canonical.searchParams.set('category', category);
-    }
-
-    return canonical.toString();
-};
-
-const buildStructuredData = (canonicalUrl: string, title: string, description: string, selectedQuiz: Quiz | null) => {
-    const organization = {
-        '@type': 'EducationalOrganization',
-        name: 'Trường Tiểu học Ít Ong',
-        alternateName: 'ItOng Quiz',
-        url: 'https://www.thitong.site',
-    };
-
-    if (selectedQuiz) {
-        return {
-            '@context': 'https://schema.org',
-            '@type': 'Quiz',
-            name: selectedQuiz.title,
-            description,
-            url: canonicalUrl,
-            educationalLevel: selectedQuiz.classLevel ? `Lớp ${selectedQuiz.classLevel}` : 'Tiểu học',
-            about: selectedQuiz.category || 'Trắc nghiệm',
-            inLanguage: 'vi',
-            isAccessibleForFree: true,
-            numberOfQuestions: selectedQuiz.questions?.length || 0,
-            publisher: organization,
-        };
-    }
-
-    return {
-        '@context': 'https://schema.org',
-        '@graph': [
-            {
-                '@type': 'WebSite',
-                name: 'ItOng Quiz',
-                url: 'https://www.thitong.site/',
-                inLanguage: 'vi',
-                description,
-            },
-            organization,
-            {
-                '@type': 'WebPage',
-                name: title,
-                url: canonicalUrl,
-                description,
-            },
-        ],
-    };
-};
-
 const PageLoading: React.FC = () => (
     <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB]">
         <Loader2 className="w-10 h-10 text-[#6C5CE7] animate-spin" />
@@ -150,11 +39,16 @@ const App: React.FC = () => {
     const classroomStore = useClassroomStore();
     const location = useLocation();
     const navigate = useNavigate();
+    
+    // Feature flags
     const isGiftShopFeatureEnabled = String(import.meta.env.VITE_FEATURE_GIFT_SHOP_V2 || 'false').toLowerCase() === 'true';
 
     const [ioeQuizzes, setIoeQuizzes] = useState<Quiz[]>([]);
     const [ioeLoading, setIoeLoading] = useState(false);
     const [aiAssistantEnabled, setAiAssistantEnabled] = useState(true);
+
+    // Call custom SEO hook
+    useSeo(location.pathname, quizStore.view, quizStore.selectedQuiz, isGiftShopFeatureEnabled);
 
     const loadIoeData = async (forceRefresh = false) => {
         if (ioeLoading) return;
@@ -182,6 +76,15 @@ const App: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Tự động chuyển hướng giáo viên/admin vào dashboard nếu đã đăng nhập
+    useEffect(() => {
+        if (authStore.isLoggedIn && quizStore.view === 'home' && location.pathname === '/') {
+            console.log('[App] Auto-redirecting teacher to dashboard');
+            quizStore.setView('teacher_dash');
+        }
+    }, [authStore.isLoggedIn, quizStore.view, location.pathname, quizStore]);
+
+    // Handle legacy quiz parameters
     useEffect(() => {
         if (location.pathname !== '/') return;
 
@@ -196,6 +99,7 @@ const App: React.FC = () => {
         navigate({ pathname: '/', search: `?${params.toString()}` }, { replace: true });
     }, [location.pathname, location.search, navigate]);
 
+    // Handle System Settings
     useEffect(() => {
         const loadSystemSettings = async () => {
             try {
@@ -223,84 +127,7 @@ const App: React.FC = () => {
         };
     }, []);
 
-    useEffect(() => {
-        const pathname = location.pathname;
-        let title = DEFAULT_TITLE;
-        let description = DEFAULT_DESCRIPTION;
-        let keywords = DEFAULT_KEYWORDS;
-        let robots = 'index, follow';
-
-        if (pathname === '/about') {
-            title = 'Giới thiệu trường Ít Ong - ItOng Quiz';
-            description = 'Thông tin giới thiệu Trường Tiểu học Ít Ong, quá trình phát triển và hoạt động nổi bật.';
-            keywords = 'giới thiệu trường Ít Ong, Trường Tiểu học Ít Ong, ItOng Quiz';
-        } else if (pathname === '/contact') {
-            title = 'Liên hệ trường Ít Ong - ItOng Quiz';
-            description = 'Kênh liên hệ Trường Tiểu học Ít Ong: địa chỉ, hotline, fanpage và bản đồ.';
-            keywords = 'liên hệ trường Ít Ong, bản đồ trường Ít Ong, hotline trường Ít Ong';
-        } else if (pathname === '/privacy') {
-            title = 'Chính sách bảo mật - ItOng Quiz';
-        } else if (pathname === '/tos') {
-            title = 'Điều khoản sử dụng - ItOng Quiz';
-        } else if (quizStore.view === 'teacher_dash') {
-            title = 'Quản lý đề thi - ItOng Quiz';
-            robots = 'noindex, nofollow, noarchive';
-        } else if (quizStore.view === 'student' && quizStore.selectedQuiz) {
-            title = `${quizStore.selectedQuiz.title} - ItOng Quiz`;
-            description = `Luyện tập bài thi ${quizStore.selectedQuiz.title} trên hệ thống ItOng Quiz.`;
-            keywords = [
-                quizStore.selectedQuiz.title,
-                `Lớp ${quizStore.selectedQuiz.classLevel || 'Tiểu học'}`,
-                quizStore.selectedQuiz.category || 'trắc nghiệm',
-                'ItOng Quiz',
-                'ôn thi tiểu học',
-            ].join(', ');
-        } else if (quizStore.view === 'student_portal') {
-            title = 'Cổng học sinh - ItOng Quiz';
-            robots = 'noindex, nofollow, noarchive';
-        } else if (quizStore.view === 'shop' && isGiftShopFeatureEnabled) {
-            title = 'Tiệm Tạp Hóa Ít Ong - ItOng Quiz';
-            description = 'Đổi quà bằng xu và quản lý voucher trong hệ thống ItOng Quiz.';
-            robots = 'noindex, nofollow, noarchive';
-        }
-
-        const canonicalUrl = getCanonicalUrl(pathname, quizStore.view, quizStore.selectedQuiz);
-        const structuredData = buildStructuredData(
-            canonicalUrl,
-            title,
-            description,
-            pathname === '/' && quizStore.view === 'student' ? quizStore.selectedQuiz : null
-        );
-
-        document.title = title;
-
-        upsertMetaByName('description', description);
-        upsertMetaByName('keywords', keywords);
-        upsertMetaByName('robots', robots);
-
-        upsertMetaByProperty('og:title', title);
-        upsertMetaByProperty('og:description', description);
-        upsertMetaByProperty('og:url', canonicalUrl);
-        upsertMetaByProperty('twitter:title', title);
-        upsertMetaByProperty('twitter:description', description);
-        upsertMetaByProperty('twitter:url', canonicalUrl);
-
-        upsertMetaByName('twitter:title', title);
-        upsertMetaByName('twitter:description', description);
-
-        upsertCanonical(canonicalUrl);
-        upsertJsonLd('seo-jsonld', structuredData);
-    }, [
-        location.pathname,
-        quizStore.view,
-        quizStore.selectedQuiz?.id,
-        quizStore.selectedQuiz?.title,
-        quizStore.selectedQuiz?.classLevel,
-        quizStore.selectedQuiz?.category,
-        quizStore.selectedQuiz?.questions?.length,
-        isGiftShopFeatureEnabled,
-    ]);
-
+    // Handle Quiz selection via URL
     useEffect(() => {
         if (location.pathname !== '/') return;
 

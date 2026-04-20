@@ -120,7 +120,13 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'get_system_settings': method = 'GET'; path = '/api/system-settings'; break;
         case 'save_system_settings': method = 'POST'; path = '/api/system-settings'; break;
 
-        default: break; // Fallback to root path for undefined actions (though they shouldn't occur)
+        default: 
+            // Fallback for legacy actions (like hw_assignments)
+            method = 'POST';
+            path = '/api/gas';
+            // Legacy workers endpoint expects 'action' and 'token' inside the body
+            payload = { ...payload, action, token: API_SECRET_TOKEN };
+            break;
     }
 
     try {

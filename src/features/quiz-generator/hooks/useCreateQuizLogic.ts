@@ -232,10 +232,10 @@ export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSu
         setQuizTitle(aiDetectedLesson);
     };
 
-    const handleCreateManual = () => {
+    const handleStartManual = () => {
         const quiz: Quiz = {
             id: editingQuiz?.id || `quiz-manual-${Date.now()}`,
-            title: quizTitle || 'Đề thi thủ công',
+            title: quizTitle || 'Đề thi mới (Chưa đặt tên)',
             classLevel: classLevel || '3',
             timeLimit: typeof manualTimeLimit === 'number' ? manualTimeLimit : 15,
             questions: [],
@@ -546,7 +546,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
         addTagToState,
         handleApplyAiCategory,
         handleApplyAiTitleSuggestion,
-        handleCreateManual,
+        handleStartManual,
         handleGenerate,
         handleRegenerateSingle,
         handleSaveQuiz,

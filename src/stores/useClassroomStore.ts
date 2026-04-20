@@ -20,6 +20,7 @@ import * as classroomService from '../services/classroomService';
 import { useGamificationStore, restoreGamificationData } from './useGamificationStore';
 import { PetData, ShopItem } from '../types/gamification.types';
 import { StorageKeys } from '../constants/storageKeys';
+import { useHomeworkStore } from '../features/homework/stores/useHomeworkStore';
 
 // --- Store Interface ---
 
@@ -406,6 +407,7 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
         set({ studentSession: null, assignments: [] });
         // Clear gamification data on logout
         useGamificationStore.getState().clearGamification();
+        useHomeworkStore.getState().resetStore();
     },
 
     restoreStudentSession: () => {

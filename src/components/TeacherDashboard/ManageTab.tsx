@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Quiz } from '../../types';
 import { Card, Button } from '../common';
 import { useQuizManager } from '../../hooks';
@@ -144,7 +144,7 @@ const QuickAssignModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div
                 className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95"
                 onClick={(e) => e.stopPropagation()}

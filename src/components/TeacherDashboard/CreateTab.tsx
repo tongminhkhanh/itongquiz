@@ -212,7 +212,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                             logic.setGeneratedQuiz({ ...logic.generatedQuiz, questions });
                         }
                     }}
-                    onCreateManual={logic.handleCreateManual}
+                    onStartManual={logic.handleStartManual}
                     onRegenerateQuestion={logic.handleRegenerateSingle}
                 />
             </div>

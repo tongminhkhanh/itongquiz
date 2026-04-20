@@ -347,35 +347,56 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         if (!body) return errorResponse('Invalid JSON body');
 
         const inputHash = await hashPassword(body.password);
-        const student = await db.prepare('SELECT * FROM students WHERE username = ? AND password_hash = ?')
-            .bind(body.username, inputHash).first<any>();
+        
+        // Use JOIN to get student, class, and pet in a single query
+        const studentData = await db.prepare(`
+            SELECT 
+                s.*, 
+                c.name as class_name,
+                p.pet_id, p.pet_name, p.level as pet_level, p.exp as pet_exp, 
+                p.exp_to_next as pet_exp_to_next, p.mood as pet_mood, 
+                p.items as pet_items, p.last_active as pet_last_active, 
+                p.image_url as pet_image_url
+            FROM students s
+            LEFT JOIN classes c ON c.id = s.class_id
+            LEFT JOIN user_pets p ON p.username = s.username
+            WHERE s.username = ? AND s.password_hash = ?
+        `).bind(body.username, inputHash).first<any>();
 
-        if (!student) return jsonResponse({ status: 'error', message: 'Sai tên đăng nhập hoặc mật khẩu.' });
+        if (!studentData) return jsonResponse({ status: 'error', message: 'Sai tên đăng nhập hoặc mật khẩu.' });
 
-        const cls = await db.prepare('SELECT name FROM classes WHERE id = ?').bind(student.class_id).first<any>();
-        const pet = await db.prepare('SELECT * FROM user_pets WHERE username = ?').bind(student.username).first<any>();
+        // Get shop items in a separate query (still optimized compared to before)
         const shopItems = await db.prepare('SELECT * FROM shop_items').all();
 
-        // Update pet lastActive
-        if (pet) {
+        // Update pet lastActive if it exists
+        if (studentData.pet_id) {
             await db.prepare('UPDATE user_pets SET last_active = ?, mood = ? WHERE username = ?')
-                .bind(new Date().toISOString(), 'happy', student.username).run();
+                .bind(new Date().toISOString(), 'happy', studentData.username).run();
         }
 
-        const petData = pet ? {
-            petId: pet.pet_id, petName: pet.pet_name,
-            level: Number(pet.level) || 1, exp: Number(pet.exp) || 0,
-            expToNext: Number(pet.exp_to_next) || 100, mood: pet.mood || 'happy',
-            items: pet.items ? JSON.parse(pet.items as string) : [],
-            lastActive: pet.last_active || '', imageUrl: pet.image_url || '',
+        const petData = studentData.pet_id ? {
+            petId: studentData.pet_id, 
+            petName: studentData.pet_name,
+            level: Number(studentData.pet_level) || 1, 
+            exp: Number(studentData.pet_exp) || 0,
+            expToNext: Number(studentData.pet_exp_to_next) || 100, 
+            mood: studentData.pet_mood || 'happy',
+            items: studentData.pet_items ? JSON.parse(studentData.pet_items as string) : [],
+            lastActive: studentData.pet_last_active || '', 
+            imageUrl: studentData.pet_image_url || '',
         } : null;
 
         return jsonResponse({
             status: 'success',
             data: {
-                studentId: student.id, fullName: student.full_name, username: student.username,
-                classId: student.class_id, className: cls?.name || '', avatar: student.avatar || '',
-                coins: Number(student.coins) || 0, pet: petData,
+                studentId: studentData.id, 
+                fullName: studentData.full_name, 
+                username: studentData.username,
+                classId: studentData.class_id, 
+                className: studentData.class_name || '', 
+                avatar: studentData.avatar || '',
+                coins: Number(studentData.coins) || 0, 
+                pet: petData,
                 shopItems: shopItems.results.map((i: any) => ({
                     itemId: i.item_id, name: i.name, price: Number(i.price) || 0,
                     type: i.type || 'ACCESSORY', category: i.category || '', assetUrl: i.asset_url || '',
@@ -417,6 +438,7 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
                 LEFT JOIN classes c ON a.class_id = c.id
                 LEFT JOIN quizzes q ON a.quiz_id = q.id
                 LEFT JOIN students s ON a.student_id = s.id
+                ORDER BY a.created_at DESC
             `).all();
 
             const mapped = assignments.results.map((a: any) => ({
@@ -454,6 +476,7 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
                 LEFT JOIN classes c ON a.class_id = c.id 
                 LEFT JOIN students s ON a.student_id = s.id 
                 WHERE a.class_id IN (${placeholders})
+                ORDER BY a.created_at DESC
             `).bind(...classIds).all();
 
             const mapped = assignments.results.map((a: any) => ({
@@ -472,7 +495,7 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
             if (!stu) return jsonResponse({ status: 'error', message: 'Student not found' });
 
             const asns = await db.prepare(
-                `SELECT * FROM assignments WHERE class_id = ? AND (student_id = '' OR student_id = ?)`
+                `SELECT * FROM assignments WHERE class_id = ? AND (student_id = '' OR student_id = ?) ORDER BY created_at DESC`
             ).bind(stu.class_id, stu.id).all();
 
             if (asns.results.length === 0) {
@@ -506,6 +529,7 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
                 FROM assignments a 
                 LEFT JOIN students s ON a.student_id = s.id 
                 WHERE a.class_id = ?
+                ORDER BY a.created_at DESC
             `).bind(classId).all();
             const mapped = rows.results.map((a: any) => ({
                 ...mapAssignment(a), studentName: a.student_name || ''

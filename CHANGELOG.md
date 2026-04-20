@@ -1,3 +1,25 @@
+## [2026-04-20] - Homework System & Security Update
+### Added
+- **Homework Submission Engine**: Triển khai hệ thống nộp bài tự luận với giao diện Modal hiện đại, hỗ trợ lưu bản nháp và tải tập tin.
+- **AI-Powered Evaluation**: Tích hợp AI chấm điểm sơ bộ và giáo viên nhận xét chi tiết cho bài tập tự luận.
+- **Assignment Progress Tracking**: Hiển thị tiến độ nộp bài trực quan cho giáo viên (Số lượng học sinh đã nộp / Tổng số).
+- **Zustand Reset Mechanism**: Thêm `resetStore` cho HomeworkStore để đảm bảo dọn dẹp dữ liệu khi đăng xuất.
+
+### Fixed
+- **Student Data Leakage**: Vá lỗ hổng nghiêm trọng cho phép học sinh thấy bài nộp của nhau. Giờ đây Backend bắt buộc lọc theo `student_id` và `assignment_id` đồng thời.
+- **Duplicate Participation Count**: Sửa lỗi đếm trùng số lượng học sinh nộp bài trong Dashboard giáo viên bằng cách dùng `COUNT(DISTINCT student_id)`.
+- **Session Bleeding**: Khắc phục tình trạng "ký ức" bài tập của người dùng trước đó vẫn hiển thị sau khi đăng xuất/đăng nhập lại trên cùng trình duyệt.
+
+### Improved (UI/UX)
+- **Teacher Workspace Renaming**: Đổi tên các mục trong Sidebar ("Bài tập" -> "Bài tập tự luận") để phân biệt rõ với Quiz trắc nghiệm.
+- **Global Glassmorphism Modernization**: Thực hiện nâng cấp giao diện toàn diện theo phong cách "Minimal Professional" của Apple/Notion.
+- **Unified Backdrop System**: Thay thế toàn bộ 13+ lớp phủ nền (Backdrop) sang hệ màu `slate-900/60` kết hợp `backdrop-blur-md` mang lại cảm giác cao cấp và hiện đại đồng nhất trên toàn ứng dụng.
+
+## [2026-04-20] - Phase 1
+### Added
+- **Manual Quiz Creation**: Tích hợp luồng "Ra đề THỦ CÔNG" hoàn chỉnh, cho phép giáo viên bắt đầu từ đề thi trống và tự thêm câu hỏi.
+- **Smart Manual Redirect**: Tự động chuyển hướng giáo viên/admin đã đăng nhập vào thẳng Dashboard thay vì dừng lại ở Landing Page.
+
 ## [2026-04-18]
 ### Added
 - **StudentView Senior Refactoring**: Hoàn tất tái cấu trúc thành phần monolithic `StudentView.tsx` sang kiến trúc Feature-based hiện đại.

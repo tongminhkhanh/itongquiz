@@ -19,6 +19,7 @@ export enum QuestionType {
     WORD_SCRAMBLE = 'WORD_SCRAMBLE', // Sắp xếp chữ cái thành từ
     RIDDLE = 'RIDDLE', // Giải câu đố
     ERROR_CORRECTION = 'ERROR_CORRECTION', // Tìm từ sai và sửa lại
+    GEOMETRY = 'GEOMETRY', // Câu hỏi hình học (SVG/Canvas)
 }
 
 export interface MCQQuestion {
@@ -229,6 +230,18 @@ export interface ErrorCorrectionQuestion {
     difficulty?: 1 | 2 | 3;
 }
 
+// Geometry Question - Câu hỏi hình học
+export interface GeometryQuestion {
+    id: string;
+    type: QuestionType.GEOMETRY;
+    question: string;
+    geometryData: any; // Using any for now to avoid circular or complex imports
+    geometryType?: string;
+    explanation?: string;
+    image?: string;
+    difficulty?: 1 | 2 | 3;
+}
+
 /**
  * Question Snapshot - Lưu thông tin câu hỏi tối giản trong kết quả
  * Dùng để xem chi tiết kết quả ngay cả khi quiz đã bị xóa
@@ -252,7 +265,7 @@ export interface AnswerDetail {
     questionSnapshot?: QuestionSnapshot;  // Snapshot câu hỏi (để xem khi quiz bị xóa)
 }
 
-export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion | CategorizationQuestion | WordScrambleQuestion | RiddleQuestion | ErrorCorrectionQuestion;
+export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion | CategorizationQuestion | WordScrambleQuestion | RiddleQuestion | ErrorCorrectionQuestion | GeometryQuestion;
 
 export interface Quiz {
     id: string;

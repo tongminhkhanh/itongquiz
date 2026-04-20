@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { callApi } from '../../services/apiAdapter';
 import { UserPlus, Pencil, Trash2, X, Save, Loader2, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { ResponsiveDataView } from '../common';
@@ -326,7 +326,7 @@ const TeacherManagementTab: React.FC = () => {
 
             {/* Create/Edit Modal */}
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
                     <div className="bg-white w-full h-dvh md:h-auto md:max-h-[90vh] md:max-w-md rounded-none md:rounded-2xl shadow-xl p-5 md:p-6 md:mx-4 overflow-y-auto">
                         {/* Modal header */}
                         <div className="flex items-center justify-between mb-6">

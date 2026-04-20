@@ -28,6 +28,7 @@ export function getTypeLabel(type: QuestionType): string {
         [QuestionType.WORD_SCRAMBLE]: 'Ghép chữ',
         [QuestionType.RIDDLE]: 'Câu đố',
         [QuestionType.ERROR_CORRECTION]: 'Tìm từ sai',
+        [QuestionType.GEOMETRY]: 'Hình học',
     };
     return labels[type] ?? type;
 }
