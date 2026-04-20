@@ -2,12 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Quiz } from '../../types';
 import { Card, Button } from '../common';
 import { useQuizManager } from '../../hooks';
-import { Search, Key, Edit, Trash2, RefreshCw, Lock, Tag, Copy, Send, MoreVertical, Eye, X, Loader2, CheckCircle2 } from 'lucide-react';
+import { Search, Key, Edit, Trash2, RefreshCw, Lock, Tag, Copy, Send, MoreVertical, Eye, X, Loader2, CheckCircle2, BookOpen } from 'lucide-react';
 import { useQuizStore } from '../../../stores/quizStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { SUBJECT_CONFIG } from '../HomePage/StudentDashboardUI';
 import { showError, showConfirm, showSuccess } from '../../utils/toast';
+import WorksheetExportModal from './WorksheetExportModal';
 
 // Category tabs config for teacher filter
 const CATEGORY_TABS = [
@@ -32,8 +33,9 @@ const DropdownMenu: React.FC<{
     onManageCode: (quizId: string, currentCode: string) => void;
     onEdit: (quiz: Quiz) => void;
     onDelete: (quizId: string) => void;
+    onExportWorksheet: (quiz: Quiz) => void;
     isDeleting: boolean;
-}> = ({ quiz, onManageCode, onEdit, onDelete, isDeleting }) => {
+}> = ({ quiz, onManageCode, onEdit, onDelete, onExportWorksheet, isDeleting }) => {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -79,6 +81,12 @@ const DropdownMenu: React.FC<{
                         className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-colors"
                     >
                         <Edit className="w-4 h-4" /> Sửa đề
+                    </button>
+                    <button
+                        onClick={() => { onExportWorksheet(quiz); setIsOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                    >
+                        <BookOpen className="w-4 h-4" /> Xuất Vở Bài Tập
                     </button>
                     <div className="my-1 border-t border-gray-100" />
                     <button
@@ -254,6 +262,7 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
     const [assigningQuiz, setAssigningQuiz] = useState<Quiz | null>(null);
+    const [worksheetQuiz, setWorksheetQuiz] = useState<Quiz | null>(null);
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
@@ -291,6 +300,14 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
             {/* Quick Assign Modal */}
             {assigningQuiz && (
                 <QuickAssignModal quiz={assigningQuiz} onClose={() => setAssigningQuiz(null)} />
+            )}
+
+            {/* Worksheet Export Modal */}
+            {worksheetQuiz && (
+                <WorksheetExportModal
+                    quiz={worksheetQuiz}
+                    onClose={() => setWorksheetQuiz(null)}
+                />
             )}
 
             {/* Category Filter Tabs */}
@@ -430,6 +447,7 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
                                             quiz={quiz}
                                             onManageCode={onManageCode}
                                             onEdit={onEdit}
+                                            onExportWorksheet={(q) => setWorksheetQuiz(q)}
                                             onDelete={quizManagerHook.handleDelete}
                                             isDeleting={quizManagerHook.deletingId === quiz.id}
                                         />

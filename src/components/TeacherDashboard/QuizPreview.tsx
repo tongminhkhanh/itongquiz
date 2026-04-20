@@ -2,8 +2,9 @@ import React, { useState, useRef } from 'react';
 import type { Quiz, Question, QuestionType as QType } from '../../types';
 import { QuestionType } from '../../types';
 import { Card, Button, Modal } from '../common';
-import { X, Save, PlusCircle, FileDown } from 'lucide-react';
+import { X, Save, PlusCircle, FileDown, BookOpen } from 'lucide-react';
 import { generateQuizDocx } from '../../utils/docxGenerator';
+import WorksheetExportModal from './WorksheetExportModal';
 import { 
     QuestionCard, 
     QuestionEditorModal, 
@@ -66,6 +67,9 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
     // 3. Regeneration State
     const [isGeneratingSingle, setIsGeneratingSingle] = useState<string | null>(null);
 
+    // 4. Worksheet Export Modal
+    const [showWorksheetModal, setShowWorksheetModal] = useState(false);
+
     const handleRegenerateSingleQuestion = async (q: Question) => {
         if (!onRegenerateQuestion || !quiz || !onUpdateQuestions) return;
         setIsGeneratingSingle(q.id);
@@ -108,6 +112,14 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
 
     return (
         <>
+            {/* Worksheet Export Modal */}
+            {showWorksheetModal && quiz && (
+                <WorksheetExportModal
+                    quiz={quiz}
+                    onClose={() => setShowWorksheetModal(false)}
+                />
+            )}
+
             <Card title="📋 Xem trước đề thi">
                 {quiz ? (
                     <div className="space-y-4">
@@ -118,7 +130,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
                                     Lớp {quiz.classLevel} • {quiz.questions.length} câu • {quiz.timeLimit} phút
                                 </p>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 flex-wrap">
                                 <Button
                                     onClick={() => quiz && generateQuizDocx(quiz)}
                                     variant="secondary"
@@ -126,6 +138,14 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
                                 >
                                     Tải file Word
                                 </Button>
+                                <button
+                                    onClick={() => setShowWorksheetModal(true)}
+                                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-sm hover:shadow-md transition-all"
+                                    title="Xuất Vở Bài Tập để in"
+                                >
+                                    <BookOpen className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Xuất Vở</span>
+                                </button>
                                 <Button
                                     onClick={onSave}
                                     variant="success"
