@@ -8,6 +8,7 @@ import React from 'react';
 import { StudentResult, Quiz } from '../../../types';
 import { ArrowUpDown, Eye, Trash2, Loader2 } from 'lucide-react';
 import { ResponsiveDataView } from '../../common';
+import { checkAnswer } from '../../../utils/question/scoring.util';
 
 export interface ResultsTableProps {
     results: StudentResult[];
@@ -30,6 +31,55 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
     onDeleteClick,
     isLoading,
 }) => {
+    const isAnswerSkipped = (value: any): boolean => (
+        value === undefined ||
+        value === null ||
+        value === '' ||
+        (Array.isArray(value) && value.length === 0) ||
+        (typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0)
+    );
+
+    const getDisplayedTotalQuestions = (result: StudentResult): number => {
+        if (result.totalQuestions && result.totalQuestions > 0) return result.totalQuestions;
+        return Object.keys(result.answers || {}).filter(key => !key.startsWith('_')).length;
+    };
+
+    const getDisplayedCorrectCount = (result: StudentResult): number => {
+        const answerEntries = Object.entries(result.answers || {}).filter(([key]) => !key.startsWith('_'));
+        if (answerEntries.length === 0) {
+            return result.correctCount || 0;
+        }
+
+        let correctCount = 0;
+
+        answerEntries.forEach(([questionId, answerData]) => {
+            if (answerData && typeof answerData === 'object' && ('selectedAnswer' in answerData || 'questionSnapshot' in answerData)) {
+                const selectedAnswer = (answerData as any).selectedAnswer;
+                if (isAnswerSkipped(selectedAnswer)) return;
+
+                const snapshot = (answerData as any).questionSnapshot;
+                if (snapshot?.type) {
+                    const { isCorrect } = checkAnswer(snapshot, selectedAnswer);
+                    if (isCorrect) correctCount++;
+                    return;
+                }
+
+                if ((answerData as any).isCorrect === true) {
+                    correctCount++;
+                }
+                return;
+            }
+
+            if (isAnswerSkipped(answerData)) return;
+            const validation = result.validationDetails?.find(v => v.questionId === questionId);
+            if (validation?.isCorrect) {
+                correctCount++;
+            }
+        });
+
+        return correctCount;
+    };
+
     // Get quiz title by ID, prioritize quizTitle from result if available
     const getQuizTitle = (result: StudentResult) => {
         // First try to use quizTitle from result (from Google Sheets)
@@ -137,7 +187,7 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                         <span className="text-sm text-gray-500">
-                                            {result.correctCount}/{result.totalQuestions} câu
+                                            {getDisplayedCorrectCount(result)}/{getDisplayedTotalQuestions(result)} câu
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-right">
@@ -202,7 +252,7 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                     </div>
                     <p className="text-sm text-slate-600 line-clamp-2">{getQuizTitle(result)}</p>
                     <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>{result.correctCount}/{result.totalQuestions} câu đúng</span>
+                        <span>{getDisplayedCorrectCount(result)}/{getDisplayedTotalQuestions(result)} câu đúng</span>
                         <span>{formatDate(result.submittedAt)}</span>
                     </div>
                     {(onRowClick || onDeleteClick) && (
