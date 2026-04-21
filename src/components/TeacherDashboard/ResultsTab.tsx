@@ -20,7 +20,8 @@ import {
 import { useResults } from '../../hooks';
 import { useQuizStore } from '../../../stores/quizStore';
 import { fetchResultAnswers } from '../../services/googleSheetService';
-import { RefreshCw, Download, ChevronDown, Search, FileText, Users, BarChart, Loader2 } from 'lucide-react';
+import { RefreshCw, Download, ChevronDown, Search, FileText, Users, BarChart } from 'lucide-react';
+import { checkAnswer } from '../../utils/question/scoring.util';
 import {
     calculateResultsStatistics,
     analyzeQuestionDifficulty,
@@ -33,6 +34,12 @@ interface ResultsTabProps {
     results: StudentResult[];
     quizzes: Quiz[];
     onRefresh?: () => Promise<StudentResult[]>;
+}
+
+interface ResultDisplayOverride {
+    correctCount: number;
+    totalQuestions: number;
+    score: number;
 }
 
 const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) => {
@@ -51,6 +58,53 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [activeQuizId, setActiveQuizId] = useState<string>('all');
     const [currentPage, setCurrentPage] = useState(1);
+    const [resultOverrides, setResultOverrides] = useState<Record<string, ResultDisplayOverride>>({});
+
+    const isAnswerSkipped = (value: any): boolean => (
+        value === undefined ||
+        value === null ||
+        value === '' ||
+        (Array.isArray(value) && value.length === 0) ||
+        (typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0)
+    );
+
+    const calculateOverrideFromAnswers = useCallback((result: StudentResult, answers: Record<string, any>): ResultDisplayOverride | null => {
+        const answerEntries = Object.entries(answers || {}).filter(([key]) => !key.startsWith('_'));
+        if (answerEntries.length === 0) return null;
+
+        let correctedCount = 0;
+        answerEntries.forEach(([questionId, answerData]) => {
+            if (answerData && typeof answerData === 'object' && ('selectedAnswer' in answerData || 'questionSnapshot' in answerData)) {
+                const selectedAnswer = (answerData as any).selectedAnswer;
+                if (isAnswerSkipped(selectedAnswer)) return;
+
+                const snapshot = (answerData as any).questionSnapshot;
+                if (snapshot?.type) {
+                    const { status } = checkAnswer(snapshot as any, selectedAnswer);
+                    if (status === 'correct') correctedCount++;
+                    return;
+                }
+
+                if ((answerData as any).isCorrect === true) {
+                    correctedCount++;
+                }
+                return;
+            }
+
+            if (isAnswerSkipped(answerData)) return;
+            const validation = result.validationDetails?.find(v => v.questionId === questionId);
+            if (validation?.isCorrect) correctedCount++;
+        });
+
+        const totalQuestions = result.totalQuestions && result.totalQuestions > 0 ? result.totalQuestions : answerEntries.length;
+        const score = totalQuestions > 0 ? Math.round((correctedCount / totalQuestions) * 100) / 10 : result.score;
+
+        return {
+            correctCount: correctedCount,
+            totalQuestions,
+            score,
+        };
+    }, []);
 
     // Use custom hooks for results
     const resultsHook = useResults({
@@ -100,6 +154,58 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
             setCurrentPage(totalPages);
         }
     }, [currentPage, totalPages]);
+
+    // Fetch answers for visible rows to recalculate correct/total from source data
+    useEffect(() => {
+        const missingRows = paginatedResults.filter(r => !resultOverrides[String(r.id)]);
+        if (missingRows.length === 0) return;
+
+        let cancelled = false;
+
+        const loadOverrides = async () => {
+            const resolved = await Promise.all(
+                missingRows.map(async (result) => {
+                    try {
+                        const answers = await fetchResultAnswers(result.id);
+                        const override = calculateOverrideFromAnswers(result, answers);
+                        if (!override) return null;
+                        return { id: String(result.id), override };
+                    } catch {
+                        return null;
+                    }
+                })
+            );
+
+            if (cancelled) return;
+
+            setResultOverrides((prev) => {
+                let changed = false;
+                const next = { ...prev };
+
+                resolved.forEach((item) => {
+                    if (!item) return;
+                    const existing = next[item.id];
+                    if (
+                        !existing ||
+                        existing.correctCount !== item.override.correctCount ||
+                        existing.totalQuestions !== item.override.totalQuestions ||
+                        existing.score !== item.override.score
+                    ) {
+                        next[item.id] = item.override;
+                        changed = true;
+                    }
+                });
+
+                return changed ? next : prev;
+            });
+        };
+
+        loadOverrides();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [paginatedResults, resultOverrides, calculateOverrideFromAnswers]);
 
     // Calculate statistics
     const statistics = useMemo(() => {
@@ -232,15 +338,38 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
     const handleViewDetail = useCallback(async (result: StudentResult) => {
         // If answers already loaded (non-empty), show modal directly
         if (result.answers && Object.keys(result.answers).length > 0) {
-            setSelectedStudent(result);
+            const override = calculateOverrideFromAnswers(result, result.answers);
+            if (override) {
+                setResultOverrides(prev => ({ ...prev, [String(result.id)]: override }));
+                setSelectedStudent({
+                    ...result,
+                    correctCount: override.correctCount,
+                    totalQuestions: override.totalQuestions,
+                    score: override.score,
+                });
+            } else {
+                setSelectedStudent(result);
+            }
             return;
         }
 
         setIsFetchingDetail(true);
         try {
             const answers = await fetchResultAnswers(result.id);
-            // Merge loaded answers into the result object
-            setSelectedStudent({ ...result, answers });
+            const override = calculateOverrideFromAnswers(result, answers);
+
+            if (override) {
+                setResultOverrides(prev => ({ ...prev, [String(result.id)]: override }));
+            }
+
+            // Merge loaded answers into the result object (with corrected display metrics when available)
+            setSelectedStudent({
+                ...result,
+                answers,
+                correctCount: override?.correctCount ?? result.correctCount,
+                totalQuestions: override?.totalQuestions ?? result.totalQuestions,
+                score: override?.score ?? result.score,
+            });
         } catch (error) {
             console.error('Failed to fetch student answers:', error);
             // Show modal anyway with empty answers (will show warning)
@@ -248,7 +377,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
         } finally {
             setIsFetchingDetail(false);
         }
-    }, []);
+    }, [calculateOverrideFromAnswers]);
 
     return (
         <div className="space-y-6">
@@ -388,6 +517,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                 <ResultsTable
                     results={paginatedResults}
                     quizzes={quizzes}
+                    resultOverrides={resultOverrides}
                     sortField={resultsHook.sortField}
                     sortOrder={resultsHook.sortOrder}
                     onSortChange={(field) => {

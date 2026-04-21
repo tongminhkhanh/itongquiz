@@ -13,6 +13,7 @@ import { checkAnswer } from '../../../utils/question/scoring.util';
 export interface ResultsTableProps {
     results: StudentResult[];
     quizzes: Quiz[];
+    resultOverrides?: Record<string, { correctCount: number; totalQuestions: number; score?: number }>;
     sortField: 'score' | 'submittedAt';
     sortOrder: 'asc' | 'desc';
     onSortChange: (field: 'score' | 'submittedAt') => void;
@@ -24,6 +25,7 @@ export interface ResultsTableProps {
 export const ResultsTable: React.FC<ResultsTableProps> = ({
     results,
     quizzes,
+    resultOverrides,
     sortField,
     sortOrder,
     onSortChange,
@@ -78,6 +80,17 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
         });
 
         return correctCount;
+    };
+
+    const getResolvedResult = (result: StudentResult): StudentResult => {
+        const override = resultOverrides?.[String(result.id)];
+        if (!override) return result;
+        return {
+            ...result,
+            correctCount: override.correctCount,
+            totalQuestions: override.totalQuestions,
+            score: typeof override.score === 'number' ? override.score : result.score,
+        };
     };
 
     // Get quiz title by ID, prioritize quizTitle from result if available
@@ -165,7 +178,9 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {results.map((result) => (
+                            {results.map((result) => {
+                                const displayResult = getResolvedResult(result);
+                                return (
                                 <tr
                                     key={result.id}
                                     className={`hover:bg-gray-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
@@ -181,13 +196,13 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                                         <span className="text-gray-600 text-sm">{getQuizTitle(result)}</span>
                                     </td>
                                     <td className="px-4 py-3 text-center">
-                                        <span className={`inline-flex px-2 py-1 rounded-full text-sm font-bold ${getScoreColor(result.score)}`}>
-                                            {result.score}
+                                        <span className={`inline-flex px-2 py-1 rounded-full text-sm font-bold ${getScoreColor(displayResult.score)}`}>
+                                            {displayResult.score}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                         <span className="text-sm text-gray-500">
-                                            {getDisplayedCorrectCount(result)}/{getDisplayedTotalQuestions(result)} câu
+                                            {getDisplayedCorrectCount(displayResult)}/{getDisplayedTotalQuestions(displayResult)} câu
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-right">
@@ -231,12 +246,15 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                                         </td>
                                     )}
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
             )}
-            renderMobileCard={(result) => (
+            renderMobileCard={(result) => {
+                const displayResult = getResolvedResult(result);
+                return (
                 <div
                     className={`space-y-3 ${onRowClick ? 'cursor-pointer' : ''}`}
                     onClick={() => onRowClick?.(result)}
@@ -246,13 +264,13 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                             <p className="text-sm font-bold text-slate-800">{result.studentName}</p>
                             <p className="text-xs text-slate-500">{result.studentClass}</p>
                         </div>
-                        <span className={`inline-flex px-2 py-1 rounded-full text-sm font-bold ${getScoreColor(result.score)}`}>
-                            {result.score}
+                        <span className={`inline-flex px-2 py-1 rounded-full text-sm font-bold ${getScoreColor(displayResult.score)}`}>
+                            {displayResult.score}
                         </span>
                     </div>
                     <p className="text-sm text-slate-600 line-clamp-2">{getQuizTitle(result)}</p>
                     <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>{getDisplayedCorrectCount(result)}/{getDisplayedTotalQuestions(result)} câu đúng</span>
+                        <span>{getDisplayedCorrectCount(displayResult)}/{getDisplayedTotalQuestions(displayResult)} câu đúng</span>
                         <span>{formatDate(result.submittedAt)}</span>
                     </div>
                     {(onRowClick || onDeleteClick) && (
@@ -287,7 +305,8 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                         </div>
                     )}
                 </div>
-            )}
+                );
+            }}
         />
     );
 };
