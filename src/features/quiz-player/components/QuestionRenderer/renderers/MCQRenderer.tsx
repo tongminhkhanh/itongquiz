@@ -48,7 +48,7 @@ const MCQRenderer: React.FC<BaseRendererProps> = ({
                                         }`}
                                     >
                                         <ChoiceIndicator label={label} isSelected={isSelected} />
-                                        <MathSpan content={opt} className="flex-1" />
+                                        <MathSpan content={typeof opt === 'string' ? opt.replace(/^[A-Za-z][.)]\s*/, '') : String(opt)} className="flex-1" />
                                     </button>
                                 );
                             })}
@@ -78,7 +78,7 @@ const MCQRenderer: React.FC<BaseRendererProps> = ({
                     >
                         <ChoiceIndicator label={label} isSelected={isSelected} />
                         <div className="flex-1 min-w-0">
-                            <MathSpan content={opt as string} className="text-gray-800 font-medium leading-relaxed block overflow-hidden text-ellipsis" />
+                            <MathSpan content={typeof opt === 'string' ? opt.replace(/^[A-Za-z][.)]\s*/, '') : String(opt)} className="text-gray-800 font-medium leading-relaxed block overflow-hidden text-ellipsis" />
                         </div>
                     </button>
                 );

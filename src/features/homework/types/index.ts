@@ -32,6 +32,13 @@ export interface HomeworkSubmission {
   ai_evaluation: string;
   score: number;
   submitted_at: string;
+  analyticsData?: AnalyticsNode[];
+}
+
+export interface AnalyticsNode {
+  questionId: string | number;
+  score: number; // 0.0 to 1.0 (0=sai, 1=đúng, 0.5=đúng một nửa)
+  label: string; // Tên hiển thị, vd: "Câu 1"
 }
 
 export interface HomeworkConfig {

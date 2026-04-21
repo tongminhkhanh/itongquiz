@@ -2,7 +2,7 @@
     "meta": {
         "schema_version": "1.1.0",
         "awf_version": "3.3.0",
-        "last_updated": "2026-04-20T10:30:00+07:00"
+        "last_updated": "2026-04-20T18:50:00+07:00"
     },
     "project": {
         "name": "ítongQuiz",
@@ -21,8 +21,8 @@
         "ui_style": "Minimal Professional (Glassmorphism)"
     },
     "tech_stack": {
-        "frontend": "Vite, React 19, React.memo Optimization, TailwindCSS 4, Zustand, MathJax 3, react-hot-toast, Framer Motion",
-        "backend": "Cloudflare Workers, D1 Database",
+        "frontend": "Vite, React 19, React.memo & useCallback Optimization, TailwindCSS 4, Zustand, MathJax 3, useSeo Hook, Framer Motion",
+        "backend": "Cloudflare Workers, D1 Database (JOIN Optimized)",
         "ai_providers": "Google Gemini, Perplexity (via Cloudflare Proxy)",
         "hosting": "Vercel (Frontend), Cloudflare (Backend)"
     },
@@ -51,35 +51,23 @@
             ],
             "optimization": "React.memo for QuestionRenderer"
         },
-        "quiz_editor": {
-            "pattern": "Feature-based (Smart Hook & Draft Mapping)",
-            "directory": "src/features/quiz-editor/",
-            "logic": {
-                "hook": "useQuestionEditor.ts",
-                "mapper": "utils/questionDraftMapper.ts",
-                "ai_service": "hooks/useSmartDistractors.ts"
-            },
-            "sub_components": [
-                { "name": "QuestionCard", "desc": "Smart Preview/Actions card" },
-                { "name": "QuestionEditorModal", "desc": "Dispatcher for 14+ type-specific editors" }
-            ],
-            "strict_mode": "Zero Build Errors policy"
-        },
-        "quiz_generator": {
-            "hook": "src/features/quiz-generator/hooks/useCreateQuizLogic.ts",
-            "modes": ["AI Generation (PDF/Prompt)", "Manual Creation (Empty Start)"],
-            "ui": "src/components/TeacherDashboard/CreateTab.tsx"
+        "seo_management": {
+            "pattern": "Centralized Hook Injection",
+            "hook": "src/hooks/useSeo.ts",
+            "features": ["Canonical URLs", "JSON-LD structured data", "Meta dynamic injection", "Category whitelist enforcement"],
+            "entry_point": "App.tsx (root)"
         },
         "homework_system": {
-            "pattern": "Submission & Feedback Workflow",
+            "pattern": "Submission & Feedback Workflow (Senior Refactor)",
             "directory": "src/features/homework/",
             "store": "stores/useHomeworkStore.ts",
             "components": [
                 { "name": "HomeworkTab", "desc": "Teacher view for managing assignments" },
                 { "name": "StudentHomeworkSection", "desc": "Dashboard list for student assignments" },
-                { "name": "HomeworkSubmissionModal", "desc": "Draft/Submission interface with file upload" }
+                { "name": "HomeworkSubmissionModal", "desc": "Decomposed sub-components: AssignmentDetails, SubmissionArea." }
             ],
-            "security": "Strict student_id filtering at Database level"
+            "security": "Strict student_id filtering at Database level",
+            "optimization": "useCallback for heavy handlers & Memoized sections"
         }
     },
     "database_schema": {
@@ -93,7 +81,7 @@
             { "name": "results", "desc": "Lịch sử làm bài và điểm số" },
             { "name": "announcements", "desc": "Thông báo toàn hệ thống hiển thị qua Banner" }
         ],
-        "migration_notes": "Bcrypt migration (2026-03-15). Homework system integration (2026-04-20)."
+        "optimization_notes": "SQL JOIN batching for student login & assignment count (2026-04-20)."
     },
     "business_rules": [
         "Giáo viên quản lý lớp và đề thi riêng",
@@ -107,17 +95,15 @@
     "knowledge_items": {
         "patterns": [
             "Feature-based refactoring for monolithic components",
-            "State centralization in custom hooks to reduce Prop Drilling",
-            "Glassmorphism Backdrop Standard: bg-slate-900/60 + backdrop-blur-md for all modals.",
+            "SEO-as-a-Hook pattern: Move all head/meta management to a specialized hook injected at root.",
+            "Database batching: Use JOIN instead of sequential SELECTs to reduce latency spikes in Workers.",
             "Logout Cleanup: Global stores (Homework, Gamification) must be reset manually on logout."
         ],
         "gotchas": [
+            "Sequential SELECT queries cause significant latency in Cloudflare Workers (N+1 effect).",
             "Branding unification is critical across multiple layout files (Login, Landing, ChatBot, Common Footer).",
-            "Announcement banners need careful padding-based positioning to avoid header element overlap.",
-            "Splitting LaTeX strings for inline components breaks MathJax parsing.",
-            "Dual Session Persistence: Teacher and Student sessions must be cleared simultaneously on logout to ensure correct landing page redirection.",
-            "Data Leakage Risk: Backend queries for student records MUST include student_id filter to prevent cross-account exposure when assignment_id is present.",
-            "Zustand Persistence: Stored state persists across login sessions unless explicitly reset, which can leak data between different users on the same machine."
+            "Zustand Persistence: Stored state persists across login sessions unless explicitly reset.",
+            "Meta tags in React require effective lifecycle management (useEffect) to prevent duplicate tag injection."
         ]
     }
 }

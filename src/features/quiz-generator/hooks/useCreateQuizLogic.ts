@@ -3,11 +3,13 @@ import { Quiz, QuestionType, ImageLibraryItem } from '../../../types';
 import { showError, showSuccess } from '../../../utils/toast';
 import { extractTextFromPdf, generateQuiz, QuizGenerationOptions, AIProvider } from '../../../services/geminiService';
 import { generateTrangNguyenQuiz } from '../../../services/trangNguyenGeminiService';
+import { getTeacherAiQuota, consumeTeacherAiQuota } from '../../../services/teacherAiQuotaService';
 import { useAuthStore } from '../../../../stores/authStore';
 import { useClassroomStore } from '../../../stores/useClassroomStore';
 import { normalizeTagValue, normalizeTags, normalizeAiCategory } from '../utils/quizNormalizers';
 
 const MAX_OCR_CONTENT_LENGTH = 60000;
+const DEFAULT_TEACHER_DAILY_AI_LIMIT = 5;
 
 interface UseCreateQuizLogicProps {
     editingQuiz: Quiz | null;
@@ -20,6 +22,7 @@ export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSu
     const authStore = useAuthStore();
     const classroomStore = useClassroomStore();
 
+    const isTeacherAccount = !authStore.isAdmin;
     const isClassLocked = !authStore.isAdmin && !!authStore.teacherClass;
     const lockedClass = authStore.teacherClass || '3';
 
@@ -90,9 +93,32 @@ export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSu
     });
     const [maxAttempts, setMaxAttempts] = useState(3);
     const [tnSearchMode, setTnSearchMode] = useState<'search' | 'quick'>('search');
+    const [aiUsageCount, setAiUsageCount] = useState(0);
+    const [dailyAiLimit, setDailyAiLimit] = useState(DEFAULT_TEACHER_DAILY_AI_LIMIT);
+
+    const aiUsageRemaining = isTeacherAccount
+        ? Math.max(0, dailyAiLimit - aiUsageCount)
+        : Number.POSITIVE_INFINITY;
+    const hasAiQuota = !isTeacherAccount || aiUsageRemaining > 0;
 
     const toggleSection = (section: string) => {
         setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    };
+
+    const refreshTeacherAiQuota = async () => {
+        if (!isTeacherAccount || !authStore.username) {
+            setAiUsageCount(0);
+            setDailyAiLimit(DEFAULT_TEACHER_DAILY_AI_LIMIT);
+            return;
+        }
+
+        try {
+            const quota = await getTeacherAiQuota(authStore.username);
+            setAiUsageCount(quota.usedCount || 0);
+            setDailyAiLimit(quota.dailyLimit || DEFAULT_TEACHER_DAILY_AI_LIMIT);
+        } catch (err) {
+            console.warn('Khong the dong bo han muc AI tu server:', err);
+        }
     };
 
     useEffect(() => {
@@ -100,6 +126,10 @@ export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSu
             classroomStore.fetchClasses(authStore.username);
         }
     }, [authStore.username]);
+
+    useEffect(() => {
+        refreshTeacherAiQuota();
+    }, [isTeacherAccount, authStore.username]);
 
     useEffect(() => {
         if (editingQuiz) {
@@ -288,6 +318,24 @@ export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSu
         if (questionCount === 0) {
             showError('Tổng số câu hỏi phải lớn hơn 0');
             return;
+        }
+
+        if (isTeacherAccount) {
+            const username = String(authStore.username || '').trim();
+            if (!username) {
+                showError('Khong xac dinh duoc tai khoan giao vien de kiem tra han muc AI.');
+                return;
+            }
+
+            try {
+                const quota = await consumeTeacherAiQuota(username);
+                setAiUsageCount(quota.usedCount || 0);
+                setDailyAiLimit(quota.dailyLimit || DEFAULT_TEACHER_DAILY_AI_LIMIT);
+            } catch (err: any) {
+                await refreshTeacherAiQuota();
+                showError(err?.message || 'Ban da dung het luot tao de AI hom nay.');
+                return;
+            }
         }
 
         setIsGenerating(true);
@@ -540,6 +588,11 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
         maxAttempts, setMaxAttempts,
         tnSearchMode, setTnSearchMode,
         isClassLocked, lockedClass,
+        isTeacherAccount,
+        aiUsageCount,
+        aiUsageRemaining,
+        hasAiQuota,
+        dailyAiLimit,
         
         // Methods
         generateRandomCode,
@@ -555,3 +608,4 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
         authStore
     };
 };
+

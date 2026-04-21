@@ -77,7 +77,8 @@ CREATE TABLE IF NOT EXISTS results (
   total_questions INTEGER DEFAULT 0,
   time_taken INTEGER DEFAULT 0,
   submitted_at TEXT NOT NULL,
-  answers TEXT DEFAULT '{}'
+  answers TEXT DEFAULT '{}',
+  analytics_json TEXT DEFAULT '[]'
 );
 
 -- Assignments
@@ -256,6 +257,7 @@ CREATE INDEX IF NOT EXISTS idx_results_quiz_id ON results(quiz_id);
 CREATE INDEX IF NOT EXISTS idx_results_student ON results(student_name);
 CREATE INDEX IF NOT EXISTS idx_classes_teacher ON classes(teacher_username);
 CREATE INDEX IF NOT EXISTS idx_results_submitted_at ON results(submitted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_results_analytics ON results(class_name, submitted_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_user_date ON attendance_claims(username, claim_date);
 CREATE INDEX IF NOT EXISTS idx_attendance_user_week ON attendance_claims(username, claim_date DESC);
 CREATE INDEX IF NOT EXISTS idx_gift_catalog_active ON gift_catalog_items(is_active);
@@ -297,7 +299,8 @@ CREATE TABLE IF NOT EXISTS hw_submissions (
   teacher_feedback TEXT DEFAULT '',
   ai_evaluation TEXT DEFAULT '',
   score REAL DEFAULT 0,
-  submitted_at TEXT NOT NULL
+  submitted_at TEXT NOT NULL,
+  analytics_json TEXT DEFAULT '[]'
 );
 
 -- Performance indexes for homework
@@ -305,3 +308,15 @@ CREATE INDEX IF NOT EXISTS idx_hw_assignments_class ON hw_assignments(class_id);
 CREATE INDEX IF NOT EXISTS idx_hw_assignments_teacher ON hw_assignments(teacher_id);
 CREATE INDEX IF NOT EXISTS idx_hw_submissions_assignment ON hw_submissions(assignment_id);
 CREATE INDEX IF NOT EXISTS idx_hw_submissions_student ON hw_submissions(student_id);
+CREATE INDEX IF NOT EXISTS idx_hw_submissions_analytics ON hw_submissions(assignment_id, submitted_at DESC);
+
+ - -   T e s t   B a n k   T a b l e 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   t e s t _ b a n k   ( 
+         i d   T E X T   P R I M A R Y   K E Y , 
+         t e a c h e r _ i d   T E X T   N O T   N U L L , 
+         q u e s t i o n _ d a t a   T E X T   N O T   N U L L , 
+         t a g s   T E X T , 
+         c r e a t e d _ a t   D A T E T I M E   D E F A U L T   C U R R E N T _ T I M E S T A M P 
+ ) ; 
+ C R E A T E   I N D E X   I F   N O T   E X I S T S   i d x _ t e s t _ b a n k _ t e a c h e r   O N   t e s t _ b a n k ( t e a c h e r _ i d ) ;  
+ 

@@ -7,6 +7,8 @@ import { Button } from '../../../components/common';
 import MathSpan from '../../../components/common/MathSpan';
 import { homeworkBackendService } from '../services/homeworkBackendService';
 import { homeworkService } from '../services/homeworkService';
+import { ClassHeatmap, StudentProgressChart, ProgressData } from '../../analytics';
+import { analyticsService, ClassAnalyticsResponse } from '../../analytics/services/analyticsService';
 
 interface AssignmentSubmissionsViewProps {
   assignment: HomeworkAssignment;
@@ -24,10 +26,14 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
   const [selectedSubmission, setSelectedSubmission] = useState<HomeworkSubmission | null>(null);
   const [isGrading, setIsGrading] = useState(false);
   const [isAILoading, setIsAILoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'GRADING' | 'ANALYTICS'>('GRADING');
 
   // For editing
   const [editScore, setEditScore] = useState<number>(0);
   const [editFeedback, setEditFeedback] = useState<string>('');
+
+  // Analytics data
+  const [analyticsData, setAnalyticsData] = useState<ClassAnalyticsResponse | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -35,6 +41,15 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
       await fetchStudents(assignment.class_id);
       const subs = await homeworkBackendService.getSubmissions(assignment.id);
       setLocalSubmissions(subs);
+      
+      try {
+        // Lấy báo cáo xu hướng lớp
+        const stats = await analyticsService.getClassAnalytics(assignment.class_id);
+        setAnalyticsData(stats);
+      } catch (e) {
+        console.warn('Could not load analytics', e);
+      }
+      
       setLoading(false);
     };
     loadData();
@@ -125,7 +140,60 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab('GRADING')}
+          className={`px-4 py-3 font-bold text-sm tracking-wide border-b-2 transition-colors ${
+            activeTab === 'GRADING' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          DANH SÁCH BÀI NỘP
+        </button>
+        <button
+          onClick={() => setActiveTab('ANALYTICS')}
+          className={`px-4 py-3 font-bold text-sm tracking-wide border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'ANALYTICS' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" /> BÁO CÁO NHANH
+        </button>
+      </div>
+
+      {activeTab === 'ANALYTICS' ? (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            <div className="bg-white p-2 rounded-3xl">
+              <div className="mb-4">
+                <h3 className="text-lg font-black text-slate-800">Biểu đồ Phổ Điểm (Biến Động)</h3>
+                <p className="text-sm text-slate-500">Trung bình chung của lớp qua các bài tập.</p>
+              </div>
+              <div className="h-[350px]">
+                <StudentProgressChart 
+                  title="Xu hướng Lớp Học" 
+                  data={analyticsData?.homeworkTrend.map((t, idx) => ({ 
+                    timeLabel: 'Lần ' + (idx + 1), 
+                    score: Math.round(t.avg_score * 10) / 10 
+                  })) || []} 
+                />
+              </div>
+            </div>
+
+            <div className="bg-white p-2 rounded-3xl">
+              <div className="mb-4">
+                <h3 className="text-lg font-black text-slate-800">Ma trận phổ điểm Từng Cầu (Heatmap)</h3>
+                <p className="text-sm text-slate-500">Bảng màu Xanh/Đỏ giúp phát hiện nhanh các "điểm mù" kiến thức của cả lớp bài này.</p>
+              </div>
+              <React.Suspense fallback={<div className="h-64 flex items-center justify-center animate-pulse bg-slate-50 rounded-xl">Đang tải ma trận...</div>}>
+                <ClassHeatmap submissions={localSubmissions} />
+              </React.Suspense>
+            </div>
+          </div>
+
+        </div>
+      ) : (
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Student List Sidebar */}
         <div className="xl:col-span-1 space-y-4">
           <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">Danh sách học sinh ({classStudents.length})</h3>
@@ -305,6 +373,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
           )}
         </div>
       </div>
+      )}
     </div>
   );
 };

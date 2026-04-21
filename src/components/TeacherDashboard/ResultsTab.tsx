@@ -377,11 +377,6 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                 )}
             </div>
 
-            {/* Analytics Charts */}
-            {filteredResults.length > 0 && (
-                <ResultsAnalytics statistics={statistics} />
-            )}
-
             {/* Results Table */}
             <Card padding="none">
                 <div className="p-4 border-b flex items-center justify-between">

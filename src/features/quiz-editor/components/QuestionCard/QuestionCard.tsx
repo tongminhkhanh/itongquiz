@@ -89,6 +89,8 @@ export interface QuestionCardProps {
     onGenerateDistractors?: (questionId: string, count: number) => void;
     onToggleDistractorPopover?: (id: string | null) => void;
     onSetDistractorCount?: (count: number) => void;
+    // Bank action
+    onSaveToBank?: (question: Question) => void;
     // Action state (passed down from hooks)
     isGeneratingSingle?: string | null;
     generatingDistractorId?: string | null;
@@ -110,6 +112,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
     onGenerateDistractors,
     onToggleDistractorPopover,
     onSetDistractorCount,
+    onSaveToBank,
     isGeneratingSingle = null,
     generatingDistractorId = null,
     showDistractorPopover = null,
@@ -166,6 +169,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                         onGenerateDistractors={onGenerateDistractors}
                         onToggleDistractorPopover={onToggleDistractorPopover}
                         onSetDistractorCount={onSetDistractorCount}
+                        onSaveToBank={onSaveToBank}
                         canEdit={canEdit}
                         canRegenerate={canRegenerate}
                     />

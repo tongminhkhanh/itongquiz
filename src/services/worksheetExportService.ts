@@ -1,7 +1,8 @@
 import jsPDF from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType, VerticalAlign } from 'docx';
 import { saveAs } from 'file-saver';
 import { Quiz, QuestionType } from '../types';
+import { setupUnicodeFont, FONT_NAME } from '../utils/pdfFonts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,26 +57,40 @@ function drawPdfHeader(doc: jsPDF, quiz: Quiz, schoolName: string, pageLabel: st
     const pageW = doc.internal.pageSize.getWidth();
     let y = MARGIN;
 
+    // Ensure font is ready
+    setupUnicodeFont(doc);
+
+    // Helper to safely set font with fallback
+    const safeSetFont = (font: string, style: string) => {
+        try {
+            doc.setFont(font, style);
+        } catch (e) {
+            doc.setFont('helvetica', style);
+        }
+    };
+
     // School name — top center
-    doc.setFont('helvetica', 'bold');
+    safeSetFont(FONT_NAME, 'bold');
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     doc.text(schoolName.toUpperCase(), pageW / 2, y, { align: 'center' });
     y += 6;
 
     // Page label (e.g. "BÀI KIỂM TRA" / "ĐÁP ÁN")
+    safeSetFont(FONT_NAME, 'bold');
     doc.setFontSize(14);
     doc.text(pageLabel, pageW / 2, y, { align: 'center' });
     y += 6;
 
     // Quiz title
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(FONT_NAME, 'normal');
     doc.setFontSize(11);
     const titleLines = doc.splitTextToSize(quiz.title, pageW - MARGIN * 2);
     doc.text(titleLines, pageW / 2, y, { align: 'center' });
     y += titleLines.length * 5 + 3;
 
     // Info line — class, questions, time
+    doc.setFont(FONT_NAME, 'normal');
     doc.setFontSize(9);
     doc.setTextColor(80, 80, 80);
     doc.text(
@@ -88,6 +103,7 @@ function drawPdfHeader(doc: jsPDF, quiz: Quiz, schoolName: string, pageLabel: st
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
     const infoY = y;
+    doc.setFont(FONT_NAME, 'normal');
     doc.text('Họ và tên: ___________________________', MARGIN, infoY);
     doc.text(`Lớp: ________  Ngày: ________`, pageW / 2 + 5, infoY);
     y += 7;
@@ -109,18 +125,49 @@ function addNewPdfPage(doc: jsPDF, opts: WorksheetExportOptions): number {
 }
 
 /** Strip LaTeX markers for plain-text export */
-function cleanMath(text: string): string {
+function cleanMath(text: string, wrapForWord: boolean = false): string {
     if (!text) return '';
-    return text
-        .replace(/\$\$(.*?)\$\$/gs, '$1')
-        .replace(/\$(.*?)\$/g, '$1')
-        .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2')
-        .replace(/\\times/g, '×')
-        .replace(/\\div/g, '÷')
-        .replace(/\\pm/g, '±')
-        .replace(/\\sqrt\{([^}]*)\}/g, '√$1')
-        .replace(/\\\\/g, ' ')
-        .trim();
+    let processed = text;
+    
+    if (wrapForWord) {
+        // 1. Convert specific LaTeX types to $..$
+        processed = processed
+            .replace(/\\\((.*?)\\\)/g, '$$$1$$')
+            .replace(/\\\[(.*?)\\\]/g, '$$$1$$');
+        
+        // 2. Identify potential plain-text math sequences first
+        // Match sequences like "1/2 + 3/4" or "2/3 x 5"
+        // We look for parts with numbers and math operators that AREN'T already in $
+        const mathPattern = /(?<![\d$])(\d+[\d\/\s+×÷=\-<>*]*[+×÷=\/<>*][\d\/\s+×÷=\-<>*]*\d+)(?!\$)/g;
+        
+        processed = processed.replace(mathPattern, (match) => {
+            // Inside the match, convert A/B to \frac{A}{B}
+            let math = match.replace(/(\d+)\/(\d+)/g, '\\frac{$1}{$2}');
+            // Normalize spaces for LaTeX
+            math = math.replace(/×/g, '\\times').replace(/÷/g, '\\div');
+            return `$$${math}$$`;
+        });
+
+        // 3. Handle standalone fractions like "3/7" that didn't match the complex pattern above
+        processed = processed.replace(/(?<![\d/$])(\d+)\/(\d+)(?![\d/$])/g, '$$\\frac{$1}{$2}$$');
+
+        // Note: For Word mode, we RETURN EARLY to preserve the LaTeX syntax (\frac, \times etc.)
+        return processed.trim();
+    } else {
+        // PDF Mode: Strip/Convert all math delimiters for clean text rendering
+        return processed
+            .replace(/\$\$(.*?)\$\$/gs, '$1')
+            .replace(/\$(.*?)\$/g, '$1')
+            .replace(/\\\((.*?)\\\)/g, '$1')
+            .replace(/\\\[(.*?)\\\]/g, '$1')
+            .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2')
+            .replace(/\\times/g, '×')
+            .replace(/\\div/g, '÷')
+            .replace(/\\pm/g, '±')
+            .replace(/\\sqrt\{([^}]*)\}/g, '√$1')
+            .replace(/\\\\/g, ' ')
+            .trim();
+    }
 }
 
 // ─── Question Renderers (PDF) ──────────────────────────────────────────────────
@@ -146,8 +193,13 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
 
     checkNewPage(ctx, 30);
 
+    // Helper for safe font
+    const safeSetFont = (f: string, s: string) => {
+        try { doc.setFont(f, s); } catch (e) { doc.setFont('helvetica', s); }
+    };
+
     // Question number + type tag
-    doc.setFont('helvetica', 'bold');
+    safeSetFont(FONT_NAME, 'bold');
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     const typeTag = getTypeLabelPdf(q.type);
@@ -155,7 +207,7 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
     const questionHeader = `Câu ${index + 1} [${typeTag}]: `;
     doc.text(questionHeader, MARGIN, ctx.yPos);
 
-    doc.setFont('helvetica', 'normal');
+    safeSetFont(FONT_NAME, 'normal');
     const headerW = doc.getTextWidth(questionHeader);
     const firstLineW = contentW - headerW;
     const wrappedQ = doc.splitTextToSize(qText, firstLineW);
@@ -190,10 +242,10 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
                 doc.setDrawColor(60, 60, 60);
                 doc.setLineWidth(0.4);
                 doc.rect(xOpt, yOpt - 3.5, 4, 4);
-                doc.setFont('helvetica', 'bold');
+                safeSetFont(FONT_NAME, 'bold');
                 doc.setFontSize(9);
                 doc.text(`${letters[i]}.`, xOpt + 6, yOpt);
-                doc.setFont('helvetica', 'normal');
+                safeSetFont(FONT_NAME, 'normal');
                 const cleanOpt = cleanMath(opt.replace(/^[A-Da-d][.)]\s*/, ''));
                 const optLines = doc.splitTextToSize(cleanOpt, colW - 14);
                 doc.text(optLines[0] || '', xOpt + 14, yOpt);
@@ -207,7 +259,7 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
             const items: any[] = (q as any).items || [];
             checkNewPage(ctx, items.length * 8 + 10);
             // Header row
-            doc.setFont('helvetica', 'bold');
+            doc.setFont(FONT_NAME, 'bold');
             doc.setFontSize(9);
             doc.text('Nội dung', MARGIN + 2, ctx.yPos);
             doc.text('Đ', pageW - MARGIN - 14, ctx.yPos, { align: 'center' });
@@ -216,7 +268,7 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
             doc.setLineWidth(0.3);
             doc.line(MARGIN, ctx.yPos, pageW - MARGIN, ctx.yPos);
             ctx.yPos += 4;
-            doc.setFont('helvetica', 'normal');
+            doc.setFont(FONT_NAME, 'normal');
             items.forEach((item) => {
                 checkNewPage(ctx, 10);
                 const stmtLines = doc.splitTextToSize(cleanMath(item.statement || ''), contentW - 22);
@@ -234,7 +286,7 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
         case QuestionType.RIDDLE: {
             // 3 writing lines
             checkNewPage(ctx, 18);
-            doc.setFont('helvetica', 'normal');
+            doc.setFont(FONT_NAME, 'normal');
             doc.setFontSize(9);
             doc.setTextColor(100, 100, 100);
             doc.text('Trả lời:', MARGIN, ctx.yPos);
@@ -256,12 +308,12 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
             checkNewPage(ctx, pairs.length * 8 + 12);
             const colW2 = (contentW - 20) / 2;
             // Header
-            doc.setFont('helvetica', 'bold');
+            doc.setFont(FONT_NAME, 'bold');
             doc.setFontSize(9);
             doc.text('Cột A', MARGIN + 2, ctx.yPos);
             doc.text('Cột B', MARGIN + colW2 + 22, ctx.yPos);
             ctx.yPos += 5;
-            doc.setFont('helvetica', 'normal');
+            doc.setFont(FONT_NAME, 'normal');
             pairs.forEach((pair, i) => {
                 checkNewPage(ctx, 8);
                 doc.text(`${i + 1}. ${cleanMath(pair.left)}`, MARGIN + 2, ctx.yPos);
@@ -284,10 +336,10 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
             const distractors: string[] = (q as any).distractors || [];
             const wordBank = [...blanks, ...distractors].sort(() => Math.random() - 0.5);
             checkNewPage(ctx, 20);
-            doc.setFont('helvetica', 'bold');
+            doc.setFont(FONT_NAME, 'bold');
             doc.setFontSize(9);
             doc.text('Từ cho sẵn: ', MARGIN, ctx.yPos);
-            doc.setFont('helvetica', 'normal');
+            doc.setFont(FONT_NAME, 'normal');
             const bankText = wordBank.join('  /  ');
             const bankLines = doc.splitTextToSize(bankText, contentW - 30);
             doc.text(bankLines, MARGIN + 25, ctx.yPos);
@@ -302,7 +354,7 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
         case QuestionType.ORDERING: {
             const items: string[] = (q as any).items || [];
             checkNewPage(ctx, items.length * 7 + 14);
-            doc.setFont('helvetica', 'normal');
+            doc.setFont(FONT_NAME, 'normal');
             doc.setFontSize(9);
             doc.text('Sắp xếp các ý sau theo thứ tự đúng:', MARGIN, ctx.yPos);
             ctx.yPos += 5;
@@ -324,7 +376,7 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
             checkNewPage(ctx, 20);
             // Category headers
             const catW = contentW / Math.max(categories.length, 1);
-            doc.setFont('helvetica', 'bold');
+            doc.setFont(FONT_NAME, 'bold');
             doc.setFontSize(9);
             categories.forEach((cat, i) => {
                 const xCat = MARGIN + i * catW;
@@ -335,7 +387,7 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
             ctx.yPos += 8;
             // Blank rows for student to fill
             const rowsNeeded = Math.ceil(catItems.length / categories.length);
-            doc.setFont('helvetica', 'normal');
+            doc.setFont(FONT_NAME, 'normal');
             for (let r = 0; r < rowsNeeded + 1; r++) {
                 checkNewPage(ctx, 8);
                 categories.forEach((_, i) => {
@@ -360,7 +412,7 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
         case QuestionType.WORD_SCRAMBLE: {
             const letters: string[] = (q as any).letters || [];
             checkNewPage(ctx, 16);
-            doc.setFont('helvetica', 'bold');
+            doc.setFont(FONT_NAME, 'bold');
             doc.setFontSize(11);
             // Render each letter in a box
             let xL = MARGIN + 2;
@@ -372,7 +424,7 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
                 xL += 11;
             });
             ctx.yPos += 8;
-            doc.setFont('helvetica', 'normal');
+            doc.setFont(FONT_NAME, 'normal');
             doc.setFontSize(9);
             doc.text('Từ đúng: _ _ _ _ _ _ _ _ _ _ _', MARGIN, ctx.yPos);
             ctx.yPos += 7;
@@ -382,7 +434,7 @@ function renderQuestionPdf(ctx: RenderContext, q: any, index: number): void {
         case QuestionType.UNDERLINE: {
             const sentence = cleanMath((q as any).sentence || '');
             checkNewPage(ctx, 14);
-            doc.setFont('helvetica', 'normal');
+            doc.setFont(FONT_NAME, 'normal');
             doc.setFontSize(9);
             doc.setTextColor(80, 80, 80);
             doc.text('Câu: ', MARGIN, ctx.yPos);
@@ -432,14 +484,14 @@ function renderAnswerKeyPdf(doc: jsPDF, quiz: Quiz, schoolName: string): void {
     let y = MARGIN;
 
     // Header
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(FONT_NAME, 'bold');
     doc.setFontSize(10);
     doc.text(schoolName.toUpperCase(), pageW / 2, y, { align: 'center' });
     y += 6;
     doc.setFontSize(13);
     doc.text('ĐÁP ÁN', pageW / 2, y, { align: 'center' });
     y += 5;
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(FONT_NAME, 'normal');
     doc.setFontSize(9);
     doc.setTextColor(80, 80, 80);
     doc.text(quiz.title, pageW / 2, y, { align: 'center' });
@@ -456,10 +508,13 @@ function renderAnswerKeyPdf(doc: jsPDF, quiz: Quiz, schoolName: string): void {
             y = MARGIN + 5;
         }
         const answer = getAnswerText(q);
-        doc.setFont('helvetica', 'bold');
+        const safeSetFont = (f: string, s: string) => {
+            try { doc.setFont(f, s); } catch (e) { doc.setFont('helvetica', s); }
+        };
+        safeSetFont(FONT_NAME, 'bold');
         doc.setFontSize(9);
         doc.text(`Câu ${i + 1}:`, MARGIN, y);
-        doc.setFont('helvetica', 'normal');
+        safeSetFont(FONT_NAME, 'normal');
         const ansLines = doc.splitTextToSize(answer, pageW - MARGIN * 2 - 20);
         doc.text(ansLines, MARGIN + 18, y);
         y += Math.max(ansLines.length * 5, 6) + 2;
@@ -467,13 +522,14 @@ function renderAnswerKeyPdf(doc: jsPDF, quiz: Quiz, schoolName: string): void {
 }
 
 /** Extract human-readable answer for a question */
-function getAnswerText(q: any): string {
+function getAnswerText(q: any, wrapForWord: boolean = false): string {
+    const cm = (t: string) => cleanMath(t, wrapForWord);
     switch (q.type) {
         case QuestionType.MCQ:
         case QuestionType.IMAGE_QUESTION: {
             const letters = ['A', 'B', 'C', 'D'];
             const idx = letters.indexOf(q.correctAnswer);
-            const optText = q.options?.[idx] ? `${q.correctAnswer}. ${cleanMath(q.options[idx])}` : q.correctAnswer;
+            const optText = q.options?.[idx] ? `${q.correctAnswer}. ${cm(q.options[idx])}` : q.correctAnswer;
             return optText;
         }
         case QuestionType.MULTIPLE_SELECT:
@@ -482,7 +538,7 @@ function getAnswerText(q: any): string {
             return (q.items || []).map((it: any, i: number) => `${i + 1}. ${it.isCorrect ? 'Đúng' : 'Sai'}`).join('  |  ');
         case QuestionType.SHORT_ANSWER:
         case QuestionType.RIDDLE:
-            return cleanMath(q.correctAnswer || '');
+            return cm(q.correctAnswer || '');
         case QuestionType.MATCHING:
             return (q.pairs || []).map((p: any, i: number) => `${i + 1}→${String.fromCharCode(65 + i)}`).join('  ');
         case QuestionType.DRAG_DROP:
@@ -490,7 +546,7 @@ function getAnswerText(q: any): string {
         case QuestionType.ORDERING:
             return (q.correctOrder || []).map((idx: number, pos: number) => `${pos + 1}=(${idx + 1})`).join('  ');
         case QuestionType.WORD_SCRAMBLE:
-            return cleanMath(q.correctWord || '');
+            return cm(q.correctWord || '');
         case QuestionType.UNDERLINE:
             return (q.correctWordIndexes || []).map((i: number) => `"${(q.words || [])[i] || i}"`).join(', ');
         case QuestionType.CATEGORIZATION:
@@ -499,9 +555,9 @@ function getAnswerText(q: any): string {
                 return `${cat.name}: ${catItems.join(', ')}`;
             }).join(' | ');
         case QuestionType.ERROR_CORRECTION:
-            return `Sai: "${cleanMath(q.wrongWord)}"  →  Đúng: "${cleanMath(q.correctWord)}"`;
+            return `Sai: "${cm(q.wrongWord)}"  →  Đúng: "${cm(q.correctWord)}"`;
         default:
-            return cleanMath(q.correctAnswer || '');
+            return cm(q.correctAnswer || '');
     }
 }
 
@@ -531,38 +587,46 @@ async function exportPdf(opts: WorksheetExportOptions): Promise<void> {
     const { quiz, paperStyle, answerKey } = opts;
     const schoolName = opts.schoolName || 'Trường Tiểu học Ít Ong';
 
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    try {
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    // Page 1: grid + header
-    drawGridBackground(doc, paperStyle);
-    const startY = drawPdfHeader(doc, quiz, schoolName, 'BÀI KIỂM TRA');
+        // Ensure font is ready
+        setupUnicodeFont(doc);
 
-    const ctx: RenderContext = { doc, opts, yPos: startY };
+        // Page 1: grid + header
+        drawGridBackground(doc, paperStyle);
+        const startY = drawPdfHeader(doc, quiz, schoolName, 'BÀI KIỂM TRA');
 
-    // Render all questions
-    quiz.questions.forEach((q, i) => renderQuestionPdf(ctx, q, i));
+        const ctx: RenderContext = { doc, opts, yPos: startY };
 
-    // Footer on all content pages
-    const totalContentPages = doc.getNumberOfPages();
-    for (let p = 1; p <= totalContentPages; p++) {
-        doc.setPage(p);
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(
-            `Trang ${p} / ${totalContentPages}  —  ${schoolName}  —  iTong Quiz`,
-            doc.internal.pageSize.getWidth() / 2,
-            doc.internal.pageSize.getHeight() - 7,
-            { align: 'center' }
-        );
+        // Render all questions
+        quiz.questions.forEach((q, i) => renderQuestionPdf(ctx, q, i));
+
+        // Footer on all content pages
+        const totalContentPages = doc.getNumberOfPages();
+        for (let p = 1; p <= totalContentPages; p++) {
+            doc.setPage(p);
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text(
+                `Trang ${p} / ${totalContentPages}  —  ${schoolName}  —  iTong Quiz`,
+                doc.internal.pageSize.getWidth() / 2,
+                doc.internal.pageSize.getHeight() - 7,
+                { align: 'center' }
+            );
+        }
+
+        // Answer key section (separate pages)
+        if (answerKey === 'separate') {
+            renderAnswerKeyPdf(doc, quiz, schoolName);
+        }
+
+        const safeTitle = quiz.title.replace(/[^a-zA-Z0-9\u00C0-\u024F\s]/g, '-').trim();
+        doc.save(`vo-bai-tap-${safeTitle}.pdf`);
+    } catch (error) {
+        console.error('Worksheet export failed:', error);
+        throw error; // Re-throw to be caught by UI
     }
-
-    // Answer key section (separate pages)
-    if (answerKey === 'separate') {
-        renderAnswerKeyPdf(doc, quiz, schoolName);
-    }
-
-    const safeTitle = quiz.title.replace(/[^a-zA-Z0-9\u00C0-\u024F\s]/g, '-').trim();
-    doc.save(`vo-bai-tap-${safeTitle}.pdf`);
 }
 
 // ─── DOCX Export ─────────────────────────────────────────────────────────────
@@ -571,54 +635,56 @@ async function exportDocx(opts: WorksheetExportOptions): Promise<void> {
     const { quiz } = opts;
     const schoolName = opts.schoolName || 'Trường Tiểu học Ít Ong';
     const children: any[] = [];
+    const cmw = (t: string) => cleanMath(t, true);
+    const atw = (q: any) => getAnswerText(q, true);
 
     // Header
     children.push(
         new Paragraph({
-            children: [new TextRun({ text: schoolName.toUpperCase(), bold: true, size: 22 })],
+            children: [new TextRun({ text: schoolName.toUpperCase(), bold: true, size: 28 })],
             alignment: AlignmentType.CENTER,
-            spacing: { after: 80 },
+            spacing: { after: 40 },
         }),
         new Paragraph({
-            children: [new TextRun({ text: 'BÀI KIỂM TRA', bold: true, size: 28 })],
+            children: [new TextRun({ text: 'BÀI KIỂM TRÀ', bold: true, size: 32 })],
             alignment: AlignmentType.CENTER,
-            spacing: { after: 80 },
+            spacing: { after: 40 },
         }),
         new Paragraph({
-            children: [new TextRun({ text: quiz.title, size: 22 })],
+            children: [new TextRun({ text: quiz.title, size: 28 })],
             alignment: AlignmentType.CENTER,
-            spacing: { after: 80 },
+            spacing: { after: 40 },
         }),
         new Paragraph({
-            children: [new TextRun({ text: `Lớp ${quiz.classLevel}  •  ${quiz.questions.length} câu  •  ${quiz.timeLimit} phút`, size: 18, color: '555555' })],
+            children: [new TextRun({ text: `Lớp ${quiz.classLevel}  •  ${quiz.questions.length} câu  •  ${quiz.timeLimit} phút`, size: 24, color: '555555' })],
             alignment: AlignmentType.CENTER,
-            spacing: { after: 100 },
+            spacing: { after: 120 },
         }),
         // Student info row
         new Table({
             rows: [new TableRow({
                 children: [
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Họ và tên: ___________________________', size: 20 })] })], width: { size: 60, type: WidthType.PERCENTAGE }, borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Lớp: ________  Ngày: ________', size: 20 })] })], width: { size: 40, type: WidthType.PERCENTAGE }, borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Họ và tên: ___________________________', size: 28 })] })], width: { size: 60, type: WidthType.PERCENTAGE }, borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Lớp: ________  Ngày: ________', size: 28 })] })], width: { size: 40, type: WidthType.PERCENTAGE }, borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
                 ],
             })],
             width: { size: 100, type: WidthType.PERCENTAGE },
         }),
-        new Paragraph({ text: '', spacing: { after: 160 } }),
+        new Paragraph({ text: '', spacing: { after: 120 } }),
     );
 
     // Questions
     quiz.questions.forEach((q: any, i) => {
-        const qText = cleanMath(q.question || q.mainQuestion || '');
+        const qText = cmw(q.question || q.mainQuestion || '');
         const typeLabel = getTypeLabelPdf(q.type);
 
         children.push(
             new Paragraph({
                 children: [
-                    new TextRun({ text: `Câu ${i + 1} [${typeLabel}]: `, bold: true, size: 20 }),
-                    new TextRun({ text: qText, size: 20 }),
+                    new TextRun({ text: `Câu ${i + 1}: `, bold: true, size: 28 }),
+                    new TextRun({ text: qText, size: 28 }),
                 ],
-                spacing: { before: 160, after: 80 },
+                spacing: { before: 0, after: 0, line: 320 },
             })
         );
 
@@ -633,9 +699,10 @@ async function exportDocx(opts: WorksheetExportOptions): Promise<void> {
                     new TableCell({
                         children: [new Paragraph({
                             children: [
-                                new TextRun({ text: `□ ${letters2[j]}. `, bold: true, size: 18 }),
-                                new TextRun({ text: cleanMath(opt.replace(/^[A-Da-d][.)]\s*/, '')), size: 18 }),
+                                new TextRun({ text: `${letters2[j]}. `, bold: true, size: 28 }),
+                                new TextRun({ text: cmw(opt.replace(/^[A-Da-d][.)]\s*/, '')), size: 28 }),
                             ],
+                            spacing: { after: 20, line: 320 },
                         })],
                         width: { size: 50, type: WidthType.PERCENTAGE },
                         borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
@@ -658,17 +725,17 @@ async function exportDocx(opts: WorksheetExportOptions): Promise<void> {
                 const tfRows = [
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Nội dung', bold: true, size: 18 })] })], width: { size: 70, type: WidthType.PERCENTAGE } }),
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Đ', bold: true, size: 18 })], alignment: AlignmentType.CENTER })], width: { size: 15, type: WidthType.PERCENTAGE } }),
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'S', bold: true, size: 18 })], alignment: AlignmentType.CENTER })], width: { size: 15, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Nội dung', bold: true, size: 28 })], spacing: { line: 280 } })], width: { size: 70, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Đ', bold: true, size: 28 })], alignment: AlignmentType.CENTER, spacing: { line: 280 } })], width: { size: 15, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'S', bold: true, size: 28 })], alignment: AlignmentType.CENTER, spacing: { line: 280 } })], width: { size: 15, type: WidthType.PERCENTAGE } }),
                         ],
                     }),
                     ...items2.map(item =>
                         new TableRow({
                             children: [
-                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cleanMath(item.statement || ''), size: 18 })] })] }),
-                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '□', size: 18 })], alignment: AlignmentType.CENTER })] }),
-                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '□', size: 18 })], alignment: AlignmentType.CENTER })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cmw(item.statement || ''), size: 28 })], spacing: { line: 280 } })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '□', size: 28 })], alignment: AlignmentType.CENTER, spacing: { line: 280 } })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '□', size: 28 })], alignment: AlignmentType.CENTER, spacing: { line: 280 } })] }),
                             ],
                         })
                     ),
@@ -678,8 +745,23 @@ async function exportDocx(opts: WorksheetExportOptions): Promise<void> {
             }
             case QuestionType.SHORT_ANSWER:
             case QuestionType.RIDDLE:
-                children.push(new Paragraph({ children: [new TextRun({ text: 'Trả lời: _____________________________________________________________________________', size: 18 })] }));
-                children.push(new Paragraph({ children: [new TextRun({ text: '          _____________________________________________________________________________', size: 18 })] }));
+                children.push(
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
+                        rows: [
+                            new TableRow({
+                                children: [
+                                    new TableCell({
+                                        children: [new Paragraph({ children: [new TextRun({ text: 'Trả lời: ', size: 28 })], spacing: { before: 20, after: 20 } })],
+                                        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.SINGLE, size: 4 }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                                        verticalAlign: VerticalAlign.BOTTOM,
+                                    })
+                                ]
+                            })
+                        ]
+                    })
+                );
                 break;
             case QuestionType.MATCHING: {
                 const pairs2: any[] = q.pairs || [];
@@ -687,17 +769,17 @@ async function exportDocx(opts: WorksheetExportOptions): Promise<void> {
                 const matchRows2 = [
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Cột A', bold: true, size: 18 })] })], width: { size: 45, type: WidthType.PERCENTAGE } }),
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Nối', bold: true, size: 18 })], alignment: AlignmentType.CENTER })], width: { size: 10, type: WidthType.PERCENTAGE } }),
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Cột B', bold: true, size: 18 })] })], width: { size: 45, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Cột A', bold: true, size: 28 })], spacing: { line: 280 } })], width: { size: 45, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Nối', bold: true, size: 28 })], alignment: AlignmentType.CENTER, spacing: { line: 280 } })], width: { size: 10, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Cột B', bold: true, size: 28 })], spacing: { line: 280 } })], width: { size: 45, type: WidthType.PERCENTAGE } }),
                         ],
                     }),
                     ...pairs2.map((pair: any, idx: number) =>
                         new TableRow({
                             children: [
-                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${idx + 1}. ${cleanMath(pair.left)}`, size: 18 })] })] }),
-                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '___', size: 18 })], alignment: AlignmentType.CENTER })] }),
-                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${String.fromCharCode(65 + idx)}. ${cleanMath(shuffledRight2[idx] || '')}`, size: 18 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${idx + 1}. ${cmw(pair.left)}`, size: 28 })], spacing: { line: 280 } })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '___', size: 28 })], alignment: AlignmentType.CENTER, spacing: { line: 280 } })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${String.fromCharCode(65 + idx)}. ${cmw(shuffledRight2[idx] || '')}`, size: 28 })], spacing: { line: 280 } })] }),
                             ],
                         })
                     ),
@@ -709,16 +791,32 @@ async function exportDocx(opts: WorksheetExportOptions): Promise<void> {
                 const blanks3: string[] = q.blanks || [];
                 const distractors3: string[] = q.distractors || [];
                 const bank3 = [...blanks3, ...distractors3].sort(() => Math.random() - 0.5);
-                children.push(new Paragraph({ children: [new TextRun({ text: `Từ cho sẵn: ${bank3.join('  /  ')}`, bold: true, size: 18 })] }));
-                const ddText3 = cleanMath((q.text || '').replace(/\[([^\]]+)\]/g, '____'));
-                children.push(new Paragraph({ children: [new TextRun({ text: ddText3, size: 18 })] }));
+                children.push(new Paragraph({ children: [new TextRun({ text: `Từ cho sẵn: ${bank3.join('  /  ')}`, bold: true, size: 28 })], spacing: { line: 320 } }));
+                const ddText3 = cmw((q.text || '').replace(/\[([^\]]+)\]/g, '____'));
+                children.push(new Paragraph({ children: [new TextRun({ text: ddText3, size: 28 })], spacing: { line: 320 } }));
                 break;
             }
             default:
-                children.push(new Paragraph({ children: [new TextRun({ text: 'Trả lời: _____________________________________________________________________________', size: 18 })] }));
+                children.push(
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
+                        rows: [
+                            new TableRow({
+                                children: [
+                                    new TableCell({
+                                        children: [new Paragraph({ children: [new TextRun({ text: 'Trả lời: ', size: 28 })], spacing: { before: 20, after: 20 } })],
+                                        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.SINGLE, size: 4 }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                                        verticalAlign: VerticalAlign.BOTTOM,
+                                    })
+                                ]
+                            })
+                        ]
+                    })
+                );
         }
 
-        children.push(new Paragraph({ text: '', spacing: { after: 80 } }));
+        // No extra gap after questions
     });
 
     // Answer key
@@ -730,15 +828,29 @@ async function exportDocx(opts: WorksheetExportOptions): Promise<void> {
         quiz.questions.forEach((q: any, i) => {
             children.push(new Paragraph({
                 children: [
-                    new TextRun({ text: `Câu ${i + 1}: `, bold: true, size: 20 }),
-                    new TextRun({ text: getAnswerText(q), size: 20 }),
+                    new TextRun({ text: `Câu ${i + 1}: `, bold: true, size: 28 }),
+                    new TextRun({ text: atw(q), size: 28 }),
                 ],
-                spacing: { after: 60 },
+                spacing: { before: 20, after: 20, line: 320 },
             }));
         });
     }
 
-    const doc2 = new Document({ sections: [{ properties: {}, children }] });
+    const doc2 = new Document({ 
+        sections: [{ 
+            properties: {
+                page: {
+                    margin: {
+                        top: 1134,    // 20mm
+                        bottom: 1134, // 20mm
+                        left: 1701,   // 30mm
+                        right: 850    // 15mm
+                    }
+                }
+            }, 
+            children 
+        }] 
+    });
     const blob = await Packer.toBlob(doc2);
     const safeTitle = quiz.title.replace(/[^a-zA-Z0-9\u00C0-\u024F\s]/g, '-').trim();
     saveAs(blob, `vo-bai-tap-${safeTitle}.docx`);

@@ -7,8 +7,8 @@
  *   - Edit (pencil)
  *   - Delete (trash)
  */
-import React from 'react';
-import { Edit3, Trash2, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Edit3, Trash2, Sparkles, Loader2, RefreshCw, BookmarkPlus, Check } from 'lucide-react';
 import type { Question } from '../../../../types';
 import { supportsDistractors } from '../../index';
 
@@ -34,6 +34,8 @@ interface QuestionCardActionsProps {
     canEdit: boolean;
     /** Whether the parent provides AI regeneration. */
     canRegenerate: boolean;
+    /** Callback to save the question to the teacher's personal bank. */
+    onSaveToBank?: (question: Question) => void;
 }
 
 const QuestionCardActions: React.FC<QuestionCardActionsProps> = ({
@@ -51,12 +53,31 @@ const QuestionCardActions: React.FC<QuestionCardActionsProps> = ({
     onSetDistractorCount,
     canEdit,
     canRegenerate,
+    onSaveToBank
 }) => {
+    const [isSaving, setIsSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+
     if (!canEdit) return null;
 
     const isGeneratingThis = generatingDistractorId === question.id;
     const isRegeneratingThis = isGeneratingSingle === question.id;
     const popoverOpen = showDistractorPopover === question.id;
+
+    const handleSaveToBank = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!onSaveToBank) return;
+        setIsSaving(true);
+        try {
+            await onSaveToBank(question);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 2000);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
         <div className="flex items-center gap-1 relative">
@@ -143,6 +164,22 @@ const QuestionCardActions: React.FC<QuestionCardActionsProps> = ({
                     ) : (
                         <RefreshCw className="w-4 h-4" />
                     )}
+                </button>
+            )}
+
+            {/* Save to Bank */}
+            {onSaveToBank && (
+                <button
+                    onClick={handleSaveToBank}
+                    disabled={isSaving || saved}
+                    className={'p-1.5 rounded-lg transition-colors ' + (
+                        saved ? 'text-green-500 bg-green-50' : 
+                        isSaving ? 'text-orange-400 bg-orange-50 cursor-wait' : 'text-orange-500 hover:bg-orange-50'
+                    )}
+                    title="Lưu câu hỏi này vào ngân hàng chung của bạn"
+                >
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 
+                     saved ? <Check className="w-4 h-4" /> : <BookmarkPlus className="w-4 h-4" />}
                 </button>
             )}
 

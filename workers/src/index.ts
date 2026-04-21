@@ -16,6 +16,9 @@ import { handlePracticeRoutes } from './routes/practice';
 import { handleGiftShopRoutes } from './routes/giftShop';
 import { handleHelpRagRoutes } from './routes/helpRag';
 import { handleSystemSettingsRoutes } from './routes/systemSettings';
+import { handleAnalyticsRoutes } from './routes/analytics';
+import { handleTestBankRoutes } from './routes/testBank';
+import { handleTeacherAiQuotaRoutes } from './routes/teacherAiQuota';
 import { Env } from './types';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
 
@@ -68,6 +71,12 @@ export default {
                 response = await handleHelpRagRoutes(request, env, path, method);
             } else if (path.startsWith('/api/system-settings')) {
                 response = await handleSystemSettingsRoutes(request, env, path, method);
+            } else if (path.startsWith('/api/analytics')) {
+                response = await handleAnalyticsRoutes(request, env, path, method);
+            } else if (path.startsWith('/api/test-bank')) {
+                response = await handleTestBankRoutes(request, env, path, method);
+            } else if (path.startsWith('/api/teacher-ai-quota')) {
+                response = await handleTeacherAiQuotaRoutes(request, env, path, method);
             } else if (path === '/api/health') {
                 response = jsonResponse({ status: 'ok', timestamp: new Date().toISOString() });
             }

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import type { Quiz, Question, QuestionType as QType } from '../../types';
 import { QuestionType } from '../../types';
 import { Card, Button, Modal } from '../common';
-import { X, Save, PlusCircle, FileDown, BookOpen } from 'lucide-react';
+import { X, Save, PlusCircle, FileDown, BookOpen, Library } from 'lucide-react';
 import { generateQuizDocx } from '../../utils/docxGenerator';
 import WorksheetExportModal from './WorksheetExportModal';
 import { 
@@ -12,6 +12,9 @@ import {
     useSmartDistractors,
     AnyEditorDraft,
 } from '../../features/quiz-editor';
+import { useAuthStore } from '../../../stores/authStore';
+import { testBankService } from '../../services/testBankService';
+import { TestBankModal } from '../../features/quiz-editor/components/TestBankModal';
 
 interface QuizPreviewProps {
     quiz: Quiz | null;
@@ -110,6 +113,15 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
         setShowAddModal(false);
     };
 
+    // 5. Test Bank State
+    const { username } = useAuthStore();
+    const [showTestBank, setShowTestBank] = useState(false);
+
+    const handleSaveToBank = async (q: Question) => {
+        if (!username) return;
+        await testBankService.saveQuestion(username, q, [q.type]);
+    };
+
     return (
         <>
             {/* Worksheet Export Modal */}
@@ -119,6 +131,18 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
                     onClose={() => setShowWorksheetModal(false)}
                 />
             )}
+
+            {/* Test Bank Modal */}
+            <TestBankModal
+                isOpen={showTestBank}
+                onClose={() => setShowTestBank(false)}
+                teacherId={username || ''}
+                onAddQuestion={(q) => {
+                    if (onUpdateQuestions && quiz) {
+                        onUpdateQuestions([...quiz.questions, q]);
+                    }
+                }}
+            />
 
             <Card title="📋 Xem trước đề thi">
                 {quiz ? (
@@ -171,6 +195,8 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
                                         }
                                     }}
                                     onRegenerate={() => handleRegenerateSingleQuestion(q)}
+                                    // Save to bank
+                                    onSaveToBank={handleSaveToBank}
                                     // Smart Distractor props
                                     isGeneratingSingle={isGeneratingSingle === q.id ? q.id : null}
                                     generatingDistractorId={distractorConfig.generatingDistractorId}
@@ -214,6 +240,13 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
                                         >
                                             + Dạng khác
                                         </button>
+                                        <div className="w-px h-6 bg-gray-300 mx-1 border-r" />
+                                        <button
+                                            onClick={() => setShowTestBank(true)}
+                                            className="px-3 py-1.5 rounded-lg text-sm font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors flex items-center gap-1.5 shadow-sm"
+                                        >
+                                            <Library className="w-4 h-4" /> Bốc từ kho
+                                        </button>
                                     </div>
                                 </div>
                             )}
@@ -228,14 +261,16 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
                         <p className="text-slate-500 max-w-xs mx-auto mb-6">
                             Vui lòng nhập thông tin bên trái và chọn phương thức tạo đề (AI hoặc Thủ công).
                         </p>
-                        <div className="flex flex-col gap-3">
-                            <button
-                                onClick={onStartManual}
-                                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md active:scale-95 text-sm"
-                            >
-                                Bắt đầu tạo đề THỦ CÔNG
-                            </button>
-                        </div>
+                        {onStartManual && (
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={onStartManual}
+                                    className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md active:scale-95 text-sm"
+                                >
+                                    Bắt đầu tạo đề THỦ CÔNG
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </Card>
@@ -318,3 +353,4 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
 };
 
 export default QuizPreview;
+

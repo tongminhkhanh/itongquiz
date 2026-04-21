@@ -53,13 +53,14 @@ export async function handleLegacyAction(db: D1Database, action: string, body: a
 
         case 'submit_result': {
             await db.prepare(
-                `INSERT INTO results (student_name, class_name, quiz_id, quiz_title, score, correct_count, total_questions, submitted_at, answers)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                `INSERT INTO results (student_name, class_name, quiz_id, quiz_title, score, correct_count, total_questions, submitted_at, answers, analytics_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).bind(
                 body.studentName || '', body.className || '', body.quizId || '',
                 body.quizTitle || '', body.score || 0, body.correctCount || 0,
                 body.totalQuestions || 0, body.submittedAt || new Date().toISOString(),
-                JSON.stringify(body.answers || {})
+                JSON.stringify(body.answers || {}),
+                body.analyticsJson ? JSON.stringify(body.analyticsJson) : '[]'
             ).run();
             return jsonResponse({ status: 'success' });
         }
@@ -578,6 +579,11 @@ async function handleSubmitHw(db: D1Database, body: any) {
              params.push(studentNote);
         }
 
+        if (body.analyticsData || body.analyticsJson) {
+            query += ', analytics_json = ?';
+            params.push(JSON.stringify(body.analyticsData || body.analyticsJson));
+        }
+
         query += ' WHERE id = ?';
         params.push(existingId);
         
@@ -587,12 +593,13 @@ async function handleSubmitHw(db: D1Database, body: any) {
         // INSERT new submission
         const newId = `sub-${crypto.randomUUID().substring(0, 8)}`;
         await db.prepare(`
-            INSERT INTO hw_submissions (id, assignment_id, student_id, student_name, status, file_urls, student_note, teacher_feedback, ai_evaluation, score, submitted_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO hw_submissions (id, assignment_id, student_id, student_name, status, file_urls, student_note, teacher_feedback, ai_evaluation, score, submitted_at, analytics_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
             newId, assignmentId, studentId, studentName, status,
             JSON.stringify(fileUrls || []), studentNote || '', 
-            teacherFeedback, aiEvaluation, score, now
+            teacherFeedback, aiEvaluation, score, now,
+            JSON.stringify(body.analyticsData || body.analyticsJson || [])
         ).run();
         return jsonResponse({ status: 'success', data: { id: newId } });
     }
@@ -618,11 +625,16 @@ async function handleGetHwSubmissions(db: D1Database, body: any) {
 
     const rows = await db.prepare(query).bind(...params).all();
     
-    // Parse file_urls JSON
-    const mapped = rows.results.map((r: any) => ({
-        ...r,
-        file_urls: typeof r.file_urls === 'string' ? JSON.parse(r.file_urls) : r.file_urls
-    }));
+    // Parse file_urls and analytics_json JSON
+    const mapped = rows.results.map((r: any) => {
+        let analyticsData = [];
+        try { if (r.analytics_json) analyticsData = JSON.parse(r.analytics_json); } catch {}
+        return {
+            ...r,
+            file_urls: typeof r.file_urls === 'string' ? JSON.parse(r.file_urls) : r.file_urls,
+            analyticsData: analyticsData
+        };
+    });
 
     return jsonResponse({ status: 'success', data: mapped });
 }

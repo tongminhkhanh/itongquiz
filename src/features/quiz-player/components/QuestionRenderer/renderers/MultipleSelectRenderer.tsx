@@ -40,7 +40,7 @@ const MultipleSelectRenderer: React.FC<BaseRendererProps> = ({
                         }`}>
                             {isSelected && <CheckCircle className="w-3 h-3" />}
                         </div>
-                        <MathSpan content={opt} className="flex-1" />
+                        <MathSpan content={typeof opt === 'string' ? opt.replace(/^[A-Za-z][.)]\s*/, '') : String(opt)} className="flex-1" />
                     </button>
                 );
             })}

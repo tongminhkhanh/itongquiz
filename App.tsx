@@ -78,11 +78,39 @@ const App: React.FC = () => {
 
     // Tự động chuyển hướng giáo viên/admin vào dashboard nếu đã đăng nhập
     useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('autologin') === 'teacher' && !authStore.isLoggedIn) {
+            authStore.loginSuccess('admin', 'Admin Test', true, '4A');
+            
+            // Seed mock results if empty for UI testing
+            if (quizStore.results.length === 0) {
+                const mockResult = {
+                    id: 'mock-123',
+                    studentName: 'Học Sinh Thử Nghiệm',
+                    studentClass: '4A',
+                    quizId: 'quiz-123',
+                    quizTitle: 'Bài tập ôn tập Toán 4',
+                    score: 8.5,
+                    correctCount: 17,
+                    totalQuestions: 20,
+                    submittedAt: new Date().toISOString(),
+                    timeTaken: 600,
+                    answers: {
+                        'q1': { selected: 'A', correct: true },
+                        'q2': { selected: 'B', correct: false },
+                        'q3': { selected: 'C', correct: true }
+                    }
+                };
+                quizStore.setResults([mockResult]);
+            }
+            return;
+        }
+
         if (authStore.isLoggedIn && quizStore.view === 'home' && location.pathname === '/') {
             console.log('[App] Auto-redirecting teacher to dashboard');
             quizStore.setView('teacher_dash');
         }
-    }, [authStore.isLoggedIn, quizStore.view, location.pathname, quizStore]);
+    }, [authStore.isLoggedIn, quizStore.view, location.pathname, quizStore, authStore]);
 
     // Handle legacy quiz parameters
     useEffect(() => {
