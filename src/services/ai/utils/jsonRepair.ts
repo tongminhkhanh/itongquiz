@@ -44,18 +44,27 @@ export const parseAndRepairJSON = (text: string): unknown => {
   repaired = repaired.replace(/"\s*\[/g, '",[');
   repaired = repaired.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
   repaired = repaired.replace(/:\s*'([^']*)'/g, ': "$1"');
+  // Handle invalid escapes from model output (for example: "\_") by escaping "\" itself.
+  repaired = repaired.replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
   repaired = repaired.replace(/[\x00-\x1F\x7F]/g, ' ');
 
   // Step 5: Try parsing repaired JSON
   try {
     return JSON.parse(repaired);
   } catch (e2) {
+    const syntaxError = e2 as SyntaxError;
+    const match = /position\s+(\d+)/i.exec(syntaxError.message || '');
+    if (match?.[1]) {
+      const pos = Number(match[1]);
+      const start = Math.max(0, pos - 80);
+      const end = Math.min(repaired.length, pos + 80);
+      console.error('JSON error context:', repaired.slice(start, end));
+    }
     console.error('JSON repair failed:', e2);
     console.error('Original text:', text.substring(0, 500));
     throw new Error('AI trả về JSON không hợp lệ. Vui lòng thử tạo đề lại.');
   }
 };
-
 // ─────────────────────────────────────────────────────────
 //  LATEX FIXES
 // ─────────────────────────────────────────────────────────
@@ -344,3 +353,4 @@ export const validateAndFixQuiz = (quiz: unknown, maxQuestions?: number): unknow
 
 // Re-export AIProvider type so providers don't need to import from the root
 export type { AIProvider };
+
