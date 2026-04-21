@@ -5,7 +5,6 @@ import { ResponsiveDataView } from '../common';
 import { useAuthStore } from '../../../stores/authStore';
 import { showError, showSuccess, showConfirm } from '../../utils/toast';
 
-// Teacher data from D1
 interface TeacherRecord {
     username: string;
     password: string;
@@ -14,7 +13,6 @@ interface TeacherRecord {
     class: string;
 }
 
-// Form state for create/edit
 interface TeacherForm {
     username: string;
     password: string;
@@ -38,13 +36,11 @@ const TeacherManagementTab: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Modal state
     const [showModal, setShowModal] = useState(false);
     const [editingUsername, setEditingUsername] = useState<string | null>(null);
     const [form, setForm] = useState<TeacherForm>(EMPTY_FORM);
     const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
-    // Fetch teachers list
     const fetchTeachers = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -54,7 +50,7 @@ const TeacherManagementTab: React.FC = () => {
                 setTeachers(data);
             }
         } catch (err: any) {
-            setError(err.message || 'KhÃ´ng thá»ƒ táº£i danh sÃ¡ch giÃ¡o viÃªn');
+            setError(err.message || 'Không thể tải danh sách giáo viên');
         } finally {
             setLoading(false);
         }
@@ -62,14 +58,12 @@ const TeacherManagementTab: React.FC = () => {
 
     useEffect(() => { fetchTeachers(); }, [fetchTeachers]);
 
-    // Open modal for create
     const handleCreate = () => {
         setEditingUsername(null);
         setForm(EMPTY_FORM);
         setShowModal(true);
     };
 
-    // Open modal for edit
     const handleEdit = (teacher: TeacherRecord) => {
         setEditingUsername(teacher.username);
         setForm({
@@ -82,11 +76,10 @@ const TeacherManagementTab: React.FC = () => {
         setShowModal(true);
     };
 
-    // Delete teacher
     const handleDelete = async (username: string, fullName: string) => {
         showConfirm({
-            message: `XÃ¡c nháº­n xÃ³a tÃ i khoáº£n "${fullName}" (${username})?`,
-            confirmLabel: 'XÃ³a',
+            message: `Xác nhận xóa tài khoản "${fullName}" (${username})?`,
+            confirmLabel: 'Xóa',
             destructive: true,
             onConfirm: async () => {
                 try {
@@ -96,23 +89,21 @@ const TeacherManagementTab: React.FC = () => {
                     });
                     if (result.status === 'success') {
                         setTeachers(prev => prev.filter(t => t.username !== username));
-                        showSuccess('XÃ³a tÃ i khoáº£n thÃ nh cÃ´ng');
+                        showSuccess('Xóa tài khoản thành công');
                     } else {
-                        showError(result.message || 'Lá»—i khi xÃ³a');
+                        showError(result.message || 'Lỗi khi xóa');
                     }
                 } catch (err: any) {
-                    showError(err.message || 'Lá»—i khi xÃ³a');
+                    showError(err.message || 'Lỗi khi xóa');
                 }
             },
         });
     };
 
-
-    // Save (create or update)
     const handleSave = async () => {
-        if (!form.fullName.trim()) { showError('Vui lÃ²ng nháº­p há» tÃªn'); return; }
-        if (!form.username.trim()) { showError('Vui lÃ²ng nháº­p tÃªn Ä‘Äƒng nháº­p'); return; }
-        if (!editingUsername && !form.password.trim()) { showError('Vui lÃ²ng nháº­p máº­t kháº©u'); return; }
+        if (!form.fullName.trim()) { showError('Vui lòng nhập họ tên'); return; }
+        if (!form.username.trim()) { showError('Vui lòng nhập tên đăng nhập'); return; }
+        if (!editingUsername && !form.password.trim()) { showError('Vui lòng nhập mật khẩu'); return; }
 
         setSaving(true);
         try {
@@ -140,33 +131,30 @@ const TeacherManagementTab: React.FC = () => {
 
             setShowModal(false);
             setForm(EMPTY_FORM);
-            showSuccess(editingUsername ? 'Cáº­p nháº­t thÃ nh cÃ´ng' : 'Táº¡o tÃ i khoáº£n thÃ nh cÃ´ng');
+            showSuccess(editingUsername ? 'Cập nhật thành công' : 'Tạo tài khoản thành công');
             await fetchTeachers();
         } catch (err: any) {
-            showError(err.message || 'Lá»—i khi lÆ°u');
+            showError(err.message || 'Lỗi khi lưu');
         } finally {
             setSaving(false);
         }
     };
 
-    // Toggle password visibility
     const togglePassword = (username: string) => {
         setShowPasswords(prev => ({ ...prev, [username]: !prev[username] }));
     };
 
-    // Role display
     const roleLabel = (role: string) => {
         if (role === 'admin') return <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium">Admin</span>;
-        return <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">GiÃ¡o viÃªn</span>;
+        return <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Giáo viên</span>;
     };
 
     return (
         <div className="space-y-4">
-            {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-800">Quáº£n lÃ½ GiÃ¡o viÃªn</h2>
-                    <p className="text-sm text-gray-500">Táº¡o, sá»­a, xÃ³a tÃ i khoáº£n giÃ¡o viÃªn</p>
+                    <h2 className="text-xl font-bold text-gray-800">Quản lý Giáo viên</h2>
+                    <p className="text-sm text-gray-500">Tạo, sửa, xóa tài khoản giáo viên</p>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                     <button
@@ -174,26 +162,24 @@ const TeacherManagementTab: React.FC = () => {
                         className="flex items-center gap-2 px-3 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
                     >
                         <RefreshCw className="w-4 h-4" />
-                        LÃ m má»›i
+                        Làm mới
                     </button>
                     <button
                         onClick={handleCreate}
                         className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"
                     >
                         <UserPlus className="w-4 h-4" />
-                        ThÃªm giÃ¡o viÃªn
+                        Thêm giáo viên
                     </button>
                 </div>
             </div>
 
-            {/* Error */}
             {error && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                     {error}
                 </div>
             )}
 
-            {/* Loading */}
             {loading ? (
                 <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
@@ -205,7 +191,7 @@ const TeacherManagementTab: React.FC = () => {
                     emptyState={(
                         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                             <div className="text-center py-8 text-gray-400">
-                                ChÆ°a cÃ³ giÃ¡o viÃªn nÃ o. Nháº¥n "ThÃªm giÃ¡o viÃªn" Ä‘á»ƒ báº¯t Ä‘áº§u.
+                                Chưa có giáo viên nào. Nhấn "Thêm giáo viên" để bắt đầu.
                             </div>
                         </div>
                     )}
@@ -216,12 +202,12 @@ const TeacherManagementTab: React.FC = () => {
                                     <thead>
                                         <tr className="bg-gray-50 border-b border-gray-200">
                                             <th className="text-left px-4 py-3 font-semibold text-gray-600">#</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Há» tÃªn</th>
+                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Họ tên</th>
                                             <th className="text-left px-4 py-3 font-semibold text-gray-600">Username</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Máº­t kháº©u</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Vai trÃ²</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Lá»›p</th>
-                                            <th className="text-center px-4 py-3 font-semibold text-gray-600">Thao tÃ¡c</th>
+                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Mật khẩu</th>
+                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Vai trò</th>
+                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Lớp</th>
+                                            <th className="text-center px-4 py-3 font-semibold text-gray-600">Thao tác</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -233,7 +219,7 @@ const TeacherManagementTab: React.FC = () => {
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-1">
                                                         <span className="text-gray-500 font-mono text-xs">
-                                                            {showPasswords[t.username] ? t.password : 'â€¢â€¢â€¢â€¢â€¢â€¢'}
+                                                            {showPasswords[t.username] ? t.password : '••••••'}
                                                         </span>
                                                         <button
                                                             onClick={() => togglePassword(t.username)}
@@ -253,14 +239,14 @@ const TeacherManagementTab: React.FC = () => {
                                                         <button
                                                             onClick={() => handleEdit(t)}
                                                             className="p-1.5 hover:bg-blue-100 rounded-lg text-blue-500 hover:text-blue-700 transition-colors"
-                                                            title="Sá»­a"
+                                                            title="Sửa"
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDelete(t.username, t.full_name)}
                                                             className="p-1.5 hover:bg-red-100 rounded-lg text-red-400 hover:text-red-600 transition-colors"
-                                                            title="XÃ³a"
+                                                            title="Xóa"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
@@ -272,7 +258,7 @@ const TeacherManagementTab: React.FC = () => {
                                 </table>
                             </div>
                             <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-400">
-                                Tá»•ng cá»™ng: {teachers.length} giÃ¡o viÃªn
+                                Tổng cộng: {teachers.length} giáo viên
                             </div>
                         </div>
                     )}
@@ -287,10 +273,10 @@ const TeacherManagementTab: React.FC = () => {
                                 {roleLabel(teacher.role)}
                             </div>
                             <div className="flex items-center justify-between gap-2">
-                                <span className="text-xs text-slate-500 font-semibold">Máº­t kháº©u:</span>
+                                <span className="text-xs text-slate-500 font-semibold">Mật khẩu:</span>
                                 <div className="flex items-center gap-1">
                                     <span className="text-gray-500 font-mono text-xs">
-                                        {showPasswords[teacher.username] ? teacher.password : 'â€¢â€¢â€¢â€¢â€¢â€¢'}
+                                        {showPasswords[teacher.username] ? teacher.password : '••••••'}
                                     </span>
                                     <button
                                         onClick={() => togglePassword(teacher.username)}
@@ -301,7 +287,7 @@ const TeacherManagementTab: React.FC = () => {
                                 </div>
                             </div>
                             <p className="text-xs text-slate-600">
-                                <span className="font-semibold">Lá»›p phá»¥ trÃ¡ch:</span> {teacher.class || '-'}
+                                <span className="font-semibold">Lớp phụ trách:</span> {teacher.class || '-'}
                             </p>
                             <div className="flex items-center justify-end gap-2">
                                 <button
@@ -309,14 +295,14 @@ const TeacherManagementTab: React.FC = () => {
                                     className="h-10 px-3 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold inline-flex items-center gap-1.5"
                                 >
                                     <Pencil className="w-4 h-4" />
-                                    Sá»­a
+                                    Sửa
                                 </button>
                                 <button
                                     onClick={() => handleDelete(teacher.username, teacher.full_name)}
                                     className="h-10 px-3 rounded-lg bg-red-50 text-red-700 text-sm font-semibold inline-flex items-center gap-1.5"
                                 >
                                     <Trash2 className="w-4 h-4" />
-                                    XÃ³a
+                                    Xóa
                                 </button>
                             </div>
                         </div>
@@ -324,18 +310,16 @@ const TeacherManagementTab: React.FC = () => {
                 />
             )}
 
-            {/* Create/Edit Modal */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
                     <div className="bg-white w-full h-dvh md:h-auto md:max-h-[90vh] md:max-w-md rounded-none md:rounded-2xl shadow-xl p-5 md:p-6 md:mx-4 overflow-y-auto">
-                        {/* Modal header */}
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-orange-100 rounded-xl">
                                     <UserPlus className="w-6 h-6 text-orange-600" />
                                 </div>
                                 <h2 className="text-xl font-bold text-gray-800">
-                                    {editingUsername ? 'Sá»­a giÃ¡o viÃªn' : 'ThÃªm giÃ¡o viÃªn má»›i'}
+                                    {editingUsername ? 'Sửa giáo viên' : 'Thêm giáo viên mới'}
                                 </h2>
                             </div>
                             <button
@@ -346,24 +330,23 @@ const TeacherManagementTab: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Form */}
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Há» tÃªn <span className="text-red-500">*</span>
+                                    Họ tên <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={form.fullName}
                                     onChange={e => setForm(prev => ({ ...prev, fullName: e.target.value }))}
-                                    placeholder="VD: CÃ´ HÆ°Æ¡ng"
+                                    placeholder="VD: Cô Hương"
                                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                                 />
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    TÃªn Ä‘Äƒng nháº­p <span className="text-red-500">*</span>
+                                    Tên đăng nhập <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -374,54 +357,53 @@ const TeacherManagementTab: React.FC = () => {
                                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${editingUsername ? 'bg-gray-100 text-gray-500' : ''}`}
                                 />
                                 {editingUsername && (
-                                    <p className="text-xs text-gray-400 mt-1">KhÃ´ng thá»ƒ Ä‘á»•i username</p>
+                                    <p className="text-xs text-gray-400 mt-1">Không thể đổi username</p>
                                 )}
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Máº­t kháº©u {!editingUsername && <span className="text-red-500">*</span>}
+                                    Mật khẩu {!editingUsername && <span className="text-red-500">*</span>}
                                 </label>
                                 <input
                                     type="text"
                                     value={form.password}
                                     onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
-                                    placeholder={editingUsername ? 'Äá»ƒ trá»‘ng náº¿u khÃ´ng Ä‘á»•i' : 'Nháº­p máº­t kháº©u'}
+                                    placeholder={editingUsername ? 'Để trống nếu không đổi' : 'Nhập mật khẩu'}
                                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                                 />
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Vai trÃ²</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Vai trò</label>
                                     <select
                                         value={form.role}
                                         onChange={e => setForm(prev => ({ ...prev, role: e.target.value }))}
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                                     >
-                                        <option value="teacher">GiÃ¡o viÃªn</option>
+                                        <option value="teacher">Giáo viên</option>
                                         <option value="admin">Admin</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Lá»›p phá»¥ trÃ¡ch</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Lớp phụ trách</label>
                                     <input
                                         type="text"
                                         value={form.teacherClass}
                                         onChange={e => setForm(prev => ({ ...prev, teacherClass: e.target.value }))}
-                                        placeholder="VD: 3a1"
+                                        placeholder="VD: 3A1"
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                                     />
                                 </div>
                             </div>
 
-                            {/* Action buttons */}
                             <div className="flex gap-3 pt-2">
                                 <button
                                     onClick={() => setShowModal(false)}
                                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    Há»§y
+                                    Hủy
                                 </button>
                                 <button
                                     onClick={handleSave}
@@ -433,7 +415,7 @@ const TeacherManagementTab: React.FC = () => {
                                     ) : (
                                         <Save className="w-4 h-4" />
                                     )}
-                                    {editingUsername ? 'Cáº­p nháº­t' : 'Táº¡o tÃ i khoáº£n'}
+                                    {editingUsername ? 'Cập nhật' : 'Tạo tài khoản'}
                                 </button>
                             </div>
                         </div>
