@@ -22,6 +22,13 @@ export type TabType = 'overview';
 
 const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentName, studentClass }) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const isAnswerSkipped = (answer: any): boolean => (
+        answer === undefined ||
+        answer === null ||
+        answer === '' ||
+        (Array.isArray(answer) && answer.length === 0) ||
+        (typeof answer === 'object' && answer !== null && !Array.isArray(answer) && Object.keys(answer).length === 0)
+    );
 
 
 
@@ -32,7 +39,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
         if (result.validationDetails && result.validationDetails.length > 0) {
             const serverResult = result.validationDetails.find(d => d.questionId === question.id);
             if (serverResult) {
-                if (!answer && answer !== false && answer !== 0) return 'skipped';
+                if (isAnswerSkipped(answer)) return 'skipped';
                 // Override: Server has bugs for ORDERING and UNDERLINE → fall through to local
                 if (!serverResult.isCorrect && (
                     question.type === 'ORDERING' || question.type === 'UNDERLINE' ||
@@ -46,7 +53,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
         }
 
         // 2. Fallback to local calculation if no server data
-        if (!answer && answer !== false && answer !== 0) return 'skipped';
+        if (isAnswerSkipped(answer)) return 'skipped';
 
         switch (question.type) {
             case 'MCQ': {
@@ -70,8 +77,28 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
             }
             case 'MULTIPLE_SELECT': {
                 const studentAns = (answer as string[]) || [];
-                const correctAns = (question as any).correctAnswers || [];
-                const msCorrect = studentAns.length === correctAns.length && studentAns.every((v: string) => correctAns.includes(v));
+                const rawCorrect = (question as any).correctAnswers ?? (question as any).correctAnswer ?? [];
+                let correctAns: string[] = [];
+                if (Array.isArray(rawCorrect)) {
+                    correctAns = rawCorrect;
+                } else if (typeof rawCorrect === 'string') {
+                    try {
+                        const parsed = JSON.parse(rawCorrect);
+                        correctAns = Array.isArray(parsed) ? parsed : rawCorrect.split('|');
+                    } catch {
+                        correctAns = rawCorrect.split('|');
+                    }
+                }
+
+                const normalize = (arr: string[]) =>
+                    Array.from(new Set(arr.map(v => String(v || '').trim().toUpperCase()).filter(Boolean))).sort();
+
+                const normalizedStudent = normalize(studentAns);
+                const normalizedCorrect = normalize(correctAns);
+                const msCorrect = normalizedCorrect.length > 0 &&
+                    normalizedStudent.length > 0 &&
+                    normalizedStudent.length === normalizedCorrect.length &&
+                    normalizedStudent.every((v, idx) => v === normalizedCorrect[idx]);
                 return msCorrect ? 'correct' : 'wrong';
             }
             case 'WORD_SCRAMBLE': {

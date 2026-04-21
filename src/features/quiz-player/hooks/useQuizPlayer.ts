@@ -221,19 +221,52 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
             
             // Rebuild final answers with snapshots and corrections
             const finalAnswersWithSnapshots: Record<string, any> = {};
+            const isAnswerSkipped = (value: any): boolean => (
+                value === undefined ||
+                value === null ||
+                value === '' ||
+                (Array.isArray(value) && value.length === 0) ||
+                (typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0)
+            );
+            const clientOverrideTypes = new Set([
+                QuestionType.ORDERING,
+                QuestionType.UNDERLINE,
+                QuestionType.ERROR_CORRECTION
+            ]);
+
             quiz.questions.forEach(q => {
                 const clientResult = clientScoring.details.find(d => d.questionId === q.id);
                 const serverResult = validationResult.details?.find((d: any) => d.questionId === q.id);
-                
-                // Client-side overrides take precedence for complex types where server might have quirks
-                const isCorrect = clientResult?.isCorrect || serverResult?.isCorrect || false;
+                const selectedAnswer = answers[q.id];
+                const skipped = isAnswerSkipped(selectedAnswer);
+
+                let isCorrect = false;
+                if (!skipped) {
+                    const clientIsCorrect = Boolean(clientResult?.isCorrect);
+                    const serverIsCorrect = serverResult?.isCorrect;
+
+                    if (clientOverrideTypes.has(q.type)) {
+                        // Keep local override only for historically unstable server types.
+                        isCorrect = clientIsCorrect || Boolean(serverIsCorrect);
+                    } else if (typeof serverIsCorrect === 'boolean') {
+                        isCorrect = serverIsCorrect;
+                    } else {
+                        isCorrect = clientIsCorrect;
+                    }
+                }
 
                 finalAnswersWithSnapshots[q.id] = {
-                    selectedAnswer: answers[q.id],
+                    selectedAnswer,
                     isCorrect,
                     questionSnapshot: { ...q }
                 };
             });
+
+            const mergedCorrectCount = Object.values(finalAnswersWithSnapshots).filter((a: any) => a.isCorrect === true).length;
+            const mergedTotalQuestions = quiz.questions.length;
+            const mergedScore = mergedTotalQuestions === 0
+                ? 0
+                : parseFloat(((mergedCorrectCount / mergedTotalQuestions) * 10).toFixed(1));
 
             const resultData: StudentResult = {
                 id: generateUUID(),
@@ -241,9 +274,9 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
                 quizTitle: quiz.title,
                 studentName,
                 studentClass,
-                score: clientScoring.score,
-                correctCount: clientScoring.correctCount,
-                totalQuestions: clientScoring.totalItems,
+                score: mergedScore,
+                correctCount: mergedCorrectCount,
+                totalQuestions: mergedTotalQuestions,
                 timeTaken,
                 submittedAt: new Date().toISOString(),
                 answers: {
@@ -257,8 +290,8 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
             setResult(resultData);
 
             // Gamification logic
-            const addExp = clientScoring.correctCount * 10 + (clientScoring.score === 10 ? 50 : 0);
-            const addCoins = clientScoring.correctCount * 5;
+            const addExp = mergedCorrectCount * 10 + (mergedScore === 10 ? 50 : 0);
+            const addCoins = mergedCorrectCount * 5;
             
             let rewardLevel = 1;
             let didLevelUp = false;
@@ -278,7 +311,7 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
                 } catch (e) { console.warn('Gamification sync failed', e); }
             }
 
-            if (clientScoring.correctCount > 0) {
+            if (mergedCorrectCount > 0) {
                 setRewardData({ expEarned: addExp, coinsEarned: addCoins, newLevel: rewardLevel, leveledUp: didLevelUp });
                 setShowReward(true);
             }

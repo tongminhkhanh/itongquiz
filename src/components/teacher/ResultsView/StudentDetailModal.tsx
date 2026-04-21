@@ -38,6 +38,13 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     onClose,
 }) => {
     const reportRef = useRef<HTMLDivElement>(null);
+    const isAnswerSkipped = (value: any): boolean => (
+        value === undefined ||
+        value === null ||
+        value === '' ||
+        (Array.isArray(value) && value.length === 0) ||
+        (typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0)
+    );
     const questionsMap = useMemo(() => {
         const map: Record<string, Question> = {};
         questions.forEach(q => { map[q.id] = q; });
@@ -84,7 +91,9 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
 
                 let finalIsCorrect = normalized.isCorrect;
                 const hasPersistedCorrectness = typeof normalized.isCorrect === 'boolean';
-                if (!hasPersistedCorrectness && standardizedQuestion.type) {
+                if (isAnswerSkipped(normalized.selectedAnswer)) {
+                    finalIsCorrect = false;
+                } else if (!hasPersistedCorrectness && standardizedQuestion.type) {
                     const { status } = checkAnswer(standardizedQuestion as any, normalized.selectedAnswer);
                     finalIsCorrect = status === 'correct';
                 }

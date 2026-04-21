@@ -139,6 +139,13 @@ export function mapShopItem(i: ShopItem): any {
 export async function handleValidateAnswers(db: D1Database, body: any): Promise<Response> {
     const quizId = body.quizId;
     const studentAnswers = body.answers || {};
+    const isSkippedAnswer = (value: any): boolean => (
+        value === undefined ||
+        value === null ||
+        value === '' ||
+        (Array.isArray(value) && value.length === 0) ||
+        (typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0)
+    );
 
     const questions = await db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all();
     if (questions.results.length === 0) {
@@ -158,7 +165,7 @@ export async function handleValidateAnswers(db: D1Database, body: any): Promise<
         let isCorrect = false;
 
         // 🛡️ Guard: A skipped answer is ALWAYS wrong, even if the correct answer in DB is empty
-        const isSkipped = !studentAnswer && studentAnswer !== false && studentAnswer !== 0;
+        const isSkipped = isSkippedAnswer(studentAnswer);
 
         if (isSkipped) {
             isCorrect = false;
@@ -178,15 +185,33 @@ export async function handleValidateAnswers(db: D1Database, body: any): Promise<
             }
         } else if (qType === 'MULTIPLE_SELECT') {
             try {
-                let correct: string[] = [];
-                if (correctAnswer.startsWith('[') && correctAnswer.endsWith(']')) {
-                    correct = JSON.parse(correctAnswer);
+                let correctRaw: any[] = [];
+                const normalizedCorrectAnswer = String(correctAnswer || '').trim();
+
+                if (normalizedCorrectAnswer.startsWith('[') && normalizedCorrectAnswer.endsWith(']')) {
+                    const parsed = JSON.parse(normalizedCorrectAnswer);
+                    correctRaw = Array.isArray(parsed) ? parsed : [];
                 } else {
                     // Fallback for pipe-separated format (A|B|C)
-                    correct = correctAnswer.split('|').map((s: string) => s.trim()).filter((s: string) => s !== '');
+                    correctRaw = normalizedCorrectAnswer.split('|');
                 }
-                const student = Array.isArray(studentAnswer) ? studentAnswer : [];
-                isCorrect = correct.length === student.length && correct.every((a: string) => student.includes(a));
+
+                const normalizeChoices = (values: any[]): string[] => (
+                    Array.from(
+                        new Set(
+                            values
+                                .map((v: any) => String(v ?? '').trim().toUpperCase())
+                                .filter(Boolean)
+                        )
+                    ).sort()
+                );
+
+                const correct = normalizeChoices(correctRaw);
+                const student = normalizeChoices(Array.isArray(studentAnswer) ? studentAnswer : []);
+                isCorrect = correct.length > 0 &&
+                    student.length > 0 &&
+                    correct.length === student.length &&
+                    correct.every((choice, idx) => choice === student[idx]);
             } catch { isCorrect = false; }
         } else if (qType === 'TRUE_FALSE') {
             try {
