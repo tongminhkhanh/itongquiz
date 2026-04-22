@@ -13,7 +13,6 @@ import {
     ResultsTable,
     ResultsAnalytics,
     DateRangeFilter,
-    StudentDetailModal,
     QuestionAnalysisTable,
     DateRange
 } from '../teacher/ResultsView';
@@ -29,6 +28,7 @@ import {
     searchResultsByName
 } from '../../utils/statisticsUtils';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
+import { useNavigate } from 'react-router-dom';
 
 interface ResultsTabProps {
     results: StudentResult[];
@@ -44,6 +44,7 @@ interface ResultDisplayOverride {
 
 const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) => {
     const { isMobile } = useResponsiveLayout();
+    const navigate = useNavigate();
     const PAGE_SIZE = 5;
 
     // State for filters and modals
@@ -53,8 +54,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
         label: 'Tất cả'
     });
     const [searchName, setSearchName] = useState('');
-    const [selectedStudent, setSelectedStudent] = useState<StudentResult | null>(null);
-    const [isFetchingDetail, setIsFetchingDetail] = useState(false);
+    const [isNavigatingDetail, setIsNavigatingDetail] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [activeQuizId, setActiveQuizId] = useState<string>('all');
     const [currentPage, setCurrentPage] = useState(1);
@@ -328,56 +328,10 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
         setShowExportMenu(false);
     };
 
-    // Get questions for student detail modal
-    const getQuestionsForResult = (result: StudentResult): Question[] => {
-        const quiz = quizzes.find(q => q.id === result.quizId);
-        return quiz?.questions || [];
-    };
-
-    // Lazy-load answers when teacher clicks "View Detail"
-    const handleViewDetail = useCallback(async (result: StudentResult) => {
-        // If answers already loaded (non-empty), show modal directly
-        if (result.answers && Object.keys(result.answers).length > 0) {
-            const override = calculateOverrideFromAnswers(result, result.answers);
-            if (override) {
-                setResultOverrides(prev => ({ ...prev, [String(result.id)]: override }));
-                setSelectedStudent({
-                    ...result,
-                    correctCount: override.correctCount,
-                    totalQuestions: override.totalQuestions,
-                    score: override.score,
-                });
-            } else {
-                setSelectedStudent(result);
-            }
-            return;
-        }
-
-        setIsFetchingDetail(true);
-        try {
-            const answers = await fetchResultAnswers(result.id);
-            const override = calculateOverrideFromAnswers(result, answers);
-
-            if (override) {
-                setResultOverrides(prev => ({ ...prev, [String(result.id)]: override }));
-            }
-
-            // Merge loaded answers into the result object (with corrected display metrics when available)
-            setSelectedStudent({
-                ...result,
-                answers,
-                correctCount: override?.correctCount ?? result.correctCount,
-                totalQuestions: override?.totalQuestions ?? result.totalQuestions,
-                score: override?.score ?? result.score,
-            });
-        } catch (error) {
-            console.error('Failed to fetch student answers:', error);
-            // Show modal anyway with empty answers (will show warning)
-            setSelectedStudent(result);
-        } finally {
-            setIsFetchingDetail(false);
-        }
-    }, [calculateOverrideFromAnswers]);
+    const handleViewDetail = useCallback((result: StudentResult) => {
+        setIsNavigatingDetail(true);
+        navigate(`/teacher/results/${encodeURIComponent(String(result.id))}`);
+    }, [navigate]);
 
     return (
         <div className="space-y-6">
@@ -529,7 +483,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                         }
                     }}
                     onRowClick={handleViewDetail}
-                    isLoading={isFetchingDetail}
+                    isLoading={isNavigatingDetail}
                     onDeleteClick={async (result) => {
                         try {
                             await useQuizStore.getState().removeResult(result.id);
@@ -587,14 +541,6 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                 </Card>
             )}
 
-            {/* Student Detail Modal */}
-            {selectedStudent && (
-                <StudentDetailModal
-                    result={selectedStudent}
-                    questions={getQuestionsForResult(selectedStudent)}
-                    onClose={() => setSelectedStudent(null)}
-                />
-            )}
         </div>
     );
 };

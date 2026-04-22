@@ -188,9 +188,19 @@ const calculateIsCorrectFallback = (
 
     // MATCHING: Compare pairs
     if (type === 'MATCHING' && pairs && Array.isArray(pairs)) {
-        const studentPairs = typeof selectedAnswer === 'object' ? selectedAnswer : {};
-        const cleanedPairs = { ...studentPairs };
-        delete cleanedPairs.selectedLeft;
+        const rawPairs = typeof selectedAnswer === 'object' ? selectedAnswer : {};
+        const cleanedPairs: Record<string, string> = {};
+        Object.entries(rawPairs || {}).forEach(([key, value]) => {
+            if (key === 'selectedLeft' || key === '__shuffledIds') return;
+            if (typeof value !== 'string') return;
+
+            const leftMatch = key.match(/^l-(\d+)$/i);
+            const rightMatch = value.match(/^r-(\d+)$/i);
+            const leftKey = leftMatch ? String(pairs[Number(leftMatch[1])]?.left ?? key) : key;
+            const rightVal = rightMatch ? String(pairs[Number(rightMatch[1])]?.right ?? value) : value;
+            cleanedPairs[leftKey] = rightVal;
+        });
+
         if (Object.keys(cleanedPairs).length !== pairs.length) return false;
         return pairs.every((pair: any) => cleanedPairs[pair.left] === pair.right);
     }

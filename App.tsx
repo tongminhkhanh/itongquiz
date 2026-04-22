@@ -17,6 +17,7 @@ import { useSeo } from './src/hooks/useSeo';
 const StudentView = React.lazy(() => import('./src/components/StudentView'));
 const IoeStudentView = React.lazy(() => import('./src/components/IoeStudentView'));
 const TeacherDashboard = React.lazy(() => import('./src/components/TeacherDashboard'));
+const TeacherResultDetailPage = React.lazy(() => import('./src/components/TeacherDashboard/TeacherResultDetailPage'));
 const GiftShop = React.lazy(() => import('./src/components/gamification/GiftShop'));
 const HomePage = React.lazy(() => import('./src/components/HomePage/HomePage'));
 const PrivacyPolicy = React.lazy(() => import('./src/components/legal/PrivacyPolicy'));
@@ -249,6 +250,14 @@ const App: React.FC = () => {
         <>
             <Routes>
                 <Route path="/" element={renderRootView()} />
+                <Route
+                    path="/teacher/results/:resultId"
+                    element={
+                        <Suspense fallback={<PageLoading />}>
+                            <TeacherResultDetailPage />
+                        </Suspense>
+                    }
+                />
                 <Route
                     path="/about"
                     element={

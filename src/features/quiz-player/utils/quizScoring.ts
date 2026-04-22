@@ -73,10 +73,26 @@ export const calculateStudentScore = (quiz: Quiz, answers: Record<string, any>):
         } 
         else if (q.type === QuestionType.MATCHING) {
             totalItems++;
-            const userPairs = answers[q.id] || {};
             const correctPairs = qa.pairs || [];
+            const rawPairs = answers[q.id] || {};
+            const normalizeMatchingMap = (input: any): Record<string, string> => {
+                if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+                const mapped: Record<string, string> = {};
+                Object.entries(input).forEach(([key, value]) => {
+                    if (key === 'selectedLeft' || key === '__shuffledIds') return;
+                    if (typeof value !== 'string') return;
+
+                    const leftMatch = key.match(/^l-(\d+)$/i);
+                    const rightMatch = value.match(/^r-(\d+)$/i);
+                    const leftKey = leftMatch ? String(correctPairs[Number(leftMatch[1])]?.left ?? key) : key;
+                    const rightVal = rightMatch ? String(correctPairs[Number(rightMatch[1])]?.right ?? value) : value;
+                    mapped[leftKey] = rightVal;
+                });
+                return mapped;
+            };
+            const userPairs = normalizeMatchingMap(rawPairs);
             let allMatch = true;
-            const actualUserPairsCount = Object.keys(userPairs).filter(key => key !== 'selectedLeft').length;
+            const actualUserPairsCount = Object.keys(userPairs).length;
             
             if (actualUserPairsCount !== correctPairs.length) {
                 allMatch = false;

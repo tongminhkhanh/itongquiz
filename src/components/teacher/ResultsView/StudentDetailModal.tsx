@@ -28,6 +28,7 @@ interface StudentDetailModalProps {
     result: StudentResult;
     questions: Question[];
     onClose: () => void;
+    embedded?: boolean;
 }
 
 // Helper to normalize answer detail (support both old and new format)
@@ -42,6 +43,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     result,
     questions,
     onClose,
+    embedded = false,
 }) => {
     const authStore = useAuthStore();
     const openAssignmentComposerWithDraft = useTeacherDashboardUIStore((state) => state.openAssignmentComposerWithDraft);
@@ -183,7 +185,12 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 }
             } catch (error: any) {
                 if (!cancelled) {
-                    setWeaknessError(error.message || 'Khong the tai ho so diem yeu.');
+                    const message = String(error?.message || '');
+                    if (message.includes('404')) {
+                        setWeaknessError('Chưa có dữ liệu phân tích năng lực cho bài này.');
+                    } else {
+                        setWeaknessError(error.message || 'Khong the tai ho so diem yeu.');
+                    }
                 }
             } finally {
                 if (!cancelled) {
@@ -388,8 +395,8 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     const wrongCount = displayQuestions.filter(q => q.isCorrect === false).length;
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4">
-            <div className="bg-white w-full h-dvh md:h-auto md:max-h-[90vh] md:max-w-4xl rounded-none md:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300">
+        <div className={embedded ? 'min-h-screen bg-slate-50' : 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4'}>
+            <div className={embedded ? 'bg-white w-full min-h-screen overflow-hidden flex flex-col' : 'bg-white w-full h-dvh md:h-auto md:max-h-[90vh] md:max-w-4xl rounded-none md:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300'}>
                 
                 {/* Header Section */}
                 <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white p-4 md:p-6 pb-0 md:pb-0 relative">

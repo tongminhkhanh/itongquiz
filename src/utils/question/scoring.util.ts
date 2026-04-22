@@ -150,6 +150,33 @@ const normalizeMultipleSelectChoices = (value: any, options: any[] = []): string
     return Array.from(new Set(values.map(toLabel).filter(Boolean))).sort();
 };
 
+const normalizeMatchingMap = (answer: any, pairs: Array<{ left: any; right: any }> = []): Record<string, string> => {
+    if (!answer || typeof answer !== 'object' || Array.isArray(answer)) return {};
+
+    const cleaned: Record<string, string> = {};
+    Object.entries(answer).forEach(([key, value]) => {
+        if (key === 'selectedLeft' || key === '__shuffledIds') return;
+        if (typeof value !== 'string') return;
+        cleaned[String(key)] = value;
+    });
+
+    const leftByIndex = pairs.map((pair) => String(pair?.left ?? ''));
+    const rightByIndex = pairs.map((pair) => String(pair?.right ?? ''));
+
+    const resolved: Record<string, string> = {};
+    Object.entries(cleaned).forEach(([leftKey, rightValue]) => {
+        const leftMatch = leftKey.match(/^l-(\d+)$/i);
+        const rightMatch = String(rightValue).match(/^r-(\d+)$/i);
+
+        const resolvedLeft = leftMatch ? leftByIndex[Number(leftMatch[1])] ?? leftKey : leftKey;
+        const resolvedRight = rightMatch ? rightByIndex[Number(rightMatch[1])] ?? rightValue : rightValue;
+
+        resolved[String(resolvedLeft)] = String(resolvedRight);
+    });
+
+    return resolved;
+};
+
 /**
  * Main scoring function
  */
@@ -209,20 +236,19 @@ export const checkAnswer = (question: any, answer: any): ScoringResult => {
             }
             break;
 
-        case 'MATCHING':
-        case 'CATEGORIZATION':
-            // Chuyển đổi pairs mảng -> object để so sánh với studentAnswer
-            const normalizePairs = (p: any) => {
-                if (Array.isArray(p)) {
-                    const obj: any = {};
-                    p.forEach(pair => {
-                        if (pair.left && pair.right) obj[pair.left] = pair.right;
-                    });
-                    return JSON.stringify(Object.keys(obj).sort().reduce((acc: any, key) => {
-                        acc[key] = obj[key];
-                        return acc;
-                    }, {}));
-                }
+        case 'MATCHING': {
+            const pairList = Array.isArray(question.pairs) ? question.pairs : [];
+            const normalizedStudent = normalizeMatchingMap(answer, pairList);
+            isCorrect = pairList.length > 0 && pairList.every((pair: any) => {
+                const left = String(pair?.left ?? '');
+                const right = String(pair?.right ?? '');
+                return normalizedStudent[left] === right;
+            });
+            break;
+        }
+
+        case 'CATEGORIZATION': {
+            const normalizeObject = (p: any) => {
                 if (typeof p === 'object' && p !== null) {
                     return JSON.stringify(Object.keys(p).sort().reduce((acc: any, key) => {
                         acc[key] = p[key];
@@ -231,8 +257,9 @@ export const checkAnswer = (question: any, answer: any): ScoringResult => {
                 }
                 return String(p);
             };
-            isCorrect = normalizePairs(answer) === normalizePairs(question.correctAnswer || question.pairs);
+            isCorrect = normalizeObject(answer) === normalizeObject(question.correctAnswer || question.pairs);
             break;
+        }
 
         case 'UNDERLINE':
             // So sánh mảng index cho Gạch chân
