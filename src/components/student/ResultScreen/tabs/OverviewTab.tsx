@@ -4,15 +4,17 @@ import { CheckCircle, XCircle, Clock, Trophy, Target, Stethoscope } from 'lucide
 import DrOwlModal from '../DrOwlModal';
 import { callApi } from '../../../../services/apiAdapter';
 import { motion } from 'framer-motion';
+import WeaknessSummaryCard from '../WeaknessSummaryCard';
 
 interface Props {
     quiz: Quiz;
     result: StudentResult;
     answers: Record<string, any>;
     studentUsername?: string;
+    onOpenRecommendations: () => void;
 }
 
-const OverviewTab: React.FC<Props> = ({ quiz, result, answers, studentUsername }) => {
+const OverviewTab: React.FC<Props> = ({ quiz, result, answers, studentUsername, onOpenRecommendations }) => {
     const [showDrOwl, setShowDrOwl] = useState(false);
 
     // Calculate additional stats using validationDetails as source of truth
@@ -133,6 +135,14 @@ const OverviewTab: React.FC<Props> = ({ quiz, result, answers, studentUsername }
                     <p className="text-white/90 leading-relaxed">{comment.message}</p>
                 </div>
             </div>
+
+            <WeaknessSummaryCard
+                resultId={result.id}
+                scorePct={scorePct}
+                wrongQuestionIds={wrongQuestionIds}
+                onOpenDrOwl={() => setShowDrOwl(true)}
+                onOpenRecommendations={onOpenRecommendations}
+            />
 
             {/* 🆘 DR. OWL EMERGENCY BUTTON — only when score < 50% and has wrong questions */}
             {scorePct < 50 && wrongQuestionIds.length >= 2 && (

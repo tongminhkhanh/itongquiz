@@ -15,10 +15,11 @@ import {
 } from 'lucide-react';
 import { SCHOOL_NAME } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
+import type { TeacherDashboardTab } from '../../stores/useTeacherDashboardUIStore';
 
 export interface SidebarProps {
-    activeTab: string;
-    setActiveTab: (tab: string) => void;
+    activeTab: TeacherDashboardTab;
+    setActiveTab: (tab: TeacherDashboardTab) => void;
     isGiftShopEnabled?: boolean;
     onLogout: () => void;
     isMobileOpen?: boolean;
@@ -42,7 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     void onLogout;
 
     const navItems = useMemo(() => {
-        const baseItems: Array<{ id: string; label: string; icon: React.ReactNode }> = [
+        const baseItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
             { id: 'overview', label: 'Tổng quan', icon: <Home className="w-5 h-5" /> },
             { id: 'create', label: 'Tạo đề mới', icon: <PlusCircle className="w-5 h-5" /> },
             { id: 'manage', label: 'Đề kiểm tra', icon: <List className="w-5 h-5" /> },
@@ -59,13 +60,13 @@ const Sidebar: React.FC<SidebarProps> = ({
         return baseItems;
     }, [isGiftShopEnabled]);
 
-    const ioeItems = [
+    const ioeItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
         { id: 'ioe-manage', label: 'IOE Quản lý', icon: <Globe className="w-5 h-5" /> },
         { id: 'ioe', label: 'IOE Tạo đề', icon: <Globe className="w-4 h-4 ml-1" /> },
         { id: 'ioe-results', label: 'IOE Kết quả', icon: <Globe className="w-4 h-4 ml-1" /> },
     ];
 
-    const settingItems = [
+    const settingItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
         { id: 'announcements', label: 'Thông báo', icon: <Megaphone className="w-5 h-5" /> },
         { id: 'teachers', label: 'Giáo viên', icon: <Users className="w-5 h-5" /> },
     ];
@@ -77,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         adminOnly = false,
     }: {
         title: string;
-        items: Array<{ id: string; label: string; icon: React.ReactNode }>;
+        items: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }>;
         groupKey: GroupKey;
         adminOnly?: boolean;
     }) => {

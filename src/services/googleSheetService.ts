@@ -253,6 +253,9 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                     correctAnswer: row.correctAnswer || row.correct_answer,
                     text: row.text || row.text_field,
                     correctWordIndexes: row.correctWordIndexes || row.correct_word_indexes,
+                    skillCode: row.skillCode || row.skill_code,
+                    subskillCode: row.subskillCode || row.subskill_code,
+                    difficulty: row.difficulty ?? row.difficulty_level ?? row.difficultyLevel,
                 };
             };
 
@@ -265,6 +268,38 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
             qData.forEach((row: any) => {
                 const qId = row.quizId;
                 if (!questionsByQuizId[qId]) questionsByQuizId[qId] = [];
+
+                const parseTags = (rawTags: any): string[] | undefined => {
+                    if (!rawTags) return undefined;
+                    if (Array.isArray(rawTags)) return rawTags.map((tag) => String(tag).trim()).filter(Boolean);
+                    const raw = String(rawTags).trim();
+                    if (!raw) return undefined;
+                    if (raw.startsWith('[') && raw.endsWith(']')) {
+                        try {
+                            const parsed = JSON.parse(raw);
+                            if (Array.isArray(parsed)) {
+                                return parsed.map((tag) => String(tag).trim()).filter(Boolean);
+                            }
+                        } catch {
+                            // Fall back to comma-splitting below
+                        }
+                    }
+                    return raw.split(',').map((tag) => tag.trim()).filter(Boolean);
+                };
+
+                const parsedTags = parseTags(row.tags);
+                const numericDifficulty = Number(row.difficulty);
+                const normalizedDifficulty = numericDifficulty === 1 || numericDifficulty === 2 || numericDifficulty === 3
+                    ? (numericDifficulty as 1 | 2 | 3)
+                    : undefined;
+
+                const questionMetadata = {
+                    ...(row.subject ? { subject: row.subject } : {}),
+                    ...(row.skillCode ? { skillCode: row.skillCode } : {}),
+                    ...(row.subskillCode ? { subskillCode: row.subskillCode } : {}),
+                    ...(parsedTags ? { tags: parsedTags } : {}),
+                    ...(normalizedDifficulty ? { difficulty: normalizedDifficulty } : {}),
+                };
 
                 let question: Question | null = null;
 
@@ -279,28 +314,32 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         type: QuestionType.MCQ,
                         question: unescapeSheetValue(row.question),
                         options: processOptions(row.options),
-                        correctAnswer: unescapeSheetValue(row.correctAnswer)
+                        correctAnswer: unescapeSheetValue(row.correctAnswer),
+                        ...questionMetadata
                     } as MCQQuestion;
                 } else if (row.type === QuestionType.TRUE_FALSE) {
                     question = {
                         id: row.id,
                         type: QuestionType.TRUE_FALSE,
                         mainQuestion: unescapeSheetValue(row.question), // Using 'question' column for mainQuestion
-                        items: row.items ? JSON.parse(row.items) : [] // Items are JSON, usually safe unless generated
+                        items: row.items ? JSON.parse(row.items) : [], // Items are JSON, usually safe unless generated
+                        ...questionMetadata
                     } as TrueFalseQuestion;
                 } else if (row.type === QuestionType.SHORT_ANSWER) {
                     question = {
                         id: row.id,
                         type: QuestionType.SHORT_ANSWER,
                         question: unescapeSheetValue(row.question),
-                        correctAnswer: unescapeSheetValue(row.correctAnswer)
+                        correctAnswer: unescapeSheetValue(row.correctAnswer),
+                        ...questionMetadata
                     } as ShortAnswerQuestion;
                 } else if (row.type === QuestionType.MATCHING) {
                     question = {
                         id: row.id,
                         type: QuestionType.MATCHING,
                         mainQuestion: unescapeSheetValue(row.question),
-                        pairs: row.items ? JSON.parse(row.items) : []
+                        pairs: row.items ? JSON.parse(row.items) : [],
+                        ...questionMetadata
                     } as any;
                 } else if (row.type === QuestionType.MULTIPLE_SELECT) {
                     question = {
@@ -308,7 +347,8 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         type: QuestionType.MULTIPLE_SELECT,
                         question: unescapeSheetValue(row.question),
                         options: processOptions(row.options),
-                        correctAnswers: row.correctAnswer ? JSON.parse(row.correctAnswer) : []
+                        correctAnswers: row.correctAnswer ? JSON.parse(row.correctAnswer) : [],
+                        ...questionMetadata
                     } as any;
                 } else if (row.type === QuestionType.DRAG_DROP) {
                     question = {
@@ -317,7 +357,8 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         question: unescapeSheetValue(row.question || "Điền từ thích hợp vào chỗ trống:"),
                         text: unescapeSheetValue(row.text || ""),
                         blanks: row.blanks ? JSON.parse(row.blanks) : [],
-                        distractors: row.distractors ? JSON.parse(row.distractors) : []
+                        distractors: row.distractors ? JSON.parse(row.distractors) : [],
+                        ...questionMetadata
                     } as any;
                 } else if (row.type === QuestionType.ORDERING) {
                     question = {
@@ -325,7 +366,8 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         type: QuestionType.ORDERING,
                         question: unescapeSheetValue(row.question),
                         items: row.items ? JSON.parse(row.items) : [],
-                        correctOrder: row.correctAnswer ? JSON.parse(row.correctAnswer) : [] // Fix: correctOrder is stored in correctAnswer column
+                        correctOrder: row.correctAnswer ? JSON.parse(row.correctAnswer) : [], // Fix: correctOrder is stored in correctAnswer column
+                        ...questionMetadata
                     } as any;
                 } else if (row.type === QuestionType.IMAGE_QUESTION) {
                     question = {
@@ -335,7 +377,8 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         image: row.image || "",
                         options: processOptions(row.options),
                         optionImages: row.distractors ? JSON.parse(row.distractors) : [], // Fix: Map optionImages from distractors column
-                        correctAnswer: unescapeSheetValue(row.correctAnswer)
+                        correctAnswer: unescapeSheetValue(row.correctAnswer),
+                        ...questionMetadata
                     } as any;
                 } else if (row.type === QuestionType.DROPDOWN) {
                     question = {
@@ -344,7 +387,8 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         question: unescapeSheetValue(row.question),
                         text: unescapeSheetValue(row.text || ""),
                         blanks: row.blanks ? JSON.parse(row.blanks) : [],
-                        image: row.image || "" // Fix: Map image field
+                        image: row.image || "", // Fix: Map image field
+                        ...questionMetadata
                     } as any;
                 } else if (row.type === QuestionType.UNDERLINE) {
                     question = {
@@ -353,7 +397,8 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         question: unescapeSheetValue(row.question),
                         sentence: unescapeSheetValue(row.sentence || ""),
                         words: row.items ? JSON.parse(row.items) : [], // words stored in items column
-                        correctWordIndexes: row.correctAnswer ? JSON.parse(row.correctAnswer) : []
+                        correctWordIndexes: row.correctAnswer ? JSON.parse(row.correctAnswer) : [],
+                        ...questionMetadata
                     } as any;
                 } else if (row.type === QuestionType.RIDDLE) {
                     // RIDDLE: riddleLines -> items, answerLabel -> text, hint -> sentence
@@ -364,7 +409,8 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         riddleLines: row.items ? JSON.parse(row.items) : [],
                         answerLabel: unescapeSheetValue(row.text || ""),
                         hint: unescapeSheetValue(row.sentence || ""),
-                        correctAnswer: unescapeSheetValue(row.correctAnswer)
+                        correctAnswer: unescapeSheetValue(row.correctAnswer),
+                        ...questionMetadata
                     } as any;
                 } else if (row.type === QuestionType.CATEGORIZATION) {
                     // CATEGORIZATION: items stored in 'items' column, categories stored in 'distractors' column
@@ -373,7 +419,8 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         type: QuestionType.CATEGORIZATION,
                         question: unescapeSheetValue(row.question),
                         items: row.items ? JSON.parse(row.items) : [],
-                        categories: row.distractors ? JSON.parse(row.distractors) : []
+                        categories: row.distractors ? JSON.parse(row.distractors) : [],
+                        ...questionMetadata
                     } as any;
                 } else if (row.type === QuestionType.WORD_SCRAMBLE) {
                     // WORD_SCRAMBLE: letters → items, correctWord → correctAnswer, hint → text
@@ -384,6 +431,7 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         letters: row.items ? JSON.parse(row.items) : [],
                         correctWord: unescapeSheetValue(row.correctAnswer),
                         hint: unescapeSheetValue(row.text || ""),
+                        ...questionMetadata
                     } as any;
                 } else if (row.type === QuestionType.ERROR_CORRECTION) {
                     // ERROR_CORRECTION: passage → text, wrongWord → distractors, correctWord → correctAnswer
@@ -394,6 +442,7 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         passage: unescapeSheetValue(row.text || ""),
                         wrongWord: unescapeSheetValue(row.distractors || ""),
                         correctWord: unescapeSheetValue(row.correctAnswer),
+                        ...questionMetadata
                     } as any;
                 }
 
@@ -456,6 +505,12 @@ export const prepareQuizForSave = (quiz: Quiz) => {
         if (eq.correctAnswer) eq.correctAnswer = escapeSheetValue(eq.correctAnswer);
         if (eq.text) eq.text = escapeSheetValue(eq.text);
         if (eq.sentence) eq.sentence = escapeSheetValue(eq.sentence);
+        if (eq.difficulty !== undefined && eq.difficulty !== null) {
+            const normalizedDifficulty = Number(eq.difficulty);
+            eq.difficulty = normalizedDifficulty === 1 || normalizedDifficulty === 2 || normalizedDifficulty === 3
+                ? normalizedDifficulty
+                : undefined;
+        }
 
         // Escape options array
         if (eq.options && Array.isArray(eq.options)) {

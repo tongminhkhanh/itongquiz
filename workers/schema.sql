@@ -62,7 +62,11 @@ CREATE TABLE IF NOT EXISTS questions (
   words TEXT DEFAULT '',
   correct_word_indexes TEXT DEFAULT '',
   image TEXT DEFAULT '',
-  tags TEXT DEFAULT ''
+  tags TEXT DEFAULT '',
+  subject TEXT DEFAULT '',
+  skill_code TEXT DEFAULT '',
+  subskill_code TEXT DEFAULT '',
+  difficulty INTEGER DEFAULT NULL
 );
 
 -- Results
@@ -310,13 +314,12 @@ CREATE INDEX IF NOT EXISTS idx_hw_submissions_assignment ON hw_submissions(assig
 CREATE INDEX IF NOT EXISTS idx_hw_submissions_student ON hw_submissions(student_id);
 CREATE INDEX IF NOT EXISTS idx_hw_submissions_analytics ON hw_submissions(assignment_id, submitted_at DESC);
 
- - -   T e s t   B a n k   T a b l e 
- C R E A T E   T A B L E   I F   N O T   E X I S T S   t e s t _ b a n k   ( 
-         i d   T E X T   P R I M A R Y   K E Y , 
-         t e a c h e r _ i d   T E X T   N O T   N U L L , 
-         q u e s t i o n _ d a t a   T E X T   N O T   N U L L , 
-         t a g s   T E X T , 
-         c r e a t e d _ a t   D A T E T I M E   D E F A U L T   C U R R E N T _ T I M E S T A M P 
- ) ; 
- C R E A T E   I N D E X   I F   N O T   E X I S T S   i d x _ t e s t _ b a n k _ t e a c h e r   O N   t e s t _ b a n k ( t e a c h e r _ i d ) ;  
- 
+-- Test Bank Table
+CREATE TABLE IF NOT EXISTS test_bank (
+    id TEXT PRIMARY KEY,
+    teacher_id TEXT NOT NULL,
+    question_data TEXT NOT NULL,
+    tags TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_test_bank_teacher ON test_bank(teacher_id);

@@ -11,6 +11,8 @@ import {
     Classroom, CreateClassPayload,
     Student, CreateStudentPayload, StudentLoginPayload, StudentSession,
     Assignment, CreateAssignmentPayload,
+    SmartAssignmentPreviewApiResponse,
+    SmartAssignmentPreviewData, SmartAssignmentPreviewErrorData, SmartAssignmentPreviewRequest,
     ClassroomApiResponse,
 } from '../types/classroom.types';
 
@@ -203,6 +205,15 @@ export const createAssignment = async (payload: CreateAssignmentPayload): Promis
     }
     console.error('[ClassroomService] createAssignment failed:', res.message);
     return null;
+};
+
+/**
+ * Build a smart assignment preview for one student from an existing result context.
+ */
+export const getSmartAssignmentPreview = async (
+    payload: SmartAssignmentPreviewRequest,
+): Promise<SmartAssignmentPreviewApiResponse> => {
+    return callGasApi<SmartAssignmentPreviewData | SmartAssignmentPreviewErrorData>('get_smart_assignment_preview', payload);
 };
 
 /**

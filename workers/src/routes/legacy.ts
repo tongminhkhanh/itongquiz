@@ -250,8 +250,8 @@ async function handleCreateQuiz(db: D1Database, body: any) {
 
     if (body.questions && Array.isArray(body.questions)) {
         const stmt = db.prepare(
-            `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags, subject, skill_code, subskill_code, difficulty)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         );
         const batch = body.questions.map((q: any) => {
             const mapped = mapQuestionForSave(q, body.id);
@@ -280,8 +280,8 @@ async function handleUpdateQuiz(db: D1Database, body: any) {
 
     if (body.questions && Array.isArray(body.questions)) {
         const stmt = db.prepare(
-            `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags, subject, skill_code, subskill_code, difficulty)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         );
         const batch = body.questions.map((q: any) => {
             const mapped = mapQuestionForSave(q, body.id);

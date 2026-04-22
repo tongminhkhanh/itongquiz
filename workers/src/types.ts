@@ -35,6 +35,10 @@ export interface Question {
     correct_word_indexes?: string;
     image?: string;
     tags?: string;
+    subject?: string;
+    skill_code?: string;
+    subskill_code?: string;
+    difficulty?: 1 | 2 | 3 | null;
 }
 
 export interface Assignment {

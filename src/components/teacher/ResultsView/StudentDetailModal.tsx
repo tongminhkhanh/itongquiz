@@ -1,9 +1,9 @@
-/**
+﻿/**
  * Student Detail Modal Component
  * 
  * Shows detailed answers for a specific student result
- * 📸 Supports question snapshots for viewing results even when quiz is deleted
- * 📊 Phase 7: Added Cognitive Domain Analysis, Radar Chart & AI Insight & Export
+ * Supports question snapshots for viewing results even when quiz is deleted
+ * Phase 7: Added Cognitive Domain Analysis, Radar Chart, AI Insight, and Export
  */
 
 import React, { useRef, useMemo, useState, useEffect } from 'react';
@@ -15,6 +15,12 @@ import { calculateStudentCompetency } from '../../../utils/competencyMapping';
 import { CompetencyRadar } from '../../../features/analytics/components/CompetencyRadar';
 import { AIInsightBox } from '../../../features/analytics/components/AIInsightBox';
 import { analyzeStudentPerformance } from '../../../services/ai/studentAnalysisService';
+import { fetchWeaknessProfile } from '../../../services/weaknessProfileService';
+import type { SkillBreakdownItem, WeaknessProfileResponse } from '../../../shared/skillTaxonomy';
+import { getSmartAssignmentPreview } from '../../../services/classroomService';
+import type { SmartAssignmentPreviewApiResponse, SmartAssignmentPreviewData } from '../../../types/classroom.types';
+import { useTeacherDashboardUIStore } from '../../../stores/useTeacherDashboardUIStore';
+import { useAuthStore } from '../../../../stores/authStore';
 import { toast } from 'react-hot-toast';
 import html2canvas from 'html2canvas';
 
@@ -37,6 +43,8 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     questions,
     onClose,
 }) => {
+    const authStore = useAuthStore();
+    const openAssignmentComposerWithDraft = useTeacherDashboardUIStore((state) => state.openAssignmentComposerWithDraft);
     const reportRef = useRef<HTMLDivElement>(null);
     const isAnswerSkipped = (value: any): boolean => (
         value === undefined ||
@@ -129,11 +137,187 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     const [aiInsight, setAiInsight] = useState<string | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
+    const [weaknessProfile, setWeaknessProfile] = useState<WeaknessProfileResponse | null>(null);
+    const [isWeaknessLoading, setIsWeaknessLoading] = useState(false);
+    const [weaknessError, setWeaknessError] = useState<string | null>(null);
+    const [smartPreview, setSmartPreview] = useState<SmartAssignmentPreviewData | null>(null);
+    const [smartPreviewError, setSmartPreviewError] = useState<string | null>(null);
+    const [smartPreviewErrorDetails, setSmartPreviewErrorDetails] = useState<SmartAssignmentPreviewApiResponse['data'] | null>(null);
+    const [isSmartPreviewLoading, setIsSmartPreviewLoading] = useState(false);
+    const [selectedPreviewQuizId, setSelectedPreviewQuizId] = useState('');
+    const [smartDeadline, setSmartDeadline] = useState('');
+    const [smartMaxAttempts, setSmartMaxAttempts] = useState(1);
 
     // Calculate competency data for Radar Chart
     const competencyData = useMemo(() => {
         return calculateStudentCompetency(result, questionsMap);
     }, [result, questionsMap]);
+
+    useEffect(() => {
+        setWeaknessProfile(null);
+        setWeaknessError(null);
+        setSmartPreview(null);
+        setSmartPreviewError(null);
+        setSmartPreviewErrorDetails(null);
+        setSelectedPreviewQuizId('');
+        setSmartDeadline('');
+        setSmartMaxAttempts(1);
+    }, [result.id]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        if (activeTab !== 'analytics' || isWeaknessLoading || weaknessProfile) {
+            return () => {
+                cancelled = true;
+            };
+        }
+
+        const loadWeaknessProfile = async () => {
+            setIsWeaknessLoading(true);
+            setWeaknessError(null);
+            try {
+                const response = await fetchWeaknessProfile(result.id);
+                if (!cancelled) {
+                    setWeaknessProfile(response);
+                }
+            } catch (error: any) {
+                if (!cancelled) {
+                    setWeaknessError(error.message || 'Khong the tai ho so diem yeu.');
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsWeaknessLoading(false);
+                }
+            }
+        };
+
+        loadWeaknessProfile();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeTab, result.id, weaknessProfile]);
+
+    const focusSkills = useMemo<SkillBreakdownItem[]>(() => {
+        if (!weaknessProfile) return [];
+
+        const statusOrder: Record<SkillBreakdownItem['status'], number> = {
+            weak: 0,
+            needs_practice: 1,
+            stable: 2,
+        };
+
+        return weaknessProfile.subjects
+            .flatMap((subject) => subject.skills)
+            .filter((skill) => skill.status === 'weak' || skill.status === 'needs_practice')
+            .sort((left, right) => {
+                if (statusOrder[left.status] !== statusOrder[right.status]) {
+                    return statusOrder[left.status] - statusOrder[right.status];
+                }
+                if (left.accuracy !== right.accuracy) {
+                    return left.accuracy - right.accuracy;
+                }
+                return left.skillLabel.localeCompare(right.skillLabel);
+            })
+            .slice(0, 3);
+    }, [weaknessProfile]);
+
+    const showCoverageWarning = Boolean(
+        weaknessProfile && (
+            weaknessProfile.coveragePercent < 80 ||
+            weaknessProfile.unclassifiedQuestionCount > 0
+        ),
+    );
+
+    const getSkillStatusLabel = (status: SkillBreakdownItem['status']) => {
+        if (status === 'weak') return 'Can uu tien';
+        if (status === 'needs_practice') return 'Can luyen them';
+        return 'On dinh';
+    };
+
+    useEffect(() => {
+        if (!smartPreview) return;
+        setSelectedPreviewQuizId(smartPreview.assignmentDraft.quizId);
+        setSmartDeadline(new Date(smartPreview.assignmentDraft.deadline).toISOString().slice(0, 16));
+        setSmartMaxAttempts(smartPreview.assignmentDraft.maxAttempts);
+    }, [smartPreview]);
+
+    const handleLoadSmartPreview = async () => {
+        if (!authStore.username) {
+            toast.error('Khong xac dinh duoc giao vien dang dang nhap.');
+            return;
+        }
+
+        setIsSmartPreviewLoading(true);
+        setSmartPreviewError(null);
+        setSmartPreviewErrorDetails(null);
+
+        try {
+            const response = await getSmartAssignmentPreview({
+                resultId: String(result.id),
+                teacherUsername: authStore.username,
+                strategy: 'top_weak_skill',
+                deadlinePreset: '7d',
+                maxAttempts: 1,
+            });
+
+            if (response.status === 'success' && response.data && 'assignmentDraft' in response.data) {
+                setSmartPreview(response.data);
+                return;
+            }
+
+            setSmartPreview(null);
+            setSmartPreviewError(response.message || 'Khong tao duoc smart preview.');
+            setSmartPreviewErrorDetails(response.data || null);
+        } catch (error: any) {
+            setSmartPreview(null);
+            setSmartPreviewError(error?.message || 'Khong tao duoc smart preview.');
+            setSmartPreviewErrorDetails(null);
+        } finally {
+            setIsSmartPreviewLoading(false);
+        }
+    };
+
+    const handleUseSmartPreviewInAssignmentTab = () => {
+        if (!smartPreview || !selectedPreviewQuizId || !smartDeadline) {
+            toast.error('Smart preview chua san sang de giao bai.');
+            return;
+        }
+
+        const selectedPreviewQuiz = smartPreview.recommendedQuizzes.find((quiz) => quiz.quizId === selectedPreviewQuizId);
+
+        openAssignmentComposerWithDraft({
+            source: 'smart-preview',
+            sourceResultId: String(result.id),
+            studentName: smartPreview.student.fullName,
+            className: smartPreview.student.className,
+            classId: smartPreview.assignmentDraft.classId,
+            studentId: smartPreview.assignmentDraft.studentId,
+            quizId: selectedPreviewQuizId,
+            deadline: new Date(smartDeadline).toISOString(),
+            maxAttempts: smartMaxAttempts,
+            weaknessSummary: {
+                skillCode: smartPreview.weaknessSummary.topSkill.skillCode,
+                skillLabel: smartPreview.weaknessSummary.topSkill.skillLabel,
+                subskillCode: smartPreview.weaknessSummary.topSkill.subskillCode,
+                subskillLabel: smartPreview.weaknessSummary.topSkill.subskillLabel,
+                status: smartPreview.weaknessSummary.topSkill.status,
+                accuracy: smartPreview.weaknessSummary.topSkill.accuracy,
+                coveragePercent: smartPreview.weaknessSummary.coveragePercent,
+                targetDifficulty: smartPreview.weaknessSummary.topSkill.targetDifficulty,
+            },
+            recommendedQuizzes: smartPreview.recommendedQuizzes,
+            warnings: smartPreview.warnings,
+            createdAt: new Date().toISOString(),
+        });
+
+        toast.success(
+            selectedPreviewQuiz
+                ? `Da nap goi y "${selectedPreviewQuiz.title}" sang tab Giao bai.`
+                : 'Da nap smart preview sang tab Giao bai.',
+        );
+    };
 
     const handleAnalyze = async () => {
         if (isAnalyzing) return;
@@ -225,7 +409,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                 <p className="text-blue-100/80 text-sm font-medium flex items-center gap-1">
                                     {result.studentClass} <ChevronRight className="w-3 h-3" /> {result.quizTitle || 'Bài kiểm tra'}
                                 </p>
-                                {/* Stats + Tabs — cùng 1 hàng */}
+                                {/* Stats + Tabs - cùng 1 hàng */}
                                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                                     <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-lg backdrop-blur-sm border border-white/5">
                                         <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
@@ -473,6 +657,214 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                 ))}
                                             </div>
                                         </div>
+
+                                        <div className="bg-white p-6 rounded-[2rem] shadow-xl shadow-blue-900/5 border border-white">
+                                            <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                                <AlertCircle className="w-4 h-4 text-amber-500" /> Kỹ năng cần chú ý
+                                            </h4>
+
+                                            {isWeaknessLoading ? (
+                                                <div className="space-y-3">
+                                                    {[0, 1, 2].map((item) => (
+                                                        <div key={item} className="animate-pulse rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                                                            <div className="h-3 w-32 rounded bg-slate-200 mb-3" />
+                                                            <div className="h-2 w-full rounded bg-slate-200 mb-2" />
+                                                            <div className="h-2 w-20 rounded bg-slate-200" />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : weaknessError ? (
+                                                <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                                                    {weaknessError}
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {showCoverageWarning && weaknessProfile && (
+                                                        <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-700 leading-relaxed">
+                                                            Dữ liệu phân loại mới phủ {weaknessProfile.coveragePercent}% số câu. Hiện còn {weaknessProfile.unclassifiedQuestionCount} câu chưa map kỹ năng, nên anh xem đây là tín hiệu sớm để ưu tiên kiểm tra thêm.
+                                                        </div>
+                                                    )}
+
+                                                    {focusSkills.length > 0 ? (
+                                                        focusSkills.map((skill) => (
+                                                            <div key={`${skill.subject}-${skill.skillCode}`} className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                                                                <div className="flex items-start justify-between gap-3">
+                                                                    <div>
+                                                                        <p className="text-sm font-black text-slate-800">{skill.skillLabel}</p>
+                                                                        <p className="text-[11px] uppercase tracking-wide text-slate-400 font-bold mt-1">
+                                                                            {skill.subjectLabel}
+                                                                        </p>
+                                                                    </div>
+                                                                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                                                                        skill.status === 'weak'
+                                                                            ? 'bg-red-100 text-red-700'
+                                                                            : 'bg-amber-100 text-amber-700'
+                                                                    }`}>
+                                                                        {getSkillStatusLabel(skill.status)}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="mt-3 flex items-center justify-between text-xs font-medium text-slate-500">
+                                                                    <span>Độ chính xác</span>
+                                                                    <span className="font-black text-slate-800">{skill.accuracy}%</span>
+                                                                </div>
+                                                                <div className="mt-2 h-2.5 overflow-hidden rounded-full border border-slate-200/80 bg-white">
+                                                                    <div
+                                                                        className={`h-full rounded-full ${
+                                                                            skill.status === 'weak'
+                                                                                ? 'bg-gradient-to-r from-red-400 to-rose-500'
+                                                                                : 'bg-gradient-to-r from-amber-400 to-orange-500'
+                                                                        }`}
+                                                                        style={{ width: `${Math.max(skill.accuracy, 6)}%` }}
+                                                                    />
+                                                                </div>
+                                                                <p className="mt-3 text-[11px] font-medium text-slate-500">
+                                                                    Đã làm {skill.attempted} câu, sai {skill.wrong} câu ở nhóm kỹ năng này.
+                                                                </p>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4 text-sm text-emerald-700">
+                                                            Chưa thấy kỹ năng nào rơi vào nhóm cần ưu tiên từ 5 bài gần nhất. Đây là dấu hiệu tốt, nhưng anh vẫn có thể kết hợp thêm bảng câu sai để nhìn sâu hơn.
+                                                        </div>
+                                                    )}
+
+                                                    {focusSkills.length > 0 && (
+                                                        <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
+                                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                                <div>
+                                                                    <p className="text-sm font-black text-slate-800">Smart Assignment MVP</p>
+                                                                    <p className="mt-1 text-xs text-slate-500">
+                                                                        Preview bai on loi cho chinh hoc sinh nay, dua tren weakness profile hien tai.
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={handleLoadSmartPreview}
+                                                                    disabled={isSmartPreviewLoading}
+                                                                    className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors disabled:opacity-60"
+                                                                >
+                                                                    {isSmartPreviewLoading ? 'Dang tao preview...' : 'Giao bai on loi cho em nay'}
+                                                                </button>
+                                                            </div>
+
+                                                            {smartPreviewError && (
+                                                                <div className="mt-4 rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-red-600">
+                                                                    <p className="font-semibold">{smartPreviewError}</p>
+                                                                    {smartPreviewErrorDetails && 'candidates' in smartPreviewErrorDetails && Array.isArray(smartPreviewErrorDetails.candidates) && smartPreviewErrorDetails.candidates.length > 0 && (
+                                                                        <div className="mt-3 space-y-1 text-xs text-red-500">
+                                                                            {smartPreviewErrorDetails.candidates.map((candidate) => (
+                                                                                <p key={candidate.id}>
+                                                                                    {candidate.fullName} - {candidate.className}
+                                                                                </p>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {smartPreview && (
+                                                                <div className="mt-4 space-y-4">
+                                                                    <div className="rounded-2xl border border-white bg-white p-4">
+                                                                        <div className="flex items-start justify-between gap-3">
+                                                                            <div>
+                                                                                <p className="text-sm font-black text-slate-800">Ky nang uu tien</p>
+                                                                                <p className="mt-1 text-sm text-slate-600">
+                                                                                    {smartPreview.weaknessSummary.topSkill.skillLabel} - {getSkillStatusLabel(smartPreview.weaknessSummary.topSkill.status)} ({smartPreview.weaknessSummary.topSkill.accuracy}%)
+                                                                                </p>
+                                                                                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium text-slate-500">
+                                                                                    <span>Muc goi y: {smartPreview.weaknessSummary.topSkill.targetDifficulty}</span>
+                                                                                    {smartPreview.weaknessSummary.topSkill.subskillLabel && (
+                                                                                        <span>• {smartPreview.weaknessSummary.topSkill.subskillLabel}</span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                                                                                {smartPreview.student.className}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        {smartPreview.warnings.length > 0 && (
+                                                                            <div className="mt-3 space-y-2">
+                                                                                {smartPreview.warnings.map((warning) => (
+                                                                                    <div key={warning.code} className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                                                                                        {warning.message}
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div className="grid grid-cols-1 gap-3">
+                                                                        <div>
+                                                                                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                                                    De goi y
+                                                                                </label>
+                                                                                <select
+                                                                                    value={selectedPreviewQuizId}
+                                                                                onChange={(event) => setSelectedPreviewQuizId(event.target.value)}
+                                                                                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                                                                >
+                                                                                    {smartPreview.recommendedQuizzes.map((quiz) => (
+                                                                                        <option key={quiz.quizId} value={quiz.quizId}>
+                                                                                            {quiz.title} - {quiz.questionCount} cau - {quiz.matchReason} - {Math.round(quiz.confidence * 100)}%
+                                                                                        </option>
+                                                                                    ))}
+                                                                                </select>
+                                                                                {smartPreview.recommendedQuizzes
+                                                                                    .filter((quiz) => quiz.quizId === selectedPreviewQuizId)
+                                                                                    .map((quiz) => (
+                                                                                        <p key={`${quiz.quizId}-reason`} className="mt-2 text-xs text-slate-500">
+                                                                                            {quiz.matchReason} • Tong diem {quiz.matchBreakdown.totalScore}
+                                                                                        </p>
+                                                                                    ))}
+                                                                            </div>
+
+                                                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                                            <div>
+                                                                                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                                                    Han nop
+                                                                                </label>
+                                                                                <input
+                                                                                    type="datetime-local"
+                                                                                    value={smartDeadline}
+                                                                                    onChange={(event) => setSmartDeadline(event.target.value)}
+                                                                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                                                                />
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                                                    So luot lam
+                                                                                </label>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min={1}
+                                                                                    max={10}
+                                                                                    value={smartMaxAttempts}
+                                                                                    onChange={(event) => setSmartMaxAttempts(Math.max(1, Math.min(10, Number(event.target.value) || 1)))}
+                                                                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <button
+                                                                        onClick={handleUseSmartPreviewInAssignmentTab}
+                                                                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+                                                                    >
+                                                                        Dung trong AssignmentTab
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {weaknessProfile && (
+                                                        <p className="text-[11px] text-slate-400 font-medium">
+                                                            Tổng hợp từ {weaknessProfile.basedOnResultIds.length} bài gần nhất của {result.studentName}.
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                         
                                         <AIInsightBox 
                                             insight={aiInsight}
@@ -524,3 +916,4 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
 };
 
 export default StudentDetailModal;
+

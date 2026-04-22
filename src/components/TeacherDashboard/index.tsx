@@ -5,6 +5,7 @@ import { Key, X, Save, Loader2, Bell, Search } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
+import { useTeacherDashboardUIStore } from '../../stores/useTeacherDashboardUIStore';
 import { setStripAnswersEnabled } from '../../services/googleSheetService';
 import { cacheService } from '../../services/CacheService';
 import Sidebar from './Sidebar';
@@ -33,6 +34,9 @@ const TeacherDashboard: React.FC = () => {
     const quizStore = useQuizStore();
     const navigate = useNavigate();
     const isGiftShopFeatureEnabled = String(import.meta.env.VITE_FEATURE_GIFT_SHOP_V2 || 'false').toLowerCase() === 'true';
+    const activeTab = useTeacherDashboardUIStore((state) => state.activeTab);
+    const setActiveTab = useTeacherDashboardUIStore((state) => state.setActiveTab);
+    const clearAssignmentComposerDraft = useTeacherDashboardUIStore((state) => state.clearAssignmentComposerDraft);
 
     // 🔐 ANTI-CHEAT: Disable answer stripping for teacher views
     // Also force reload quizzes from server to get fresh data with answers
@@ -52,8 +56,6 @@ const TeacherDashboard: React.FC = () => {
         };
     }, []);
 
-    // Tab state (Default to 'overview' now instead of 'results')
-    const [activeTab, setActiveTab] = useState<string>('overview');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     useEffect(() => {
@@ -127,6 +129,8 @@ const TeacherDashboard: React.FC = () => {
     };
 
     const handleLogout = () => {
+        clearAssignmentComposerDraft();
+        setActiveTab('overview');
         authStore.logout();
         useClassroomStore.getState().logoutStudent();
         quizStore.setView('home');

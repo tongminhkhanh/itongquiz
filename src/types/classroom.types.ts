@@ -104,10 +104,93 @@ export interface CreateAssignmentPayload {
     maxAttempts: number;        // Max times a student can take this quiz (default: 1)
 }
 
+export type SmartAssignmentPreviewErrorCode =
+    | 'STUDENT_NOT_FOUND'
+    | 'AMBIGUOUS_STUDENT_MATCH'
+    | 'NO_RECOMMENDED_QUIZ';
+
+export interface SmartAssignmentWarning {
+    code: string;
+    message: string;
+}
+
+export interface SmartAssignmentCandidateStudent {
+    id: string;
+    fullName: string;
+    classId: string;
+    className: string;
+}
+
+export interface SmartAssignmentTopSkill {
+    subject: string;
+    subjectLabel: string;
+    skillCode: string;
+    skillLabel: string;
+    subskillCode?: string;
+    subskillLabel?: string;
+    status: 'weak' | 'needs_practice' | 'stable';
+    accuracy: number;
+    attempted: number;
+    wrong: number;
+    targetDifficulty: 1 | 2 | 3;
+}
+
+export interface SmartAssignmentMatchBreakdown {
+    subjectMatched: boolean;
+    skillMatched: boolean;
+    subskillMatched: boolean;
+    matchedViaTags: boolean;
+    avgDifficulty?: number;
+    targetDifficulty: 1 | 2 | 3;
+    difficultyDistance?: number;
+    totalScore: number;
+}
+
+export interface SmartAssignmentRecommendedQuiz {
+    quizId: string;
+    title: string;
+    matchReason: string;
+    questionCount: number;
+    timeLimit: number;
+    confidence: number;
+    matchBreakdown: SmartAssignmentMatchBreakdown;
+}
+
+export interface SmartAssignmentPreviewRequest {
+    resultId: string;
+    teacherUsername: string;
+    strategy: 'top_weak_skill';
+    preferredQuizId?: string;
+    deadlinePreset?: '3d' | '7d' | '14d' | 'custom';
+    maxAttempts?: number;
+}
+
+export interface SmartAssignmentPreviewData {
+    student: SmartAssignmentCandidateStudent;
+    weaknessSummary: {
+        resultId: string;
+        coveragePercent: number;
+        basedOnResultIds: string[];
+        topSkill: SmartAssignmentTopSkill;
+    };
+    recommendedQuizzes: SmartAssignmentRecommendedQuiz[];
+    assignmentDraft: CreateAssignmentPayload;
+    warnings: SmartAssignmentWarning[];
+}
+
+export interface SmartAssignmentPreviewErrorData {
+    candidates?: SmartAssignmentCandidateStudent[];
+}
+
+export type SmartAssignmentPreviewApiResponse = ClassroomApiResponse<
+    SmartAssignmentPreviewData | SmartAssignmentPreviewErrorData
+>;
+
 // --- API Response ---
 
 export interface ClassroomApiResponse<T> {
     status: 'success' | 'error';
     data?: T;
     message?: string;
+    code?: string;
 }

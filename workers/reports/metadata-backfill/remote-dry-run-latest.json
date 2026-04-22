@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-04-22T07:34:01.696Z",
+  "mode": "REMOTE",
+  "reportType": "dry-run",
+  "summary": {
+    "writeEnabled": false,
+    "limit": 50,
+    "candidateRows": 0
+  },
+  "rows": []
+}

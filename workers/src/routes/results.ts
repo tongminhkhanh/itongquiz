@@ -6,6 +6,13 @@
 import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
 import { handleValidateAnswers, parseBody } from '../utils/helpers';
+import {
+    buildResultSkillBreakdownFromData,
+    buildWeaknessProfileFromData,
+    getQuestionsForQuizIds,
+    getRecentResultsForStudentContext,
+    getResultById,
+} from '../services/weaknessProfile';
 
 export async function handleResultRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
@@ -59,6 +66,27 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
         const row = await db.prepare('SELECT answers FROM results WHERE id = ?').bind(id).first<{ answers: string }>();
         if (!row) return errorResponse('Result not found', 404);
         return jsonResponse({ answers: row.answers });
+    }
+
+    // GET /api/results/:id/skill-breakdown
+    if (path.match(/^\/api\/results\/[^/]+\/skill-breakdown$/) && method === 'GET') {
+        const resultId = path.split('/')[3];
+        const result = await getResultById(db, resultId);
+        if (!result) return errorResponse('Result not found', 404);
+
+        const questions = await getQuestionsForQuizIds(db, [result.quiz_id]);
+        return jsonResponse(buildResultSkillBreakdownFromData(result, questions));
+    }
+
+    // GET /api/results/:id/weakness-profile
+    if (path.match(/^\/api\/results\/[^/]+\/weakness-profile$/) && method === 'GET') {
+        const resultId = path.split('/')[3];
+        const result = await getResultById(db, resultId);
+        if (!result) return errorResponse('Result not found', 404);
+
+        const recentResults = await getRecentResultsForStudentContext(db, result);
+        const questions = await getQuestionsForQuizIds(db, recentResults.map((item) => item.quiz_id));
+        return jsonResponse(buildWeaknessProfileFromData(result, recentResults, questions));
     }
 
     // POST /api/results - Submit result

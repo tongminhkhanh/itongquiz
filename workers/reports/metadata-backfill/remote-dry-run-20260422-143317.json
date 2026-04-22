@@ -1,0 +1,75 @@
+{
+  "generatedAt": "2026-04-22T07:33:17.086Z",
+  "mode": "REMOTE",
+  "reportType": "dry-run",
+  "summary": {
+    "writeEnabled": false,
+    "limit": 50,
+    "candidateRows": 7
+  },
+  "rows": [
+    {
+      "id": "q-manual-1772157472411",
+      "question": "Nối bốn điểm nào trong hình vẽ để được một hình bình hành?",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1772158258558",
+      "question": "Chọn đáp án đúng. Hình bình hành ABCD có:",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1772158770684",
+      "question": "Trong hình bình hành ABCD:",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1772161143133",
+      "question": "Cho hình bình hành ABCD (như hình vẽ). Các cặp cạnh  song song với nhau là:",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1772170285564",
+      "question": "Chọn tất cả các đáp án đúng. Hình bình hành là hình nào dưới đây?",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1772170491719",
+      "question": "Chọn đáp án đúng nhất. Hình bình hành là hình thế nào?",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1772414734609",
+      "question": "Hình nào dưới đây là hình bình hành",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    }
+  ]
+}

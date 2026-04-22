@@ -1,15 +1,24 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
-import { Assignment, CreateAssignmentPayload, Classroom } from '../../types/classroom.types';
+import {
+    Assignment,
+    CreateAssignmentPayload,
+    Classroom,
+    SmartAssignmentWarning,
+} from '../../types/classroom.types';
 import { Quiz } from '../../types';
 import {
     ClipboardList, CalendarClock, Send, Trash2, X, Loader2,
-    Clock, CheckCircle2, BookOpen, Users, Edit3, Check
+    Clock, CheckCircle2, BookOpen, Users, Edit3, Check, Sparkles, AlertTriangle
 } from 'lucide-react';
 import { Button, ResponsiveDataView } from '../common';
 import { showConfirm } from '../../utils/toast';
+import {
+    type AssignmentComposerDraft,
+    useTeacherDashboardUIStore,
+} from '../../stores/useTeacherDashboardUIStore';
 
 // ==========================================
 // ASSIGNMENT TAB (Main)
@@ -19,6 +28,8 @@ const AssignmentTab: React.FC = () => {
     const authStore = useAuthStore();
     const store = useClassroomStore();
     const quizStore = useQuizStore();
+    const assignmentComposerDraft = useTeacherDashboardUIStore((state) => state.assignmentComposerDraft);
+    const clearAssignmentComposerDraft = useTeacherDashboardUIStore((state) => state.clearAssignmentComposerDraft);
 
     const refreshAssignments = async () => {
         if (!authStore.username) return;
@@ -57,6 +68,8 @@ const AssignmentTab: React.FC = () => {
             <CreateAssignmentSection
                 classes={store.classes}
                 quizzes={quizStore.quizzes}
+                draft={assignmentComposerDraft}
+                onClearDraft={clearAssignmentComposerDraft}
                 onCreateAssignment={async (payload) => {
                     const result = await store.addAssignment(payload);
                     if (result) {
@@ -110,35 +123,136 @@ const AssignmentTab: React.FC = () => {
 const CreateAssignmentSection: React.FC<{
     classes: Classroom[];
     quizzes: Quiz[];
+    draft: AssignmentComposerDraft | null;
+    onClearDraft: () => void;
     onCreateAssignment: (payload: CreateAssignmentPayload) => Promise<boolean>;
     isLoading: boolean;
-}> = ({ classes, quizzes, onCreateAssignment, isLoading }) => {
+}> = ({ classes, quizzes, draft, onClearDraft, onCreateAssignment, isLoading }) => {
     const [selectedQuizId, setSelectedQuizId] = useState('');
     const [selectedClassId, setSelectedClassId] = useState('');
     const [selectedStudentId, setSelectedStudentId] = useState(''); // New state for student
     const [deadline, setDeadline] = useState('');
     const [maxAttempts, setMaxAttempts] = useState(1);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [activeDraft, setActiveDraft] = useState<AssignmentComposerDraft | null>(null);
+    const [manualNotice, setManualNotice] = useState<string | null>(null);
+    const [draftWarnings, setDraftWarnings] = useState<SmartAssignmentWarning[]>([]);
+    const lastHydratedDraftRef = useRef<string | null>(null);
+    const isHydratingDraftRef = useRef(false);
 
     // Get students for selected class from store
     const store = useClassroomStore();
     const studentsInClass = store.students[selectedClassId] || [];
 
+    const getDefaultDeadline = () => {
+        const nextDeadline = new Date();
+        nextDeadline.setDate(nextDeadline.getDate() + 7);
+        nextDeadline.setHours(23, 59, 0, 0);
+        return nextDeadline.toISOString().slice(0, 16);
+    };
+
+    const appendDraftWarning = (warning: SmartAssignmentWarning) => {
+        setDraftWarnings((current) => {
+            if (current.some((item) => item.code === warning.code && item.message === warning.message)) {
+                return current;
+            }
+            return [...current, warning];
+        });
+    };
+
+    const clearDraftState = (options?: { keepFormValues?: boolean; manualNotice?: string }) => {
+        setActiveDraft(null);
+        setDraftWarnings([]);
+        onClearDraft();
+
+        if (options?.manualNotice) {
+            setManualNotice(options.manualNotice);
+        }
+
+        if (!options?.keepFormValues) {
+            setSelectedQuizId('');
+            setSelectedClassId('');
+            setSelectedStudentId('');
+            setDeadline(getDefaultDeadline());
+            setMaxAttempts(1);
+        }
+    };
+
     // Fetch students when a class is selected
     useEffect(() => {
-        if (selectedClassId) {
-            store.fetchStudents(selectedClassId);
-            setSelectedStudentId(''); // Reset student selection when class changes
+        if (!selectedClassId) {
+            if (!isHydratingDraftRef.current) {
+                setSelectedStudentId('');
+            }
+            return;
         }
+
+        store.fetchStudents(selectedClassId);
+
+        if (isHydratingDraftRef.current) {
+            isHydratingDraftRef.current = false;
+            return;
+        }
+
+        setSelectedStudentId(''); // Reset student selection when class changes
     }, [selectedClassId]);
 
     // Set default deadline to 7 days from now
     useEffect(() => {
-        const d = new Date();
-        d.setDate(d.getDate() + 7);
-        d.setHours(23, 59, 0, 0);
-        setDeadline(d.toISOString().slice(0, 16));
+        setDeadline(getDefaultDeadline());
     }, []);
+
+    useEffect(() => {
+        if (!draft || lastHydratedDraftRef.current === draft.createdAt) {
+            return;
+        }
+
+        isHydratingDraftRef.current = true;
+        lastHydratedDraftRef.current = draft.createdAt;
+        setManualNotice(null);
+        setActiveDraft(draft);
+        setDraftWarnings(draft.warnings || []);
+        setSelectedQuizId(draft.quizId);
+        setSelectedClassId(draft.classId);
+        setSelectedStudentId(draft.studentId || '');
+        setDeadline(new Date(draft.deadline).toISOString().slice(0, 16));
+        setMaxAttempts(draft.maxAttempts);
+    }, [draft]);
+
+    useEffect(() => {
+        if (!activeDraft) return;
+
+        if (quizzes.length > 0 && !quizzes.some((quiz) => quiz.id === activeDraft.quizId)) {
+            setSelectedQuizId('');
+            appendDraftWarning({
+                code: 'QUIZ_NOT_FOUND',
+                message: 'De goi y khong con ton tai. Thay co vui long chon mot de khac.',
+            });
+        }
+
+        if (classes.length > 0 && !classes.some((classroom) => classroom.id === activeDraft.classId)) {
+            setSelectedClassId('');
+            setSelectedStudentId('');
+            clearDraftState({
+                keepFormValues: true,
+                manualNotice: 'Khong tim thay lop tu goi y nay. He thong da quay ve che do giao bai thu cong.',
+            });
+        }
+    }, [activeDraft, classes, quizzes]);
+
+    useEffect(() => {
+        if (!activeDraft || !activeDraft.studentId || selectedClassId !== activeDraft.classId) return;
+        if (!store.students[activeDraft.classId]) return;
+
+        const hasStudent = (store.students[activeDraft.classId] || []).some((student) => student.id === activeDraft.studentId);
+        if (!hasStudent) {
+            setSelectedStudentId('');
+            clearDraftState({
+                keepFormValues: true,
+                manualNotice: 'Khong tim thay hoc sinh trong lop nay nua. He thong da giu lai de va lop de thay co giao thu cong.',
+            });
+        }
+    }, [activeDraft, selectedClassId, store.students]);
 
     const handleSubmit = async () => {
         if (!selectedQuizId || !selectedClassId || !deadline) return;
@@ -155,12 +269,72 @@ const CreateAssignmentSection: React.FC<{
             setSelectedQuizId('');
             setSelectedClassId('');
             setSelectedStudentId('');
+            setDeadline(getDefaultDeadline());
+            setMaxAttempts(1);
+            setManualNotice(null);
+            if (activeDraft) {
+                clearDraftState({ keepFormValues: true });
+            }
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 3000);
         }
     };
 
     const selectedQuiz = quizzes.find(q => q.id === selectedQuizId);
+    const selectedRecommendedQuiz = activeDraft?.recommendedQuizzes?.find((quiz) => quiz.quizId === selectedQuizId);
+    const prefillLabel = activeDraft?.weaknessSummary?.status === 'weak' ? 'Can uu tien' : 'Can luyen them';
+    const recommendedQuizIds = useMemo(
+        () => new Set((activeDraft?.recommendedQuizzes || []).map((quiz) => quiz.quizId)),
+        [activeDraft?.recommendedQuizzes],
+    );
+    const orderedQuizzes = useMemo(() => {
+        if (!activeDraft?.recommendedQuizzes?.length) {
+            return quizzes;
+        }
+
+        const recommendationOrder = new Map(
+            activeDraft.recommendedQuizzes.map((quiz, index) => [quiz.quizId, index]),
+        );
+
+        return [...quizzes].sort((left, right) => {
+            const leftOrder = recommendationOrder.get(left.id);
+            const rightOrder = recommendationOrder.get(right.id);
+
+            if (leftOrder !== undefined && rightOrder !== undefined) {
+                return leftOrder - rightOrder;
+            }
+
+            if (leftOrder !== undefined) return -1;
+            if (rightOrder !== undefined) return 1;
+
+            return left.title.localeCompare(right.title);
+        });
+    }, [activeDraft?.recommendedQuizzes, quizzes]);
+
+    const getRecommendationKindLabel = (quiz: NonNullable<AssignmentComposerDraft['recommendedQuizzes']>[number]) => {
+        if (quiz.matchBreakdown.subskillMatched) return 'Khop subskill';
+        if (quiz.matchBreakdown.skillMatched) return 'Khop skill';
+        return 'Khop tags';
+    };
+
+    const formatConfidence = (confidence: number) => `${Math.round(confidence * 100)}%`;
+
+    const getDifficultyLabel = (difficulty?: number) => {
+        if (difficulty === 1) return 'De';
+        if (difficulty === 2) return 'Trung binh';
+        if (difficulty === 3) return 'Kho';
+        return 'Chua ro';
+    };
+    const recommendationUsesTagsFallback = Boolean(selectedRecommendedQuiz?.matchBreakdown.matchedViaTags);
+    const recommendationHasExplicitSkillMatch = Boolean(
+        selectedRecommendedQuiz?.matchBreakdown.subskillMatched || selectedRecommendedQuiz?.matchBreakdown.skillMatched,
+    );
+    const tagsFallbackTitle = recommendationHasExplicitSkillMatch
+        ? 'Van co mot phan fallback tu tags'
+        : 'Recommendation nay dang dua chu yeu vao tags cu';
+    const tagsFallbackMessage = recommendationHasExplicitSkillMatch
+        ? 'He thong van co khop ky nang, nhung mot phan diem de xuat dang duoc bo tro boi tags cu. Neu thay co muon chac hon, hay xem nhanh vai cau dau truoc khi giao bai.'
+        : 'Question bank hien chua co metadata ky nang day du cho de nay. He thong dang suy luan chu yeu tu tags cu, vi vay thay co nen xem nhanh 2-3 cau dau truoc khi giao bai.';
 
     return (
         <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
@@ -173,6 +347,63 @@ const CreateAssignmentSection: React.FC<{
                     <p className="text-sm text-gray-400">Chọn đề, chọn lớp, đặt deadline</p>
                 </div>
             </div>
+
+            {manualNotice && (
+                <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <p>{manualNotice}</p>
+                </div>
+            )}
+
+            {activeDraft && (
+                <div className="mb-5 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-sky-50 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-indigo-600">
+                                <Sparkles className="h-4 w-4" />
+                                <p className="text-sm font-black uppercase tracking-wide">Da nap goi y tu ket qua hoc sinh</p>
+                            </div>
+                            <div>
+                                <p className="text-base font-bold text-slate-800">
+                                    {activeDraft.studentName || 'Hoc sinh'} - {activeDraft.className || 'Lop hoc'}
+                                </p>
+                                {activeDraft.weaknessSummary && (
+                                    <p className="mt-1 text-sm text-slate-600">
+                                        {activeDraft.weaknessSummary.skillLabel} - {prefillLabel} ({activeDraft.weaknessSummary.accuracy}%)
+                                    </p>
+                                )}
+                            </div>
+                            {selectedRecommendedQuiz && (
+                                <p className="text-xs font-medium text-slate-500">
+                                    {selectedRecommendedQuiz.matchReason} • Do tin cay {Math.round(selectedRecommendedQuiz.confidence * 100)}%
+                                </p>
+                            )}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => clearDraftState({ keepFormValues: true })}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                        >
+                            <X className="h-4 w-4" />
+                            Bo goi y
+                        </button>
+                    </div>
+
+                    {draftWarnings.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                            {draftWarnings.map((warning) => (
+                                <div
+                                    key={`${warning.code}-${warning.message}`}
+                                    className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700"
+                                >
+                                    {warning.message}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Form Grid */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-5">
@@ -188,9 +419,9 @@ const CreateAssignmentSection: React.FC<{
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none appearance-none cursor-pointer text-sm"
                     >
                         <option value="">-- Chọn đề --</option>
-                        {quizzes.map((q) => (
+                        {orderedQuizzes.map((q) => (
                             <option key={q.id} value={q.id}>
-                                {q.title} ({q.questions?.length || 0} câu)
+                                {recommendedQuizIds.has(q.id) ? '[Goi y] ' : ''}{q.title} ({q.questions?.length || 0} câu)
                             </option>
                         ))}
                     </select>
@@ -289,6 +520,75 @@ const CreateAssignmentSection: React.FC<{
                         </span>
                     </div>
                 </div>
+            )}
+
+            {activeDraft && selectedQuizId && (
+                selectedRecommendedQuiz ? (
+                    <div className="mb-4 rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <p className="text-sm font-black text-slate-800">Vi sao de nay duoc goi y</p>
+                                <p className="mt-1 text-sm text-slate-600">{selectedRecommendedQuiz.matchReason}</p>
+                            </div>
+                            <div className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-wide text-sky-700 shadow-sm">
+                                Do tin cay {formatConfidence(selectedRecommendedQuiz.confidence)}
+                            </div>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                            <div className="rounded-xl border border-white bg-white px-3 py-3">
+                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Kieu khop</p>
+                                <p className="mt-1 text-sm font-semibold text-slate-800">
+                                    {getRecommendationKindLabel(selectedRecommendedQuiz)}
+                                </p>
+                            </div>
+                            <div className="rounded-xl border border-white bg-white px-3 py-3">
+                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Muc muc tieu</p>
+                                <p className="mt-1 text-sm font-semibold text-slate-800">
+                                    {selectedRecommendedQuiz.matchBreakdown.targetDifficulty} - {getDifficultyLabel(selectedRecommendedQuiz.matchBreakdown.targetDifficulty)}
+                                </p>
+                            </div>
+                            <div className="rounded-xl border border-white bg-white px-3 py-3">
+                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Do kho trung binh</p>
+                                <p className="mt-1 text-sm font-semibold text-slate-800">
+                                    {selectedRecommendedQuiz.matchBreakdown.avgDifficulty
+                                        ? `${selectedRecommendedQuiz.matchBreakdown.avgDifficulty} - ${getDifficultyLabel(selectedRecommendedQuiz.matchBreakdown.avgDifficulty)}`
+                                        : 'Chua co metadata'}
+                                </p>
+                            </div>
+                            <div className="rounded-xl border border-white bg-white px-3 py-3">
+                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Tong diem he thong</p>
+                                <p className="mt-1 text-sm font-semibold text-slate-800">
+                                    {selectedRecommendedQuiz.matchBreakdown.totalScore}
+                                </p>
+                            </div>
+                        </div>
+
+                        {activeDraft.weaknessSummary && (
+                            <p className="mt-3 text-xs text-slate-500">
+                                Dang uu tien {activeDraft.weaknessSummary.skillLabel}
+                                {activeDraft.weaknessSummary.subskillLabel ? ` • ${activeDraft.weaknessSummary.subskillLabel}` : ''}
+                                {activeDraft.weaknessSummary.targetDifficulty ? ` • muc muc tieu ${activeDraft.weaknessSummary.targetDifficulty}` : ''}
+                            </p>
+                        )}
+
+                        {recommendationUsesTagsFallback && (
+                            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-800">
+                                <div className="flex items-start gap-2">
+                                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                                    <div>
+                                        <p className="font-bold uppercase tracking-wide">{tagsFallbackTitle}</p>
+                                        <p className="mt-1 leading-5">{tagsFallbackMessage}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                        Dang o che do chon de thu cong. He thong se giu goi y ban dau de thay co doi chieu neu can.
+                    </div>
+                )
             )}
 
             {/* Submit */}
@@ -786,3 +1086,5 @@ const AssignmentProgress: React.FC<{
 );
 
 export default AssignmentTab;
+
+

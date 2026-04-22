@@ -1,13 +1,13 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Quiz, StudentResult, Question } from '../../../types';
 
-import { Home } from 'lucide-react';
+import { BookOpen, Home, Sparkles } from 'lucide-react';
 
 // Components
-// ResultTabs import removed
 
 // Tabs
 import OverviewTab from './tabs/OverviewTab';
+import RecommendationsTab from './tabs/RecommendationsTab';
 
 interface Props {
     quiz: Quiz;
@@ -18,7 +18,7 @@ interface Props {
     studentClass?: string;
 }
 
-export type TabType = 'overview';
+export type TabType = 'overview' | 'recommendations';
 
 const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentName, studentClass }) => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -31,6 +31,8 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
     );
 
 
+
+    const [activeTab, setActiveTab] = useState<TabType>('overview');
 
     // Helper function to check if answer is correct 
     // PRIORITY: Use server validationDetails if available, fallback to local calculation
@@ -271,12 +273,50 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
             {/* Content Area */}
             <div className="max-w-5xl mx-auto px-4 pb-8">
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                    <OverviewTab
-                        quiz={quiz}
-                        result={result}
-                        answers={answers}
-                        studentUsername={studentName}
-                    />
+                    <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('overview')}
+                                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                                    activeTab === 'overview'
+                                        ? 'bg-indigo-600 text-white shadow-sm'
+                                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                                }`}
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                Tong quan
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('recommendations')}
+                                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                                    activeTab === 'recommendations'
+                                        ? 'bg-indigo-600 text-white shadow-sm'
+                                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                                }`}
+                            >
+                                <BookOpen className="w-4 h-4" />
+                                Goi y hoc
+                            </button>
+                        </div>
+                    </div>
+
+                    {activeTab === 'overview' ? (
+                        <OverviewTab
+                            quiz={quiz}
+                            result={result}
+                            answers={answers}
+                            studentUsername={studentName}
+                            onOpenRecommendations={() => setActiveTab('recommendations')}
+                        />
+                    ) : (
+                        <RecommendationsTab
+                            quiz={quiz}
+                            result={result}
+                            answers={answers}
+                        />
+                    )}
                 </div>
             </div>
         </div>

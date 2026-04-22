@@ -1,8 +1,14 @@
+import type { QuestionSkillMetadataFields } from '../shared/skillTaxonomy';
+
 /**
  * Domain Types
  * 
  * Core business types for the Quiz application.
  */
+
+export interface QuestionMetadata extends QuestionSkillMetadataFields {
+    tags?: string[] | string;
+}
 
 export enum QuestionType {
     MCQ = 'MCQ',
@@ -253,6 +259,10 @@ export interface QuestionSnapshot {
     correctAnswer?: string | string[];  // Đáp án đúng
     items?: any[];              // Items (TRUE_FALSE, MATCHING, etc.)
     mainQuestion?: string;      // Câu hỏi chính (TRUE_FALSE)
+    subject?: QuestionMetadata['subject'];
+    skillCode?: string;
+    subskillCode?: string;
+    tags?: QuestionMetadata['tags'];
 }
 
 /**
@@ -265,7 +275,23 @@ export interface AnswerDetail {
     questionSnapshot?: QuestionSnapshot;  // Snapshot câu hỏi (để xem khi quiz bị xóa)
 }
 
-export type Question = MCQQuestion | TrueFalseQuestion | ShortAnswerQuestion | MatchingQuestion | MultipleSelectQuestion | DragDropQuestion | OrderingQuestion | ImageQuestion | DropdownQuestion | UnderlineQuestion | CategorizationQuestion | WordScrambleQuestion | RiddleQuestion | ErrorCorrectionQuestion | GeometryQuestion;
+export type Question = (
+    MCQQuestion |
+    TrueFalseQuestion |
+    ShortAnswerQuestion |
+    MatchingQuestion |
+    MultipleSelectQuestion |
+    DragDropQuestion |
+    OrderingQuestion |
+    ImageQuestion |
+    DropdownQuestion |
+    UnderlineQuestion |
+    CategorizationQuestion |
+    WordScrambleQuestion |
+    RiddleQuestion |
+    ErrorCorrectionQuestion |
+    GeometryQuestion
+) & QuestionMetadata;
 
 export interface Quiz {
     id: string;

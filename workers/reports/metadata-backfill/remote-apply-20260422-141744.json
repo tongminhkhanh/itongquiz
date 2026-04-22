@@ -1,0 +1,462 @@
+{
+  "generatedAt": "2026-04-22T07:17:44.720Z",
+  "mode": "REMOTE",
+  "reportType": "apply",
+  "summary": {
+    "writeEnabled": true,
+    "limit": 50,
+    "candidateRows": 50
+  },
+  "rows": [
+    {
+      "id": "q-1770687698607-6",
+      "question": "",
+      "tags": "#ngu_phap,#tieng_viet,#vi_ngu",
+      "subject": "vietnamese",
+      "skill_code": "luyen_tu_va_cau",
+      "subskill_code": "ngu_phap",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1770687698607-7",
+      "question": "Trong câu 'Nam là học sinh giỏi.', vị ngữ là cụm từ nào?",
+      "tags": "#ngu_phap,#tieng_viet,#vi_ngu",
+      "subject": "vietnamese",
+      "skill_code": "luyen_tu_va_cau",
+      "subskill_code": "ngu_phap",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1770687698607-8",
+      "question": "Trong câu 'Gió thổi mạnh.', vị ngữ là từ nào?",
+      "tags": "#ngu_phap,#tieng_viet,#vi_ngu",
+      "subject": "vietnamese",
+      "skill_code": "luyen_tu_va_cau",
+      "subskill_code": "ngu_phap",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1770687698607-9",
+      "question": "Vị ngữ trong câu 'Cánh đồng lúa chín vàng.' thuộc loại nào?",
+      "tags": "#ngu_phap,#tieng_viet,#vi_ngu",
+      "subject": "vietnamese",
+      "skill_code": "luyen_tu_va_cau",
+      "subskill_code": "ngu_phap",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-0",
+      "question": "Điền dấu thích hợp vào chỗ chấm: $\\frac{5}{9}$ $\\dots$ $\\frac{7}{9}$",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-1",
+      "question": "Kết quả so sánh hai phân số $\\frac{5}{8}$ và $\\frac{9}{8}$ là:",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-10",
+      "question": "Điền dấu ($>$, $<$, $=$) vào chỗ chấm: $\\frac{3}{4}$ $\\dots$ $\\frac{1}{2}$",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-11",
+      "question": "Sắp xếp các phân số sau theo thứ tự từ bé đến lớn: ($\\frac{2}{5}$, $\\frac{8}{5}$, $\\frac{3",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-12",
+      "question": "Phân loại các phân số sau vào nhóm thích hợp.",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-13",
+      "question": "So sánh hai phân số $\\frac{8}{3}$ và $\\frac{11}{21}$.",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-14",
+      "question": "Trong các phân số sau, những phân số nào lớn hơn 1? (Chọn tất cả đáp án đúng)",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-15",
+      "question": "Sắp xếp các số sau theo thứ tự từ bé đến lớn: ($\\frac{1}{6}$, $\\frac{5}{2}$, 1)",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-16",
+      "question": "Nối các phân số trên tia số (Bài 4) với giá trị số tự nhiên tương ứng:",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-17",
+      "question": "Dựa vào tia số ở Bài 4, các phân số nào sau đây nằm giữa 1 và 2? (Chọn tất cả đáp án đúng)",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-18",
+      "question": "Tìm số tự nhiên $x$ biết: $\\frac{x}{4}$ = 3$",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-19",
+      "question": "Mẫu số chung nhỏ nhất để quy đồng hai phân số $\\frac{3}{4}$ và $\\frac{1}{2}$ là bao nhiêu?",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-2",
+      "question": "Đánh giá tính đúng sai của các phép so sánh sau với số 1:",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-3",
+      "question": "Điền dấu ($>$, $<$, $=$) thích hợp vào chỗ chấm: $\\frac{3}{14}$ $\\dots$ $\\frac{6}{14}$",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-4",
+      "question": "Nối phép so sánh với kết quả đúng:",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-5",
+      "question": "Trong các phân số sau, phân số nào bé hơn 1?",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-6",
+      "question": "Trong các phân số sau, phân số nào lớn hơn 1?",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-7",
+      "question": "Điền số thích hợp vào chỗ chấm: $\\frac{4}{4}$ = $\\dots$",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-8",
+      "question": "Quy đồng mẫu số rồi so sánh hai phân số $\\frac{2}{5}$ và $\\frac{3}{10}$. Kết quả là:",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771815844177-9",
+      "question": "Kiểm tra tính đúng sai của các bước so sánh $\\frac{7}{12}$ và $\\frac{5}{6}$:",
+      "tags": "#phan_so,#so_sanh_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "so_sanh_phan_so",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-0",
+      "question": "Mẫu số chung nhỏ nhất của hai phân số $\\frac{1}{2}$ và $\\frac{1}{3}$ là bao nhiêu? <i>(là ",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-1",
+      "question": "Điền dấu thích hợp vào chỗ chấm: $\\frac{4}{7}$ ... $\\frac{2}{7}$",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-10",
+      "question": "Phân số nào dưới đây lớn nhất?",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-11",
+      "question": "Kiểm tra tính đúng sai của các phép so sánh sau:",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-12",
+      "question": "Phân loại các phân số sau vào nhóm thích hợp.",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-13",
+      "question": "Chọn tất cả các phân số lớn hơn $\\frac{1}{2}$ trong các phân số dưới đây:",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-14",
+      "question": "Mẹ có một cái bánh. Mẹ cho Lan $\\frac{1}{3}$ cái bánh, cho Hùng $\\frac{2}{5}$ cái bánh. Hỏ",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-18",
+      "question": "Sắp xếp các phân số $\\frac{1}{2}$ ; $\\frac{3}{4}$ ; $\\frac{5}{8}$ theo thứ tự từ bé đến lớ",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-2",
+      "question": "Đúng hay Sai về so sánh phân số với 1?",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-3",
+      "question": "Tìm số thích hợp điền vào chỗ chấm: $\\frac{2}{5}$ = \\frac{...}{15}$",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-4",
+      "question": "Trong các phân số sau, phân số nào bé hơn 1?",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-5",
+      "question": "Quy đồng mẫu số hai phân số $\\frac{3}{4}$ và $\\frac{2}{5}$, ta được hai phân số nào?",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-6",
+      "question": "Nối hai phân số bằng nhau:",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-7",
+      "question": "So sánh hai phân số $\\frac{5}{8}$ và $\\frac{5}{9}$.",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1771988898232-8",
+      "question": "Tìm mẫu số chung nhỏ nhất của $\\frac{3}{8}$ và $\\frac{5}{12}$. <i>(là mẫu số nhỏ nhất có t",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1772154262735-0",
+      "question": "Hình bình hành có đặc điểm nào sau đây?",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1772154262735-1",
+      "question": "Các phát biểu sau đây về hình bình hành là đúng hay sai?",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-1772154262735-9",
+      "question": "Hãy sắp xếp các đặc điểm sau vào nhóm phù hợp để phân biệt Hình chữ nhật và Hình bình hành",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1770000614898",
+      "question": "Rút gọn phân số $\\frac{8}{12}$ về dạng tối giản. Kết quả là?",
+      "tags": "#phan_so,#rut_gon_phan_so,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "rut_gon_phan_so",
+      "difficulty": 1
+    },
+    {
+      "id": "q-manual-1770212602050",
+      "question": "Quy đồng mẫu số hai phân số $\\frac{1}{17}$  và $\\frac{5}{34}$ với mẫu số chung nhỏ nhất, t",
+      "tags": "#phan_so,#quy_dong,#toan",
+      "subject": "math",
+      "skill_code": "phan_so",
+      "subskill_code": "quy_dong",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1771230053610",
+      "question": "Chọn từ thích hợp điền vào chỗ trống để hoàn thành các câu văn sau:",
+      "tags": "#ngu_phap,#tieng_viet,#vi_ngu",
+      "subject": "vietnamese",
+      "skill_code": "luyen_tu_va_cau",
+      "subskill_code": "ngu_phap",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1772154710788",
+      "question": "Hình vẽ bên có mấy hình bình hành",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1772155214206",
+      "question": "Cho hình bình hành ABCD (như hình vẽ). Khẳng định sau đây là sai?",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1772155379957",
+      "question": "Cạnh ME dài 6cm. Cạnh PO dài là:",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1772157058853",
+      "question": "Biết A, B, C, D là bốn đỉnh của một hình bình hành. Hỏi đỉnh C đã bị con vật nào che mất?",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    },
+    {
+      "id": "q-manual-1772157269607",
+      "question": "Cho ABCD và CDEG là các hình bình hành. Biết độ dài cạnh AB bằng 3 dm. Độ dài cạnh EG bằng",
+      "tags": "#hinh_binh_hanh,#hinh_hoc,#toan",
+      "subject": "math",
+      "skill_code": "hinh_hoc_co_ban",
+      "subskill_code": "hinh_hoc",
+      "difficulty": 2
+    }
+  ]
+}

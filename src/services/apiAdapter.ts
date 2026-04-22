@@ -34,6 +34,8 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         // --- Results ---
         case 'get_results': method = 'GET'; path = '/api/results'; break;
         case 'get_result_answers': method = 'GET'; path = `/api/results/${payload.resultId}/answers`; break;
+        case 'get_result_skill_breakdown': method = 'GET'; path = `/api/results/${payload.resultId}/skill-breakdown`; break;
+        case 'get_result_weakness_profile': method = 'GET'; path = `/api/results/${payload.resultId}/weakness-profile`; break;
         case 'submit_result': method = 'POST'; path = '/api/results'; break;
         case 'delete_result': method = 'DELETE'; path = `/api/results/${payload.resultId}`; break;
         case 'validate_answers': method = 'POST'; path = '/api/validate'; break;
@@ -69,6 +71,7 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'get_all_assignments': method = 'GET'; path = '/api/assignments'; urlParams.append('all', 'true'); break;
         case 'get_student_assignments': method = 'GET'; path = '/api/assignments'; urlParams.append('studentId', payload.studentId); break;
         case 'create_assignment': method = 'POST'; path = '/api/assignments'; break;
+        case 'get_smart_assignment_preview': method = 'POST'; path = '/api/assignments/smart-preview'; break;
         case 'delete_assignment': method = 'DELETE'; path = `/api/assignments/${payload.assignmentId}`; break;
         case 'update_assignment_deadline': method = 'PUT'; path = `/api/assignments/${payload.assignmentId}/deadline`; break;
         case 'update_assignment_status': method = 'PUT'; path = `/api/assignments/${payload.assignmentId}/status`; break;

@@ -53,8 +53,8 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
             // Insert questions (batch)
             if (body.questions && Array.isArray(body.questions) && body.questions.length > 0) {
                 const stmt = db.prepare(
-                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags, subject, skill_code, subskill_code, difficulty)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 );
                 body.questions.forEach((q: Partial<import('../types').Question> & { type: string }) => {
                     const mapped = mapQuestionForSave(q, body.id);
@@ -106,8 +106,8 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
             // Re-insert questions
             if (body.questions && Array.isArray(body.questions) && body.questions.length > 0) {
                 const stmt = db.prepare(
-                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags, subject, skill_code, subskill_code, difficulty)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 );
                 body.questions.forEach((q: any) => {
                     const mapped = mapQuestionForSave(q, id);
@@ -171,15 +171,16 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
             // Insert copied questions
             if (originalQuestions.results.length > 0) {
                 const stmt = db.prepare(
-                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags, subject, skill_code, subskill_code, difficulty)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 );
                 for (const q of originalQuestions.results) {
                     const newQId = generateId('q');
                     batch.push(stmt.bind(
                         newQId, newQuizId, q.type, q.question || '', q.options || '', q.correct_answer || '',
                         q.items || '', q.text_field || '', q.blanks || '', q.distractors || '',
-                        q.sentence || '', q.words || '', q.correct_word_indexes || '', q.image || '', q.tags || ''
+                        q.sentence || '', q.words || '', q.correct_word_indexes || '', q.image || '', q.tags || '',
+                        q.subject || '', q.skill_code || '', q.subskill_code || '', q.difficulty || ''
                     ));
                 }
             }

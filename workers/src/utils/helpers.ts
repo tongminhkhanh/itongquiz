@@ -76,10 +76,19 @@ export function mapQuestionForSave(q: Partial<Question> & { type: string }, quiz
         tagsField = q.tags;
     }
 
+    const subjectField = String((anyQ.subject ?? anyQ.subject_code ?? '') || '');
+    const skillCodeField = String((anyQ.skillCode ?? anyQ.skill_code ?? '') || '');
+    const subskillCodeField = String((anyQ.subskillCode ?? anyQ.subskill_code ?? '') || '');
+    const rawDifficulty = Number(anyQ.difficulty ?? anyQ.difficulty_level ?? anyQ.difficultyLevel);
+    const difficultyField = rawDifficulty === 1 || rawDifficulty === 2 || rawDifficulty === 3
+        ? rawDifficulty
+        : '';
+
     const result = [
         q.id || '', quizId, q.type, questionText || '', options, correctAnswer,
         items, textField, blanksField, distractorsField, sentenceField,
         wordsField, correctWordIndexesField, imageField, tagsField,
+        subjectField, skillCodeField, subskillCodeField, difficultyField,
     ];
 
     // Ensure no undefined/null values are sent to D1 bind, which causes silent drops/throws

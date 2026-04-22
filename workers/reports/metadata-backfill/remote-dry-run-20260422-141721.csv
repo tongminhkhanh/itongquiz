@@ -1,0 +1,51 @@
+id,question,tags,subject,skill_code,subskill_code,difficulty
+q-1770687698607-6,,"#ngu_phap,#tieng_viet,#vi_ngu",vietnamese,luyen_tu_va_cau,ngu_phap,2
+q-1770687698607-7,"Trong câu 'Nam là học sinh giỏi.', vị ngữ là cụm từ nào?","#ngu_phap,#tieng_viet,#vi_ngu",vietnamese,luyen_tu_va_cau,ngu_phap,2
+q-1770687698607-8,"Trong câu 'Gió thổi mạnh.', vị ngữ là từ nào?","#ngu_phap,#tieng_viet,#vi_ngu",vietnamese,luyen_tu_va_cau,ngu_phap,2
+q-1770687698607-9,Vị ngữ trong câu 'Cánh đồng lúa chín vàng.' thuộc loại nào?,"#ngu_phap,#tieng_viet,#vi_ngu",vietnamese,luyen_tu_va_cau,ngu_phap,2
+q-1771815844177-0,Điền dấu thích hợp vào chỗ chấm: $\frac{5}{9}$ $\dots$ $\frac{7}{9}$,"#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-1,Kết quả so sánh hai phân số $\frac{5}{8}$ và $\frac{9}{8}$ là:,"#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-10,"Điền dấu ($>$, $<$, $=$) vào chỗ chấm: $\frac{3}{4}$ $\dots$ $\frac{1}{2}$","#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-11,"Sắp xếp các phân số sau theo thứ tự từ bé đến lớn: ($\frac{2}{5}$, $\frac{8}{5}$, $\frac{3","#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-12,Phân loại các phân số sau vào nhóm thích hợp.,"#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-13,So sánh hai phân số $\frac{8}{3}$ và $\frac{11}{21}$.,"#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-14,"Trong các phân số sau, những phân số nào lớn hơn 1? (Chọn tất cả đáp án đúng)","#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-15,"Sắp xếp các số sau theo thứ tự từ bé đến lớn: ($\frac{1}{6}$, $\frac{5}{2}$, 1)","#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-16,Nối các phân số trên tia số (Bài 4) với giá trị số tự nhiên tương ứng:,"#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-17,"Dựa vào tia số ở Bài 4, các phân số nào sau đây nằm giữa 1 và 2? (Chọn tất cả đáp án đúng)","#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-18,Tìm số tự nhiên $x$ biết: $\frac{x}{4}$ = 3$,"#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-19,Mẫu số chung nhỏ nhất để quy đồng hai phân số $\frac{3}{4}$ và $\frac{1}{2}$ là bao nhiêu?,"#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-2,Đánh giá tính đúng sai của các phép so sánh sau với số 1:,"#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-3,"Điền dấu ($>$, $<$, $=$) thích hợp vào chỗ chấm: $\frac{3}{14}$ $\dots$ $\frac{6}{14}$","#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-4,Nối phép so sánh với kết quả đúng:,"#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-5,"Trong các phân số sau, phân số nào bé hơn 1?","#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-6,"Trong các phân số sau, phân số nào lớn hơn 1?","#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-7,Điền số thích hợp vào chỗ chấm: $\frac{4}{4}$ = $\dots$,"#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-8,Quy đồng mẫu số rồi so sánh hai phân số $\frac{2}{5}$ và $\frac{3}{10}$. Kết quả là:,"#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771815844177-9,Kiểm tra tính đúng sai của các bước so sánh $\frac{7}{12}$ và $\frac{5}{6}$:,"#phan_so,#so_sanh_phan_so,#toan",math,phan_so,so_sanh_phan_so,2
+q-1771988898232-0,Mẫu số chung nhỏ nhất của hai phân số $\frac{1}{2}$ và $\frac{1}{3}$ là bao nhiêu? <i>(là ,"#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-1,Điền dấu thích hợp vào chỗ chấm: $\frac{4}{7}$ ... $\frac{2}{7}$,"#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-10,Phân số nào dưới đây lớn nhất?,"#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-11,Kiểm tra tính đúng sai của các phép so sánh sau:,"#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-12,Phân loại các phân số sau vào nhóm thích hợp.,"#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-13,Chọn tất cả các phân số lớn hơn $\frac{1}{2}$ trong các phân số dưới đây:,"#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-14,"Mẹ có một cái bánh. Mẹ cho Lan $\frac{1}{3}$ cái bánh, cho Hùng $\frac{2}{5}$ cái bánh. Hỏ","#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-18,Sắp xếp các phân số $\frac{1}{2}$ ; $\frac{3}{4}$ ; $\frac{5}{8}$ theo thứ tự từ bé đến lớ,"#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-2,Đúng hay Sai về so sánh phân số với 1?,"#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-3,Tìm số thích hợp điền vào chỗ chấm: $\frac{2}{5}$ = \frac{...}{15}$,"#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-4,"Trong các phân số sau, phân số nào bé hơn 1?","#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-5,"Quy đồng mẫu số hai phân số $\frac{3}{4}$ và $\frac{2}{5}$, ta được hai phân số nào?","#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-6,Nối hai phân số bằng nhau:,"#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-7,So sánh hai phân số $\frac{5}{8}$ và $\frac{5}{9}$.,"#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1771988898232-8,Tìm mẫu số chung nhỏ nhất của $\frac{3}{8}$ và $\frac{5}{12}$. <i>(là mẫu số nhỏ nhất có t,"#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-1772154262735-0,Hình bình hành có đặc điểm nào sau đây?,"#hinh_binh_hanh,#hinh_hoc,#toan",math,hinh_hoc_co_ban,hinh_hoc,2
+q-1772154262735-1,Các phát biểu sau đây về hình bình hành là đúng hay sai?,"#hinh_binh_hanh,#hinh_hoc,#toan",math,hinh_hoc_co_ban,hinh_hoc,2
+q-1772154262735-9,Hãy sắp xếp các đặc điểm sau vào nhóm phù hợp để phân biệt Hình chữ nhật và Hình bình hành,"#hinh_binh_hanh,#hinh_hoc,#toan",math,hinh_hoc_co_ban,hinh_hoc,2
+q-manual-1770000614898,Rút gọn phân số $\frac{8}{12}$ về dạng tối giản. Kết quả là?,"#phan_so,#rut_gon_phan_so,#toan",math,phan_so,rut_gon_phan_so,1
+q-manual-1770212602050,"Quy đồng mẫu số hai phân số $\frac{1}{17}$  và $\frac{5}{34}$ với mẫu số chung nhỏ nhất, t","#phan_so,#quy_dong,#toan",math,phan_so,quy_dong,2
+q-manual-1771230053610,Chọn từ thích hợp điền vào chỗ trống để hoàn thành các câu văn sau:,"#ngu_phap,#tieng_viet,#vi_ngu",vietnamese,luyen_tu_va_cau,ngu_phap,2
+q-manual-1772154710788,Hình vẽ bên có mấy hình bình hành,"#hinh_binh_hanh,#hinh_hoc,#toan",math,hinh_hoc_co_ban,hinh_hoc,2
+q-manual-1772155214206,Cho hình bình hành ABCD (như hình vẽ). Khẳng định sau đây là sai?,"#hinh_binh_hanh,#hinh_hoc,#toan",math,hinh_hoc_co_ban,hinh_hoc,2
+q-manual-1772155379957,Cạnh ME dài 6cm. Cạnh PO dài là:,"#hinh_binh_hanh,#hinh_hoc,#toan",math,hinh_hoc_co_ban,hinh_hoc,2
+q-manual-1772157058853,"Biết A, B, C, D là bốn đỉnh của một hình bình hành. Hỏi đỉnh C đã bị con vật nào che mất?","#hinh_binh_hanh,#hinh_hoc,#toan",math,hinh_hoc_co_ban,hinh_hoc,2
+q-manual-1772157269607,Cho ABCD và CDEG là các hình bình hành. Biết độ dài cạnh AB bằng 3 dm. Độ dài cạnh EG bằng,"#hinh_binh_hanh,#hinh_hoc,#toan",math,hinh_hoc_co_ban,hinh_hoc,2

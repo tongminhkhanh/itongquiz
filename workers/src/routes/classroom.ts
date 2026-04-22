@@ -5,6 +5,7 @@ import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
 import { mapAssignment, mapAssignments, hashSHA256, parseBody, extractIdFromPath } from '../utils/helpers';
 import { generateId, hashPassword } from '../utils/response';
+import { getSmartAssignmentPreview } from '../services/smartAssignment';
 
 export async function handleClassroomRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
@@ -538,6 +539,19 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         }
 
         return errorResponse('Missing query parameter: classId, teacherUsername, studentId, or all=true');
+    }
+
+    // POST /api/assignments
+    if (path === '/api/assignments/smart-preview' && method === 'POST') {
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+
+        try {
+            const preview = await getSmartAssignmentPreview(db, body);
+            return jsonResponse(preview);
+        } catch (error: any) {
+            return errorResponse(error?.message || 'Khong the tao smart preview.');
+        }
     }
 
     // POST /api/assignments

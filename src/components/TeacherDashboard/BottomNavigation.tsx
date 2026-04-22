@@ -1,9 +1,10 @@
 import React from 'react';
 import { Home, List, PlusCircle, GraduationCap, Menu } from 'lucide-react';
+import type { TeacherDashboardTab } from '../../stores/useTeacherDashboardUIStore';
 
 export interface BottomNavigationProps {
-    activeTab: string;
-    setActiveTab: (tab: string) => void;
+    activeTab: TeacherDashboardTab;
+    setActiveTab: (tab: TeacherDashboardTab) => void;
     onToggleMenu: () => void;
 }
 
