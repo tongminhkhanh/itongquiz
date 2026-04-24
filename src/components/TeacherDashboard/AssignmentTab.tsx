@@ -11,10 +11,14 @@ import {
 import { Quiz } from '../../types';
 import {
     ClipboardList, CalendarClock, Send, Trash2, X, Loader2,
-    Clock, CheckCircle2, BookOpen, Users, Edit3, Check, Sparkles, AlertTriangle
+    Clock, CheckCircle2, BookOpen, Users, Edit3, Check, AlertTriangle
 } from 'lucide-react';
 import { Button, ResponsiveDataView } from '../common';
 import { showConfirm } from '../../utils/toast';
+import SmartAssignmentInsightCard, {
+    type SmartAssignmentInsightViewModel,
+} from './SmartAssignmentInsightCard';
+import { buildSmartAssignmentInsightModel } from './buildSmartAssignmentInsightModel';
 import {
     type AssignmentComposerDraft,
     useTeacherDashboardUIStore,
@@ -282,7 +286,6 @@ const CreateAssignmentSection: React.FC<{
 
     const selectedQuiz = quizzes.find(q => q.id === selectedQuizId);
     const selectedRecommendedQuiz = activeDraft?.recommendedQuizzes?.find((quiz) => quiz.quizId === selectedQuizId);
-    const prefillLabel = activeDraft?.weaknessSummary?.status === 'weak' ? 'Can uu tien' : 'Can luyen them';
     const recommendedQuizIds = useMemo(
         () => new Set((activeDraft?.recommendedQuizzes || []).map((quiz) => quiz.quizId)),
         [activeDraft?.recommendedQuizzes],
@@ -311,30 +314,34 @@ const CreateAssignmentSection: React.FC<{
         });
     }, [activeDraft?.recommendedQuizzes, quizzes]);
 
-    const getRecommendationKindLabel = (quiz: NonNullable<AssignmentComposerDraft['recommendedQuizzes']>[number]) => {
-        if (quiz.matchBreakdown.subskillMatched) return 'Khop subskill';
-        if (quiz.matchBreakdown.skillMatched) return 'Khop skill';
-        return 'Khop tags';
-    };
-
-    const formatConfidence = (confidence: number) => `${Math.round(confidence * 100)}%`;
-
-    const getDifficultyLabel = (difficulty?: number) => {
-        if (difficulty === 1) return 'De';
-        if (difficulty === 2) return 'Trung binh';
-        if (difficulty === 3) return 'Kho';
-        return 'Chua ro';
-    };
     const recommendationUsesTagsFallback = Boolean(selectedRecommendedQuiz?.matchBreakdown.matchedViaTags);
     const recommendationHasExplicitSkillMatch = Boolean(
         selectedRecommendedQuiz?.matchBreakdown.subskillMatched || selectedRecommendedQuiz?.matchBreakdown.skillMatched,
     );
-    const tagsFallbackTitle = recommendationHasExplicitSkillMatch
-        ? 'Van co mot phan fallback tu tags'
-        : 'Recommendation nay dang dua chu yeu vao tags cu';
     const tagsFallbackMessage = recommendationHasExplicitSkillMatch
         ? 'He thong van co khop ky nang, nhung mot phan diem de xuat dang duoc bo tro boi tags cu. Neu thay co muon chac hon, hay xem nhanh vai cau dau truoc khi giao bai.'
         : 'Question bank hien chua co metadata ky nang day du cho de nay. He thong dang suy luan chu yeu tu tags cu, vi vay thay co nen xem nhanh 2-3 cau dau truoc khi giao bai.';
+    const insightModel = useMemo<SmartAssignmentInsightViewModel | null>(() => buildSmartAssignmentInsightModel({
+        activeDraft,
+        quizzes,
+        selectedQuizId,
+        selectedClassId,
+        selectedStudentId,
+        selectedRecommendedQuiz,
+        draftWarnings,
+        manualNotice,
+        tagsFallbackMessage,
+    }), [
+        activeDraft,
+        draftWarnings,
+        manualNotice,
+        selectedClassId,
+        selectedQuizId,
+        selectedRecommendedQuiz,
+        selectedStudentId,
+        tagsFallbackMessage,
+        quizzes,
+    ]);
 
     return (
         <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
@@ -355,31 +362,10 @@ const CreateAssignmentSection: React.FC<{
                 </div>
             )}
 
-            {activeDraft && (
-                <div className="mb-5 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-sky-50 p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-indigo-600">
-                                <Sparkles className="h-4 w-4" />
-                                <p className="text-sm font-black uppercase tracking-wide">Da nap goi y tu ket qua hoc sinh</p>
-                            </div>
-                            <div>
-                                <p className="text-base font-bold text-slate-800">
-                                    {activeDraft.studentName || 'Hoc sinh'} - {activeDraft.className || 'Lop hoc'}
-                                </p>
-                                {activeDraft.weaknessSummary && (
-                                    <p className="mt-1 text-sm text-slate-600">
-                                        {activeDraft.weaknessSummary.skillLabel} - {prefillLabel} ({activeDraft.weaknessSummary.accuracy}%)
-                                    </p>
-                                )}
-                            </div>
-                            {selectedRecommendedQuiz && (
-                                <p className="text-xs font-medium text-slate-500">
-                                    {selectedRecommendedQuiz.matchReason} • Do tin cay {Math.round(selectedRecommendedQuiz.confidence * 100)}%
-                                </p>
-                            )}
-                        </div>
-
+            {insightModel && (
+                <SmartAssignmentInsightCard
+                    model={insightModel}
+                    actions={(
                         <button
                             type="button"
                             onClick={() => clearDraftState({ keepFormValues: true })}
@@ -388,21 +374,8 @@ const CreateAssignmentSection: React.FC<{
                             <X className="h-4 w-4" />
                             Bo goi y
                         </button>
-                    </div>
-
-                    {draftWarnings.length > 0 && (
-                        <div className="mt-4 space-y-2">
-                            {draftWarnings.map((warning) => (
-                                <div
-                                    key={`${warning.code}-${warning.message}`}
-                                    className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700"
-                                >
-                                    {warning.message}
-                                </div>
-                            ))}
-                        </div>
                     )}
-                </div>
+                />
             )}
 
             {/* Form Grid */}
@@ -522,74 +495,6 @@ const CreateAssignmentSection: React.FC<{
                 </div>
             )}
 
-            {activeDraft && selectedQuizId && (
-                selectedRecommendedQuiz ? (
-                    <div className="mb-4 rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                                <p className="text-sm font-black text-slate-800">Vi sao de nay duoc goi y</p>
-                                <p className="mt-1 text-sm text-slate-600">{selectedRecommendedQuiz.matchReason}</p>
-                            </div>
-                            <div className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-wide text-sky-700 shadow-sm">
-                                Do tin cay {formatConfidence(selectedRecommendedQuiz.confidence)}
-                            </div>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                            <div className="rounded-xl border border-white bg-white px-3 py-3">
-                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Kieu khop</p>
-                                <p className="mt-1 text-sm font-semibold text-slate-800">
-                                    {getRecommendationKindLabel(selectedRecommendedQuiz)}
-                                </p>
-                            </div>
-                            <div className="rounded-xl border border-white bg-white px-3 py-3">
-                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Muc muc tieu</p>
-                                <p className="mt-1 text-sm font-semibold text-slate-800">
-                                    {selectedRecommendedQuiz.matchBreakdown.targetDifficulty} - {getDifficultyLabel(selectedRecommendedQuiz.matchBreakdown.targetDifficulty)}
-                                </p>
-                            </div>
-                            <div className="rounded-xl border border-white bg-white px-3 py-3">
-                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Do kho trung binh</p>
-                                <p className="mt-1 text-sm font-semibold text-slate-800">
-                                    {selectedRecommendedQuiz.matchBreakdown.avgDifficulty
-                                        ? `${selectedRecommendedQuiz.matchBreakdown.avgDifficulty} - ${getDifficultyLabel(selectedRecommendedQuiz.matchBreakdown.avgDifficulty)}`
-                                        : 'Chua co metadata'}
-                                </p>
-                            </div>
-                            <div className="rounded-xl border border-white bg-white px-3 py-3">
-                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Tong diem he thong</p>
-                                <p className="mt-1 text-sm font-semibold text-slate-800">
-                                    {selectedRecommendedQuiz.matchBreakdown.totalScore}
-                                </p>
-                            </div>
-                        </div>
-
-                        {activeDraft.weaknessSummary && (
-                            <p className="mt-3 text-xs text-slate-500">
-                                Dang uu tien {activeDraft.weaknessSummary.skillLabel}
-                                {activeDraft.weaknessSummary.subskillLabel ? ` • ${activeDraft.weaknessSummary.subskillLabel}` : ''}
-                                {activeDraft.weaknessSummary.targetDifficulty ? ` • muc muc tieu ${activeDraft.weaknessSummary.targetDifficulty}` : ''}
-                            </p>
-                        )}
-
-                        {recommendationUsesTagsFallback && (
-                            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-800">
-                                <div className="flex items-start gap-2">
-                                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                                    <div>
-                                        <p className="font-bold uppercase tracking-wide">{tagsFallbackTitle}</p>
-                                        <p className="mt-1 leading-5">{tagsFallbackMessage}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                        Dang o che do chon de thu cong. He thong se giu goi y ban dau de thay co doi chieu neu can.
-                    </div>
-                )
-            )}
 
             {/* Submit */}
             <div className="flex items-center gap-4">

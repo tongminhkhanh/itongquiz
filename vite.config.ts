@@ -47,9 +47,6 @@ export default defineConfig(({ mode }) => {
             // State management
             'vendor-state': ['zustand'],
 
-            // Data parsing
-            'vendor-data': ['papaparse', 'zod'],
-
             // Heavy animation library (if used)
             'vendor-motion': ['framer-motion'],
           },

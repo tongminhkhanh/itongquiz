@@ -1,11 +1,12 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss" source(none);
 
 @theme {
   --font-baloo: "Baloo 2", sans-serif;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap');
-@source "./src/**/*.{ts,tsx,html}";
+@source "./src/**/*.{tsx,html}";
+@source "./src/components/HomePage/constants/dashboard.constants.ts";
+@source "./src/features/quiz-editor/utils/questionHelpers.ts";
 @source "./index.html";
 
 /* =========================
