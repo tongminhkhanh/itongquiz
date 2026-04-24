@@ -8,6 +8,7 @@ import { BookOpen, Home, Sparkles } from 'lucide-react';
 // Tabs
 import OverviewTab from './tabs/OverviewTab';
 import RecommendationsTab from './tabs/RecommendationsTab';
+import type { StudentWeaknessFocus } from './studentWeaknessFocus';
 
 interface Props {
     quiz: Quiz;
@@ -33,6 +34,7 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
 
 
     const [activeTab, setActiveTab] = useState<TabType>('overview');
+    const [recommendationFocus, setRecommendationFocus] = useState<StudentWeaknessFocus | null>(null);
 
     // Helper function to check if answer is correct 
     // PRIORITY: Use server validationDetails if available, fallback to local calculation
@@ -308,13 +310,17 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
                             result={result}
                             answers={answers}
                             studentUsername={studentName}
-                            onOpenRecommendations={() => setActiveTab('recommendations')}
+                            onOpenRecommendations={(focus) => {
+                                setRecommendationFocus(focus ?? null);
+                                setActiveTab('recommendations');
+                            }}
                         />
                     ) : (
                         <RecommendationsTab
                             quiz={quiz}
                             result={result}
                             answers={answers}
+                            focus={recommendationFocus}
                         />
                     )}
                 </div>

@@ -2,71 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, BookOpen, ChevronRight, Loader2, Sparkles, Target } from 'lucide-react';
 import { fetchWeaknessProfile } from '../../../services/weaknessProfileService';
 import type { SkillBreakdownItem, WeaknessProfileResponse } from '../../../shared/skillTaxonomy';
+import { buildStudentWeaknessFocus, type StudentWeaknessFocus } from './studentWeaknessFocus';
 
 export type WeaknessSummaryCardProps = {
     resultId: string | number;
     scorePct: number;
     wrongQuestionIds: Array<string | number>;
     onOpenDrOwl: () => void;
-    onOpenRecommendations: () => void;
+    onOpenRecommendations: (focus?: StudentWeaknessFocus | null) => void;
 };
-
-type StudentSkillCopy = {
-    title: string;
-    shortHint: string;
-    actionLabel: string;
-};
-
-const SKILL_COPY: Record<string, StudentSkillCopy> = {
-    phan_so: {
-        title: 'Phan so',
-        shortHint: 'Con dang hay nham o dang toan nay. Minh luyen them vai cau nhe hon nhe.',
-        actionLabel: 'Luyen phan so',
-    },
-    phep_cong_tru: {
-        title: 'Phep cong tru',
-        shortHint: 'Con can on lai cach dat tinh va tinh can than hon o dang nay.',
-        actionLabel: 'On phep cong tru',
-    },
-    phep_nhan_chia: {
-        title: 'Phep nhan chia',
-        shortHint: 'Con thu luyen them vai cau co bang nhan bang chia de quen tay hon nhe.',
-        actionLabel: 'On phep nhan chia',
-    },
-    toan_co_loi_van: {
-        title: 'Toan co loi van',
-        shortHint: 'Con can doc ky de bai va tim xem minh can tinh gi truoc nha.',
-        actionLabel: 'On toan loi van',
-    },
-    doc_hieu: {
-        title: 'Doc hieu',
-        shortHint: 'Con thu doc cham lai doan van va gach chan nhung y quan trong nhe.',
-        actionLabel: 'On doc hieu',
-    },
-    luyen_tu_va_cau: {
-        title: 'Luyen tu va cau',
-        shortHint: 'Con can on lai cach nhan biet va dung cau cho dung.',
-        actionLabel: 'On luyen tu va cau',
-    },
-    chinh_ta: {
-        title: 'Chinh ta',
-        shortHint: 'Con dang can de y them cach viet dung am va van o dang nay.',
-        actionLabel: 'On chinh ta',
-    },
-    tu_vung: {
-        title: 'Tu vung',
-        shortHint: 'Con thu hoc lai nghia cua tu va cach dung trong cau nhe.',
-        actionLabel: 'On tu vung',
-    },
-};
-
-function getSkillCopy(skill: SkillBreakdownItem): StudentSkillCopy {
-    return SKILL_COPY[skill.skillCode] || {
-        title: skill.skillLabel,
-        shortHint: 'Con dang can on them phan nay. Minh hoc them tung chut mot nhe.',
-        actionLabel: 'Xem goi y hoc',
-    };
-}
 
 function getStatusLabel(status: SkillBreakdownItem['status']): string {
     if (status === 'weak') return 'Can uu tien';
@@ -141,12 +85,12 @@ const WeaknessSummaryCard: React.FC<WeaknessSummaryCardProps> = ({
     const shouldOpenDrOwl = scorePct < 50 && wrongQuestionIds.length >= 2;
     const hasLowCoverage = Boolean(profile && (profile.coveragePercent < 70 || profile.unclassifiedQuestionCount > 0));
 
-    const handlePrimaryAction = () => {
+    const handlePrimaryAction = (skill: SkillBreakdownItem) => {
         if (shouldOpenDrOwl) {
             onOpenDrOwl();
             return;
         }
-        onOpenRecommendations();
+        onOpenRecommendations(buildStudentWeaknessFocus(skill));
     };
 
     if (isLoading) {
@@ -250,14 +194,14 @@ const WeaknessSummaryCard: React.FC<WeaknessSummaryCardProps> = ({
 
             <div className="mt-4 space-y-3">
                 {focusSkills.map((skill) => {
-                    const copy = getSkillCopy(skill);
+                    const focus = buildStudentWeaknessFocus(skill);
 
                     return (
                         <div key={`${skill.subject}-${skill.skillCode}`} className="rounded-2xl border border-white bg-white/90 p-4 shadow-sm">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
-                                    <p className="text-base font-bold text-slate-800">{copy.title}</p>
-                                    <p className="mt-1 text-sm leading-relaxed text-slate-500">{copy.shortHint}</p>
+                                    <p className="text-base font-bold text-slate-800">{focus.title}</p>
+                                    <p className="mt-1 text-sm leading-relaxed text-slate-500">{focus.shortHint}</p>
                                 </div>
                                 <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
                                     skill.status === 'weak'
@@ -285,10 +229,10 @@ const WeaknessSummaryCard: React.FC<WeaknessSummaryCardProps> = ({
 
                             <button
                                 type="button"
-                                onClick={handlePrimaryAction}
+                                onClick={() => handlePrimaryAction(skill)}
                                 className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
                             >
-                                {shouldOpenDrOwl ? 'Luyen ngay voi Cu Meo' : copy.actionLabel}
+                                {shouldOpenDrOwl ? 'Luyen ngay voi Cu Meo' : focus.actionLabel}
                                 <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>

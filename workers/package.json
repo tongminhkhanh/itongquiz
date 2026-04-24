@@ -19,6 +19,8 @@
         "db:audit:question-metadata:remote": "node scripts/audit-question-metadata.cjs --remote",
         "db:preview:metadata-backfill:local": "node scripts/preview-question-metadata-backfill.cjs",
         "db:preview:metadata-backfill:remote": "node scripts/preview-question-metadata-backfill.cjs --remote",
+        "db:analyze:metadata-phase2:local": "node scripts/analyze-question-metadata-phase2.cjs",
+        "db:analyze:metadata-phase2:remote": "node scripts/analyze-question-metadata-phase2.cjs --remote",
         "db:apply:metadata-backfill:local:dry-run": "node scripts/apply-question-metadata-backfill.cjs",
         "db:apply:metadata-backfill:remote:dry-run": "node scripts/apply-question-metadata-backfill.cjs --remote",
         "db:apply:metadata-backfill:local": "node scripts/apply-question-metadata-backfill.cjs --write",

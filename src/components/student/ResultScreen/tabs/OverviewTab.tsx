@@ -5,13 +5,14 @@ import DrOwlModal from '../DrOwlModal';
 import { callApi } from '../../../../services/apiAdapter';
 import { motion } from 'framer-motion';
 import WeaknessSummaryCard from '../WeaknessSummaryCard';
+import type { StudentWeaknessFocus } from '../studentWeaknessFocus';
 
 interface Props {
     quiz: Quiz;
     result: StudentResult;
     answers: Record<string, any>;
     studentUsername?: string;
-    onOpenRecommendations: () => void;
+    onOpenRecommendations: (focus?: StudentWeaknessFocus | null) => void;
 }
 
 const OverviewTab: React.FC<Props> = ({ quiz, result, answers, studentUsername, onOpenRecommendations }) => {

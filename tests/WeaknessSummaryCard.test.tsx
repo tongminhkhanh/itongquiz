@@ -138,6 +138,11 @@ describe('WeaknessSummaryCard', () => {
         fireEvent.click(await screen.findByRole('button', { name: /On luyen tu va cau/i }));
 
         expect(onOpenRecommendations).toHaveBeenCalledTimes(1);
+        expect(onOpenRecommendations).toHaveBeenCalledWith(expect.objectContaining({
+            subjectId: 'tieng-viet',
+            skillCode: 'luyen_tu_va_cau',
+            skillLabel: 'Luyen tu va cau',
+        }));
         expect(onOpenDrOwl).not.toHaveBeenCalled();
     });
 

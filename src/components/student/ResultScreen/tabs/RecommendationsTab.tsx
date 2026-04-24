@@ -1,24 +1,24 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, BookOpen, Heart, Lightbulb, RefreshCw, Sparkles, Target } from 'lucide-react';
 import { Quiz, StudentResult } from '../../../../types';
 import { getAIRecommendations, extractWrongAnswers, AIRecommendation } from '../../../../services/aiTutorService';
-import { Lightbulb, BookOpen, Target, Heart, Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
 import { MathSpan } from '../../../common';
+import type { StudentWeaknessFocus } from '../studentWeaknessFocus';
 
 interface Props {
     quiz: Quiz;
     result: StudentResult;
     answers: Record<string, any>;
+    focus?: StudentWeaknessFocus | null;
 }
 
-const RecommendationsTab: React.FC<Props> = ({ quiz, result, answers }) => {
+const RecommendationsTab: React.FC<Props> = ({ quiz, result, answers, focus }) => {
     const [recommendation, setRecommendation] = useState<AIRecommendation | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Extract wrong answers using validationDetails from result
     const wrongAnswers = useMemo(() => extractWrongAnswers(quiz, answers, result), [quiz, answers, result]);
 
-    // Fetch AI recommendations
     const fetchRecommendations = async () => {
         setIsLoading(true);
         setError(null);
@@ -27,65 +27,98 @@ const RecommendationsTab: React.FC<Props> = ({ quiz, result, answers }) => {
             const aiResult = await getAIRecommendations(quiz, result, wrongAnswers);
             setRecommendation(aiResult);
         } catch (err) {
-            setError('Không thể lấy gợi ý từ AI. Vui lòng thử lại.');
+            setError('Khong the lay goi y tu AI. Vui long thu lai.');
             console.error('Recommendation error:', err);
         } finally {
             setIsLoading(false);
         }
     };
 
-
     useEffect(() => {
         fetchRecommendations();
     }, []);
 
-    // Loading state
+    const focusCard = focus ? (
+        <div className="rounded-2xl border border-sky-100 bg-gradient-to-r from-sky-50 via-white to-indigo-50 p-5">
+            <div className="flex items-start gap-4">
+                <div className="rounded-2xl bg-sky-100 p-3">
+                    <Target className="w-5 h-5 text-sky-700" />
+                </div>
+                <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-bold text-slate-800">{focus.recommendationTitle}</h3>
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-wide ${
+                            focus.status === 'weak'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-amber-100 text-amber-700'
+                        }`}>
+                            Uu tien tu bai vua lam
+                        </span>
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-600">{focus.recommendationSummary}</p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border border-slate-100 bg-white/90 p-4">
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-500">Dang can on</p>
+                            <p className="mt-1 text-base font-bold text-slate-800">{focus.title}</p>
+                            <p className="mt-1 text-sm text-slate-500">{focus.subjectLabel}</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-100 bg-white/90 p-4">
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-500">{focus.nextStepLabel}</p>
+                            <p className="mt-1 text-sm leading-relaxed text-slate-600">{focus.nextStepHint}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    ) : null;
+
     if (isLoading) {
         return (
             <div className="p-8 text-center">
-                <div className="inline-flex items-center gap-3 bg-indigo-50 text-indigo-700 px-6 py-4 rounded-xl">
+                <div className="inline-flex items-center gap-3 rounded-xl bg-indigo-50 px-6 py-4 text-indigo-700">
                     <Sparkles className="w-6 h-6 animate-pulse" />
                     <div>
-                        <p className="font-bold">AI đang phân tích bài làm...</p>
-                        <p className="text-sm opacity-80">Chờ một chút nhé!</p>
+                        <p className="font-bold">
+                            {focus ? `AI dang chuan bi goi y cho ${focus.title}...` : 'AI dang phan tich bai lam...'}
+                        </p>
+                        <p className="text-sm opacity-80">Cho mot chut nhe.</p>
                     </div>
                 </div>
             </div>
         );
     }
 
-    // Error state
     if (error) {
         return (
             <div className="p-8 text-center">
-                <div className="inline-flex flex-col items-center gap-4 bg-red-50 text-red-700 px-8 py-6 rounded-xl">
+                <div className="inline-flex flex-col items-center gap-4 rounded-xl bg-red-50 px-8 py-6 text-red-700">
                     <AlertCircle className="w-10 h-10" />
                     <p>{error}</p>
                     <button
                         onClick={fetchRecommendations}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
                     >
                         <RefreshCw className="w-4 h-4" />
-                        Thử lại
+                        Thu lai
                     </button>
                 </div>
             </div>
         );
     }
 
-    // Perfect score - no recommendations needed
     if (wrongAnswers.length === 0) {
         return (
             <div className="p-8">
-                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl p-8 text-white text-center">
-                    <div className="text-7xl mb-4">🏆</div>
-                    <h2 className="text-3xl font-bold mb-3">Xuất sắc!</h2>
-                    <p className="text-xl opacity-90 mb-6">
-                        Em đã trả lời đúng tất cả các câu hỏi!
+                {focusCard}
+                <div className="rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 p-8 text-center text-white">
+                    <div className="mb-4 text-7xl">Tuyet voi</div>
+                    <h2 className="mb-3 text-3xl font-bold">Xuat sac!</h2>
+                    <p className="mb-6 text-xl opacity-90">
+                        Em da tra loi dung tat ca cac cau hoi.
                     </p>
-                    <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 inline-block">
+                    <div className="inline-block rounded-xl bg-white/20 p-4 backdrop-blur-sm">
                         <p className="text-lg">
-                            🌟 Thầy cô rất tự hào về em. Hãy tiếp tục phát huy nhé!
+                            Thay co rat tu hao ve em. Hay tiep tuc phat huy nhe.
                         </p>
                     </div>
                 </div>
@@ -94,57 +127,56 @@ const RecommendationsTab: React.FC<Props> = ({ quiz, result, answers }) => {
     }
 
     return (
-        <div className="p-6 space-y-6">
-            {/* Header */}
+        <div className="space-y-6 p-6">
+            {focusCard}
+
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl">
+                    <div className="rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 p-3">
                         <Sparkles className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h2 className="font-bold text-xl text-gray-800">Gợi ý ôn tập từ AI</h2>
-                        <p className="text-sm text-gray-500">Dựa trên kết quả bài làm của em</p>
+                        <h2 className="font-bold text-xl text-gray-800">Goi y on tap tu AI</h2>
+                        <p className="text-sm text-gray-500">Dua tren ket qua bai lam cua em</p>
                     </div>
                 </div>
                 <button
                     onClick={fetchRecommendations}
-                    className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-indigo-600 transition-colors hover:bg-indigo-50"
                 >
                     <RefreshCw className="w-4 h-4" />
-                    Làm mới
+                    Lam moi
                 </button>
             </div>
 
             {recommendation && (
                 <>
-                    {/* Analysis Card */}
-                    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-100">
+                    <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
                         <div className="flex items-start gap-4">
-                            <div className="p-2 bg-indigo-100 rounded-lg">
+                            <div className="rounded-lg bg-indigo-100 p-2">
                                 <Target className="w-5 h-5 text-indigo-600" />
                             </div>
                             <div>
-                                <h3 className="font-bold text-indigo-900 mb-2">📊 Nhận xét tổng quan</h3>
-                                <p className="text-indigo-800 leading-relaxed">{recommendation.analysis}</p>
+                                <h3 className="mb-2 font-bold text-indigo-900">Nhan xet tong quan</h3>
+                                <p className="leading-relaxed text-indigo-800">{recommendation.analysis}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Weak Topics */}
                     {recommendation.weakTopics.length > 0 && (
-                        <div className="bg-amber-50 rounded-xl p-6 border border-amber-200">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2 bg-amber-100 rounded-lg">
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
+                            <div className="mb-4 flex items-center gap-3">
+                                <div className="rounded-lg bg-amber-100 p-2">
                                     <BookOpen className="w-5 h-5 text-amber-600" />
                                 </div>
-                                <h3 className="font-bold text-amber-900">⚠️ Em cần ôn lại</h3>
+                                <h3 className="font-bold text-amber-900">Em can on lai</h3>
                             </div>
 
                             <div className="flex flex-wrap gap-2">
                                 {recommendation.weakTopics.map((topic, idx) => (
                                     <span
                                         key={idx}
-                                        className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full font-medium"
+                                        className="rounded-full bg-amber-100 px-4 py-2 font-medium text-amber-800"
                                     >
                                         {topic}
                                     </span>
@@ -153,63 +185,60 @@ const RecommendationsTab: React.FC<Props> = ({ quiz, result, answers }) => {
                         </div>
                     )}
 
-                    {/* Study Tips */}
-                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-green-100 rounded-lg">
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <div className="mb-4 flex items-center gap-3">
+                            <div className="rounded-lg bg-green-100 p-2">
                                 <Lightbulb className="w-5 h-5 text-green-600" />
                             </div>
-                            <h3 className="font-bold text-gray-800">💡 Gợi ý học tập</h3>
+                            <h3 className="font-bold text-gray-800">Goi y hoc tap</h3>
                         </div>
 
                         <div className="space-y-3">
                             {recommendation.studyTips.map((tip, idx) => (
                                 <div
                                     key={idx}
-                                    className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                    className="flex items-start gap-3 rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100"
                                 >
-                                    <span className="flex-shrink-0 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">
+                                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-green-500 font-bold text-white">
                                         {idx + 1}
                                     </span>
-                                    <p className="text-gray-700 leading-relaxed">{tip}</p>
+                                    <p className="leading-relaxed text-gray-700">{tip}</p>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Encouragement */}
-                    <div className="bg-gradient-to-r from-pink-500 via-rose-500 to-red-500 rounded-xl p-6 text-white">
+                    <div className="rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-red-500 p-6 text-white">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-white/20 rounded-full">
+                            <div className="rounded-full bg-white/20 p-3">
                                 <Heart className="w-8 h-8" />
                             </div>
                             <div>
-                                <h3 className="font-bold text-lg mb-1">💖 Lời nhắn từ thầy cô</h3>
-                                <p className="text-white/90 text-lg">{recommendation.encouragement}</p>
+                                <h3 className="mb-1 text-lg font-bold">Loi nhan tu thay co</h3>
+                                <p className="text-lg text-white/90">{recommendation.encouragement}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Wrong answers summary */}
-                    <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            📝 Các câu cần xem lại ({wrongAnswers.length} câu)
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+                        <h3 className="mb-4 flex items-center gap-2 font-bold text-gray-800">
+                            Cac cau can xem lai ({wrongAnswers.length} cau)
                         </h3>
-                        <div className="space-y-2 max-h-60 overflow-y-auto">
-                            {wrongAnswers.map((wa, idx) => (
-                                <div key={idx} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100">
-                                    <span className="flex-shrink-0 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center font-bold text-sm">
-                                        {wa.questionNumber}
+                        <div className="max-h-60 space-y-2 overflow-y-auto">
+                            {wrongAnswers.map((wrongAnswer, idx) => (
+                                <div key={idx} className="flex items-center gap-3 rounded-lg border border-gray-100 bg-white p-3">
+                                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-sm font-bold text-red-600">
+                                        {wrongAnswer.questionNumber}
                                     </span>
-                                    <div className="flex-1 min-w-0">
-                                        <MathSpan content={wa.questionText} className="text-gray-700 text-sm truncate block" />
-                                        <p className="text-xs text-gray-400">{wa.questionType}</p>
+                                    <div className="min-w-0 flex-1">
+                                        <MathSpan content={wrongAnswer.questionText} className="block truncate text-sm text-gray-700" />
+                                        <p className="text-xs text-gray-400">{wrongAnswer.questionType}</p>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        <p className="mt-4 text-sm text-gray-500 text-center">
-                            💡 Xem tab <strong>"Chi tiết"</strong> để xem giải thích cho từng câu
+                        <p className="mt-4 text-center text-sm text-gray-500">
+                            Xem tab <strong>"Chi tiet"</strong> de xem giai thich cho tung cau.
                         </p>
                     </div>
                 </>
