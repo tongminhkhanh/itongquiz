@@ -22,8 +22,22 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
 
     // GET /api/teachers
     if (path === '/api/teachers' && method === 'GET') {
-        const rows = await db.prepare('SELECT * FROM teachers').all();
-        return jsonResponse(rows.results);
+        const rows = await db.prepare(
+            'SELECT username, full_name, role, class FROM teachers'
+        ).all<{
+            username: string;
+            full_name: string;
+            role: string;
+            class: string;
+        }>();
+
+        return jsonResponse((rows.results || []).map((teacher) => ({
+            username: teacher.username,
+            fullName: teacher.full_name,
+            full_name: teacher.full_name,
+            role: teacher.role,
+            class: teacher.class,
+        })));
     }
 
     // POST /api/teachers - Create teacher

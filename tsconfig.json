@@ -27,6 +27,13 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["src"],
+  "include": [
+    "src",
+    "App.tsx",
+    "index.tsx",
+    "stores",
+    "utils",
+    "vite-env.d.ts"
+  ],
   "exclude": ["node_modules", "workers"]
 }

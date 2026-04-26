@@ -128,7 +128,7 @@ const WeaknessSummaryCard: React.FC<WeaknessSummaryCardProps> = ({
                         <p className="mt-1 text-sm text-red-600">{error}</p>
                         <button
                             type="button"
-                            onClick={onOpenRecommendations}
+                            onClick={() => onOpenRecommendations(null)}
                             className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
                         >
                             <BookOpen className="w-4 h-4" />
@@ -154,7 +154,7 @@ const WeaknessSummaryCard: React.FC<WeaknessSummaryCardProps> = ({
                         </p>
                         <button
                             type="button"
-                            onClick={onOpenRecommendations}
+                            onClick={() => onOpenRecommendations(null)}
                             className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-emerald-700 border border-emerald-200 hover:bg-emerald-50 transition-colors"
                         >
                             <BookOpen className="w-4 h-4" />

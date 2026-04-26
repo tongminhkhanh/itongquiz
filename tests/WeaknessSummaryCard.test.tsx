@@ -89,13 +89,14 @@ describe('WeaknessSummaryCard', () => {
     it('shows positive empty state when no focus skills remain', async () => {
         mockedFetchWeaknessProfile.mockResolvedValue(makeWeaknessProfileEmpty());
 
-        renderCard({
+        const { onOpenRecommendations } = renderCard({
             scorePct: 85,
             wrongQuestionIds: [],
         });
 
         expect(await screen.findByText(/Con dang lam kha tot roi!/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Xem goi y hoc/i })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /Xem goi y hoc/i }));
+        expect(onOpenRecommendations).toHaveBeenCalledWith(null);
     });
 
     it('shows error state and fallback CTA when service fails', async () => {
@@ -110,6 +111,7 @@ describe('WeaknessSummaryCard', () => {
 
         fireEvent.click(screen.getByRole('button', { name: /Xem goi y hoc/i }));
         expect(onOpenRecommendations).toHaveBeenCalledTimes(1);
+        expect(onOpenRecommendations).toHaveBeenCalledWith(null);
     });
 
     it('routes primary CTA to DrOwl for low score with many wrong answers', async () => {

@@ -10,7 +10,19 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.next
+tmp
 *.local
+*.tmp
+*.tsbuildinfo
+
+# Generated/debug artifacts
+audit.json
+q.json
+quiz_check.json
+tsc_output.txt
+stitch_petshop.html
+design_preview.html
 
 # Environment Variables
 .env
@@ -30,3 +42,4 @@ dist-ssr
 
 .vercel
 .gitnexus
+workers/.wrangler/
