@@ -111,11 +111,12 @@ export class BaseAPI {
                 logger.api.response(fullUrl, { status: response.status });
                 return data as T;
 
-            } catch (error: any) {
+            } catch (error: unknown) {
+                const normalizedError = error instanceof Error ? error : new Error(String(error));
                 lastError = error;
 
                 // Don't retry on abort (timeout)
-                if (error.name === 'AbortError') {
+                if (normalizedError.name === 'AbortError') {
                     logger.error(`Request timeout: ${fullUrl}`, { module: 'API' });
                     throw new Error(`Request timeout after ${timeout}ms`);
                 }
@@ -123,7 +124,7 @@ export class BaseAPI {
                 // Check if should retry
                 if (attempt <= maxRetries && isRetryableError(error) && retryOn(error)) {
                     const delay = delayMs * Math.pow(backoffMultiplier, attempt - 1);
-                    logger.warn(`Retry ${attempt}/${maxRetries} after ${delay}ms: ${error.message}`, { module: 'API' });
+                    logger.warn(`Retry ${attempt}/${maxRetries} after ${delay}ms: ${normalizedError.message}`, { module: 'API' });
                     await sleep(delay);
                     continue;
                 }

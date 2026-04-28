@@ -147,8 +147,9 @@ D. [Đáp án D]
                 content: content
             };
 
-        } catch (error: any) {
-            const isTimeout = error.name === 'AbortError' || error.message?.includes('abort');
+        } catch (error: unknown) {
+            const normalizedError = error instanceof Error ? error : new Error(String(error));
+            const isTimeout = normalizedError.name === 'AbortError' || normalizedError.message?.includes('abort');
 
             if (isTimeout && attempt < MAX_RETRIES) {
                 console.warn(`[TN Search] Timeout lần ${attempt}, đang thử lại...`);

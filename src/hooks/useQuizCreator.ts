@@ -213,9 +213,10 @@ export const useQuizCreator = (): UseQuizCreatorReturn => {
             };
 
             setGeneratedQuiz(normalizedQuiz);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
             console.error('Quiz generation error:', err);
-            setError(err.message || 'Đã xảy ra lỗi khi tạo đề.');
+            setError(normalizedError.message || 'Đã xảy ra lỗi khi tạo đề.');
         } finally {
             setIsGenerating(false);
         }

@@ -114,9 +114,10 @@ export const useQuizManager = ({ quizzes, onDelete }: UseQuizManagerProps): UseQ
             try {
                 await onDelete(quizId);
                 alert('Đã xóa bài kiểm tra thành công!');
-            } catch (error: any) {
+            } catch (error: unknown) {
+                const normalizedError = error instanceof Error ? error : new Error(String(error));
                 console.error('Delete quiz error:', error);
-                alert('Lỗi khi xóa: ' + (error.message || 'Không thể xóa bài kiểm tra. Vui lòng thử lại.'));
+                alert('Lỗi khi xóa: ' + (normalizedError.message || 'Không thể xóa bài kiểm tra. Vui lòng thử lại.'));
             } finally {
                 setDeletingId(null);
             }

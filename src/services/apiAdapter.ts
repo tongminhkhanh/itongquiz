@@ -165,8 +165,9 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         }
 
         return (await response.json()) as T;
-    } catch (error: any) {
-        if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+    } catch (error: unknown) {
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
+        if (normalizedError.name === 'TypeError' && normalizedError.message === 'Failed to fetch') {
             throw new Error('Không thể kết nối mạng hoặc lỗi CORS. Vui lòng kiểm tra kết nối.');
         }
         throw error;

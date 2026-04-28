@@ -33,8 +33,9 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({ classroom, isA
             } else {
                 setAddError('Tên đăng nhập đã tồn tại hoặc có lỗi xảy ra.');
             }
-        } catch (err: any) {
-            setAddError(err.message || 'Lỗi thêm học sinh');
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            setAddError(normalizedError.message || 'Lỗi thêm học sinh');
         } finally {
             setIsSaving(false);
         }
@@ -55,8 +56,9 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({ classroom, isA
             } else {
                 setAddError(`Đã thêm ${successCount}/${payloads.length} học sinh. Một số bị lỗi (có thể trùng tên đăng nhập).`);
             }
-        } catch (err: any) {
-             setAddError(err.message || 'Lỗi thêm danh sách học sinh');
+        } catch (err: unknown) {
+             const normalizedError = err instanceof Error ? err : new Error(String(err));
+             setAddError(normalizedError.message || 'Lỗi thêm danh sách học sinh');
         } finally {
             setIsSaving(false);
         }

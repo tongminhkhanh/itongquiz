@@ -22,9 +22,10 @@ const callGasApi = async <T = unknown>(action: string, payload: Record<string, u
     try {
         const data = await callApi<GamificationApiResponse<T>>(action, payload);
         return { status: 'success', data: data.data ?? (data as any) };
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
         console.error(`[GamificationService] API Error [${action}]:`, error);
-        return { status: 'error', message: error.message || 'Unknown API error' };
+        return { status: 'error', message: normalizedError.message || 'Unknown API error' };
     }
 };
 

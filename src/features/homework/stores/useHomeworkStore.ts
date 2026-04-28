@@ -32,8 +32,9 @@ export const useHomeworkStore = create<HomeworkState>((set, get) => ({
     try {
       const data = await homeworkBackendService.getTeacherAssignments(teacherId);
       set({ assignments: data, isLoading: false });
-    } catch (err: any) {
-      set({ error: err.message || 'Không thể tải danh sách bài tập', isLoading: false });
+    } catch (err: unknown) {
+      const normalizedError = err instanceof Error ? err : new Error(String(err));
+      set({ error: normalizedError.message || 'Không thể tải danh sách bài tập', isLoading: false });
     }
   },
 
@@ -42,8 +43,9 @@ export const useHomeworkStore = create<HomeworkState>((set, get) => ({
     try {
       const data = await homeworkBackendService.getAssignments(classId);
       set({ assignments: data, isLoading: false });
-    } catch (err: any) {
-      set({ error: err.message || 'Không thể tải danh sách bài tập', isLoading: false });
+    } catch (err: unknown) {
+      const normalizedError = err instanceof Error ? err : new Error(String(err));
+      set({ error: normalizedError.message || 'Không thể tải danh sách bài tập', isLoading: false });
     }
   },
 
@@ -58,8 +60,9 @@ export const useHomeworkStore = create<HomeworkState>((set, get) => ({
       const results = await Promise.all(submissionPromises);
       const activeSubmissions = results.filter((s): s is HomeworkSubmission => s !== null);
       set({ submissions: activeSubmissions, isLoading: false });
-    } catch (err: any) {
-      set({ error: err.message || 'Không thể tải lịch sử nộp bài', isLoading: false });
+    } catch (err: unknown) {
+      const normalizedError = err instanceof Error ? err : new Error(String(err));
+      set({ error: normalizedError.message || 'Không thể tải lịch sử nộp bài', isLoading: false });
     }
   },
 
@@ -84,8 +87,9 @@ export const useHomeworkStore = create<HomeworkState>((set, get) => ({
       } else {
         set({ isLoading: false });
       }
-    } catch (err: any) {
-      set({ error: err.message || 'Không thể nộp bài', isLoading: false });
+    } catch (err: unknown) {
+      const normalizedError = err instanceof Error ? err : new Error(String(err));
+      set({ error: normalizedError.message || 'Không thể nộp bài', isLoading: false });
       throw err; // Re-throw to handle in UI
     }
   },
@@ -101,8 +105,9 @@ export const useHomeworkStore = create<HomeworkState>((set, get) => ({
       } else {
         set({ isLoading: false });
       }
-    } catch (err: any) {
-      set({ error: err.message || 'Không thể lưu bài tập', isLoading: false });
+    } catch (err: unknown) {
+      const normalizedError = err instanceof Error ? err : new Error(String(err));
+      set({ error: normalizedError.message || 'Không thể lưu bài tập', isLoading: false });
     }
   },
 
@@ -114,8 +119,9 @@ export const useHomeworkStore = create<HomeworkState>((set, get) => ({
         assignments: state.assignments.map((a) => (a.id === id ? { ...a, ...updates } : a)),
         isLoading: false
       }));
-    } catch (err: any) {
-      set({ error: err.message || 'Không thể cập nhật bài tập', isLoading: false });
+    } catch (err: unknown) {
+      const normalizedError = err instanceof Error ? err : new Error(String(err));
+      set({ error: normalizedError.message || 'Không thể cập nhật bài tập', isLoading: false });
     }
   },
 
@@ -127,8 +133,9 @@ export const useHomeworkStore = create<HomeworkState>((set, get) => ({
         assignments: state.assignments.filter((a) => a.id !== id),
         isLoading: false
       }));
-    } catch (err: any) {
-      set({ error: err.message || 'Không thể xoá bài tập', isLoading: false });
+    } catch (err: unknown) {
+      const normalizedError = err instanceof Error ? err : new Error(String(err));
+      set({ error: normalizedError.message || 'Không thể xoá bài tập', isLoading: false });
     }
   },
 

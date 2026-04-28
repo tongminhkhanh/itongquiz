@@ -189,8 +189,9 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
             }
             set({ error: 'Không thể thêm học sinh hàng loạt.', isLoading: false });
             return null;
-        } catch (err: any) {
-            set({ error: err.message || 'Lỗi khi thêm học sinh hàng loạt.', isLoading: false });
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            set({ error: normalizedError.message || 'Lỗi khi thêm học sinh hàng loạt.', isLoading: false });
             return null;
         }
     },
@@ -225,8 +226,10 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
             }
             set({ isLoading: false });
             return true;
-        } catch (err: any) {
-            set({ error: err?.message || 'Lỗi khi đặt lại mật khẩu.', isLoading: false });
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+
+            set({ error: normalizedError.message || 'Lỗi khi đặt lại mật khẩu.', isLoading: false });
             return false;
         }
     },
@@ -241,8 +244,10 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
             }
             set({ isLoading: false });
             return true;
-        } catch (err: any) {
-            set({ error: err?.message || 'Lỗi khi đổi mật khẩu.', isLoading: false });
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+
+            set({ error: normalizedError.message || 'Lỗi khi đổi mật khẩu.', isLoading: false });
             return false;
         }
     },

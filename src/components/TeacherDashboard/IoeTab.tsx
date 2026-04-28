@@ -987,9 +987,10 @@ ${searchResult.content}
             saveToHistory(quiz.questions);
 
             setGeneratedQuiz(quiz);
-        } catch (err: any) {
+        } catch (err: unknown) {
             // Error handling already sets state
-            const errorMsg = err?.message || '';
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            const errorMsg = normalizedError.message || '';
             if (errorMsg.toLowerCase().includes('timeout') ||
                 errorMsg.toLowerCase().includes('abort') ||
                 errorMsg.includes('quá thời gian')) {
@@ -1032,8 +1033,9 @@ ${searchResult.content}
             setSelectedTemplate(null);
 
             onSuccess();
-        } catch (err: any) {
-            setError(err.message || 'Lỗi khi lưu bài kiểm tra');
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            setError(normalizedError.message || 'Lỗi khi lưu bài kiểm tra');
         }
     };
 

@@ -56,8 +56,9 @@ export const useHomeworkUpload = () => {
       }));
 
       return secureUrl;
-    } catch (err: any) {
-      const errorMessage = err.message || 'Có lỗi xảy ra khi nộp bài.';
+    } catch (err: unknown) {
+      const normalizedError = err instanceof Error ? err : new Error(String(err));
+      const errorMessage = normalizedError.message || 'Có lỗi xảy ra khi nộp bài.';
       setState(prev => ({ 
         ...prev, 
         isCompressing: false, 

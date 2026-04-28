@@ -183,13 +183,14 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 if (!cancelled) {
                     setWeaknessProfile(response);
                 }
-            } catch (error: any) {
+            } catch (error: unknown) {
+                const normalizedError = error instanceof Error ? error : new Error(String(error));
                 if (!cancelled) {
-                    const message = String(error?.message || '');
+                    const message = String(normalizedError.message || '');
                     if (message.includes('404')) {
                         setWeaknessError('Chưa có dữ liệu phân tích năng lực cho bài này.');
                     } else {
-                        setWeaknessError(error.message || 'Khong the tai ho so diem yeu.');
+                        setWeaknessError(normalizedError.message || 'Khong the tai ho so diem yeu.');
                     }
                 }
             } finally {
@@ -277,9 +278,10 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
             setSmartPreview(null);
             setSmartPreviewError(response.message || 'Khong tao duoc smart preview.');
             setSmartPreviewErrorDetails(response.data || null);
-        } catch (error: any) {
+        } catch (error: unknown) {
             setSmartPreview(null);
-            setSmartPreviewError(error?.message || 'Khong tao duoc smart preview.');
+            const normalizedError = error instanceof Error ? error : new Error(String(error));
+            setSmartPreviewError(normalizedError.message || 'Khong tao duoc smart preview.');
             setSmartPreviewErrorDetails(null);
         } finally {
             setIsSmartPreviewLoading(false);
@@ -335,8 +337,9 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
             if (!apiKey) throw new Error('Không tìm thấy AI API Key.');
             const insight = await analyzeStudentPerformance(result, competencyData, apiKey);
             setAiInsight(insight);
-        } catch (err: any) {
-            setAnalysisError(err.message || 'Có lỗi xảy ra khi gọi AI.');
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            setAnalysisError(normalizedError.message || 'Có lỗi xảy ra khi gọi AI.');
             toast.error('AI đang bận, vui lòng thử lại sau.');
         } finally {
             setIsAnalyzing(false);

@@ -318,8 +318,9 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
 
             setStep('result');
             playTingSound();
-        } catch (error: any) {
-            setSubmitError('Lỗi khi nộp bài! ' + (error.message || ''));
+        } catch (error: unknown) {
+            const normalizedError = error instanceof Error ? error : new Error(String(error));
+            setSubmitError('Lỗi khi nộp bài! ' + (normalizedError.message || ''));
         } finally {
             setIsSubmitting(false);
         }

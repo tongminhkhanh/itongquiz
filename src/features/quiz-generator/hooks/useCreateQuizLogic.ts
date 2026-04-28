@@ -331,9 +331,10 @@ export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSu
                 const quota = await consumeTeacherAiQuota(username);
                 setAiUsageCount(quota.usedCount || 0);
                 setDailyAiLimit(quota.dailyLimit || DEFAULT_TEACHER_DAILY_AI_LIMIT);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 await refreshTeacherAiQuota();
-                showError(err?.message || 'Ban da dung het luot tao de AI hom nay.');
+                const normalizedError = err instanceof Error ? err : new Error(String(err));
+                showError(normalizedError.message || 'Ban da dung het luot tao de AI hom nay.');
                 return;
             }
         }
@@ -454,8 +455,9 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
 
             setGeneratedQuiz(quiz);
             setGenerationStep('completed');
-        } catch (err: any) {
-            showError(err.message || 'Đã xảy ra lỗi khi tạo đề');
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            showError(normalizedError.message || 'Đã xảy ra lỗi khi tạo đề');
             setGenerationStep('idle');
         } finally {
             setIsGenerating(false);
@@ -538,8 +540,9 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
             setAiDetectedLesson('');
             setAiSuggestedTags([]);
             onSuccess();
-        } catch (err: any) {
-            showError(err.message || 'Lỗi khi lưu bài kiểm tra');
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            showError(normalizedError.message || 'Lỗi khi lưu bài kiểm tra');
         } finally {
             setIsSaving(false);
         }

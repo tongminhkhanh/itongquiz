@@ -126,9 +126,10 @@ export async function searchIoeQuestions(
                 content: content
             };
 
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const normalizedError = error instanceof Error ? error : new Error(String(error));
             // Kiểm tra nếu là timeout (AbortError)
-            const isTimeout = error.name === 'AbortError' || error.message?.includes('abort');
+            const isTimeout = normalizedError.name === 'AbortError' || normalizedError.message?.includes('abort');
 
             if (isTimeout && attempt < MAX_RETRIES) {
                 console.warn(`[IOE Search] Timeout lần ${attempt}, đang thử lại...`);

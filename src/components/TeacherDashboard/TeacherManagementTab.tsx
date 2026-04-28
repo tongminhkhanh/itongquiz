@@ -49,8 +49,9 @@ const TeacherManagementTab: React.FC = () => {
             if (Array.isArray(data)) {
                 setTeachers(data);
             }
-        } catch (err: any) {
-            setError(err.message || 'Không thể tải danh sách giáo viên');
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            setError(normalizedError.message || 'Không thể tải danh sách giáo viên');
         } finally {
             setLoading(false);
         }
@@ -93,8 +94,9 @@ const TeacherManagementTab: React.FC = () => {
                     } else {
                         showError(result.message || 'Lỗi khi xóa');
                     }
-                } catch (err: any) {
-                    showError(err.message || 'Lỗi khi xóa');
+                } catch (err: unknown) {
+                    const normalizedError = err instanceof Error ? err : new Error(String(err));
+                    showError(normalizedError.message || 'Lỗi khi xóa');
                 }
             },
         });
@@ -133,8 +135,9 @@ const TeacherManagementTab: React.FC = () => {
             setForm(EMPTY_FORM);
             showSuccess(editingUsername ? 'Cập nhật thành công' : 'Tạo tài khoản thành công');
             await fetchTeachers();
-        } catch (err: any) {
-            showError(err.message || 'Lỗi khi lưu');
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            showError(normalizedError.message || 'Lỗi khi lưu');
         } finally {
             setSaving(false);
         }

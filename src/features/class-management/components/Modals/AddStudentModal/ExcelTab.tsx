@@ -28,8 +28,9 @@ export const ExcelTab: React.FC<ExcelTabProps> = ({ classId, onClose, onSubmit, 
         try {
             const students = await parseStudentExcel(file, classId);
             setParsedData(students);
-        } catch (err: any) {
-            setParseError(err.message || 'Lỗi không xác định.');
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            setParseError(normalizedError.message || 'Lỗi không xác định.');
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';

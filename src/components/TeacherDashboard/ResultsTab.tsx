@@ -487,8 +487,9 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                     onDeleteClick={async (result) => {
                         try {
                             await useQuizStore.getState().removeResult(result.id);
-                        } catch (err: any) {
-                            showError('Loi: ' + err.message);
+                        } catch (err: unknown) {
+                            const normalizedError = err instanceof Error ? err : new Error(String(err));
+                            showError('Loi: ' + normalizedError.message);
                         }
                     }}
                 />

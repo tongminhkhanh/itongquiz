@@ -58,8 +58,9 @@ export const useClassManagement = (isAdmin: boolean, username: string | null) =>
             } else {
                 setTeachers([]);
             }
-        } catch (err: any) {
-            setTransferError(err.message || 'Cannot load teacher list.');
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            setTransferError(normalizedError.message || 'Cannot load teacher list.');
             setTeachers([]);
         } finally {
             setIsLoadingTeachers(false);
@@ -94,8 +95,9 @@ export const useClassManagement = (isAdmin: boolean, username: string | null) =>
             setTransferClassroom(null);
             setTransferTeacherUsername('');
             setTeachers([]);
-        } catch (err: any) {
-            setTransferError(err.message || 'Cannot transfer teacher.');
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            setTransferError(normalizedError.message || 'Cannot transfer teacher.');
         } finally {
             setIsTransferring(false);
         }

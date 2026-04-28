@@ -117,12 +117,13 @@ Trả lời JSON (explanation phải có bullet points rõ ràng):
             explanation: text,
             tip: '',
         };
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
         console.error('[AI Tutor] Error explaining answer:', error);
         return {
             explanation: '',
             tip: '',
-            error: error.message || 'Không thể lấy giải thích từ AI.',
+            error: normalizedError.message || 'Không thể lấy giải thích từ AI.',
         };
     }
 }
@@ -171,7 +172,7 @@ Trả lời bằng JSON:
         }
 
         return [];
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[AI Tutor] Error generating similar questions:', error);
         return [];
     }
@@ -232,7 +233,7 @@ JSON:
             suggestions: [],
             overallFeedback: 'Cố gắng lên em nhé! 💪',
         };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[AI Tutor] Error analyzing weaknesses:', error);
         return {
             weakTopics: [],
@@ -385,7 +386,7 @@ Trả lời bằng JSON:
             studyTips: [],
             encouragement: 'Cố gắng lên em nhé! 💪',
         };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[AI Tutor] Error getting recommendations:', error);
         throw error;
     }

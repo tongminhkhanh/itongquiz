@@ -65,7 +65,7 @@ const DrOwlModal: React.FC<DrOwlModalProps> = ({
                 setError(res?.message || 'Bác sĩ Cú tạm thời bận. Thử lại sau nhé!');
                 setStep('diagnosis');
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('[DrOwl] API error:', err);
             setError('Không kết nối được với Bác sĩ Cú. Kiểm tra lại mạng nhé!');
             setStep('diagnosis');

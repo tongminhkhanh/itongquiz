@@ -111,8 +111,9 @@ export const generateImage = async (prompt: string): Promise<ImageGenerationResu
 
         return { success: true, data: imageUrl };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
         console.error('Image generation failed:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: normalizedError.message };
     }
 };

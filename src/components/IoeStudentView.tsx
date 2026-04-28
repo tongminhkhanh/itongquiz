@@ -240,9 +240,10 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
             onSaveResult(resultData);
             setStep('result');
             playTingSound();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const normalizedError = error instanceof Error ? error : new Error(String(error));
             console.error('Submit error:', error);
-            showError('Loi khi nop bai! Vui long thu lai. ' + (error.message || ''));
+            showError('Loi khi nop bai! Vui long thu lai. ' + (normalizedError.message || ''));
         }
     }, [startTime, quiz, studentName, studentClass, answers, onSaveResult, calculateScore]);
 

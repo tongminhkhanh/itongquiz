@@ -159,17 +159,19 @@ export class GeminiProvider implements IAIProvider {
                             if (q.type === 'DRAG_DROP' && q.text && Array.isArray(q.blanks)) {
                                 validateBlankMapping(q.text, q.blanks);
                             }
-                        } catch (validationError: any) {
-                            console.warn("AI Question Validation Failed:", validationError.message, "Question:", q);
-                            throw new Error(`Validation Error: ${validationError.message}`);
+                        } catch (validationError: unknown) {
+                            const normalizedError = validationError instanceof Error ? validationError : new Error(String(validationError));
+                            console.warn("AI Question Validation Failed:", normalizedError.message, "Question:", q);
+                            throw new Error(`Validation Error: ${normalizedError.message}`);
                         }
                     }
                 }
 
                 return result;
 
-            } catch (error: any) {
-                if (attempt >= maxRetries || !error.message.includes("429")) {
+            } catch (error: unknown) {
+                const normalizedError = error instanceof Error ? error : new Error(String(error));
+                if (attempt >= maxRetries || !normalizedError.message.includes("429")) {
                     console.error("Generate Quiz Error:", error);
                     throw error;
                 }

@@ -123,8 +123,9 @@ const TeacherDashboard: React.FC = () => {
             setEditingAccessCode(null);
             setNewAccessCode('');
             showSuccess('Cap nhat ma lam bai thanh cong!');
-        } catch (err: any) {
-            showError('Loi khi cap nhat: ' + (err.message || 'Unknown error'));
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error(String(err));
+            showError('Loi khi cap nhat: ' + (normalizedError.message || 'Unknown error'));
         }
     };
 

@@ -349,10 +349,11 @@ export const saveIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
 
         // Throw with specific message for UI
         throw new Error(`Lỗi từ IOE Sheet: ${errorMsg}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
         console.error('[IOE] Error saving quiz:', error);
         // Re-throw with detailed message
-        throw new Error(error.message || 'Lỗi kết nối đến IOE Sheet');
+        throw new Error(normalizedError.message || 'Lỗi kết nối đến IOE Sheet');
     }
 };
 

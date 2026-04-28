@@ -26,9 +26,10 @@ const callGasApi = async <T = any>(action: string, payload: Record<string, any> 
     try {
         const data = await callApi<ClassroomApiResponse<T>>(action, payload);
         return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
         console.error(`[ClassroomService] API Error [${action}]:`, error);
-        return { status: 'error', message: error.message || 'Unknown API error' };
+        return { status: 'error', message: normalizedError.message || 'Unknown API error' };
     }
 };
 

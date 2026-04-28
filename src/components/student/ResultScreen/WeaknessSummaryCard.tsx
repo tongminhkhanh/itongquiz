@@ -40,9 +40,10 @@ const WeaknessSummaryCard: React.FC<WeaknessSummaryCardProps> = ({
                 if (!cancelled) {
                     setProfile(response);
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 if (!cancelled) {
-                    setError(err?.message || 'Chua tai duoc goi y luyen them.');
+                    const normalizedError = err instanceof Error ? err : new Error(String(err));
+                    setError(normalizedError.message || 'Chua tai duoc goi y luyen them.');
                 }
             } finally {
                 if (!cancelled) {
