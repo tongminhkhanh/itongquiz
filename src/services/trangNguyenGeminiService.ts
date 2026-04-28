@@ -224,10 +224,11 @@ const parseAIResponse = (text: string): TrangNguyenQuizResult => {
         }
 
         return parsed as TrangNguyenQuizResult;
-    } catch (e: any) {
-        console.error('[TrangNguyen] JSON parse error:', e.message);
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('[TrangNguyen] JSON parse error:', msg);
         console.error('[TrangNguyen] Failed JSON snippet:', cleaned.substring(0, 500));
-        throw new Error('AI trả về JSON không hợp lệ: ' + e.message);
+        throw new Error('AI trả về JSON không hợp lệ: ' + msg);
     }
 };
 
@@ -391,28 +392,34 @@ export const generateTrangNguyenQuiz = async (
             throw new Error('Gemini API key not configured');
         }
 
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: userPrompt }] }],
-                    system_instruction: { parts: [{ text: TRANG_NGUYEN_SYSTEM_PROMPT }] },
-                    generation_config: {
-                        temperature: 0.4,
-                        response_mime_type: 'application/json'
-                    }
-                })
-            }
-        );
+        let response: Response;
+        try {
+            response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userPrompt }] }],
+                        system_instruction: { parts: [{ text: TRANG_NGUYEN_SYSTEM_PROMPT }] },
+                        generation_config: {
+                            temperature: 0.4,
+                            response_mime_type: 'application/json'
+                        }
+                    })
+                }
+            );
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            throw new Error(`Lỗi kết nối đến Gemini API: ${msg}`);
+        }
 
         if (!response.ok) {
             throw new Error(`Gemini API error: ${response.status}`);
         }
 
-        const data = await response.json();
-        responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const data = await response.json() as { candidates?: { content: { parts: { text?: string }[] } }[] };
+        responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';;
     }
 
     // Parse AI response

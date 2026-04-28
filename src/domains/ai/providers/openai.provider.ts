@@ -55,14 +55,14 @@ export class OpenAIProvider implements IAIProvider {
         const API_URL = `${this.baseUrl}/chat/completions`;
         const promptText = buildPrompt(topic, classLevel, content, options);
 
-        const messages: any[] = [
+        const messages: { role: string; content: unknown }[] = [
             {
                 role: 'system',
                 content: SYSTEM_INSTRUCTION
             }
         ];
 
-        const userContent: any[] = [{ type: 'text', text: promptText }];
+        const userContent: { type: string; text?: string; image_url?: { url: string } }[] = [{ type: 'text', text: promptText }];
 
         // Handle Attached File (if image) - PRIORITIZE for quiz generation
         if (file && file.type.startsWith('image/')) {
@@ -125,11 +125,17 @@ export class OpenAIProvider implements IAIProvider {
             headers['Authorization'] = `Bearer ${this.apiKey}`;
         }
 
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(requestBody)
-        });
+        let response: Response;
+        try {
+            response = await fetch(API_URL, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(requestBody)
+            });
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            throw new Error(`Lỗi kết nối đến OpenAI API: ${msg}`);
+        }
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));

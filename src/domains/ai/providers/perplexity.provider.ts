@@ -55,14 +55,20 @@ export class PerplexityProvider implements IAIProvider {
             max_tokens: 8192
         };
 
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody)
-        });
+        let response: Response;
+        try {
+            response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            throw new Error(`Lỗi kết nối đến Perplexity API: ${msg}`);
+        }
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));

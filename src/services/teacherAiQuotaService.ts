@@ -21,14 +21,20 @@ interface QuotaApiResponse {
 }
 
 const requestQuotaApi = async (path: string, method: 'GET' | 'POST', body?: Record<string, unknown>): Promise<QuotaApiResponse> => {
-    const response = await fetch(`${WORKERS_API_URL}${path}`, {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            'X-API-Token': API_SECRET_TOKEN,
-        },
-        body: method === 'POST' ? JSON.stringify(body || {}) : undefined,
-    });
+    let response: Response;
+    try {
+        response = await fetch(`${WORKERS_API_URL}${path}`, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Token': API_SECRET_TOKEN,
+            },
+            body: method === 'POST' ? JSON.stringify(body || {}) : undefined,
+        });
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`Loi ket noi server: ${msg}`);
+    }
 
     const payload = await response.json().catch(() => ({} as QuotaApiResponse)) as QuotaApiResponse;
 
