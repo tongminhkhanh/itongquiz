@@ -1,68 +1,95 @@
-import * as XLSX from 'xlsx';
-import { CreateStudentPayload } from '../types';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
+import type { CreateStudentPayload } from '../types';
 
-export const downloadStudentTemplate = () => {
-    const ws = XLSX.utils.aoa_to_sheet([
-        ['Họ và tên *', 'Tên đăng nhập (để trống tự tạo)', 'Mật khẩu (để trống tự tạo)', 'SĐT phụ huynh'],
-        ['Nguyễn Văn A', 'a.nv.101', 'xyz123', '0987654321'],
-        ['Trần Thị B', '', '', ''],
-        ['Lê Minh C', '', '', '']
-    ]);
+// --- Template Download ---
 
-    // Auto size columns a bit
-    ws['!cols'] = [{ wch: 20 }, { wch: 30 }, { wch: 25 }, { wch: 15 }];
+export const downloadStudentTemplate = async (): Promise<void> => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('HocSinh');
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'HocSinh');
-    XLSX.writeFile(wb, 'Mau_Them_Hoc_Sinh.xlsx');
+    // Column widths
+    sheet.columns = [
+        { key: 'name', width: 22 },
+        { key: 'username', width: 32 },
+        { key: 'password', width: 27 },
+        { key: 'phone', width: 17 },
+    ];
+
+    // Header row
+    sheet.addRow(['Họ và tên *', 'Tên đăng nhập (để trống tự tạo)', 'Mật khẩu (để trống tự tạo)', 'SĐT phụ huynh']);
+    // Sample data rows
+    sheet.addRow(['Nguyễn Văn A', 'a.nv.101', 'xyz123', '0987654321']);
+    sheet.addRow(['Trần Thị B', '', '', '']);
+    sheet.addRow(['Lê Minh C', '', '', '']);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    saveAs(blob, 'Mau_Them_Hoc_Sinh.xlsx');
 };
+
+// --- Excel Parser ---
 
 export const parseStudentExcel = (file: File, classId: string): Promise<CreateStudentPayload[]> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
 
-        reader.onload = (evt) => {
+        reader.onload = async (evt) => {
             try {
-                const bstr = evt.target?.result;
-                const wb = XLSX.read(bstr, { type: 'binary' });
-                const wsname = wb.SheetNames[0];
-                const ws = wb.Sheets[wsname];
-                
-                // Read as 2D array
-                const data: any[] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                const arrayBuffer = evt.target?.result as ArrayBuffer;
+                if (!arrayBuffer) {
+                    reject(new Error('Không đọc được nội dung file.'));
+                    return;
+                }
 
-                // validate
-                if (data.length <= 1) {
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(arrayBuffer);
+
+                const sheet = workbook.worksheets[0];
+                if (!sheet || sheet.rowCount <= 1) {
                     reject(new Error('File trống hoặc không có dữ liệu (cần ít nhất 1 dòng dữ liệu không tính tiêu đề).'));
                     return;
                 }
 
                 const students: CreateStudentPayload[] = [];
-                for (let i = 1; i < data.length; i++) {
-                    const row = data[i];
-                    if (!row || row.length === 0 || !row[0] || (typeof row[0] === 'string' && !row[0].trim())) {
-                        continue; // Skip empty rows
-                    }
 
-                    const fullNameRow = String(row[0]).trim();
-                    let usernameRow = row[1] ? String(row[1]).trim() : '';
-                    let passwordRow = row[2] ? String(row[2]).trim() : '';
-                    const phoneRow = row[3] ? String(row[3]).trim() : '';
+                // rows are 1-indexed; row 1 is the header → start from 2
+                sheet.eachRow((row, rowNumber) => {
+                    if (rowNumber === 1) return; // skip header
 
-                    // Generate if empty
+                    const getCellText = (colIdx: number): string => {
+                        const cell = row.getCell(colIdx);
+                        const val = cell.value;
+                        if (val === null || val === undefined) return '';
+                        // Handle rich-text objects
+                        if (typeof val === 'object' && 'richText' in val) {
+                            return (val as ExcelJS.CellRichTextValue).richText.map(r => r.text).join('');
+                        }
+                        return String(val).trim();
+                    };
+
+                    const fullNameRow = getCellText(1);
+                    if (!fullNameRow) return; // skip empty rows
+
+                    let usernameRow = getCellText(2);
+                    let passwordRow = getCellText(3);
+                    const phoneRow = getCellText(4);
+
+                    // Auto-generate username if empty
                     if (!usernameRow) {
                         const parts = fullNameRow.toLowerCase().split(/\s+/);
                         const firstName = parts[parts.length - 1] || '';
                         const lastInitial = parts[0]?.[0] || '';
                         const mid = parts.length > 2 ? parts.slice(1, -1).map(p => p[0]).join('') : '';
                         const suffix = Math.floor(Math.random() * 900 + 100);
-                        
-                        const clean = (str: string) => 
+                        const clean = (str: string) =>
                             str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
-                        
-                        usernameRow = clean(`${firstName}.${lastInitial}${mid}.${suffix}${i}`);
+                        usernameRow = clean(`${firstName}.${lastInitial}${mid}.${suffix}${rowNumber}`);
                     }
 
+                    // Auto-generate password if empty
                     if (!passwordRow) {
                         const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
                         for (let k = 0; k < 6; k++) {
@@ -77,15 +104,16 @@ export const parseStudentExcel = (file: File, classId: string): Promise<CreateSt
                         classId,
                         parentPhone: phoneRow,
                     });
-                }
+                });
 
                 if (students.length === 0) {
                     reject(new Error('Không tìm thấy dữ liệu học sinh hợp lệ.'));
                 } else {
                     resolve(students);
                 }
-            } catch (err: any) {
-                reject(new Error('Lỗi đọc file Excel: ' + (err.message || 'Unknown error.')));
+            } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : 'Unknown error.';
+                reject(new Error('Lỗi đọc file Excel: ' + msg));
             }
         };
 

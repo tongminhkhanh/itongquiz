@@ -48,7 +48,7 @@ export const ExcelTab: React.FC<ExcelTabProps> = ({ classId, onClose, onSubmit, 
                     <h3 className="font-semibold text-orange-900 text-sm">Tải file mẫu</h3>
                     <p className="text-orange-700 text-xs mt-1">Sử dụng định dạng chuẩn để tránh lỗi</p>
                 </div>
-                <Button variant="secondary" onClick={downloadStudentTemplate} icon={<Download className="w-4 h-4" />} className="bg-white">
+                <Button variant="secondary" onClick={() => void downloadStudentTemplate()} icon={<Download className="w-4 h-4" />} className="bg-white">
                     Tải xuống
                 </Button>
             </div>
@@ -56,7 +56,7 @@ export const ExcelTab: React.FC<ExcelTabProps> = ({ classId, onClose, onSubmit, 
             <div>
                 <input
                     type="file"
-                    accept=".xlsx, .xls"
+                    accept=".xlsx"
                     className="hidden"
                     ref={fileInputRef}
                     onChange={handleFileUpload}
@@ -76,7 +76,7 @@ export const ExcelTab: React.FC<ExcelTabProps> = ({ classId, onClose, onSubmit, 
                             <div className="flex flex-col items-center">
                                 <FileSpreadsheet className={`w-8 h-8 mb-3 ${parseError ? 'text-red-400' : 'text-gray-400'}`} />
                                 <p className="text-gray-700 font-medium mb-1">Chọn file Excel tải lên</p>
-                                <p className="text-gray-400 text-sm">Hỗ trợ .xlsx, .xls</p>
+                                <p className="text-gray-400 text-sm">Hỗ trợ .xlsx</p>
                             </div>
                         )}
                     </div>
