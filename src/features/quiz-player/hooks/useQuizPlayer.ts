@@ -332,7 +332,10 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
         
         switch(q.type) {
             case QuestionType.TRUE_FALSE:
-                return (q.items ?? []).every((_, idx) => val[`item-${idx}`] !== undefined || val[`item-${idx}`] !== undefined);
+                return (q.items ?? []).every((item: any, idx: number) => {
+                    const itemKey = item.id || `item-${idx}`;
+                    return val[itemKey] !== undefined;
+                });
             case QuestionType.MULTIPLE_SELECT:
                 return Array.isArray(val) && val.length > 0;
             case QuestionType.WORD_SCRAMBLE:

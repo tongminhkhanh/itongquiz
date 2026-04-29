@@ -15,7 +15,10 @@ interface QuizSidebarProps {
  */
 const isQuestionAnswered = (q: Question, answers: Record<string, any>): boolean => {
     if (q.type === QuestionType.TRUE_FALSE) {
-        return q.items.every(i => answers[q.id]?.[i.id] !== undefined);
+        return q.items.every((item: any, idx: number) => {
+            const itemKey = item.id || `item-${idx}`;
+            return answers[q.id]?.[itemKey] !== undefined;
+        });
     } else if (q.type === QuestionType.MATCHING) {
         const userPairs = answers[q.id] || {};
         const pairedCount = Object.keys(userPairs).filter(k => k !== 'selectedLeft').length;
