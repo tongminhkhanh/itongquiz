@@ -79,6 +79,7 @@ export interface ShortAnswerQuestion {
 export interface MatchingPair {
     left: string;
     right: string;
+    image?: string;
 }
 
 export interface MatchingQuestion {

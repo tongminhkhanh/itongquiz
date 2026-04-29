@@ -8,7 +8,7 @@
 
 import React, { useRef, useMemo, useState, useEffect } from 'react';
 import { StudentResult, Question, QuestionSnapshot, QuestionType, Quiz } from '../../../types';
-import { Clock, CheckCircle, XCircle, AlertCircle, Filter, User, Award, BrainCircuit, Sparkles, ChevronRight, BarChart3, CloudDownload, Tag } from 'lucide-react';
+import { Clock, XCircle, AlertCircle, Filter, User, Award, BrainCircuit, Sparkles, ChevronRight, BarChart3, CloudDownload, Tag } from 'lucide-react';
 import { QuestionReview } from '../../common';
 import { checkAnswer, AnswerStatus } from '../../../utils/question/scoring.util';
 import { calculateStudentCompetency } from '../../../utils/competencyMapping';
@@ -399,25 +399,27 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
 
     return (
         <div className={embedded ? 'min-h-screen bg-slate-50' : 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4'}>
-            <div className={embedded ? 'bg-white w-full min-h-screen overflow-hidden flex flex-col' : 'bg-white w-full h-dvh md:h-auto md:max-h-[90vh] md:max-w-4xl rounded-none md:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300'}>
+            <div className={embedded ? 'bg-white w-full min-h-screen overflow-hidden flex flex-col' : 'bg-white w-full h-dvh md:h-auto md:max-h-[92vh] md:max-w-[96vw] rounded-none md:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300'}>
                 
                 {/* Header Section */}
-                <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white p-4 md:p-6 pb-0 md:pb-0 relative">
+                <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white p-4 md:p-6 relative">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
                     
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                    <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex min-w-0 items-center gap-4">
                             <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex flex-col items-center justify-center border border-white/30 shadow-lg rotate-3">
                                 <span className="text-2xl font-black leading-none">{result.score}</span>
                                 <span className="text-[10px] text-blue-100 font-bold uppercase tracking-wider mt-1">Điểm số</span>
                             </div>
-                            <div>
+                            <div className="min-w-0">
                                 <h2 className="text-xl font-black flex items-center gap-2">
                                     <User className="w-5 h-5 text-blue-200" />
-                                    {result.studentName}
+                                    <span className="truncate">{result.studentName}</span>
                                 </h2>
                                 <p className="text-blue-100/80 text-sm font-medium flex items-center gap-1">
-                                    {result.studentClass} <ChevronRight className="w-3 h-3" /> {result.quizTitle || 'Bài kiểm tra'}
+                                    <span>{result.studentClass}</span>
+                                    <ChevronRight className="w-3 h-3 shrink-0" />
+                                    <span className="truncate">{result.quizTitle || 'Bài kiểm tra'}</span>
                                 </p>
                                 {/* Stats + Tabs - cùng 1 hàng */}
                                 <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -459,12 +461,24 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                 </div>
                             </div>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 bg-black/10 hover:bg-white/20 rounded-xl transition-all active:scale-95"
-                        >
-                            <XCircle className="w-6 h-6" />
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                            <button
+                                onClick={handleExportImage}
+                                disabled={activeTab !== 'analytics'}
+                                title={activeTab === 'analytics' ? 'Xuất báo cáo PNG' : 'Chuyển sang tab Phân tích năng lực để xuất báo cáo PNG'}
+                                className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                                <CloudDownload className="w-4 h-4" />
+                                Xuất PNG
+                            </button>
+                            <button
+                                onClick={onClose}
+                                aria-label="Đóng modal"
+                                className="p-3 bg-black/10 hover:bg-white/20 rounded-2xl transition-all active:scale-95"
+                            >
+                                <XCircle className="w-7 h-7" />
+                            </button>
+                        </div>
                     </div>
 
                 </div>
@@ -473,121 +487,95 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 <div className="flex-1 overflow-hidden flex flex-col bg-slate-50/50">
                     {activeTab === 'review' ? (
                         <>
-                            {/* Filter Toolbar */}
-                            <div className="flex items-center gap-2 px-4 py-2.5 bg-white border-b shadow-sm overflow-x-auto scrollbar-hide shrink-0">
-                                <Filter className="w-4 h-4 text-slate-400 mr-1 shrink-0" />
-                                {[
-                                    { id: 'all', label: 'Tất cả', count: displayQuestions.length },
-                                    { id: 'correct', label: '✅ Đúng', count: correctCount },
-                                    { id: 'wrong', label: '❌ Sai', count: wrongCount }
-                                ].map(f => (
-                                    <button
-                                        key={f.id}
-                                        onClick={() => setFilterMode(f.id as any)}
-                                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all border whitespace-nowrap ${
-                                            filterMode === f.id
-                                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                                                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-                                        }`}
-                                    >
-                                        {f.label}
-                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-black ${
-                                            filterMode === f.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
-                                        }`}>{f.count}</span>
-                                    </button>
-                                ))}
-                                <span className="ml-auto text-[10px] text-slate-400 font-medium shrink-0">
-                                    Click hàng để xem chi tiết
-                                </span>
-                            </div>
-
                             {/* 2-Panel Layout */}
-                            <div className="flex-1 overflow-hidden flex min-h-0">
+                            <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
 
-                                {/* LEFT: Summary Table */}
-                                <div className="w-48 md:w-56 shrink-0 border-r border-slate-200 overflow-y-auto bg-white custom-scrollbar">
+                                {/* LEFT: Question Palette */}
+                                <div className="lg:w-[28%] xl:w-[25%] shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 overflow-y-auto bg-white custom-scrollbar">
                                     {!hasAnyData ? (
                                         <div className="flex flex-col items-center justify-center p-6 text-center">
                                             <AlertCircle className="w-8 h-8 text-yellow-500 mb-2" />
                                             <p className="text-xs text-slate-500 font-medium">Đề thi đã bị xóa</p>
                                         </div>
                                     ) : (
-                                        <table className="w-full text-xs border-collapse">
-                                            <thead className="sticky top-0 z-10">
-                                                <tr className="bg-slate-100 border-b border-slate-200">
-                                                    <th className="py-2 px-2 text-left font-black text-slate-500 uppercase tracking-wide">#</th>
-                                                    <th className="py-2 px-1 text-center font-black text-slate-500 uppercase tracking-wide">Loại</th>
-                                                    <th className="py-2 px-1 text-center font-black text-slate-500 uppercase tracking-wide">KQ</th>
-                                                    <th className="py-2 px-1 text-right font-black text-slate-500 uppercase tracking-wide pr-2">⏱</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
+                                        <div className="space-y-4 p-4 md:p-5">
+                                            <div>
+                                                <div className="flex items-center gap-2 text-slate-800">
+                                                    <Filter className="w-4 h-4 text-blue-500" />
+                                                    <h3 className="text-sm font-black uppercase tracking-wide">Danh sách câu hỏi</h3>
+                                                </div>
+                                                <p className="mt-1 text-xs text-slate-400">Chọn ô để xem chi tiết, rê chuột để xem loại câu và thời gian.</p>
+                                            </div>
+
+                                            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-3 xl:grid-cols-4">
+                                                {[
+                                                    { id: 'all', label: 'Tất cả', count: displayQuestions.length },
+                                                    { id: 'correct', label: 'Đúng', count: correctCount },
+                                                    { id: 'wrong', label: 'Sai', count: wrongCount }
+                                                ].map(f => (
+                                                    <button
+                                                        key={f.id}
+                                                        onClick={() => setFilterMode(f.id as any)}
+                                                        className={`rounded-2xl border px-3 py-2 text-left transition-all ${
+                                                            filterMode === f.id
+                                                                ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm shadow-blue-100'
+                                                                : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50'
+                                                        }`}
+                                                    >
+                                                        <span className="block text-[10px] font-black uppercase tracking-wider">{f.label}</span>
+                                                        <span className="block text-lg font-black leading-none">{f.count}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            <div className="grid grid-cols-5 gap-2 sm:grid-cols-10 lg:grid-cols-5 xl:grid-cols-6">
                                                 {filteredQuestions.map((item, idx) => {
                                                     const isSelected = idx === selectedQuestionIndex;
                                                     const isCorrect = item.isCorrect;
+                                                    const statusClass = isCorrect === true
+                                                        ? 'bg-emerald-500 text-white border-emerald-500 shadow-emerald-100 hover:bg-emerald-600'
+                                                        : isCorrect === false
+                                                            ? 'bg-rose-500 text-white border-rose-500 shadow-rose-100 hover:bg-rose-600'
+                                                            : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200';
                                                     return (
-                                                        <tr
+                                                        <button
                                                             key={item.id}
                                                             onClick={() => setSelectedQuestionIndex(idx)}
-                                                            className={`cursor-pointer border-b border-slate-100 transition-all ${
-                                                                isSelected
-                                                                    ? 'bg-blue-50 border-l-2 border-l-blue-500'
-                                                                    : isCorrect === true
-                                                                        ? 'hover:bg-green-50/50'
-                                                                        : isCorrect === false
-                                                                            ? 'hover:bg-red-50/50'
-                                                                            : 'hover:bg-slate-50'
+                                                            title={`Câu ${item.index + 1} - ${getTypeLabel(item.type)}${item.timeSpent ? ` - ${item.timeSpent}s` : ''}`}
+                                                            className={`relative flex aspect-square items-center justify-center rounded-2xl border text-sm font-black shadow-sm transition-all hover:-translate-y-0.5 ${statusClass} ${
+                                                                isSelected ? 'ring-4 ring-blue-200 ring-offset-2 scale-105 z-10' : ''
                                                             }`}
                                                         >
-                                                            <td className="py-2.5 px-2 font-bold text-slate-700">
-                                                                {item.index + 1}
-                                                            </td>
-                                                            <td className="py-2.5 px-1 text-center">
-                                                                <span className="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-bold text-[10px]">
-                                                                    {getTypeLabel(item.type)}
-                                                                </span>
-                                                            </td>
-                                                            <td className="py-2.5 px-1 text-center">
-                                                                {isCorrect === true ? (
-                                                                    <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto" />
-                                                                ) : isCorrect === false ? (
-                                                                    <XCircle className="w-4 h-4 text-red-500 mx-auto" />
-                                                                ) : (
-                                                                    <span className="text-slate-300 font-bold">—</span>
-                                                                )}
-                                                            </td>
-                                                            <td className="py-2.5 pr-2 text-right text-slate-400 font-medium">
-                                                                {item.timeSpent ? `${item.timeSpent}s` : '—'}
-                                                            </td>
-                                                        </tr>
+                                                            {item.index + 1}
+                                                            <span className="absolute bottom-1 right-1 rounded bg-black/10 px-1 text-[8px] font-black uppercase leading-3">
+                                                                {getTypeLabel(item.type)}
+                                                            </span>
+                                                        </button>
                                                     );
                                                 })}
-                                            </tbody>
-                                        </table>
+                                            </div>
+
+                                            <div className="grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-[11px] font-bold text-slate-500">
+                                                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Đúng</span>
+                                                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Sai</span>
+                                                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-slate-200" /> Bỏ qua</span>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
 
                                 {/* RIGHT: Question Detail */}
-                                <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50/60 custom-scrollbar">
+                                <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-slate-50/60 custom-scrollbar">
                                     {selectedQuestion ? (
-                                        <div className="max-w-2xl mx-auto">
+                                        <div className="mx-auto w-full max-w-6xl">
                                             {/* Breadcrumb */}
                                             <div className="flex items-center gap-2 mb-4 text-xs text-slate-400 font-medium">
                                                 <Tag className="w-3.5 h-3.5" />
                                                 <span>Câu {selectedQuestion.index + 1}</span>
                                                 <span className="text-slate-300">/</span>
                                                 <span>{displayQuestions.length} câu</span>
-                                                <span className="ml-auto flex gap-1">
-                                                    <button
-                                                        disabled={selectedQuestionIndex === 0}
-                                                        onClick={() => setSelectedQuestionIndex(i => Math.max(0, i - 1))}
-                                                        className="px-2 py-0.5 rounded bg-white border border-slate-200 hover:border-blue-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                                    >← Trước</button>
-                                                    <button
-                                                        disabled={selectedQuestionIndex >= filteredQuestions.length - 1}
-                                                        onClick={() => setSelectedQuestionIndex(i => Math.min(filteredQuestions.length - 1, i + 1))}
-                                                        className="px-2 py-0.5 rounded bg-white border border-slate-200 hover:border-blue-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                                    >Sau →</button>
+                                                <span className="ml-auto rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 shadow-sm ring-1 ring-slate-200">
+                                                    {selectedQuestion.isCorrect === true ? 'Đúng' : selectedQuestion.isCorrect === false ? 'Sai' : 'Bỏ qua'}
                                                 </span>
                                             </div>
 
@@ -599,6 +587,26 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                 status={selectedQuestion.isCorrect === true ? 'correct' : selectedQuestion.isCorrect === false ? 'wrong' : 'skipped'}
                                                 showExplanation={true}
                                             />
+
+                                            <div className="mt-5 flex flex-col gap-3 rounded-3xl border border-white bg-white/80 p-3 shadow-lg shadow-slate-200/60 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+                                                <button
+                                                    disabled={selectedQuestionIndex === 0}
+                                                    onClick={() => setSelectedQuestionIndex(i => Math.max(0, i - 1))}
+                                                    className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition-all hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-35"
+                                                >
+                                                    ← Câu trước
+                                                </button>
+                                                <span className="text-center text-xs font-black uppercase tracking-widest text-slate-400">
+                                                    Câu {selectedQuestionIndex + 1} / {filteredQuestions.length}
+                                                </span>
+                                                <button
+                                                    disabled={selectedQuestionIndex >= filteredQuestions.length - 1}
+                                                    onClick={() => setSelectedQuestionIndex(i => Math.min(filteredQuestions.length - 1, i + 1))}
+                                                    className="rounded-2xl border border-blue-200 bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm shadow-blue-200 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                                                >
+                                                    Câu sau →
+                                                </button>
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className="flex flex-col items-center justify-center h-full text-slate-400">
@@ -889,31 +897,6 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                     )}
                 </div>
 
-                {/* Professional Footer */}
-                <div className="border-t p-4 bg-white flex flex-col md:flex-row justify-between items-center px-8 gap-4">
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center">
-                            <span className="text-[10px] font-black text-white italic">iQ</span>
-                        </div>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                            ItongQuiz <span className="text-blue-500">Expert Analytics Engine v7.8</span>
-                        </p>
-                    </div>
-                    <div className="flex gap-4 items-center">
-                        <button 
-                            onClick={handleExportImage}
-                            className="text-slate-400 hover:text-blue-600 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 group"
-                        >
-                           <CloudDownload className="w-3 h-3 group-hover:animate-bounce" /> Xuất báo cáo (PNG)
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className="px-10 py-3 bg-slate-900 text-white font-black rounded-2xl text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95 shadow-slate-200"
-                        >
-                            Đóng Modal
-                        </button>
-                    </div>
-                </div>
             </div>
 
             <style>{`

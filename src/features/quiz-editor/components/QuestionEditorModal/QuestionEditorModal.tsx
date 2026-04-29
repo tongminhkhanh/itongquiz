@@ -114,6 +114,7 @@ const SharedHeaderEditor: React.FC<{
 
                 {/* Image field (available for most types except TRUE_FALSE which doesn't use it) */}
                 {draft.type !== QuestionType.TRUE_FALSE &&
+                    draft.type !== QuestionType.MATCHING &&
                     draft.type !== QuestionType.IMAGE_QUESTION &&
                     draft.type !== QuestionType.DROPDOWN && (
                         <div className="flex-1">
