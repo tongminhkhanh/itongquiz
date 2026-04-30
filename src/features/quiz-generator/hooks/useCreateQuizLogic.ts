@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Quiz, QuestionType, ImageLibraryItem } from '../../../types';
 import { showError, showSuccess } from '../../../utils/toast';
-import { extractTextFromPdf, generateQuiz, QuizGenerationOptions, AIProvider } from '../../../services/geminiService';
+import {
+    extractTextFromPdf,
+    generateQuiz,
+    QuizGenerationOptions,
+    AIProvider,
+    PromptProfileOptions,
+    LearnerPromptMode,
+} from '../../../services/geminiService';
 import { generateTrangNguyenQuiz } from '../../../services/trangNguyenGeminiService';
 import { getTeacherAiQuota, consumeTeacherAiQuota } from '../../../services/teacherAiQuotaService';
 import { useAuthStore } from '../../../../stores/authStore';
@@ -10,6 +17,49 @@ import { normalizeTagValue, normalizeTags, normalizeAiCategory } from '../utils/
 
 const MAX_OCR_CONTENT_LENGTH = 60000;
 const DEFAULT_TEACHER_DAILY_AI_LIMIT = 5;
+const DEFAULT_PROMPT_PROFILE: PromptProfileOptions = {
+    useThongTu27: false,
+    learnerMode: 'default',
+};
+
+const resolvePromptProfilePreset = (
+    totalQuestions: number,
+    profile: PromptProfileOptions
+) => {
+    const safeTotal = Math.max(1, totalQuestions);
+    let ratios = { level1: 0.3, level2: 0.5, level3: 0.2 };
+    let presetLabel: 'thongtu27' | 'gifted' | 'remedial' | null = null;
+
+    if (profile.useThongTu27 && profile.learnerMode === 'gifted') {
+        ratios = { level1: 0.2, level2: 0.3, level3: 0.5 };
+        presetLabel = 'gifted';
+    } else if (profile.useThongTu27 && profile.learnerMode === 'remedial') {
+        ratios = { level1: 0.65, level2: 0.25, level3: 0.1 };
+        presetLabel = 'remedial';
+    } else if (profile.useThongTu27) {
+        ratios = { level1: 0.4, level2: 0.4, level3: 0.2 };
+        presetLabel = 'thongtu27';
+    }
+
+    let level1 = Math.round(safeTotal * ratios.level1);
+    let level2 = Math.round(safeTotal * ratios.level2);
+    let level3 = Math.round(safeTotal * ratios.level3);
+
+    const diff = safeTotal - (level1 + level2 + level3);
+    if (diff !== 0) {
+        level2 += diff;
+    }
+
+    if (level2 < 0) {
+        level1 = Math.max(0, level1 + level2);
+        level2 = 0;
+    }
+
+    return {
+        levels: { level1, level2, level3 },
+        presetLabel,
+    };
+};
 
 interface UseCreateQuizLogicProps {
     editingQuiz: Quiz | null;
@@ -59,6 +109,8 @@ export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSu
         level2: 5,
         level3: 2,
     });
+    const [promptProfile, setPromptProfile] = useState<PromptProfileOptions>(DEFAULT_PROMPT_PROFILE);
+    const [profilePresetNotice, setProfilePresetNotice] = useState<string | null>(null);
 
     const [requireCode, setRequireCode] = useState(false);
     const [accessCode, setAccessCode] = useState('');
@@ -74,6 +126,7 @@ export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSu
         basic: true,
         questionTypes: true,
         difficulty: true,
+        pedagogy: true,
         content: false,
         advanced: false,
         assign: false,
@@ -103,6 +156,47 @@ export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSu
 
     const toggleSection = (section: string) => {
         setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    };
+
+    const applyPromptProfilePreset = (nextProfile: PromptProfileOptions) => {
+        setPromptProfile(nextProfile);
+        if (!nextProfile.useThongTu27) {
+            setProfilePresetNotice(null);
+            return;
+        }
+
+        const totalQuestions = difficultyLevels.level1 + difficultyLevels.level2 + difficultyLevels.level3;
+        const { levels, presetLabel } = resolvePromptProfilePreset(totalQuestions, nextProfile);
+        setDifficultyLevels(levels);
+
+        if (presetLabel === 'gifted') {
+            setProfilePresetNotice('Da goi y lai do kho theo profile boi duong hoc sinh gioi. Ban van co the chinh tay.');
+        } else if (presetLabel === 'remedial') {
+            setProfilePresetNotice('Da goi y lai do kho theo profile phu dao hoc sinh yeu kem. Ban van co the chinh tay.');
+        } else if (presetLabel === 'thongtu27') {
+            setProfilePresetNotice('Da goi y lai do kho theo dinh huong Thong tu 27. Ban van co the chinh tay.');
+        }
+    };
+
+    const handleToggleThongTu27 = () => {
+        if (promptProfile.useThongTu27) {
+            setPromptProfile(DEFAULT_PROMPT_PROFILE);
+            setProfilePresetNotice(null);
+            return;
+        }
+
+        applyPromptProfilePreset({
+            useThongTu27: true,
+            learnerMode: 'default',
+        });
+    };
+
+    const handleSelectLearnerMode = (learnerMode: LearnerPromptMode) => {
+        if (!promptProfile.useThongTu27) return;
+        applyPromptProfilePreset({
+            useThongTu27: true,
+            learnerMode,
+        });
     };
 
     const refreshTeacherAiQuota = async () => {
@@ -155,6 +249,8 @@ export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSu
             setAiDetectedCategory(normalizeAiCategory((editingQuiz as any).detectedCategory));
             setAiDetectedLesson(typeof (editingQuiz as any).detectedLesson === 'string' ? (editingQuiz as any).detectedLesson : '');
             setAiSuggestedTags(normalizeTags((editingQuiz as any).suggestedTags));
+            setPromptProfile(DEFAULT_PROMPT_PROFILE);
+            setProfilePresetNotice(null);
         } else {
             setTopic('');
             setQuizTitle('');
@@ -173,6 +269,8 @@ export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSu
             setAiDetectedCategory(null);
             setAiDetectedLesson('');
             setAiSuggestedTags([]);
+            setPromptProfile(DEFAULT_PROMPT_PROFILE);
+            setProfilePresetNotice(null);
         }
     }, [editingQuiz, isClassLocked, lockedClass]);
 
@@ -420,6 +518,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                 questionCount,
                 questionTypes: enabledTypes,
                 difficultyLevels,
+                promptProfile,
                 imageLibrary: imageLibrary.map(img => ({ id: img.id, name: img.name, data: img.data })),
                 customPrompt: isPdfMode ? finalCustomPrompt : customPrompt.trim() || undefined,
                 isPdfMode,
@@ -476,6 +575,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
                     level2: question.difficulty === 2 || !question.difficulty ? 1 : 0,
                     level3: question.difficulty === 3 ? 1 : 0,
                 },
+                promptProfile,
                 imageLibrary: imageLibrary.map(img => ({ id: img.id, name: img.name, data: img.data })),
                 customPrompt: prompt,
                 isPdfMode: false,
@@ -539,6 +639,8 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
             setAiDetectedCategory(null);
             setAiDetectedLesson('');
             setAiSuggestedTags([]);
+            setPromptProfile(DEFAULT_PROMPT_PROFILE);
+            setProfilePresetNotice(null);
             onSuccess();
         } catch (err: unknown) {
             const normalizedError = err instanceof Error ? err : new Error(String(err));
@@ -573,6 +675,8 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
         error, setError,
         isSaving,
         customPrompt, setCustomPrompt,
+        promptProfile,
+        profilePresetNotice,
         quizMode, setQuizMode,
         aiProvider, setAiProvider,
         selectedTypes, setSelectedTypes,
@@ -599,6 +703,8 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
         
         // Methods
         generateRandomCode,
+        handleToggleThongTu27,
+        handleSelectLearnerMode,
         addTagToState,
         handleApplyAiCategory,
         handleApplyAiTitleSuggestion,

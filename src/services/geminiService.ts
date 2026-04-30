@@ -39,6 +39,13 @@ import { generateWithPerplexity } from './ai/providers/perplexityProvider';
 
 export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux' | 'localhost' | 'native-ocr';
 
+export type LearnerPromptMode = 'default' | 'gifted' | 'remedial';
+
+export interface PromptProfileOptions {
+  useThongTu27: boolean;
+  learnerMode: LearnerPromptMode;
+}
+
 export const AI_CORE_SUBJECT_IDS = [
   'toan',
   'tieng-viet',
@@ -52,6 +59,7 @@ export interface QuizGenerationOptions {
   questionCount: number;
   questionTypes: QuestionType[];
   difficultyLevels?: { level1: number; level2: number; level3: number };
+  promptProfile?: PromptProfileOptions;
   imageLibrary?: Array<{ id: string; name: string; data?: string }>;
   customPrompt?: string;
   isPdfMode?: boolean;

@@ -1,68 +1,98 @@
 /**
  * @module quizPromptBuilder
  * Builds the full prompt sent to AI providers for quiz generation.
- * Contains all Vietnamese educational prompt instructions, type descriptions,
- * difficulty level rules, and LaTeX formatting constraints.
  */
 
 import type { QuizGenerationOptions } from '../../geminiService';
 
-// ─────────────────────────────────────────────────────────
-//  AGENTIC SKILL PROMPTS
-// ─────────────────────────────────────────────────────────
-
 const SCIENTIFIC_GROUNDING_PROMPT = `
     [SCIENTIFIC RESEARCH PHASE]:
-    Trước khi tạo mảng câu hỏi, hãy thực hiện các bước tư duy sau:
-    1. Xác định kiến thức cốt lõi (Core Facts) và các sự thật khoa học của chủ đề.
-    2. Phân tích các lỗi sai phổ biến (Misconceptions) mà học sinh lứa tuổi này thường mắc phải. Dùng chúng để tạo các phương án nhiễu (distractors) có tính thách thức cao.
-    3. Tìm kiếm các tình huống đời thường (Real-world Application) gần gũi để lồng ghép vào câu hỏi, giúp bài thi không bị khô khan.
+    Truoc khi tao mang cau hoi, hay thuc hien cac buoc tu duy sau:
+    1. Xac dinh kien thuc cot loi va cac su that khoa hoc cua chu de.
+    2. Phan tich cac loi sai pho bien ma hoc sinh lua tuoi nay thuong mac phai. Dung chung de tao phuong an nhieu co tinh thach thuc hop ly.
+    3. Tim cac tinh huong doi thuong gan gui de long ghep vao cau hoi, giup bai thi khong bi kho khan.
 `;
 
 const PEDAGOGICAL_EXPLANATION_PROMPT = `
     [EXPLANATION GENERATOR RULE]:
-    Trường "explanation" PHẢI là một bài giảng mini (2-4 câu) theo cấu trúc:
-    - ✅ Khẳng định: Xác nhận đáp án đúng và lý do chọn.
-    - 🧩 Dẫn dắt (Scaffolding): Giải thích bước đi tư duy hoặc quy tắc áp dụng (VD: "Theo quy tắc bàn tay trái...", "Vì đây là danh từ chỉ vật...").
-    - 💡 Liên hệ/Mẹo: Đưa ra một ví dụ thực tế hoặc một "mẹo nhớ" (Mnemonic/Fun Fact) giúp học sinh ghi nhớ lâu hơn.
-    - Tuyệt đối không viết kiểu "Đáp án A là đúng" một cách đơn điệu.
+    Truong "explanation" phai la mot bai giang mini 2-4 cau theo cau truc:
+    - Khang dinh dap an dung va ly do chon.
+    - Giai thich buoc di tu duy hoac quy tac ap dung.
+    - Dua ra mot meo nho hoac lien he thuc te de hoc sinh nho lau hon.
+    - Tuyet doi khong viet kieu "Dap an A la dung" mot cach don dieu.
 `;
 
-// ─────────────────────────────────────────────────────────
-//  QUESTION TYPE DESCRIPTIONS
-// ─────────────────────────────────────────────────────────
+const THONG_TU_27_PROMPT = `
+    [PEDAGOGICAL POLICY PROFILE - THONG TU 27]:
+    - Bam yeu cau can dat cua chuong trinh tieu hoc va dung lua tuoi hoc sinh lop {CLASS_LEVEL}.
+    - Ngon ngu ro rang, than thien, khong danh do meo, khong gay ap luc khong can thiet.
+    - Danh gia vi su tien bo cua hoc sinh, uu tien cau hoi co y nghia hoc tap va boi canh gan gui.
+    - Van cho phep phan hoa, nhung khong vuot khoi pham vi kien thuc tieu hoc Viet Nam.
+`;
+
+const GIFTED_LEARNER_PROMPT = `
+    [LEARNER PROFILE - BOI DUONG HOC SINH GIOI]:
+    - Nghieng ro sang boi duong hoc sinh kha gioi trong pham vi tieu hoc.
+    - Tang cau hoi can suy luan, so sanh, ket noi kien thuc va van dung vao tinh huong moi.
+    - Uu tien distractor gan dung hon, buoc hoc sinh phai phan tich ky thay vi doan meo.
+    - Khuyen khich hoc sinh giai thich ly do, nhan ra quy luat va ap dung linh hoat.
+    - Tuyet doi khong vuot khoi khung chuong trinh tieu hoc.
+`;
+
+const REMEDIAL_LEARNER_PROMPT = `
+    [LEARNER PROFILE - PHU DAO HOC SINH YEU KEM]:
+    - Uu tien cung co kien thuc cot loi va cac yeu cau can dat toi thieu.
+    - Tang cau hoi nhan biet va thong hieu gan, cau ngan, ro, truc dien.
+    - Giam distractor gay roi, tranh cach hoi vong vo, uu tien phan hoi giup sua loi sai pho bien.
+    - Tao cam giac hoc duoc, lam duoc, xay dung tu tin hoc tap cho hoc sinh.
+`;
 
 const buildTypeDescriptions = (options?: QuizGenerationOptions): Record<string, string> => ({
-  'MCQ': 'MCQ (Trắc nghiệm chọn 1 đáp án đúng. Format: {"type": "MCQ", "question": "Nội dung câu hỏi (TUYỆT ĐỐI KHÔNG xuống dòng, dùng inline math $...$ thay vì $$...$$)", "options": ["A...", "B...", "C...", "D..."], "correctAnswer": "A", "explanation": "✅ [Kết luận đúng]. 🧩 [Giải thích các bước/quy tắc]. 💡 [Mẹo nhớ/Liên hệ thực tế]." })',
-  'TRUE_FALSE': 'TRUE_FALSE (Câu hỏi đúng sai. Format: {"type": "TRUE_FALSE", "mainQuestion": "Câu hỏi chính (1 dòng)", "items": [{"statement": "Ý 1", "isCorrect": true}, {"statement": "Ý 2", "isCorrect": false}]})',
-  'SHORT_ANSWER': 'SHORT_ANSWER (Điền đáp án ngắn. Format: {"type": "SHORT_ANSWER", "question": "Câu hỏi (1 dòng)", "correctAnswer": "Đáp án đúng"})',
-  'MATCHING': 'MATCHING (Nối cột. Format: {"type": "MATCHING", "question": "Câu hỏi (1 dòng)", "pairs": [{"left": "A", "right": "1"}, {"left": "B", "right": "2"}]})',
-  'MULTIPLE_SELECT': 'MULTIPLE_SELECT (Chọn TẤT CẢ đáp án đúng. Format: {"type": "MULTIPLE_SELECT", "question": "Câu hỏi (1 dòng)", "options": ["A", "B", "C", "D"], "correctAnswers": ["A", "C"]})',
-  'DRAG_DROP': 'DRAG_DROP (⚠️ NHẬN DIỆN: Câu hỏi có dạng "điền từ vào chỗ trống". question chứa đề bài gốc + danh sách từ cho sẵn, text chứa đoạn văn/thơ với từ ĐÚNG đã điền trong [ngoặc vuông], blanks là mảng các từ đúng, distractors là mảng các từ còn lại không dùng.)',
-  'ORDERING': 'ORDERING (Sắp xếp thứ tự câu. items là mảng các câu ĐÃ XÁO TRỘN, correctOrder là mảng chỉ thứ tự đúng.)',
-  'IMAGE_QUESTION': `IMAGE_QUESTION (Câu hỏi trắc nghiệm CÓ HÌNH ẢNH minh họa.
-    ${options?.imageLibrary?.length ? '✅ CÓ THƯ VIỆN ẢNH: Hãy dùng ID hình ảnh từ thư viện đã upload.' : '⚠️ KHÔNG CÓ HÌNH UPLOAD - Dùng "IMAGE_PROMPT: <Mô tả chi tiết>" để AI tự vẽ.'}
-    Format: {"type": "IMAGE_QUESTION", "question": "...", "image": "IMAGE_PROMPT: ...", "options": ["A...", "B...", "C...", "D..."], "correctAnswer": "A"})`,
-  'DROPDOWN': 'DROPDOWN (Điền vào chỗ trống bằng DROPDOWN. Trong text dùng [1], [2]... để đánh dấu vị trí. blanks là mảng các dropdown tương ứng với options và correctAnswer)',
-  'UNDERLINE': 'UNDERLINE (Gạch chân từ/cụm từ. Format: {"type": "UNDERLINE", "question": "...", "sentence": "...", "words": [...], "correctWordIndexes": [1]})',
-  'CATEGORIZATION': 'CATEGORIZATION (Kéo thả phân loại vào nhóm. categories là mảng nhóm (id, name). items là mảng mục (id, content, categoryId). MỖI ITEM BẮT BUỘC CÓ content không rỗng.)',
-  'WORD_SCRAMBLE': 'WORD_SCRAMBLE (Sắp xếp chữ cái thành từ. Format: {"type": "WORD_SCRAMBLE", "question": "...", "letters": [...], "correctWord": "..."})',
-  'RIDDLE': 'RIDDLE (Câu đố chữ tiếng Việt. Format: {"type": "RIDDLE", "question": "...", "riddleLines": [...], "correctAnswer": "1 tiếng", "answerType": "original|transformed", "answerLabel": "...", "hint": "..."})',
-  'ERROR_CORRECTION': 'ERROR_CORRECTION (Tìm từ sai và sửa lại. Format: {"type": "ERROR_CORRECTION", "question": "...", "passage": "...", "wrongWord": "...", "correctWord": "..."})',
+  MCQ: 'MCQ (Trac nghiem chon 1 dap an dung. Format: {"type":"MCQ","question":"Noi dung cau hoi 1 dong","options":["A...","B...","C...","D..."],"correctAnswer":"A","explanation":"..."} )',
+  TRUE_FALSE: 'TRUE_FALSE (Dung sai. Format: {"type":"TRUE_FALSE","mainQuestion":"Cau hoi chinh","items":[{"statement":"Y 1","isCorrect":true},{"statement":"Y 2","isCorrect":false}]})',
+  SHORT_ANSWER: 'SHORT_ANSWER (Dien dap an ngan. Format: {"type":"SHORT_ANSWER","question":"Cau hoi","correctAnswer":"Dap an"} )',
+  MATCHING: 'MATCHING (Noi cot. Format: {"type":"MATCHING","question":"Cau hoi","pairs":[{"left":"A","right":"1"},{"left":"B","right":"2"}]})',
+  MULTIPLE_SELECT: 'MULTIPLE_SELECT (Chon tat ca dap an dung. Format: {"type":"MULTIPLE_SELECT","question":"Cau hoi","options":["A","B","C","D"],"correctAnswers":["A","C"]})',
+  DRAG_DROP: 'DRAG_DROP (Dien tu vao cho trong. question chua de bai, text chua doan van voi tu dung trong [ngoac vuong], blanks la mang tu dung, distractors la mang tu nhieu.)',
+  ORDERING: 'ORDERING (Sap xep thu tu cau. items la mang cau da xao tron, correctOrder la mang chi thu tu dung.)',
+  IMAGE_QUESTION: `IMAGE_QUESTION (Trac nghiem co hinh anh. ${options?.imageLibrary?.length ? 'Co thu vien anh, uu tien dung ID anh da upload.' : 'Khong co hinh upload, dung "IMAGE_PROMPT: mo ta" de AI tu ve.'})`,
+  DROPDOWN: 'DROPDOWN (Dien vao cho trong bang dropdown. text dung [1], [2]... de danh dau vi tri.)',
+  UNDERLINE: 'UNDERLINE (Gach chan tu/cum tu. Format: {"type":"UNDERLINE","question":"...","sentence":"...","words":[...],"correctWordIndexes":[1]})',
+  CATEGORIZATION: 'CATEGORIZATION (Keo tha phan loai vao nhom. categories la mang nhom, items la mang muc.)',
+  WORD_SCRAMBLE: 'WORD_SCRAMBLE (Sap xep chu cai thanh tu. Format: {"type":"WORD_SCRAMBLE","question":"...","letters":[...],"correctWord":"..."})',
+  RIDDLE: 'RIDDLE (Cau do chu tieng Viet. Format: {"type":"RIDDLE","question":"...","riddleLines":[...],"correctAnswer":"1 tieng","answerType":"original|transformed","answerLabel":"...","hint":"..."})',
+  ERROR_CORRECTION: 'ERROR_CORRECTION (Tim tu sai va sua lai. Format: {"type":"ERROR_CORRECTION","question":"...","passage":"...","wrongWord":"...","correctWord":"..."})',
 });
 
-// ─────────────────────────────────────────────────────────
-//  BUILD PROMPT
-// ─────────────────────────────────────────────────────────
+const buildPromptProfileSections = (
+  classLevel: string,
+  options?: QuizGenerationOptions
+): { pedagogicalPolicySection: string; learnerProfileSection: string } => {
+  const promptProfile = options?.promptProfile;
+  if (!promptProfile?.useThongTu27) {
+    return { pedagogicalPolicySection: '', learnerProfileSection: '' };
+  }
 
-/** Build the full prompt string for quiz generation. */
+  let learnerProfileSection = '';
+  if (promptProfile.learnerMode === 'gifted') {
+    learnerProfileSection = GIFTED_LEARNER_PROMPT;
+  } else if (promptProfile.learnerMode === 'remedial') {
+    learnerProfileSection = REMEDIAL_LEARNER_PROMPT;
+  }
+
+  return {
+    pedagogicalPolicySection: THONG_TU_27_PROMPT.replace('{CLASS_LEVEL}', classLevel),
+    learnerProfileSection,
+  };
+};
+
 export const buildPrompt = (
   topic: string,
   classLevel: string,
   content: string,
   options?: QuizGenerationOptions
 ): string => {
-  const title = options?.title || `Kiểm tra: ${topic}`;
+  const title = options?.title || `Kiem tra: ${topic}`;
   const count = options?.questionCount || 10;
   const types = options?.questionTypes || [];
   const levels = options?.difficultyLevels;
@@ -70,95 +100,93 @@ export const buildPrompt = (
   const images = options?.imageLibrary || [];
 
   const typeDescriptions = buildTypeDescriptions(options);
-  const typesDescription = types.map(t => typeDescriptions[t] || t).join('\n    - ');
+  const typesDescription = types.map((t) => typeDescriptions[t] || t).join('\n    - ');
   const typesList = types.join(', ');
+  const { pedagogicalPolicySection, learnerProfileSection } = buildPromptProfileSections(classLevel, options);
 
-  // ── Difficulty levels ──────────────────────────────────
   let difficultyInstructions = '';
   if (levels) {
     difficultyInstructions = `
-    PHÂN BỔ CÂU HỎI THEO MỨC ĐỘ NHẬN THỨC (Chuẩn đánh giá Tiểu học Việt Nam):
-    
-    📗 MỨC 1 - NHẬN BIẾT (${levels.level1} câu): Câu hỏi đơn giản, quen thuộc, áp dụng trực tiếp.
-    📘 MỨC 2 - THÔNG HIỂU (${levels.level2} câu): Kết nối 2-3 kiến thức, tình huống tương tự.
-    📕 MỨC 3 - VẬN DỤNG (${levels.level3} câu): Câu hỏi phức tạp, thực tế, gắn với đời sống.
-    
-    TỔNG CỘNG: ${levels.level1 + levels.level2 + levels.level3} câu
-    
-    ⚠️ KHÔNG ghi nhãn mức độ vào nội dung câu hỏi.
-    🔴 BẮT BUỘC: Mỗi câu PHẢI CÓ TRƯỜNG "difficultyLevel": 1, 2 hoặc 3.
-    🔴 THỨ TỰ: Mức 1 đầu đề → Mức 2 giữa → Mức 3 cuối.`;
+    PHAN BO CAU HOI THEO MUC DO NHAN THUC:
+
+    Muc 1 - NHAN BIET (${levels.level1} cau): Cau hoi don gian, quen thuoc, ap dung truc tiep.
+    Muc 2 - THONG HIEU (${levels.level2} cau): Ket noi 2-3 kien thuc, tinh huong tuong tu.
+    Muc 3 - VAN DUNG (${levels.level3} cau): Cau hoi phuc tap hon, gan voi tinh huong thuc te.
+
+    TONG CONG: ${levels.level1 + levels.level2 + levels.level3} cau
+
+    KHONG ghi nhan muc do vao noi dung cau hoi.
+    BAT BUOC: Moi cau phai co truong "difficultyLevel": 1, 2 hoac 3.
+    THU TU: Muc 1 dau de -> Muc 2 giua -> Muc 3 cuoi.`;
   }
 
-  // ── Image library ──────────────────────────────────────
   let imageInstructions = '';
   if (images.length > 0) {
     const imageList = images.map((img, idx) => `${idx + 1}. "${img.name}" (ID: ${img.id})`).join('\n    ');
     imageInstructions = `
-    
-    THƯ VIỆN HÌNH ẢNH ĐÃ UPLOAD:
+
+    THU VIEN HINH ANH DA UPLOAD:
     ${imageList}
-    
-    ⚠️ ƯU TIÊN sử dụng các hình ảnh trên. Khi dùng, thêm trường "image" với giá trị là ID của hình.`;
+
+    Uu tien su dung cac hinh anh tren. Khi dung, them truong "image" voi gia tri la ID cua hinh.`;
   }
 
-  // ── Custom prompt ──────────────────────────────────────
   let customPromptSection = '';
   if (customPrompt) {
     customPromptSection = `
-    
-    🔴 YÊU CẦU ĐẶC BIỆT TỪ GIÁO VIÊN (ƯU TIÊN CAO NHẤT - PHẢI TUÂN THỦ):
+
+    YEU CAU DAC BIET TU GIAO VIEN (UU TIEN CAO, NHUNG KHONG DUOC MAU THUAN VOI PEDAGOGICAL POLICY NEU DANG BAT):
     "${customPrompt}"`;
   }
 
-  // ── Build final prompt ─────────────────────────────────
   return `
-    ⛔⛔⛔ GIỚI HẠN SỐ LƯỢNG - QUY TẮC TUYỆT ĐỐI ⛔⛔⛔
-    SỐ CÂU HỎI: CHÍNH XÁC ${count} CÂU. Vi phạm → toàn bộ đề BỊ HỦY.
-    ⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔
+    GIOI HAN SO LUONG - QUY TAC TUYET DOI
+    SO CAU HOI: CHINH XAC ${count} CAU. Vi pham -> toan bo de bi huy.
 
-    Tạo đề kiểm tra cho học sinh Lớp ${classLevel}.
+    Tao de kiem tra cho hoc sinh Lop ${classLevel}.
     ${customPromptSection}
-    
+
     ${SCIENTIFIC_GROUNDING_PROMPT}
     ${PEDAGOGICAL_EXPLANATION_PROMPT}
-    
-    THÔNG TIN CẤU HÌNH:
-    - Tiêu đề: "${title}"
-    - Chủ đề: "${topic}"
-    - SỐ CÂU: ${count} (KHÔNG ĐƯỢC THAY ĐỔI)
+    ${pedagogicalPolicySection}
+    ${learnerProfileSection}
 
-    METADATA AI BẮT BUỘC Ở CẤP ROOT JSON:
+    THONG TIN CAU HINH:
+    - Tieu de: "${title}"
+    - Chu de: "${topic}"
+    - SO CAU: ${count} (KHONG DUOC THAY DOI)
+
+    METADATA AI BAT BUOC O CAP ROOT JSON:
     - detectedCategory: "toan" | "tieng-viet" | "tieng-anh" | "tu-nhien-xa-hoi" | "tin-hoc"
-    - detectedLesson: Tên bài học tóm tắt gọn
-    - suggestedTags: Mảng 3-5 hashtag (chữ thường, không dấu, dùng "_")
-    
+    - detectedLesson: Ten bai hoc tom tat gon
+    - suggestedTags: Mang 3-5 hashtag (chu thuong, khong dau, dung "_")
+
     ${difficultyInstructions}
     ${imageInstructions}
-    
-    ⚠️ CHỈ ĐƯỢC PHÉP SỬ DỤNG CÁC DẠNG CÂU HỎI SAU:
+
+    CHI DUOC PHEP SU DUNG CAC DANG CAU HOI SAU:
     - ${typesDescription}
-    
+
     ${options?.isPdfMode ? `
     [PDF MODE - OCR FIRST]
-    - Dùng nội dung OCR bên dưới là NGUỒN CHÍNH.
+    - Dung noi dung OCR ben duoi la NGUON CHINH.
     OCR CONTENT FROM FILE:
     ${content ? `"${content}"` : '[ERROR: missing OCR content]'}
     ` : `
-    NỘI DUNG THAM KHẢO:
-    ${content || 'Không có nội dung cụ thể. Hãy tự động sinh câu hỏi dựa trên kiến thức chuẩn của sách giáo khoa Tiểu học Việt Nam.'}
+    NOI DUNG THAM KHAO:
+    ${content || 'Khong co noi dung cu the. Hay tu dong sinh cau hoi dua tren kien thuc chuan cua sach giao khoa tieu hoc Viet Nam.'}
     `}
 
-    ⛔ QUY TẮC BẮT BUỘC:
-    1. TẠO ĐÚNG ${count} CÂU - GIỚI HẠN CỨNG.
-    2. CHỈ dạng: ${typesList}.
-    3. Ngôn ngữ: Tiếng Việt, phù hợp tiểu học.
+    QUY TAC BAT BUOC:
+    1. TAO DUNG ${count} CAU - GIOI HAN CUNG.
+    2. CHI dang: ${typesList}.
+    3. Ngon ngu: Tieng Viet, phu hop tieu hoc.
     4. ROOT JSON: title, detectedCategory, detectedLesson, suggestedTags, questions.
-    
-    📐 QUY TẮC LATEX:
-    🚫 CHỮ TIẾNG VIỆT KHÔNG BAO GIỜ NẰM TRONG $...$
-    ✅ $...$ CHỈ CHỨA: Số, phép toán (+−×÷=), \\\\frac{}{}, \\\\sqrt{}, ký hiệu toán.
-    
-    ⚠️ KIỂM TRA LẦN CUỐI: Đếm lại số câu hỏi. Phải ĐÚNG ${count} câu.
+
+    QUY TAC LATEX:
+    - Chu Tieng Viet khong nam trong $...$
+    - $...$ chi chua so, phep toan (+-x:=), \\frac{}{}, \\sqrt{}, ky hieu toan.
+
+    KIEM TRA LAN CUOI: Dem lai so cau hoi. Phai DUNG ${count} cau.
   `;
 };

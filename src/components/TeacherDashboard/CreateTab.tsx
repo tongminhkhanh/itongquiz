@@ -8,6 +8,7 @@ import { useCreateQuizLogic } from '../../features/quiz-generator/hooks/useCreat
 // Sub-components
 import GeneralInfoSection from '../../features/quiz-generator/components/GeneralInfoSection';
 import QuestionSettingsSection from '../../features/quiz-generator/components/QuestionSettingsSection';
+import PedagogicalProfileSection from '../../features/quiz-generator/components/PedagogicalProfileSection';
 import ContentSourceSection from '../../features/quiz-generator/components/ContentSourceSection';
 import AdvancedSettingsSection from '../../features/quiz-generator/components/AdvancedSettingsSection';
 import AssignmentSection from '../../features/quiz-generator/components/AssignmentSection';
@@ -74,6 +75,15 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     isOpenTypes={logic.expandedSections.questionTypes}
                     isOpenDifficulty={logic.expandedSections.difficulty}
                     onToggle={logic.toggleSection}
+                />
+
+                <PedagogicalProfileSection
+                    promptProfile={logic.promptProfile}
+                    profilePresetNotice={logic.profilePresetNotice}
+                    isOpen={logic.expandedSections.pedagogy}
+                    onToggle={logic.toggleSection}
+                    onToggleThongTu27={logic.handleToggleThongTu27}
+                    onSelectLearnerMode={logic.handleSelectLearnerMode}
                 />
 
                 <ContentSourceSection
