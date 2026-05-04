@@ -86,6 +86,12 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'get_leaderboard': method = 'GET'; path = '/api/leaderboard'; break;
         case 'get_top_gold_leaderboard': method = 'GET'; path = '/api/leaderboard/top-gold'; break;
 
+        // --- Game Loop ---
+        case 'get_game_loop_dashboard': method = 'GET'; path = '/api/game-loop/dashboard'; urlParams.append('username', payload.username); break;
+        case 'track_game_loop_quiz': method = 'POST'; path = '/api/game-loop/track-quiz'; break;
+        case 'claim_game_loop_mission': method = 'POST'; path = '/api/game-loop/claim-mission'; break;
+        case 'claim_game_loop_chest': method = 'POST'; path = '/api/game-loop/claim-chest'; break;
+
         // --- Gift Shop ---
         case 'get_gift_shop_catalog': method = 'GET'; path = '/api/gift-shop/catalog'; break;
         case 'create_gift_shop_catalog_item': method = 'POST'; path = '/api/gift-shop/catalog'; break;

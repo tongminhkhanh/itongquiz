@@ -14,6 +14,7 @@ import { handleAiTutorRoutes } from './routes/aiTutor';
 import { handleAiProxy } from './routes/aiProxy';
 import { handlePracticeRoutes } from './routes/practice';
 import { handleGiftShopRoutes } from './routes/giftShop';
+import { handleGameLoopRoutes } from './routes/gameLoop';
 import { handleHelpRagRoutes } from './routes/helpRag';
 import { handleSystemSettingsRoutes } from './routes/systemSettings';
 import { handleAnalyticsRoutes } from './routes/analytics';
@@ -67,6 +68,8 @@ export default {
                 response = await handlePracticeRoutes(request, env, path, method);
             } else if (path.startsWith('/api/gift-shop')) {
                 response = await handleGiftShopRoutes(request, env, path, method);
+            } else if (path.startsWith('/api/game-loop')) {
+                response = await handleGameLoopRoutes(request, env, path, method);
             } else if (path.startsWith('/api/help')) {
                 response = await handleHelpRagRoutes(request, env, path, method);
             } else if (path.startsWith('/api/system-settings')) {

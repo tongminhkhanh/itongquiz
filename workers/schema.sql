@@ -190,6 +190,65 @@ CREATE TABLE IF NOT EXISTS gift_order_events (
   created_at TEXT NOT NULL
 );
 
+-- Game loop profiles (missions, boosters, collections)
+CREATE TABLE IF NOT EXISTS student_game_profiles (
+  username TEXT PRIMARY KEY,
+  daily_streak INTEGER NOT NULL DEFAULT 0,
+  last_mission_completion_date TEXT DEFAULT '',
+  hint_tokens INTEGER NOT NULL DEFAULT 0,
+  streak_shields INTEGER NOT NULL DEFAULT 0,
+  collection_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+-- Per-day mission progress
+CREATE TABLE IF NOT EXISTS student_daily_progress (
+  username TEXT NOT NULL,
+  progress_date TEXT NOT NULL,
+  questions_answered INTEGER NOT NULL DEFAULT 0,
+  correct_answers INTEGER NOT NULL DEFAULT 0,
+  quizzes_completed INTEGER NOT NULL DEFAULT 0,
+  toan_quizzes_completed INTEGER NOT NULL DEFAULT 0,
+  tieng_viet_quizzes_completed INTEGER NOT NULL DEFAULT 0,
+  mission_questions_claimed INTEGER NOT NULL DEFAULT 0,
+  mission_accuracy_claimed INTEGER NOT NULL DEFAULT 0,
+  mission_subject_claimed INTEGER NOT NULL DEFAULT 0,
+  chest_claimed INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (username, progress_date)
+);
+
+-- Achievement unlocks
+CREATE TABLE IF NOT EXISTS student_achievement_unlocks (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  achievement_code TEXT NOT NULL,
+  unlocked_at TEXT NOT NULL,
+  metadata TEXT NOT NULL DEFAULT '{}'
+);
+
+-- Mission and chest reward event log
+CREATE TABLE IF NOT EXISTS student_reward_events (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  reward_type TEXT NOT NULL,
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL
+);
+
+-- Activity events for idempotent mission progress tracking
+CREATE TABLE IF NOT EXISTS student_game_activity_events (
+  activity_id TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  event_date TEXT NOT NULL,
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL
+);
+
 -- Announcements
 CREATE TABLE IF NOT EXISTS announcements (
   id TEXT PRIMARY KEY DEFAULT '1',
@@ -272,6 +331,9 @@ CREATE INDEX IF NOT EXISTS idx_gift_orders_updated_at ON gift_orders(updated_at 
 CREATE INDEX IF NOT EXISTS idx_gift_vouchers_order ON gift_vouchers(order_id);
 CREATE INDEX IF NOT EXISTS idx_gift_ledger_student ON gift_wallet_ledger(student_id);
 CREATE INDEX IF NOT EXISTS idx_gift_events_created_at ON gift_order_events(created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_game_achievement_user_code ON student_achievement_unlocks(username, achievement_code);
+CREATE INDEX IF NOT EXISTS idx_game_reward_events_user_date ON student_reward_events(username, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_game_activity_events_user_date ON student_game_activity_events(username, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_rag_documents_source_path ON rag_documents(source_path);
 CREATE INDEX IF NOT EXISTS idx_rag_chunks_document_id ON rag_chunks(document_id);
 CREATE INDEX IF NOT EXISTS idx_rag_chunks_chunk_index ON rag_chunks(chunk_index);

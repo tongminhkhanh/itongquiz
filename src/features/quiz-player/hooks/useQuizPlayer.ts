@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Quiz, Question, QuestionType, StudentResult } from '../../../types';
 import { useClassroomStore } from '../../../stores/useClassroomStore';
 import { useGamificationStore } from '../../../stores/useGamificationStore';
+import { useGameLoopStore } from '../../../stores/useGameLoopStore';
 import { validateAnswersOnServer } from '../../../services/quizValidationService';
 import { calculateStudentScore } from '../utils/quizScoring';
 import { playTingSound, showError } from '../../../utils/toast';
@@ -314,6 +315,18 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
             if (mergedCorrectCount > 0) {
                 setRewardData({ expEarned: addExp, coinsEarned: addCoins, newLevel: rewardLevel, leveledUp: didLevelUp });
                 setShowReward(true);
+            }
+
+            if (classroomStore.studentSession?.username) {
+                void useGameLoopStore.getState().trackQuizActivity({
+                    username: classroomStore.studentSession.username,
+                    activityId: resultData.id,
+                    quizId: quiz.id,
+                    category: quiz.category,
+                    subject: quiz.topic,
+                    correctCount: mergedCorrectCount,
+                    totalQuestions: mergedTotalQuestions,
+                });
             }
 
             setStep('result');
