@@ -37,10 +37,16 @@ export async function handleLegacyAction(db: D1Database, action: string, body: a
         case 'get_results': {
             const rows = await db.prepare('SELECT id, student_name, class_name, quiz_id, quiz_title, score, correct_count, total_questions, time_taken, submitted_at FROM results ORDER BY submitted_at DESC').all();
             const mapped = rows.results.map((r: any) => ({
-                id: r.id, 'Student Name': r.student_name, 'Class': r.class_name,
-                'Quiz ID': r.quiz_id, 'Quiz Title': r.quiz_title,
-                'Score': r.score, 'correctCount': r.correct_count,
-                'Total Questions': r.total_questions, 'Submitted At': r.submitted_at,
+                id: r.id,
+                studentName: r.student_name,
+                studentClass: r.class_name,
+                quizId: r.quiz_id,
+                quizTitle: r.quiz_title,
+                score: r.score,
+                correctCount: r.correct_count,
+                totalQuestions: r.total_questions,
+                timeTaken: r.time_taken,
+                submittedAt: r.submitted_at,
             }));
             return jsonResponse(mapped);
         }

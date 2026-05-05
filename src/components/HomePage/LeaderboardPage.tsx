@@ -24,6 +24,9 @@ interface LeaderboardEntry {
     avgScore: number; // Average score per quiz (0-10)
     totalCorrect: number; // Total correct answers across all quizzes
     totalWrong: number; // Total wrong answers across all quizzes
+    avgTimePerQuiz?: number; // Average time per quiz in seconds
+    accuracyRate?: number; // Accuracy percentage (0-100)
+    streakDays?: number; // Number of unique days with activity
 }
 
 interface LeaderboardPageProps {
@@ -35,6 +38,7 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [selectedGrade, setSelectedGrade] = useState<string>('all');
     const [timePeriod, setTimePeriod] = useState<string>('all');
+    const [category, setCategory] = useState<'overall' | 'weekly' | 'speed' | 'accuracy' | 'streak'>('overall');
     const studentSession = useClassroomStore(s => s.studentSession);
 
     // Fetch results on mount
@@ -42,10 +46,42 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
         const loadResults = async () => {
             setIsLoading(true);
             try {
-                const data = await callApi<StudentResult[]>('get_results');
-                setResults(data || []);
+                const data = await callApi<any>('get_results');
+                console.log('📊 Leaderboard raw data:', data);
+                console.log('📊 Data type:', typeof data);
+                console.log('📊 Is array?', Array.isArray(data));
+                
+                // Handle different response formats
+                let resultsArray: StudentResult[] = [];
+                
+                if (Array.isArray(data)) {
+                    // Direct array response
+                    resultsArray = data;
+                    console.log('✅ Data is array, length:', data.length);
+                } else if (data && typeof data === 'object') {
+                    // Object response - check common patterns
+                    if (data.data && Array.isArray(data.data)) {
+                        resultsArray = data.data;
+                        console.log('✅ Found data.data array, length:', data.data.length);
+                    } else if (data.results && Array.isArray(data.results)) {
+                        resultsArray = data.results;
+                        console.log('✅ Found data.results array, length:', data.results.length);
+                    } else {
+                        console.warn('⚠️ Data is object but no array found. Keys:', Object.keys(data));
+                    }
+                } else {
+                    console.warn('⚠️ Unexpected data format');
+                }
+                
+                console.log('📊 Final results array length:', resultsArray.length);
+                
+                if (resultsArray.length === 0) {
+                    console.warn('⚠️ No leaderboard data available. Make sure students have completed quizzes.');
+                }
+                
+                setResults(resultsArray);
             } catch (err) {
-                console.error('Failed to fetch results for leaderboard:', err);
+                console.error('❌ Failed to fetch results for leaderboard:', err);
             } finally {
                 setIsLoading(false);
             }
@@ -55,17 +91,26 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
 
     // Process and rank students
     const leaderboard = useMemo<LeaderboardEntry[]>(() => {
-        // Filter by time period
+        // Ensure results is an array
+        if (!Array.isArray(results)) {
+            return [];
+        }
+        
+        // Filter by time period (or force weekly for 'weekly' category)
         let filtered = results;
-        if (timePeriod !== 'all') {
-            const now = new Date();
-            let cutoff: Date;
-            if (timePeriod === 'week') {
-                cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            } else {
-                // month
-                cutoff = new Date(now.getFullYear(), now.getMonth(), 1);
-            }
+        const now = new Date();
+        
+        if (category === 'weekly' || timePeriod === 'week') {
+            const cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            filtered = results.filter(r => {
+                try {
+                    return new Date(r.submittedAt) >= cutoff;
+                } catch {
+                    return false;
+                }
+            });
+        } else if (timePeriod === 'month') {
+            const cutoff = new Date(now.getFullYear(), now.getMonth(), 1);
             filtered = results.filter(r => {
                 try {
                     return new Date(r.submittedAt) >= cutoff;
@@ -84,15 +129,29 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
         }
 
         // Aggregate by student name + class (filter empty names to prevent crash)
-        const studentMap = new Map<string, { name: string; cls: string; totalScore: number; count: number; totalCorrect: number; totalQuestions: number }>();
+        const studentMap = new Map<string, { 
+            name: string; 
+            cls: string; 
+            totalScore: number; 
+            count: number; 
+            totalCorrect: number; 
+            totalQuestions: number;
+            totalTime: number;
+            dates: Set<string>;
+        }>();
+        
         filtered.filter(r => r.studentName && r.studentName.trim()).forEach(r => {
             const key = `${r.studentName}__${r.studentClass}`;
             const existing = studentMap.get(key);
+            const dateStr = new Date(r.submittedAt).toDateString();
+            
             if (existing) {
                 existing.totalScore += Math.round(r.score * 100);
                 existing.count += 1;
                 existing.totalCorrect += r.correctCount || 0;
                 existing.totalQuestions += r.totalQuestions || 0;
+                existing.totalTime += (r.timeTaken || 0) * 60; // Convert minutes to seconds
+                existing.dates.add(dateStr);
             } else {
                 studentMap.set(key, {
                     name: r.studentName,
@@ -101,29 +160,65 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
                     count: 1,
                     totalCorrect: r.correctCount || 0,
                     totalQuestions: r.totalQuestions || 0,
+                    totalTime: (r.timeTaken || 0) * 60, // Convert minutes to seconds
+                    dates: new Set([dateStr]),
                 });
             }
         });
 
-        // Convert to array and sort
-        const entries: LeaderboardEntry[] = Array.from(studentMap.values())
-            .map((s, _i) => ({
-                rank: 0,
-                studentName: s.name,
-                studentClass: s.cls,
-                totalScore: s.totalScore,
-                quizCount: s.count,
-                avgScore: s.count > 0 ? Math.round((s.totalScore / s.count / 100) * 10) / 10 : 0,
-                totalCorrect: s.totalCorrect,
-                totalWrong: s.totalQuestions - s.totalCorrect,
-            }))
-            .sort((a, b) => b.totalScore - a.totalScore);
+        // Convert to array and calculate metrics
+        let entries: LeaderboardEntry[] = Array.from(studentMap.values())
+            .map((s, _i) => {
+                const avgTimePerQuiz = s.count > 0 ? s.totalTime / s.count : 0;
+                const accuracyRate = s.totalQuestions > 0 ? (s.totalCorrect / s.totalQuestions) * 100 : 0;
+                const streakDays = s.dates.size;
+                
+                return {
+                    rank: 0,
+                    studentName: s.name,
+                    studentClass: s.cls,
+                    totalScore: s.totalScore,
+                    quizCount: s.count,
+                    avgScore: s.count > 0 ? Math.round((s.totalScore / s.count / 100) * 10) / 10 : 0,
+                    totalCorrect: s.totalCorrect,
+                    totalWrong: s.totalQuestions - s.totalCorrect,
+                    avgTimePerQuiz,
+                    accuracyRate,
+                    streakDays,
+                };
+            });
+
+        // Sort based on category
+        switch (category) {
+            case 'speed':
+                // Sort by fastest average time (lower is better), but only if they have quizzes
+                entries = entries
+                    .filter(e => e.quizCount > 0 && (e.avgTimePerQuiz ?? 0) > 0)
+                    .sort((a, b) => (a.avgTimePerQuiz ?? 0) - (b.avgTimePerQuiz ?? 0));
+                break;
+            case 'accuracy':
+                // Sort by highest accuracy rate
+                entries = entries
+                    .filter(e => e.quizCount > 0)
+                    .sort((a, b) => (b.accuracyRate ?? 0) - (a.accuracyRate ?? 0));
+                break;
+            case 'streak':
+                // Sort by most consecutive days
+                entries = entries.sort((a, b) => (b.streakDays ?? 0) - (a.streakDays ?? 0));
+                break;
+            case 'weekly':
+            case 'overall':
+            default:
+                // Sort by total score
+                entries = entries.sort((a, b) => b.totalScore - a.totalScore);
+                break;
+        }
 
         // Assign ranks
         entries.forEach((e, i) => { e.rank = i + 1; });
 
         return entries;
-    }, [results, selectedGrade, timePeriod]);
+    }, [results, selectedGrade, timePeriod, category]);
 
     const top3 = leaderboard.slice(0, 3);
     const rest = leaderboard.slice(3);
@@ -207,6 +302,61 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
                         <p>Ai là ong chăm chỉ nhất? 🐝</p>
                     </div>
                 </div>
+            </div>
+
+            {/* Category Tabs */}
+            <div className="leaderboard-categories">
+                <button
+                    onClick={() => setCategory('overall')}
+                    className={`leaderboard-category-tab ${category === 'overall' ? 'leaderboard-category-tab--active' : ''}`}
+                >
+                    <Trophy className="w-4 h-4" />
+                    <span>Tổng điểm</span>
+                </button>
+                <button
+                    onClick={() => setCategory('weekly')}
+                    className={`leaderboard-category-tab ${category === 'weekly' ? 'leaderboard-category-tab--active' : ''}`}
+                >
+                    <img
+                        src={`${FLUENT_CDN}/Fire/3D/fire_3d.png`}
+                        alt="Weekly"
+                        className="w-4 h-4"
+                    />
+                    <span>Tuần này</span>
+                </button>
+                <button
+                    onClick={() => setCategory('speed')}
+                    className={`leaderboard-category-tab ${category === 'speed' ? 'leaderboard-category-tab--active' : ''}`}
+                >
+                    <img
+                        src={`${FLUENT_CDN}/High%20voltage/3D/high_voltage_3d.png`}
+                        alt="Speed"
+                        className="w-4 h-4"
+                    />
+                    <span>Tốc độ</span>
+                </button>
+                <button
+                    onClick={() => setCategory('accuracy')}
+                    className={`leaderboard-category-tab ${category === 'accuracy' ? 'leaderboard-category-tab--active' : ''}`}
+                >
+                    <img
+                        src={`${FLUENT_CDN}/Dart/3D/dart_3d.png`}
+                        alt="Accuracy"
+                        className="w-4 h-4"
+                    />
+                    <span>Chính xác</span>
+                </button>
+                <button
+                    onClick={() => setCategory('streak')}
+                    className={`leaderboard-category-tab ${category === 'streak' ? 'leaderboard-category-tab--active' : ''}`}
+                >
+                    <img
+                        src={`${FLUENT_CDN}/Sparkles/3D/sparkles_3d.png`}
+                        alt="Streak"
+                        className="w-4 h-4"
+                    />
+                    <span>Chuỗi ngày</span>
+                </button>
             </div>
 
             {/* Podium - Top 3 */}

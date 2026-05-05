@@ -14,3 +14,7 @@ database_id = "c9482e3c-ff73-4f14-84af-52e7b6a580f4"
 
 [vars]
 CLIPROXY_API = "https://api.thitong.site/v1"
+
+# Week 2: Cron trigger for weekly leaderboard rewards
+[triggers]
+crons = ["0 0 * * 1"] # Every Monday at 00:00 UTC (7:00 AM ICT)

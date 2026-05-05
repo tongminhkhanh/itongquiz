@@ -9,6 +9,11 @@ export default defineConfig(({ mode }) => {
       port: 3001,
       host: '0.0.0.0',
       proxy: {
+        '/api/game-loop': {
+          target: 'https://itongquiz-api.sample_user_baf53feb.workers.dev',
+          changeOrigin: true,
+          rewrite: (path) => path,
+        },
         '/api/cliproxy': {
           target: env.VITE_CLIPROXY_API || process.env.VITE_CLIPROXY_API || 'https://api.thitong.site/v1',
           changeOrigin: true,

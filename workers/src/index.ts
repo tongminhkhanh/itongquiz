@@ -92,7 +92,104 @@ export default {
             return addCors(errorResponse(error.message || 'Internal server error', 500), request);
         }
     },
+
+    // Week 2: Scheduled handler for weekly leaderboard rewards
+    async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+        console.log('[Cron] Running weekly leaderboard rewards...');
+        
+        try {
+            const db = env.DB;
+            const lastWeekKey = getLastWeekKey();
+            
+            // Get top 3 from last week
+            const topStudents = await db.prepare(`
+                SELECT 
+                    s.username,
+                    SUM(r.score) as total_score
+                FROM results r
+                JOIN students s ON s.username = r.student_name
+                WHERE strftime('%Y-W%W', r.submitted_at) = ?
+                GROUP BY s.username
+                ORDER BY total_score DESC
+                LIMIT 3
+            `).bind(lastWeekKey).all();
+            
+            if (!topStudents.results || topStudents.results.length === 0) {
+                console.log('[Cron] No students found for last week');
+                return;
+            }
+            
+            const rewards = [
+                { rank: 1, coins: 500, badge: 'weekly_champion_1st' },
+                { rank: 2, coins: 300, badge: 'weekly_champion_2nd' },
+                { rank: 3, coins: 150, badge: 'weekly_champion_3rd' },
+            ];
+            
+            const now = new Date().toISOString();
+            
+            for (let i = 0; i < topStudents.results.length; i++) {
+                const student = topStudents.results[i] as any;
+                const reward = rewards[i];
+                
+                // Award coins
+                await db.prepare('UPDATE students SET coins = coins + ? WHERE username = ?')
+                    .bind(reward.coins, student.username).run();
+                
+                // Unlock badge
+                const achId = `ach-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                await db.prepare(`
+                    INSERT OR IGNORE INTO student_achievement_unlocks 
+                    (id, username, achievement_code, unlocked_at, metadata)
+                    VALUES (?, ?, ?, ?, ?)
+                `).bind(
+                    achId,
+                    student.username,
+                    reward.badge,
+                    now,
+                    JSON.stringify({ weekKey: lastWeekKey, rank: reward.rank })
+                ).run();
+                
+                // Log reward history
+                const rewardId = `lbrew-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                await db.prepare(`
+                    INSERT INTO leaderboard_rewards_history
+                    (id, username, period, period_key, rank, coins_awarded, badge_code, awarded_at)
+                    VALUES (?, ?, 'weekly', ?, ?, ?, ?, ?)
+                `).bind(
+                    rewardId,
+                    student.username,
+                    lastWeekKey,
+                    reward.rank,
+                    reward.coins,
+                    reward.badge,
+                    now
+                ).run();
+                
+                console.log(`[Cron] Awarded rank ${reward.rank} to ${student.username}: ${reward.coins} coins + ${reward.badge}`);
+            }
+            
+        } catch (error) {
+            console.error('[Cron] Error awarding weekly rewards:', error);
+        }
+    }
 };
+
+// Helper function for cron job
+function getLastWeekKey(): string {
+    const now = new Date();
+    now.setDate(now.getDate() - 7); // Go back 1 week
+    const year = now.getFullYear();
+    const week = getWeekNumber(now);
+    return `${year}-W${String(week).padStart(2, '0')}`;
+}
+
+function getWeekNumber(date: Date): number {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
 
 // Add CORS headers to any response
 function addCors(response: Response, request: Request): Response {

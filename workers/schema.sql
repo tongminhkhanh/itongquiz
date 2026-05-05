@@ -385,3 +385,36 @@ CREATE TABLE IF NOT EXISTS test_bank (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_test_bank_teacher ON test_bank(teacher_id);
+
+-- Leaderboard Rewards History (Week 2: Leaderboard Rewards)
+CREATE TABLE IF NOT EXISTS leaderboard_rewards_history (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  period TEXT NOT NULL, -- 'weekly', 'monthly'
+  period_key TEXT NOT NULL, -- '2026-W18', '2026-05'
+  rank INTEGER NOT NULL,
+  coins_awarded INTEGER DEFAULT 0,
+  badge_code TEXT,
+  awarded_at TEXT NOT NULL,
+  FOREIGN KEY (username) REFERENCES students(username)
+);
+
+CREATE INDEX IF NOT EXISTS idx_leaderboard_rewards_user ON leaderboard_rewards_history(username, awarded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_rewards_period ON leaderboard_rewards_history(period, period_key);
+
+-- Weekly Quests Progress (Week 3: Weekly Quests)
+CREATE TABLE IF NOT EXISTS student_weekly_progress (
+  username TEXT NOT NULL,
+  week_key TEXT NOT NULL, -- '2026-W18' (ISO week format)
+  quest_id TEXT NOT NULL,
+  progress INTEGER DEFAULT 0,
+  target INTEGER NOT NULL,
+  claimed INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (username, week_key, quest_id),
+  FOREIGN KEY (username) REFERENCES students(username)
+);
+
+CREATE INDEX IF NOT EXISTS idx_weekly_progress_user_week ON student_weekly_progress(username, week_key);
+CREATE INDEX IF NOT EXISTS idx_weekly_progress_quest ON student_weekly_progress(quest_id, week_key);

@@ -57,6 +57,30 @@ const calculateAttendanceStreak = (days: string[], endDateKey: string): number =
     return streak;
 };
 
+// Week 2: Helper functions for leaderboard
+const getWeekNumber = (date: Date): number => {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+};
+
+const getCurrentWeekKey = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const week = getWeekNumber(now);
+    return `${year}-W${String(week).padStart(2, '0')}`;
+};
+
+const getLastWeekKey = (): string => {
+    const now = new Date();
+    now.setDate(now.getDate() - 7); // Go back 1 week
+    const year = now.getFullYear();
+    const week = getWeekNumber(now);
+    return `${year}-W${String(week).padStart(2, '0')}`;
+};
+
 const ensureAttendanceTable = async (db: D1Database): Promise<void> => {
     await db.prepare(`
         CREATE TABLE IF NOT EXISTS attendance_claims (
@@ -383,6 +407,95 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
             coins: Number(s.coins) || 0,
         }));
         return jsonResponse({ status: 'success', data: leaderboard });
+    }
+
+    // === WEEK 2: LEADERBOARD CATEGORIES ===
+
+    // GET /api/leaderboard/weekly - Weekly leaderboard (reset mỗi tuần)
+    if (path === '/api/leaderboard/weekly' && method === 'GET') {
+        const weekKey = url.searchParams.get('week') || getCurrentWeekKey();
+        
+        const rows = await db.prepare(`
+            SELECT 
+                s.username,
+                s.full_name,
+                s.class_id,
+                s.avatar,
+                SUM(r.score) as total_score,
+                COUNT(r.id) as quiz_count,
+                SUM(r.correct_count) as total_correct
+            FROM results r
+            JOIN students s ON s.username = r.student_name
+            WHERE strftime('%Y-W%W', r.submitted_at) = ?
+            GROUP BY s.username
+            ORDER BY total_score DESC
+            LIMIT 50
+        `).bind(weekKey).all();
+        
+        return jsonResponse(rows.results || []);
+    }
+
+    // GET /api/leaderboard/speed - Speed leaderboard (avg time ratio)
+    if (path === '/api/leaderboard/speed' && method === 'GET') {
+        const rows = await db.prepare(`
+            SELECT 
+                s.username,
+                s.full_name,
+                s.class_id,
+                s.avatar,
+                AVG(CAST(r.time_taken AS REAL) / CAST(r.time_limit AS REAL)) as avg_speed_ratio,
+                COUNT(r.id) as quiz_count
+            FROM results r
+            JOIN students s ON s.username = r.student_name
+            WHERE r.time_taken > 0 AND r.time_limit > 0
+            GROUP BY s.username
+            HAVING quiz_count >= 5
+            ORDER BY avg_speed_ratio ASC
+            LIMIT 50
+        `).all();
+        
+        return jsonResponse(rows.results || []);
+    }
+
+    // GET /api/leaderboard/accuracy - Accuracy leaderboard (avg correct percentage)
+    if (path === '/api/leaderboard/accuracy' && method === 'GET') {
+        const rows = await db.prepare(`
+            SELECT 
+                s.username,
+                s.full_name,
+                s.class_id,
+                s.avatar,
+                AVG(CAST(r.correct_count AS REAL) / CAST(r.total_questions AS REAL) * 100) as avg_accuracy,
+                COUNT(r.id) as quiz_count
+            FROM results r
+            JOIN students s ON s.username = r.student_name
+            WHERE r.total_questions > 0
+            GROUP BY s.username
+            HAVING quiz_count >= 5
+            ORDER BY avg_accuracy DESC
+            LIMIT 50
+        `).all();
+        
+        return jsonResponse(rows.results || []);
+    }
+
+    // GET /api/leaderboard/streak - Streak leaderboard
+    if (path === '/api/leaderboard/streak' && method === 'GET') {
+        const rows = await db.prepare(`
+            SELECT 
+                s.username,
+                s.full_name,
+                s.class_id,
+                s.avatar,
+                gp.daily_streak
+            FROM student_game_profiles gp
+            JOIN students s ON s.username = gp.username
+            WHERE gp.daily_streak > 0
+            ORDER BY gp.daily_streak DESC
+            LIMIT 50
+        `).all();
+        
+        return jsonResponse(rows.results || []);
     }
 
     return errorResponse('Not found: ' + path, 404);

@@ -17,9 +17,11 @@ import MathSpan from '../common/MathSpan';
 import { StudentFloatingSidebar } from '../gamification/StudentFloatingSidebar';
 import { StudentHomeworkSection } from '../../features/homework/components/StudentHomeworkSection';
 import { HomeworkSubmissionModal } from '../../features/homework/components/HomeworkSubmissionModal';
+import { BadgeGallery } from '../gamification/BadgeGallery';
 import { HomeworkAssignment } from '../../features/homework/types';
 import { useHomeworkStore } from '../../features/homework/stores/useHomeworkStore';
 import type { GameLoopMission, GameLoopRewardResult } from '../../types/gameLoop.types';
+import LeaderboardPage from './LeaderboardPage';
 
 // --- Subject Config (Reused from HomePage) ---
 export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color: string; desc: string; showOnHome?: boolean }> = {
@@ -225,6 +227,13 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
     const [changePasswordError, setChangePasswordError] = useState('');
     const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const [isBadgeGalleryOpen, setIsBadgeGalleryOpen] = useState(false);
+    const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+    
+    // Weekly quests state
+    const [weeklyQuests, setWeeklyQuests] = useState<any[]>([]);
+    const [isWeeklyQuestsLoading, setIsWeeklyQuestsLoading] = useState(false);
+    const [weeklyQuestsError, setWeeklyQuestsError] = useState<string | null>(null);
 
     // --- Fetch Data ---
     useEffect(() => {
@@ -254,6 +263,36 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             loadDashboard(studentSession.username);
         }
     }, [studentSession?.username, loadDashboard]);
+
+    // Fetch weekly quests
+    useEffect(() => {
+        if (!studentSession?.username) return;
+        
+        const fetchWeeklyQuests = async () => {
+            setIsWeeklyQuestsLoading(true);
+            setWeeklyQuestsError(null);
+            
+            try {
+                const response = await fetch(
+                    `/api/game-loop/weekly-quests?username=${encodeURIComponent(studentSession.username)}`
+                );
+                
+                if (!response.ok) throw new Error('Failed to fetch weekly quests');
+                
+                const data = await response.json();
+                if (data.status === 'success' && data.quests) {
+                    setWeeklyQuests(data.quests);
+                }
+            } catch (error) {
+                console.error('Error fetching weekly quests:', error);
+                setWeeklyQuestsError('Không thể tải nhiệm vụ tuần');
+            } finally {
+                setIsWeeklyQuestsLoading(false);
+            }
+        };
+        
+        fetchWeeklyQuests();
+    }, [studentSession?.username]);
 
     // --- Derived Data ---
     const myAssignmentQuizzes = useMemo(() => {
@@ -569,6 +608,50 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         await claimChest(studentSession.username);
     };
 
+    const handleClaimWeeklyQuest = async (questId: string) => {
+        if (!studentSession?.username) return;
+        
+        try {
+            const response = await fetch('/api/game-loop/claim-weekly-quest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: studentSession.username,
+                    questId,
+                }),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to claim quest');
+            }
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                // Show success toast (you'll need to import toast from react-hot-toast)
+                alert(`🎉 Nhận thưởng thành công! +${data.reward.coins} xu`);
+                
+                // Refresh weekly quests
+                const refreshResponse = await fetch(
+                    `/api/game-loop/weekly-quests?username=${encodeURIComponent(studentSession.username)}`
+                );
+                const refreshData = await refreshResponse.json();
+                if (refreshData.status === 'success') {
+                    setWeeklyQuests(refreshData.quests);
+                }
+                
+                // Refresh dashboard to update coins
+                if (data.data) {
+                    loadDashboard(studentSession.username);
+                }
+            }
+        } catch (error: any) {
+            console.error('Error claiming weekly quest:', error);
+            alert(error.message || 'Không thể nhận thưởng');
+        }
+    };
+
     return (
         <div className="min-h-dvh bg-[#F4F7FC] font-sans text-slate-800 flex flex-col items-center">
             {/* --- NAVBAR --- */}
@@ -603,6 +686,11 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                 <span className="hidden md:inline">Tiệm Tạp Hóa</span>
                             </button>
                         )}
+
+                        <button type="button" onClick={() => setIsLeaderboardOpen(true)} className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-purple-200 bg-purple-50 text-purple-700 text-xs md:text-sm font-black hover:bg-purple-100 transition-colors">
+                            <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                            <span className="hidden md:inline">Xếp hạng</span>
+                        </button>
 
                         <div className="flex items-center gap-3 border-l pl-3 md:pl-4 border-slate-200">
                             <button onClick={handleLogout} className="sm:hidden h-9 px-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 bg-white">Đăng xuất</button>
@@ -737,6 +825,83 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                 })}
                             </div>
                         ) : null}
+
+                        {/* Weekly Quests Panel */}
+                        <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6 mt-6">
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xl">
+                                    📅
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-slate-800">Nhiệm vụ tuần</h3>
+                                    <p className="text-xs text-slate-500">Reset mỗi thứ 2</p>
+                                </div>
+                            </div>
+                            
+                            {isWeeklyQuestsLoading ? (
+                                <div className="flex justify-center py-10">
+                                    <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                                </div>
+                            ) : weeklyQuestsError ? (
+                                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                                    {weeklyQuestsError}
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {weeklyQuests.map((quest) => {
+                                        const progressPercent = Math.min(100, (quest.progress / quest.target) * 100);
+                                        
+                                        return (
+                                            <div key={quest.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                                <div className="flex items-start gap-3 mb-2">
+                                                    <div className="text-2xl">{quest.icon}</div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="text-sm font-black text-slate-800">{quest.title}</h4>
+                                                        <p className="text-xs text-slate-500">{quest.description}</p>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Progress bar */}
+                                                <div className="mb-2">
+                                                    <div className="flex justify-between text-xs font-bold mb-1">
+                                                        <span className="text-slate-600">{quest.progress}/{quest.target}</span>
+                                                        <span className="text-purple-600">{Math.round(progressPercent)}%</span>
+                                                    </div>
+                                                    <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-500"
+                                                            style={{ width: `${progressPercent}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Reward & Claim button */}
+                                                <div className="flex items-center justify-between">
+                                                    <div className="text-xs font-bold text-amber-600">
+                                                        🪙 +{quest.reward.coins} Xu
+                                                        {quest.reward.items.length > 0 && ` + ${quest.reward.itemCount} vật phẩm`}
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleClaimWeeklyQuest(quest.id)}
+                                                        disabled={!quest.completed || quest.claimed}
+                                                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                                                            quest.claimed
+                                                                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                                                : quest.completed
+                                                                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-lg'
+                                                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                                        }`}
+                                                    >
+                                                        {quest.claimed ? '✓ Đã nhận' : quest.completed ? 'Nhận thưởng' : 'Chưa xong'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="space-y-6">
@@ -795,12 +960,24 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                         </div>
 
                         <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="bg-emerald-100 p-2 rounded-2xl text-emerald-600"><Medal className="w-5 h-5" /></div>
-                                <div>
-                                    <h3 className="text-lg font-black text-slate-800">Sổ huy hiệu</h3>
-                                    <p className="text-sm text-slate-500 font-medium">Nhìn lại những cột mốc nhỏ em đã đạt được.</p>
+                            <div className="flex items-center justify-between gap-3 mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-emerald-100 p-2 rounded-2xl text-emerald-600"><Medal className="w-5 h-5" /></div>
+                                    <div>
+                                        <h3 className="text-lg font-black text-slate-800">Sổ huy hiệu</h3>
+                                        <p className="text-sm text-slate-500 font-medium">Nhìn lại những cột mốc nhỏ em đã đạt được.</p>
+                                    </div>
                                 </div>
+                                {(dashboard?.achievements.length || 0) > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsBadgeGalleryOpen(true)}
+                                        className="text-xs font-black text-purple-600 hover:text-purple-700 transition-colors flex items-center gap-1"
+                                    >
+                                        Xem tất cả
+                                        <Trophy className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
                             </div>
                             <div className="grid grid-cols-1 gap-3 mb-4">
                                 {(dashboard?.achievements.slice(0, 3) || []).map((achievement) => (
@@ -964,6 +1141,32 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 )}
             </AnimatePresence>
             <AvatarSelectorModal isOpen={isAvatarModalOpen} onClose={() => setIsAvatarModalOpen(false)} currentAvatar={studentSession.avatar} />
+            <BadgeGallery 
+                isOpen={isBadgeGalleryOpen}
+                onClose={() => setIsBadgeGalleryOpen(false)}
+                achievements={dashboard?.achievements || []}
+            />
+            <AnimatePresence>
+                {isLeaderboardOpen && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }} 
+                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+                        onClick={() => setIsLeaderboardOpen(false)}
+                    >
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+                            animate={{ opacity: 1, scale: 1, y: 0 }} 
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="w-full max-w-6xl max-h-[90vh] bg-white rounded-3xl shadow-2xl overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <LeaderboardPage onBack={() => setIsLeaderboardOpen(false)} />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             <StudentFloatingSidebar />
         </div>
     );

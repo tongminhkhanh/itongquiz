@@ -20,7 +20,10 @@ export function verifyToken(request: Request, env: Env): Response | null {
     // 4. Allow public visual announcements
     if (path === '/api/announcements' && method === 'GET') return null;
 
-    // 4. Verify token from header for REST API routes
+    // 5. Allow game-loop routes (uses username-based auth)
+    if (path.startsWith('/api/game-loop')) return null;
+
+    // 6. Verify token from header for REST API routes
     const headerToken = request.headers.get('X-API-Token') || request.headers.get('Authorization')?.replace('Bearer ', '');
 
     if (headerToken === env.API_SECRET_TOKEN) return null;

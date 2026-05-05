@@ -83,41 +83,261 @@ const COLLECTIBLE_REWARDS = [
     { id: 'sticker_rainbow_pen', title: 'Sticker Bút Cầu Vồng', icon: '🖍️' },
 ];
 
+const WEEKLY_QUESTS = [
+    {
+        id: 'weekly_20_quizzes',
+        title: 'Hoàn thành 20 bài quiz',
+        description: 'Làm xong 20 bài quiz bất kỳ trong tuần này.',
+        target: 20,
+        reward: {
+            coins: 200,
+            items: ['hint_token'],
+            itemCount: 1,
+        },
+        icon: '📚',
+    },
+    {
+        id: 'weekly_top_5',
+        title: 'Đạt top 5 lớp',
+        description: 'Lọt vào top 5 bảng xếp hạng lớp học.',
+        target: 1,
+        reward: {
+            coins: 300,
+            items: ['streak_shield'],
+            itemCount: 1,
+        },
+        icon: '🏆',
+    },
+    {
+        id: 'weekly_100_correct',
+        title: 'Trả lời đúng 100 câu',
+        description: 'Tích lũy 100 câu trả lời đúng trong tuần.',
+        target: 100,
+        reward: {
+            coins: 150,
+            items: [],
+            itemCount: 0,
+        },
+        icon: '✅',
+    },
+    {
+        id: 'weekly_subject_master',
+        title: 'Chinh phục 3 môn',
+        description: 'Hoàn thành ít nhất 1 bài Toán, Tiếng Việt và Tiếng Anh.',
+        target: 3,
+        reward: {
+            coins: 250,
+            items: ['pet_accessory_random'],
+            itemCount: 1,
+        },
+        icon: '🎯',
+    },
+    {
+        id: 'weekly_perfect_streak',
+        title: 'Chuỗi hoàn hảo',
+        description: 'Đạt 100% điểm trong 3 bài quiz.',
+        target: 3,
+        reward: {
+            coins: 400,
+            items: ['hint_token', 'streak_shield'],
+            itemCount: 2,
+        },
+        icon: '💯',
+    },
+] as const;
+
 const ACHIEVEMENTS = [
+    // === STREAK ACHIEVEMENTS ===
+    {
+        code: 'streak_3',
+        title: 'Kiên trì 3 ngày',
+        description: 'Học liên tục 3 ngày không nghỉ.',
+        icon: '🔥',
+        rarity: 'common' as const,
+    },
+    {
+        code: 'streak_7',
+        title: 'Kiên trì 7 ngày',
+        description: 'Học liên tục 7 ngày không nghỉ.',
+        icon: '🔥',
+        rarity: 'common' as const,
+    },
+    {
+        code: 'streak_30',
+        title: 'Siêu kiên trì',
+        description: 'Học liên tục 30 ngày không nghỉ.',
+        icon: '🔥🔥',
+        rarity: 'rare' as const,
+    },
+    {
+        code: 'streak_100',
+        title: 'Huyền thoại',
+        description: 'Học liên tục 100 ngày không nghỉ.',
+        icon: '👑',
+        rarity: 'epic' as const,
+    },
+
+    // === SUBJECT MASTERY ===
+    {
+        code: 'math_expert_50',
+        title: 'Cao thủ Toán',
+        description: 'Làm đúng 50 câu Toán với điểm >= 80%.',
+        icon: '🧮',
+        rarity: 'common' as const,
+    },
+    {
+        code: 'math_expert_100',
+        title: 'Bậc thầy Toán',
+        description: 'Làm đúng 100 câu Toán với điểm >= 80%.',
+        icon: '🧮',
+        rarity: 'rare' as const,
+    },
+    {
+        code: 'vietnamese_expert_50',
+        title: 'Cao thủ Tiếng Việt',
+        description: 'Làm đúng 50 câu Tiếng Việt với điểm >= 80%.',
+        icon: '📚',
+        rarity: 'common' as const,
+    },
+    {
+        code: 'english_expert_50',
+        title: 'English Expert',
+        description: 'Làm đúng 50 câu Tiếng Anh với điểm >= 80%.',
+        icon: '🇬🇧',
+        rarity: 'common' as const,
+    },
+
+    // === SPEED ACHIEVEMENTS ===
+    {
+        code: 'speed_demon_10',
+        title: 'Tốc độ ánh sáng',
+        description: 'Hoàn thành bài trong < 50% thời gian 10 lần.',
+        icon: '⚡',
+        rarity: 'rare' as const,
+    },
+    {
+        code: 'speed_master_30',
+        title: 'Bậc thầy tốc độ',
+        description: 'Hoàn thành bài trong < 50% thời gian 30 lần.',
+        icon: '⚡⚡',
+        rarity: 'epic' as const,
+    },
+
+    // === PERFECT SCORE ===
+    {
+        code: 'perfect_5',
+        title: 'Điểm 10 liên tiếp',
+        description: 'Đạt 100% điểm 5 lần liên tiếp.',
+        icon: '💯',
+        rarity: 'rare' as const,
+    },
+    {
+        code: 'perfect_20',
+        title: 'Thần đồng',
+        description: 'Đạt 100% điểm 20 lần.',
+        icon: '🌟',
+        rarity: 'epic' as const,
+    },
+
+    // === TIME-BASED ===
+    {
+        code: 'early_bird_10',
+        title: 'Chim sớm',
+        description: 'Làm bài trước 7h sáng 10 lần.',
+        icon: '🌅',
+        rarity: 'common' as const,
+    },
+    {
+        code: 'night_owl_10',
+        title: 'Cú đêm',
+        description: 'Làm bài sau 9h tối 10 lần.',
+        icon: '🦉',
+        rarity: 'common' as const,
+    },
+
+    // === COLLECTION ===
+    {
+        code: 'collector_5',
+        title: 'Nhà sưu tập',
+        description: 'Sở hữu 5 vật phẩm sưu tầm.',
+        icon: '🎁',
+        rarity: 'common' as const,
+    },
+    {
+        code: 'collector_10',
+        title: 'Đại gia sưu tầm',
+        description: 'Sở hữu 10 vật phẩm sưu tầm.',
+        icon: '🎁',
+        rarity: 'rare' as const,
+    },
+
+    // === TOTAL QUESTIONS ===
+    {
+        code: 'questions_100',
+        title: 'Trăm câu',
+        description: 'Trả lời đúng 100 câu hỏi.',
+        icon: '📝',
+        rarity: 'common' as const,
+    },
+    {
+        code: 'questions_500',
+        title: 'Năm trăm câu',
+        description: 'Trả lời đúng 500 câu hỏi.',
+        icon: '📚',
+        rarity: 'rare' as const,
+    },
+    {
+        code: 'questions_1000',
+        title: 'Nghìn câu',
+        description: 'Trả lời đúng 1000 câu hỏi.',
+        icon: '🏆',
+        rarity: 'epic' as const,
+    },
+
+    // === MISSION ACHIEVEMENTS ===
     {
         code: 'first_quiz',
         title: 'Bắt đầu hành trình',
         description: 'Hoàn thành bài quiz đầu tiên.',
         icon: '🚀',
-        rarity: 'common',
+        rarity: 'common' as const,
     },
     {
         code: 'daily_hat_trick',
         title: 'Trọn bộ nhiệm vụ',
         description: 'Hoàn thành đủ 3 nhiệm vụ trong một ngày.',
         icon: '🎯',
-        rarity: 'rare',
+        rarity: 'rare' as const,
     },
     {
-        code: 'math_starter',
-        title: 'Mầm non Toán học',
-        description: 'Hoàn thành 3 bài Toán.',
-        icon: '🧮',
-        rarity: 'common',
+        code: 'weekly_warrior',
+        title: 'Chiến binh tuần lễ',
+        description: 'Hoàn thành nhiệm vụ 7 ngày liên tiếp.',
+        icon: '⚔️',
+        rarity: 'epic' as const,
+    },
+
+    // === WEEKLY CHAMPION BADGES ===
+    {
+        code: 'weekly_champion_1st',
+        title: 'Vô địch tuần',
+        description: 'Đạt hạng 1 bảng xếp hạng tuần.',
+        icon: '👑',
+        rarity: 'epic' as const,
     },
     {
-        code: 'tieng_viet_starter',
-        title: 'Mầm non Tiếng Việt',
-        description: 'Hoàn thành 3 bài Tiếng Việt.',
-        icon: '📚',
-        rarity: 'common',
+        code: 'weekly_champion_2nd',
+        title: 'Á quân tuần',
+        description: 'Đạt hạng 2 bảng xếp hạng tuần.',
+        icon: '🥈',
+        rarity: 'rare' as const,
     },
     {
-        code: 'streak_3',
-        title: 'Giữ lửa 3 ngày',
-        description: 'Hoàn thành đủ nhiệm vụ 3 ngày liên tiếp.',
-        icon: '🔥',
-        rarity: 'epic',
+        code: 'weekly_champion_3rd',
+        title: 'Hạng 3 tuần',
+        description: 'Đạt hạng 3 bảng xếp hạng tuần.',
+        icon: '🥉',
+        rarity: 'rare' as const,
     },
 ] as const;
 
@@ -162,6 +382,79 @@ const normalizeCategory = (value: string): string => {
     if (normalized === 'toan' || normalized.includes('toán')) return 'toan';
     if (normalized === 'tieng-viet' || normalized.includes('việt')) return 'tieng-viet';
     return normalized;
+};
+
+// Weekly quest helpers
+const getCurrentWeekKey = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const week = getISOWeekNumber(now);
+    return `${year}-W${String(week).padStart(2, '0')}`;
+};
+
+const getISOWeekNumber = (date: Date): number => {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+};
+
+const getOrCreateWeeklyProgress = async (
+    db: D1Database,
+    username: string,
+    weekKey: string
+): Promise<any[]> => {
+    const existing = await db.prepare(`
+        SELECT * FROM student_weekly_progress
+        WHERE username = ? AND week_key = ?
+    `).bind(username, weekKey).all();
+    
+    if (existing.results && existing.results.length > 0) {
+        return existing.results;
+    }
+    
+    const now = new Date().toISOString();
+    const statements = WEEKLY_QUESTS.map(quest =>
+        db.prepare(`
+            INSERT INTO student_weekly_progress
+            (username, week_key, quest_id, progress, target, claimed, created_at, updated_at)
+            VALUES (?, ?, ?, 0, ?, 0, ?, ?)
+        `).bind(username, weekKey, quest.id, quest.target, now, now)
+    );
+    
+    await db.batch(statements);
+    
+    const created = await db.prepare(`
+        SELECT * FROM student_weekly_progress
+        WHERE username = ? AND week_key = ?
+    `).bind(username, weekKey).all();
+    
+    return created.results || [];
+};
+
+const updateWeeklyQuestProgress = async (
+    db: D1Database,
+    username: string,
+    weekKey: string,
+    updates: Record<string, number>
+): Promise<void> => {
+    const now = new Date().toISOString();
+    const statements = [];
+    
+    for (const [questId, increment] of Object.entries(updates)) {
+        statements.push(
+            db.prepare(`
+                UPDATE student_weekly_progress
+                SET progress = progress + ?, updated_at = ?
+                WHERE username = ? AND week_key = ? AND quest_id = ?
+            `).bind(increment, now, username, weekKey, questId)
+        );
+    }
+    
+    if (statements.length > 0) {
+        await db.batch(statements);
+    }
 };
 
 const ensureGameLoopTables = async (db: D1Database): Promise<void> => {
@@ -441,11 +734,36 @@ const getRecentRewards = async (db: D1Database, username: string) => {
 };
 
 const unlockAchievementsIfNeeded = async (db: D1Database, profile: GameProfileRow, username: string) => {
-    const aggregates = await db.prepare(`
+    // Get already unlocked achievements
+    const unlockedRows = await db.prepare(`
+        SELECT achievement_code, unlocked_at
+        FROM student_achievement_unlocks
+        WHERE username = ?
+        ORDER BY unlocked_at DESC
+    `).bind(username).all<AchievementRow>();
+    const unlockedSet = new Set(unlockedRows.results.map((row) => row.achievement_code));
+
+    const toUnlock: string[] = [];
+
+    // === SIMPLE CHECKS (no additional queries needed) ===
+    
+    // Streak achievements (from profile)
+    const streak = Number(profile.daily_streak) || 0;
+    if (streak >= 3 && !unlockedSet.has('streak_3')) toUnlock.push('streak_3');
+    if (streak >= 7 && !unlockedSet.has('streak_7')) toUnlock.push('streak_7');
+    if (streak >= 30 && !unlockedSet.has('streak_30')) toUnlock.push('streak_30');
+    if (streak >= 100 && !unlockedSet.has('streak_100')) toUnlock.push('streak_100');
+
+    // Collection achievements (from profile)
+    const collection = safeJsonParse<Array<{ id: string }>>(profile.collection_json, []);
+    const collectionSize = collection.length;
+    if (collectionSize >= 5 && !unlockedSet.has('collector_5')) toUnlock.push('collector_5');
+    if (collectionSize >= 10 && !unlockedSet.has('collector_10')) toUnlock.push('collector_10');
+
+    // Mission achievements (from daily_progress)
+    const dailyAggregates = await db.prepare(`
         SELECT
             COALESCE(SUM(quizzes_completed), 0) AS total_quizzes,
-            COALESCE(SUM(toan_quizzes_completed), 0) AS total_toan,
-            COALESCE(SUM(tieng_viet_quizzes_completed), 0) AS total_tieng_viet,
             COALESCE(SUM(
                 CASE
                     WHEN mission_questions_claimed = 1
@@ -458,31 +776,86 @@ const unlockAchievementsIfNeeded = async (db: D1Database, profile: GameProfileRo
         WHERE username = ?
     `).bind(username).first<any>();
 
-    const unlockedRows = await db.prepare(`
-        SELECT achievement_code, unlocked_at
-        FROM student_achievement_unlocks
-        WHERE username = ?
-        ORDER BY unlocked_at DESC
-    `).bind(username).all<AchievementRow>();
-    const unlockedSet = new Set(unlockedRows.results.map((row) => row.achievement_code));
-
-    const toUnlock: string[] = [];
-    if (Number(aggregates?.total_quizzes) >= 1 && !unlockedSet.has('first_quiz')) {
+    if (Number(dailyAggregates?.total_quizzes) >= 1 && !unlockedSet.has('first_quiz')) {
         toUnlock.push('first_quiz');
     }
-    if (Number(aggregates?.completed_days) >= 1 && !unlockedSet.has('daily_hat_trick')) {
+    if (Number(dailyAggregates?.completed_days) >= 1 && !unlockedSet.has('daily_hat_trick')) {
         toUnlock.push('daily_hat_trick');
     }
-    if (Number(aggregates?.total_toan) >= 3 && !unlockedSet.has('math_starter')) {
-        toUnlock.push('math_starter');
-    }
-    if (Number(aggregates?.total_tieng_viet) >= 3 && !unlockedSet.has('tieng_viet_starter')) {
-        toUnlock.push('tieng_viet_starter');
-    }
-    if (Number(profile.daily_streak) >= 3 && !unlockedSet.has('streak_3')) {
-        toUnlock.push('streak_3');
+    if (Number(dailyAggregates?.completed_days) >= 7 && !unlockedSet.has('weekly_warrior')) {
+        toUnlock.push('weekly_warrior');
     }
 
+    // === COMPLEX CHECKS (need results table query) ===
+    // Only query if there are unchecked achievements
+    const needsResultsQuery = 
+        !unlockedSet.has('math_expert_50') || !unlockedSet.has('math_expert_100') ||
+        !unlockedSet.has('vietnamese_expert_50') || !unlockedSet.has('english_expert_50') ||
+        !unlockedSet.has('speed_demon_10') || !unlockedSet.has('speed_master_30') ||
+        !unlockedSet.has('perfect_5') || !unlockedSet.has('perfect_20') ||
+        !unlockedSet.has('early_bird_10') || !unlockedSet.has('night_owl_10') ||
+        !unlockedSet.has('questions_100') || !unlockedSet.has('questions_500') || !unlockedSet.has('questions_1000');
+
+    if (needsResultsQuery) {
+        // Single optimized query for all complex checks
+        const resultsStats = await db.prepare(`
+            SELECT
+                -- Subject mastery (correct answers with score >= 80%) - using quiz category
+                COALESCE(SUM(CASE WHEN (q.category = 'Toán' OR q.category = 'toan') AND r.score >= 80 THEN r.correct_count ELSE 0 END), 0) AS math_correct,
+                COALESCE(SUM(CASE WHEN (q.category LIKE '%Việt%' OR q.category LIKE '%viet%') AND r.score >= 80 THEN r.correct_count ELSE 0 END), 0) AS vietnamese_correct,
+                COALESCE(SUM(CASE WHEN (q.category LIKE '%Anh%' OR q.category LIKE '%English%') AND r.score >= 80 THEN r.correct_count ELSE 0 END), 0) AS english_correct,
+                
+                -- Speed achievements (time_taken < 50% of time_limit)
+                COALESCE(SUM(CASE WHEN r.time_taken > 0 AND q.time_limit > 0 AND r.time_taken < (q.time_limit * 0.5) THEN 1 ELSE 0 END), 0) AS speed_count,
+                
+                -- Perfect score (100% correct)
+                COALESCE(SUM(CASE WHEN r.total_questions > 0 AND r.correct_count = r.total_questions THEN 1 ELSE 0 END), 0) AS perfect_count,
+                
+                -- Time-based (hour of submission)
+                COALESCE(SUM(CASE WHEN CAST(strftime('%H', r.submitted_at) AS INTEGER) < 7 THEN 1 ELSE 0 END), 0) AS early_bird_count,
+                COALESCE(SUM(CASE WHEN CAST(strftime('%H', r.submitted_at) AS INTEGER) >= 21 THEN 1 ELSE 0 END), 0) AS night_owl_count,
+                
+                -- Total correct answers
+                COALESCE(SUM(r.correct_count), 0) AS total_correct
+            FROM results r
+            LEFT JOIN quizzes q ON r.quiz_id = q.id
+            WHERE r.student_name = ?
+        `).bind(username).first<any>();
+
+        // Subject mastery
+        const mathCorrect = Number(resultsStats?.math_correct) || 0;
+        const vietnameseCorrect = Number(resultsStats?.vietnamese_correct) || 0;
+        const englishCorrect = Number(resultsStats?.english_correct) || 0;
+        
+        if (mathCorrect >= 50 && !unlockedSet.has('math_expert_50')) toUnlock.push('math_expert_50');
+        if (mathCorrect >= 100 && !unlockedSet.has('math_expert_100')) toUnlock.push('math_expert_100');
+        if (vietnameseCorrect >= 50 && !unlockedSet.has('vietnamese_expert_50')) toUnlock.push('vietnamese_expert_50');
+        if (englishCorrect >= 50 && !unlockedSet.has('english_expert_50')) toUnlock.push('english_expert_50');
+
+        // Speed achievements
+        const speedCount = Number(resultsStats?.speed_count) || 0;
+        if (speedCount >= 10 && !unlockedSet.has('speed_demon_10')) toUnlock.push('speed_demon_10');
+        if (speedCount >= 30 && !unlockedSet.has('speed_master_30')) toUnlock.push('speed_master_30');
+
+        // Perfect score achievements
+        const perfectCount = Number(resultsStats?.perfect_count) || 0;
+        if (perfectCount >= 5 && !unlockedSet.has('perfect_5')) toUnlock.push('perfect_5');
+        if (perfectCount >= 20 && !unlockedSet.has('perfect_20')) toUnlock.push('perfect_20');
+
+        // Time-based achievements
+        const earlyBirdCount = Number(resultsStats?.early_bird_count) || 0;
+        const nightOwlCount = Number(resultsStats?.night_owl_count) || 0;
+        if (earlyBirdCount >= 10 && !unlockedSet.has('early_bird_10')) toUnlock.push('early_bird_10');
+        if (nightOwlCount >= 10 && !unlockedSet.has('night_owl_10')) toUnlock.push('night_owl_10');
+
+        // Total questions achievements
+        const totalCorrect = Number(resultsStats?.total_correct) || 0;
+        if (totalCorrect >= 100 && !unlockedSet.has('questions_100')) toUnlock.push('questions_100');
+        if (totalCorrect >= 500 && !unlockedSet.has('questions_500')) toUnlock.push('questions_500');
+        if (totalCorrect >= 1000 && !unlockedSet.has('questions_1000')) toUnlock.push('questions_1000');
+    }
+
+    // Batch insert new achievements
     if (toUnlock.length > 0) {
         const now = new Date().toISOString();
         const inserts = toUnlock.map((code) =>
@@ -495,6 +868,7 @@ const unlockAchievementsIfNeeded = async (db: D1Database, profile: GameProfileRo
         await db.batch(inserts);
     }
 
+    // Return all unlocked achievements
     const refreshedRows = await db.prepare(`
         SELECT achievement_code, unlocked_at
         FROM student_achievement_unlocks
@@ -651,6 +1025,23 @@ export async function handleGameLoopRoutes(request: Request, env: Env, path: str
                     dateKey
                 ),
             ]);
+            
+            // Update weekly quest progress
+            const weekKey = getCurrentWeekKey();
+            const weeklyUpdates: Record<string, number> = {};
+            
+            // weekly_20_quizzes: +1 quiz
+            weeklyUpdates['weekly_20_quizzes'] = 1;
+            
+            // weekly_100_correct: +correctCount
+            weeklyUpdates['weekly_100_correct'] = correctCount;
+            
+            // weekly_perfect_streak: +1 if score === 100%
+            if (correctCount === totalQuestions && totalQuestions > 0) {
+                weeklyUpdates['weekly_perfect_streak'] = 1;
+            }
+            
+            await updateWeeklyQuestProgress(db, username, weekKey, weeklyUpdates);
         }
 
         const data = await buildDashboardResponse(db, username);
@@ -791,6 +1182,109 @@ export async function handleGameLoopRoutes(request: Request, env: Env, path: str
             status: 'success',
             data,
             reward,
+        });
+    }
+
+    if (path === '/api/game-loop/weekly-quests' && method === 'GET') {
+        const username = String(url.searchParams.get('username') || '').trim();
+        if (!username) return errorResponse('Missing username');
+        
+        const weekKey = getCurrentWeekKey();
+        const progressRows = await getOrCreateWeeklyProgress(db, username, weekKey);
+        
+        const quests = WEEKLY_QUESTS.map(quest => {
+            const progress = progressRows.find((p: any) => p.quest_id === quest.id);
+            return {
+                ...quest,
+                progress: Number(progress?.progress) || 0,
+                completed: (Number(progress?.progress) || 0) >= quest.target,
+                claimed: Number(progress?.claimed || 0) === 1,
+            };
+        });
+        
+        return jsonResponse({ status: 'success', weekKey, quests });
+    }
+
+    if (path === '/api/game-loop/claim-weekly-quest' && method === 'POST') {
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+        
+        const username = String(body.username || '').trim();
+        const questId = String(body.questId || '').trim();
+        
+        if (!username || !questId) {
+            return errorResponse('Missing username or questId');
+        }
+        
+        const weekKey = getCurrentWeekKey();
+        const quest = WEEKLY_QUESTS.find(q => q.id === questId);
+        if (!quest) return errorResponse('Quest not found', 404);
+        
+        const progress = await db.prepare(`
+            SELECT * FROM student_weekly_progress
+            WHERE username = ? AND week_key = ? AND quest_id = ?
+        `).bind(username, weekKey, questId).first<any>();
+        
+        if (!progress) return errorResponse('Quest progress not found', 404);
+        if (Number(progress.claimed) === 1) return errorResponse('Quest already claimed');
+        if (Number(progress.progress) < quest.target) return errorResponse('Quest not completed yet');
+        
+        const now = new Date().toISOString();
+        const statements = [];
+        
+        statements.push(
+            db.prepare(`
+                UPDATE student_weekly_progress
+                SET claimed = 1, updated_at = ?
+                WHERE username = ? AND week_key = ? AND quest_id = ?
+            `).bind(now, username, weekKey, questId)
+        );
+        
+        statements.push(
+            db.prepare('UPDATE students SET coins = coins + ? WHERE username = ?')
+                .bind(quest.reward.coins, username)
+        );
+        
+        const items = quest.reward.items as readonly string[];
+        if (items.some(item => item === 'hint_token')) {
+            statements.push(
+                db.prepare(`
+                    UPDATE student_game_profiles
+                    SET hint_tokens = hint_tokens + ?, updated_at = ?
+                    WHERE username = ?
+                `).bind(quest.reward.itemCount, now, username)
+            );
+        }
+        
+        if (items.some(item => item === 'streak_shield')) {
+            statements.push(
+                db.prepare(`
+                    UPDATE student_game_profiles
+                    SET streak_shields = streak_shields + ?, updated_at = ?
+                    WHERE username = ?
+                `).bind(quest.reward.itemCount, now, username)
+            );
+        }
+        
+        await db.batch(statements);
+        
+        await appendRewardEvent(db, username, 'WEEKLY_QUEST_CLAIM', 'COINS', {
+            questId,
+            coins: quest.reward.coins,
+            items: quest.reward.items,
+        });
+        
+        const data = await buildDashboardResponse(db, username);
+        
+        return jsonResponse({
+            status: 'success',
+            data,
+            reward: {
+                type: 'COINS',
+                coins: quest.reward.coins,
+                questId,
+                items: quest.reward.items,
+            },
         });
     }
 
