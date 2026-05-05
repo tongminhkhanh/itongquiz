@@ -98,6 +98,8 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'track_game_loop_quiz': method = 'POST'; path = '/api/game-loop/track-quiz'; break;
         case 'claim_game_loop_mission': method = 'POST'; path = '/api/game-loop/claim-mission'; break;
         case 'claim_game_loop_chest': method = 'POST'; path = '/api/game-loop/claim-chest'; break;
+        case 'get_weekly_quests': method = 'GET'; path = '/api/game-loop/weekly-quests'; break;
+        case 'claim_weekly_quest': method = 'POST'; path = '/api/game-loop/claim-weekly-quest'; break;
 
         // --- Gift Shop ---
         case 'get_gift_shop_catalog': method = 'GET'; path = '/api/gift-shop/catalog'; break;

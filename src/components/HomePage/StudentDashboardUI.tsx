@@ -605,24 +605,10 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
     const handleClaimWeeklyQuest = async (questId: string) => {
         if (!studentSession?.username) return;
-        
+
         try {
-            const response = await fetch('/api/game-loop/claim-weekly-quest', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: studentSession.username,
-                    questId,
-                }),
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to claim quest');
-            }
-            
-            const data = await response.json();
-            
+            const data = await callApi('claim_weekly_quest', { questId });
+
             if (data.status === 'success') {
                 // Show success toast (you'll need to import toast from react-hot-toast)
                 alert(`🎉 Nhận thưởng thành công! +${data.reward.coins} xu`);

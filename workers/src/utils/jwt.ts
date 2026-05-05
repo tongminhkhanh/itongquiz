@@ -86,7 +86,7 @@ export function createJWTCookie(token: string, maxAge: number = 7 * 24 * 60 * 60
         `auth_token=${token}`,
         'HttpOnly',
         'Secure',
-        'SameSite=Lax',
+        'SameSite=None',
         `Max-Age=${maxAge}`,
         'Path=/',
     ].join('; ');
@@ -101,7 +101,7 @@ export function clearJWTCookie(): string {
         'auth_token=',
         'HttpOnly',
         'Secure',
-        'SameSite=Lax',
+        'SameSite=None',
         'Max-Age=0',
         'Path=/',
     ].join('; ');
