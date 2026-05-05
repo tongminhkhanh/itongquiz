@@ -271,15 +271,10 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         const fetchWeeklyQuests = async () => {
             setIsWeeklyQuestsLoading(true);
             setWeeklyQuestsError(null);
-            
+
             try {
-                const response = await fetch(
-                    `/api/game-loop/weekly-quests?username=${encodeURIComponent(studentSession.username)}`
-                );
-                
-                if (!response.ok) throw new Error('Failed to fetch weekly quests');
-                
-                const data = await response.json();
+                const data = await callApi('get_weekly_quests', {});
+
                 if (data.status === 'success' && data.quests) {
                     setWeeklyQuests(data.quests);
                 }
@@ -631,16 +626,13 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             if (data.status === 'success') {
                 // Show success toast (you'll need to import toast from react-hot-toast)
                 alert(`🎉 Nhận thưởng thành công! +${data.reward.coins} xu`);
-                
+
                 // Refresh weekly quests
-                const refreshResponse = await fetch(
-                    `/api/game-loop/weekly-quests?username=${encodeURIComponent(studentSession.username)}`
-                );
-                const refreshData = await refreshResponse.json();
+                const refreshData = await callApi('get_weekly_quests', {});
                 if (refreshData.status === 'success') {
                     setWeeklyQuests(refreshData.quests);
                 }
-                
+
                 // Refresh dashboard to update coins
                 if (data.data) {
                     loadDashboard(studentSession.username);
