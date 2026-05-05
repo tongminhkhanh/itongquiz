@@ -28,6 +28,7 @@ export function corsHeaders(request: Request): Record<string, string> {
         'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
         // SECURITY: Removed x-target-url and x-target-token to prevent SSRF abuse
         'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Token',
+        'Access-Control-Allow-Credentials': 'true', // REQUIRED for JWT cookies with credentials: 'include'
         'Access-Control-Max-Age': '86400',
     };
 }
