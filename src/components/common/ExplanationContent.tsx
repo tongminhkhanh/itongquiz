@@ -18,16 +18,28 @@ interface ExplanationContentProps {
 }
 
 /**
+ * Escape HTML to prevent XSS attacks
+ */
+const escapeHtml = (text: string): string => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+};
+
+/**
  * Format AI explanation text thành HTML đẹp
  * - Loại bỏ Markdown headers (###, ##, #)
  * - Convert số thứ tự thành bullet points đẹp
  * - Format công thức toán (phân số)
  * - Giữ line breaks thành paragraphs
+ *
+ * SECURITY: Escapes all HTML first to prevent XSS, then applies safe formatting
  */
 const formatExplanationHtml = (text: string): string => {
     if (!text) return '';
 
-    let result = text;
+    // SECURITY: Escape HTML first to prevent XSS
+    let result = escapeHtml(text);
 
     // Step 1: Xử lý phân số dạng a/b thành LaTeX
     // Chỉ convert khi có số/số (ví dụ: 1/2, 3/5, 7/10)
@@ -35,7 +47,7 @@ const formatExplanationHtml = (text: string): string => {
         return `$\\frac{${numerator}}{${denominator}}$`;
     });
 
-    // Step 2: Loại bỏ Markdown headers (###, ##, #) 
+    // Step 2: Loại bỏ Markdown headers (###, ##, #)
     // Thay bằng text thường hoặc bold
     result = result.replace(/^#{1,6}\s*/gm, '');
 

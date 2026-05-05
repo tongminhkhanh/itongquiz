@@ -8,6 +8,7 @@
 import { Env } from '../types';
 import { jsonResponse, errorResponse, hashPassword } from '../utils/response';
 import { parseBody } from '../utils/helpers';
+import { signJWT, createJWTCookie } from '../utils/jwt';
 
 const isAdminActor = async (db: D1Database, actorUsername: string): Promise<boolean> => {
     const username = String(actorUsername || '').trim();
@@ -144,7 +145,23 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
             return jsonResponse({ status: 'error', message: 'Sai tên đăng nhập hoặc mật khẩu.' });
         }
 
-        return jsonResponse({
+        // SECURITY: Generate JWT token for teacher session
+        if (!env.JWT_SECRET) {
+            console.error('[Teacher Login] JWT_SECRET not configured');
+            return errorResponse('Authentication service unavailable', 503);
+        }
+
+        const jwtToken = await signJWT(
+            {
+                username: teacher.username,
+                role: teacher.role === 'admin' ? 'admin' : 'teacher',
+                fullName: teacher.full_name,
+            },
+            env.JWT_SECRET,
+            '7d' // 7 days expiration
+        );
+
+        const response = jsonResponse({
             status: 'success',
             data: {
                 username: teacher.username,
@@ -152,6 +169,16 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
                 role: teacher.role,
                 class: teacher.class,
             },
+        });
+
+        // Set JWT cookie
+        const headers = new Headers(response.headers);
+        headers.append('Set-Cookie', createJWTCookie(jwtToken));
+
+        return new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers,
         });
     }
 

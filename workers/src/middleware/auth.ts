@@ -1,4 +1,6 @@
-// Auth middleware - verify API token
+// Auth middleware - verify API token or JWT
+// MIGRATION NOTE: This middleware supports both legacy API token and new JWT authentication
+// Game-loop routes now use JWT authentication exclusively
 
 import { errorResponse } from '../utils/response';
 import { Env } from '../types';
@@ -20,10 +22,17 @@ export function verifyToken(request: Request, env: Env): Response | null {
     // 4. Allow public visual announcements
     if (path === '/api/announcements' && method === 'GET') return null;
 
-    // 5. Allow game-loop routes (uses username-based auth)
+    // 5. SECURITY: Game-loop routes now use JWT authentication (handled in gameLoop.ts)
+    // Skip legacy token check here - JWT middleware will validate in the route handler
     if (path.startsWith('/api/game-loop')) return null;
 
-    // 6. Verify token from header for REST API routes
+    // 6. SECURITY: Login endpoints don't require auth (they create auth)
+    if (path === '/api/login' || path === '/api/student-login') return null;
+
+    // 7. SECURITY: Logout endpoint requires JWT (handled in route)
+    if (path === '/api/logout') return null;
+
+    // 8. Verify token from header for REST API routes (legacy auth for non-JWT routes)
     const headerToken = request.headers.get('X-API-Token') || request.headers.get('Authorization')?.replace('Bearer ', '');
 
     if (headerToken === env.API_SECRET_TOKEN) return null;

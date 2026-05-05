@@ -28,6 +28,9 @@
         "rag:sync": "node scripts/rag-sync.cjs",
         "rag:sync:remote": "node scripts/rag-sync.cjs --remote"
     },
+    "dependencies": {
+        "jose": "^5.2.0"
+    },
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20241218.0",
         "typescript": "^5.7.0",

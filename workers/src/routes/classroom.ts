@@ -6,6 +6,7 @@ import { jsonResponse, errorResponse } from '../utils/response';
 import { mapAssignment, mapAssignments, hashSHA256, parseBody, extractIdFromPath } from '../utils/helpers';
 import { generateId, hashPassword } from '../utils/response';
 import { getSmartAssignmentPreview } from '../services/smartAssignment';
+import { signJWT, createJWTCookie } from '../utils/jwt';
 
 export async function handleClassroomRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
@@ -348,15 +349,15 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         if (!body) return errorResponse('Invalid JSON body');
 
         const inputHash = await hashPassword(body.password);
-        
+
         // Use JOIN to get student, class, and pet in a single query
         const studentData = await db.prepare(`
-            SELECT 
-                s.*, 
+            SELECT
+                s.*,
                 c.name as class_name,
-                p.pet_id, p.pet_name, p.level as pet_level, p.exp as pet_exp, 
-                p.exp_to_next as pet_exp_to_next, p.mood as pet_mood, 
-                p.items as pet_items, p.last_active as pet_last_active, 
+                p.pet_id, p.pet_name, p.level as pet_level, p.exp as pet_exp,
+                p.exp_to_next as pet_exp_to_next, p.mood as pet_mood,
+                p.items as pet_items, p.last_active as pet_last_active,
                 p.image_url as pet_image_url
             FROM students s
             LEFT JOIN classes c ON c.id = s.class_id
@@ -376,33 +377,60 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         }
 
         const petData = studentData.pet_id ? {
-            petId: studentData.pet_id, 
+            petId: studentData.pet_id,
             petName: studentData.pet_name,
-            level: Number(studentData.pet_level) || 1, 
+            level: Number(studentData.pet_level) || 1,
             exp: Number(studentData.pet_exp) || 0,
-            expToNext: Number(studentData.pet_exp_to_next) || 100, 
+            expToNext: Number(studentData.pet_exp_to_next) || 100,
             mood: studentData.pet_mood || 'happy',
             items: studentData.pet_items ? JSON.parse(studentData.pet_items as string) : [],
-            lastActive: studentData.pet_last_active || '', 
+            lastActive: studentData.pet_last_active || '',
             imageUrl: studentData.pet_image_url || '',
         } : null;
 
-        return jsonResponse({
+        // SECURITY: Generate JWT token for student session
+        if (!env.JWT_SECRET) {
+            console.error('[Student Login] JWT_SECRET not configured');
+            return errorResponse('Authentication service unavailable', 503);
+        }
+
+        const jwtToken = await signJWT(
+            {
+                username: studentData.username,
+                role: 'student',
+                fullName: studentData.full_name,
+                classId: studentData.class_id,
+            },
+            env.JWT_SECRET,
+            '7d' // 7 days expiration
+        );
+
+        const response = jsonResponse({
             status: 'success',
             data: {
-                studentId: studentData.id, 
-                fullName: studentData.full_name, 
+                studentId: studentData.id,
+                fullName: studentData.full_name,
                 username: studentData.username,
-                classId: studentData.class_id, 
-                className: studentData.class_name || '', 
+                classId: studentData.class_id,
+                className: studentData.class_name || '',
                 avatar: studentData.avatar || '',
-                coins: Number(studentData.coins) || 0, 
+                coins: Number(studentData.coins) || 0,
                 pet: petData,
                 shopItems: shopItems.results.map((i: any) => ({
                     itemId: i.item_id, name: i.name, price: Number(i.price) || 0,
                     type: i.type || 'ACCESSORY', category: i.category || '', assetUrl: i.asset_url || '',
                 })),
             },
+        });
+
+        // Set JWT cookie
+        const headers = new Headers(response.headers);
+        headers.append('Set-Cookie', createJWTCookie(jwtToken));
+
+        return new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers,
         });
     }
 

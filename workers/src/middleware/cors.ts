@@ -18,15 +18,16 @@ const ALLOWED_ORIGINS = [
 export function corsHeaders(request: Request): Record<string, string> {
     const origin = request.headers.get('Origin') || '';
     const normalizedOrigin = origin.replace(/\/$/, '');
-    
+
     const isAllowed = ALLOWED_ORIGINS.includes(normalizedOrigin);
-    
+
     const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0];
 
     return {
         'Access-Control-Allow-Origin': allowedOrigin,
         'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Token, x-target-url, x-target-token',
+        // SECURITY: Removed x-target-url and x-target-token to prevent SSRF abuse
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Token',
         'Access-Control-Max-Age': '86400',
     };
 }

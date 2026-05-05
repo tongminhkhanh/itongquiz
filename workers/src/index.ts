@@ -20,6 +20,7 @@ import { handleSystemSettingsRoutes } from './routes/systemSettings';
 import { handleAnalyticsRoutes } from './routes/analytics';
 import { handleTestBankRoutes } from './routes/testBank';
 import { handleTeacherAiQuotaRoutes } from './routes/teacherAiQuota';
+import { handleLogoutRoute } from './routes/logout';
 import { Env } from './types';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
 
@@ -50,6 +51,8 @@ export default {
 
             if (path.startsWith('/api/teachers') || path === '/api/login') {
                 response = await handleTeacherRoutes(request, env, path, method);
+            } else if (path === '/api/logout' && method === 'POST') {
+                response = await handleLogoutRoute(request, env);
             } else if (path.startsWith('/api/quizzes') || path.startsWith('/api/questions')) {
                 response = await handleQuizRoutes(request, env, path, method);
             } else if (path.startsWith('/api/results') || path === '/api/validate') {

@@ -1,10 +1,16 @@
 import { WORKERS_API_URL } from '../config/constants';
 
-// API Token for authentication
+// API Token for authentication (DEPRECATED - will be removed after JWT migration)
+// JWT authentication is now used for student and teacher sessions
 const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
 
 /**
  * The API Adapter - routes all requests to Cloudflare Workers (D1)
+ *
+ * MIGRATION NOTE: This adapter is being migrated to use JWT authentication.
+ * - Student login and game-loop routes now use JWT cookies
+ * - Teacher login now uses JWT cookies
+ * - Legacy routes still use X-API-Token header for backward compatibility
  */
 export const callApi = async <T = any>(action: string, payload: Record<string, any> = {}): Promise<T> => {
     let method = 'POST';
@@ -22,6 +28,7 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
             if (payload.actorUsername) urlParams.append('actorUsername', payload.actorUsername);
             break;
         case 'login': method = 'POST'; path = '/api/login'; break;
+        case 'logout': method = 'POST'; path = '/api/logout'; break;
 
         // --- Quizzes ---
         case 'get_quizzes': method = 'GET'; path = '/api/quizzes'; break;
@@ -86,8 +93,8 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'get_leaderboard': method = 'GET'; path = '/api/leaderboard'; break;
         case 'get_top_gold_leaderboard': method = 'GET'; path = '/api/leaderboard/top-gold'; break;
 
-        // --- Game Loop ---
-        case 'get_game_loop_dashboard': method = 'GET'; path = '/api/game-loop/dashboard'; urlParams.append('username', payload.username); break;
+        // --- Game Loop (JWT authenticated - no username in URL) ---
+        case 'get_game_loop_dashboard': method = 'GET'; path = '/api/game-loop/dashboard'; break;
         case 'track_game_loop_quiz': method = 'POST'; path = '/api/game-loop/track-quiz'; break;
         case 'claim_game_loop_mission': method = 'POST'; path = '/api/game-loop/claim-mission'; break;
         case 'claim_game_loop_chest': method = 'POST'; path = '/api/game-loop/claim-chest'; break;
@@ -144,9 +151,21 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
             method,
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-Token': API_SECRET_TOKEN,
             },
+            credentials: 'include', // IMPORTANT: Send cookies with requests for JWT authentication
         };
+
+        // Add legacy API token for non-JWT routes
+        // JWT routes (login, logout, game-loop) use cookies instead
+        const isJWTRoute = path === '/api/login' ||
+                          path === '/api/student-login' ||
+                          path === '/api/logout' ||
+                          path.startsWith('/api/game-loop');
+
+        if (!isJWTRoute && API_SECRET_TOKEN) {
+            (fetchOptions.headers as Record<string, string>)['X-API-Token'] = API_SECRET_TOKEN;
+        }
+
         // GET và DELETE thường không có body
         if (method !== 'GET' && method !== 'DELETE') {
             fetchOptions.body = JSON.stringify(payload);

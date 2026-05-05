@@ -4,12 +4,15 @@ import { corsHeaders } from '../middleware/cors';
 
 /**
  * AI Proxy Route Handler - STREAMING MODE
- * 
+ *
  * Forwards requests to CLIProxy (api.thitong.site) with stream:true enabled.
  * Pipes SSE (Server-Sent Events) chunks directly from upstream to browser.
- * 
+ *
  * This prevents Cloudflare Worker timeout (524) because data flows continuously
  * instead of waiting for the full AI response to complete.
+ *
+ * SECURITY: Only allows proxying to configured CLIPROXY_API endpoint to prevent SSRF attacks.
+ * Client cannot specify arbitrary target URLs or tokens.
  */
 export async function handleAiProxy(
     request: Request,
@@ -26,8 +29,15 @@ export async function handleAiProxy(
             // ⚡ FORCE stream:true to prevent timeout
             body.stream = true;
 
-            const targetApi = request.headers.get('x-target-url') || env.CLIPROXY_API;
-            const targetToken = request.headers.get('x-target-token') || env.CLIPROXY_TOKEN || '';
+            // SECURITY: Only use server-configured API endpoint and token
+            // Do NOT allow client to specify x-target-url or x-target-token to prevent SSRF
+            const targetApi = env.CLIPROXY_API;
+            const targetToken = env.CLIPROXY_TOKEN || '';
+
+            if (!targetApi) {
+                console.error('[AI Proxy] CLIPROXY_API not configured');
+                return errorResponse('AI service not configured', 503);
+            }
 
             const aiResponse = await fetch(`${targetApi}/chat/completions`, {
                 method: 'POST',
@@ -39,9 +49,9 @@ export async function handleAiProxy(
             });
 
             if (!aiResponse.ok) {
-                const errText = await aiResponse.text();
                 const status = aiResponse.status;
-                console.error(`[AI Proxy] CLIProxy downstream error (${status}):`, errText);
+                console.error(`[AI Proxy] CLIProxy downstream error (${status})`);
+                // SECURITY: Don't expose detailed upstream error messages to client
                 return errorResponse(`AI Service Error (${status})`, status as any);
             }
 
@@ -59,7 +69,8 @@ export async function handleAiProxy(
 
         } catch (error: any) {
             console.error('[AI Proxy] Request error:', error);
-            return errorResponse('Failed to proxy AI request: ' + (error.message || 'Unknown error'), 500);
+            // SECURITY: Don't expose internal error details to client
+            return errorResponse('AI service temporarily unavailable', 500);
         }
     }
 

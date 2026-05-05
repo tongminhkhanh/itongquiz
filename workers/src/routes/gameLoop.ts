@@ -1,6 +1,7 @@
 import { Env } from '../types';
 import { errorResponse, generateId, jsonResponse } from '../utils/response';
 import { parseBody } from '../utils/helpers';
+import { verifyJWTMiddleware, isStudent } from '../middleware/jwtAuth';
 
 type MissionId = 'daily_questions' | 'daily_accuracy' | 'daily_subject';
 type RewardType = 'COINS' | 'COLLECTIBLE' | 'HINT_TOKEN' | 'STREAK_SHIELD';
@@ -949,16 +950,44 @@ const chooseChestReward = (
     };
 };
 
+/**
+ * Validate username parameter to prevent abuse
+ * SECURITY: Basic validation - not a replacement for proper authentication
+ */
+const validateUsername = async (db: D1Database, username: string): Promise<boolean> => {
+    if (!username || username.length < 2 || username.length > 50) return false;
+
+    // Check if username exists in students table
+    const student = await db.prepare('SELECT username FROM students WHERE username = ? LIMIT 1')
+        .bind(username).first<any>();
+
+    return !!student;
+};
+
 export async function handleGameLoopRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
     const url = new URL(request.url);
     await ensureGameLoopTables(db);
 
-    if (path === '/api/game-loop/dashboard' && method === 'GET') {
-        const username = String(url.searchParams.get('username') || '').trim();
-        if (!username) return errorResponse('Missing username');
+    // SECURITY: Verify JWT token and extract authenticated user
+    const authResult = await verifyJWTMiddleware(request, env);
+    if (authResult instanceof Response) {
+        // JWT verification failed, return error response
+        return authResult;
+    }
 
-        const data = await buildDashboardResponse(db, username);
+    const { user } = authResult;
+
+    // SECURITY: Game-loop routes are student-only
+    if (!isStudent(user)) {
+        return errorResponse('Forbidden: Game-loop routes are for students only', 403);
+    }
+
+    // Use authenticated username from JWT (not from query/body)
+    const authenticatedUsername = user.username;
+
+    if (path === '/api/game-loop/dashboard' && method === 'GET') {
+        const data = await buildDashboardResponse(db, authenticatedUsername);
         return jsonResponse({ status: 'success', data });
     }
 
@@ -966,14 +995,16 @@ export async function handleGameLoopRoutes(request: Request, env: Env, path: str
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        const username = String(body.username || '').trim();
         const activityId = String(body.activityId || '').trim();
         const rawCategory = String(body.category || body.subject || '').trim();
         const normalizedCategory = normalizeCategory(rawCategory);
         const totalQuestions = Math.max(0, Math.floor(Number(body.totalQuestions) || 0));
         const correctCount = Math.max(0, Math.floor(Number(body.correctCount) || 0));
 
-        if (!username || !activityId) return errorResponse('Missing username or activityId');
+        if (!activityId) return errorResponse('Missing activityId');
+
+        // Use authenticated username from JWT
+        const username = authenticatedUsername;
 
         const existingActivity = await db.prepare(`
             SELECT activity_id
@@ -1052,9 +1083,11 @@ export async function handleGameLoopRoutes(request: Request, env: Env, path: str
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        const username = String(body.username || '').trim();
         const missionId = String(body.missionId || '').trim() as MissionId;
-        if (!username || !missionId) return errorResponse('Missing username or missionId');
+        if (!missionId) return errorResponse('Missing missionId');
+
+        // Use authenticated username from JWT
+        const username = authenticatedUsername;
 
         const dateKey = getBangkokDateKey();
         let profile = await ensureProfile(db, username);
@@ -1112,8 +1145,8 @@ export async function handleGameLoopRoutes(request: Request, env: Env, path: str
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        const username = String(body.username || '').trim();
-        if (!username) return errorResponse('Missing username');
+        // Use authenticated username from JWT
+        const username = authenticatedUsername;
 
         const dateKey = getBangkokDateKey();
         const profile = await ensureProfile(db, username);
@@ -1186,9 +1219,9 @@ export async function handleGameLoopRoutes(request: Request, env: Env, path: str
     }
 
     if (path === '/api/game-loop/weekly-quests' && method === 'GET') {
-        const username = String(url.searchParams.get('username') || '').trim();
-        if (!username) return errorResponse('Missing username');
-        
+        // Use authenticated username from JWT
+        const username = authenticatedUsername;
+
         const weekKey = getCurrentWeekKey();
         const progressRows = await getOrCreateWeeklyProgress(db, username, weekKey);
         
@@ -1208,14 +1241,15 @@ export async function handleGameLoopRoutes(request: Request, env: Env, path: str
     if (path === '/api/game-loop/claim-weekly-quest' && method === 'POST') {
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
-        
-        const username = String(body.username || '').trim();
+
         const questId = String(body.questId || '').trim();
-        
-        if (!username || !questId) {
-            return errorResponse('Missing username or questId');
+        if (!questId) {
+            return errorResponse('Missing questId');
         }
-        
+
+        // Use authenticated username from JWT
+        const username = authenticatedUsername;
+
         const weekKey = getCurrentWeekKey();
         const quest = WEEKLY_QUESTS.find(q => q.id === questId);
         if (!quest) return errorResponse('Quest not found', 404);

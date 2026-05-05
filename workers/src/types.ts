@@ -3,6 +3,7 @@ export interface Env {
     API_SECRET_TOKEN: string;
     CLIPROXY_API: string;
     CLIPROXY_TOKEN: string;
+    JWT_SECRET: string;
 }
 
 export interface Quiz {

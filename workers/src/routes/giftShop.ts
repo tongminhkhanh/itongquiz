@@ -207,6 +207,10 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
     if (path === '/api/gift-shop/catalog' && method === 'POST') {
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
+
+        // SECURITY WARNING: This trusts actorIsAdmin from client request body
+        // TODO: Replace with server-side session/JWT validation
+        // Current implementation allows authorization bypass if API token is compromised
         if (!toBool(body.actorIsAdmin)) return errorResponse('Forbidden', 403);
 
         const name = String(body.name || '').trim();
@@ -243,6 +247,9 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
 
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
+
+        // SECURITY WARNING: This trusts actorIsAdmin from client request body
+        // TODO: Replace with server-side session/JWT validation
         if (!toBool(body.actorIsAdmin)) return errorResponse('Forbidden', 403);
 
         const name = String(body.name || '').trim();
@@ -276,6 +283,8 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
         const itemId = extractIdFromPath(path, '/api/gift-shop/catalog');
         if (!itemId) return errorResponse('Missing catalog item ID');
 
+        // SECURITY WARNING: This trusts actorIsAdmin from client query string
+        // TODO: Replace with server-side session/JWT validation
         const actorIsAdmin = toBool(url.searchParams.get('actorIsAdmin'));
         if (!actorIsAdmin) return errorResponse('Forbidden', 403);
         const actorUsername = String(url.searchParams.get('actorUsername') || '').trim() || 'admin';
