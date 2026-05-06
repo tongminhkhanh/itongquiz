@@ -9,10 +9,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { LiveExamStatusResponse } from '../types/liveExam.types';
+import { getSessionStatus } from '../services/liveExamService';
 
 const POLL_INTERVAL = 3000; // 3 seconds
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
 interface UseLiveExamStatusOptions {
     sessionId: string;
     enabled?: boolean; // Allow pausing polling
@@ -37,16 +36,7 @@ export function useLiveExamStatus({
 
     const fetchStatus = async () => {
         try {
-            const response = await fetch(`${API_BASE}/live-exam/${sessionId}/status`, {
-                credentials: 'include', // Include cookies for JWT
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
+            const data = await getSessionStatus(sessionId);
 
             if (isMountedRef.current) {
                 setStatus(data);

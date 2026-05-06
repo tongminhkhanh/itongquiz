@@ -8,8 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+import { updateActivity as sendActivityUpdate } from '../services/liveExamService';
 
 interface ActivityData {
     currentQuestion?: number;
@@ -38,21 +37,7 @@ export function useLiveExamActivity({
             setError(null);
 
             try {
-                const response = await fetch(`${API_BASE}/live-exam/${sessionId}/activity`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify(data),
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || `HTTP ${response.status}`);
-                }
-
-                // Success - activity updated
+                await sendActivityUpdate(sessionId, data);
             } catch (err: any) {
                 console.error('[useLiveExamActivity] Error:', err);
                 setError(err.message || 'Failed to update activity');

@@ -320,8 +320,11 @@ export async function handleLiveExamRoutes(
                 session: {
                     id: session!.id,
                     title: session!.title,
+                    quizId: session!.quizId,
                     duration: session!.duration,
                     status: session!.status,
+                    startedAt: session!.startedAt,
+                    endsAt: session!.endsAt,
                 },
             });
         } catch (error: any) {

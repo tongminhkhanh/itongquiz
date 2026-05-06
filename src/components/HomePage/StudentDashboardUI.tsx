@@ -12,6 +12,10 @@ import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Roc
 import { motion, AnimatePresence } from 'framer-motion';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import { JoinLiveExamModal } from '../LiveExam/JoinLiveExamModal';
+import { WaitingRoomStudent } from '../LiveExam/WaitingRoomStudent';
+import { LiveExamQuiz } from '../LiveExam/LiveExamQuiz';
+import { ResultsRoom } from '../LiveExam/ResultsRoom';
+import { useLiveExamStatus } from '../../hooks/useLiveExamStatus';
 import AvatarSelectorModal from '../common/AvatarSelectorModal';
 import MathSpan from '../common/MathSpan';
 import { StudentFloatingSidebar } from '../gamification/StudentFloatingSidebar';
@@ -230,6 +234,91 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const [isBadgeGalleryOpen, setIsBadgeGalleryOpen] = useState(false);
     const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
     const [isJoinLiveExamModalOpen, setIsJoinLiveExamModalOpen] = useState(false);
+    const [joinedLiveExam, setJoinedLiveExam] = useState<{
+        sessionId: string;
+        sessionTitle: string;
+        quizId: string;
+        duration: number;
+        startedAt?: string;
+        endsAt?: string;
+    } | null>(null);
+    const [liveExamStage, setLiveExamStage] = useState<'waiting' | 'active' | 'results'>('waiting');
+
+    const { status: joinedLiveExamStatus } = useLiveExamStatus({
+        sessionId: joinedLiveExam?.sessionId || '',
+        enabled: !!joinedLiveExam,
+    });
+
+    const joinedSessionQuiz = useMemo(() => {
+        if (!joinedLiveExam) return null;
+        return quizStore.quizzes.find((q) => q.id === joinedLiveExam.quizId);
+    }, [joinedLiveExam, quizStore.quizzes]);
+
+    const liveExamQuestions = useMemo(() => {
+        const quiz = joinedSessionQuiz;
+        if (!quiz?.questions) return [];
+
+        return quiz.questions
+            .filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
+            .map((q: any) => ({
+                id: q.id,
+                text: q.question || q.mainQuestion || 'Câu hỏi',
+                imageUrl: q.image,
+                answers: (q.options || []).map((option: string, index: number) => ({
+                    id: String.fromCharCode(65 + index),
+                    text: option,
+                })),
+            }));
+    }, [joinedSessionQuiz]);
+
+    useEffect(() => {
+        if (!joinedLiveExamStatus?.session?.status) return;
+
+        if (joinedLiveExamStatus.session.status === 'active') {
+            setLiveExamStage('active');
+        } else if (joinedLiveExamStatus.session.status === 'closed') {
+            setLiveExamStage('results');
+        } else {
+            setLiveExamStage('waiting');
+        }
+    }, [joinedLiveExamStatus?.session?.status]);
+
+    if (joinedLiveExam && liveExamStage === 'waiting') {
+        return (
+            <WaitingRoomStudent
+                sessionId={joinedLiveExam.sessionId}
+                sessionTitle={joinedLiveExam.sessionTitle}
+                onExamStart={() => setLiveExamStage('active')}
+            />
+        );
+    }
+
+    if (
+        joinedLiveExam &&
+        liveExamStage === 'active' &&
+        joinedSessionQuiz &&
+        joinedLiveExamStatus?.session?.endsAt
+    ) {
+        return (
+            <LiveExamQuiz
+                sessionId={joinedLiveExam.sessionId}
+                questions={liveExamQuestions}
+                duration={joinedLiveExamStatus.session.duration}
+                endsAt={joinedLiveExamStatus.session.endsAt}
+                onComplete={() => setLiveExamStage('results')}
+            />
+        );
+    }
+
+    if (joinedLiveExam && liveExamStage === 'results') {
+        return (
+            <ResultsRoom
+                sessionId={joinedLiveExam.sessionId}
+                sessionTitle={joinedLiveExam.sessionTitle}
+            />
+        );
+    }
+
     
     // Weekly quests state
     const [weeklyQuests, setWeeklyQuests] = useState<any[]>([]);
@@ -1132,16 +1221,16 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             />
             <AnimatePresence>
                 {isLeaderboardOpen && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }} 
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
                         onClick={() => setIsLeaderboardOpen(false)}
                     >
-                        <motion.div 
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }} 
-                            animate={{ opacity: 1, scale: 1, y: 0 }} 
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="w-full max-w-6xl max-h-[90vh] bg-white rounded-3xl shadow-2xl overflow-hidden"
                             onClick={(e) => e.stopPropagation()}
@@ -1151,17 +1240,24 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     </motion.div>
                 )}
             </AnimatePresence>
-            
-            {/* Join Live Exam Modal */}
-            <JoinLiveExamModal 
+
+            <JoinLiveExamModal
                 isOpen={isJoinLiveExamModalOpen}
                 onClose={() => setIsJoinLiveExamModalOpen(false)}
-                onJoinSuccess={(sessionId) => {
-                    // Navigate to live exam session - will be handled by the modal
-                    console.log('Joined live exam session:', sessionId);
+                onJoinSuccess={(session) => {
+                    setJoinedLiveExam({
+                        sessionId: session.id,
+                        sessionTitle: session.title,
+                        quizId: session.quizId,
+                        duration: session.duration,
+                        startedAt: session.startedAt,
+                        endsAt: session.endsAt,
+                    });
+                    setLiveExamStage(session.status === 'active' ? 'active' : 'waiting');
+                    setIsJoinLiveExamModalOpen(false);
                 }}
             />
-            
+
             <StudentFloatingSidebar />
         </div>
     );

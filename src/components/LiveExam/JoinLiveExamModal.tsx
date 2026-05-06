@@ -12,7 +12,15 @@ import { joinLiveExam, parseAccessCode, isValidAccessCode } from '../../services
 interface JoinLiveExamModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onJoinSuccess: (sessionId: string, sessionTitle: string) => void;
+    onJoinSuccess: (session: {
+        id: string;
+        title: string;
+        quizId: string;
+        duration: number;
+        status: string;
+        startedAt?: string;
+        endsAt?: string;
+    }) => void;
 }
 
 export const JoinLiveExamModal: React.FC<JoinLiveExamModalProps> = ({
@@ -45,7 +53,7 @@ export const JoinLiveExamModal: React.FC<JoinLiveExamModalProps> = ({
 
         try {
             const result = await joinLiveExam(parsedCode);
-            onJoinSuccess(result.session.id, result.session.title);
+            onJoinSuccess(result.session);
             onClose();
             setCode(''); // Reset for next time
         } catch (err: any) {
