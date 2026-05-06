@@ -18,6 +18,7 @@ import { ResultsRoom } from '../LiveExam/ResultsRoom';
 import { useLiveExamStatus } from '../../hooks/useLiveExamStatus';
 import AvatarSelectorModal from '../common/AvatarSelectorModal';
 import MathSpan from '../common/MathSpan';
+import { StudentFloatingSidebar } from '../gamification/StudentFloatingSidebar';
 import { StudentHomeworkSection } from '../../features/homework/components/StudentHomeworkSection';
 import { HomeworkSubmissionModal } from '../../features/homework/components/HomeworkSubmissionModal';
 import { BadgeGallery } from '../gamification/BadgeGallery';
@@ -1349,6 +1350,8 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     setIsJoinLiveExamModalOpen(false);
                 }}
             />
+
+            <StudentFloatingSidebar />
 
         </div>
     );
