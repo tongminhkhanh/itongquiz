@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
-import { useQuizStore } from '../../../stores/quizStore';
+import { useQuizStore } from '../../stores/useQuizStore';
 import { Loader2, KeyRound, User, Lock, GraduationCap, Apple } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { showError } from '../../utils/toast';

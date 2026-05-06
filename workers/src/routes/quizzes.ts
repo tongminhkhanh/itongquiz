@@ -1,13 +1,26 @@
 // Quizzes + Questions API Routes
-// GET /api/quizzes - List all quizzes
-// POST /api/quizzes - Create quiz
-// PUT /api/quizzes/:id - Update quiz
-// DELETE /api/quizzes/:id - Delete quiz
-// GET /api/questions - List questions (optional ?quizId=X)
+// GET /api/quizzes - List all quizzes (PUBLIC)
+// GET /api/questions - List questions (PUBLIC)
+// POST /api/quizzes - Create quiz (TEACHER/ADMIN)
+// PUT /api/quizzes/:id - Update quiz (TEACHER/ADMIN with ownership check)
+// DELETE /api/quizzes/:id - Delete quiz (TEACHER/ADMIN with ownership check)
+// POST /api/quizzes/:id/duplicate - Duplicate quiz (TEACHER/ADMIN)
 
 import { Env } from '../types';
 import { jsonResponse, errorResponse, generateId } from '../utils/response';
 import { mapQuestionForSave, parseBody, extractIdFromPath } from '../utils/helpers';
+import { verifyJWTMiddleware, requireAdmin, requireTeacher } from '../middleware/jwtAuth';
+import { JWTPayload } from '../utils/jwt';
+
+const canAccessQuiz = async (db: D1Database, user: JWTPayload, quizId: string): Promise<boolean> => {
+    if (requireAdmin(user)) return true;
+    if (user.role !== 'teacher') return false;
+
+    const quiz = await db.prepare('SELECT created_by FROM quizzes WHERE id = ?').bind(quizId).first<{ created_by: string }>();
+    if (!quiz) return false;
+
+    return quiz.created_by === user.username;
+};
 
 export async function handleQuizRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
@@ -30,13 +43,23 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         return jsonResponse(rows.results);
     }
 
-    // POST /api/quizzes - Create quiz
+    // POST /api/quizzes - Create quiz (TEACHER/ADMIN only)
     if (path === '/api/quizzes' && method === 'POST') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        const { user } = authResult;
+
+        if (!requireTeacher(user)) {
+            return errorResponse('Forbidden: Teacher or admin access required', 403);
+        }
+
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
         try {
             const batch = [];
+            // Set created_by to the authenticated user
+            const createdBy = user.username;
             batch.push(
                 db.prepare(
                     `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home, tags)
@@ -44,7 +67,7 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
                 ).bind(
                     body.id, body.title, body.classLevel, body.category || '',
                     body.timeLimit, body.createdAt, body.accessCode || '',
-                    body.requireCode ? 'TRUE' : 'FALSE', body.createdBy || '',
+                    body.requireCode ? 'TRUE' : 'FALSE', createdBy,
                     body.showOnHome === false ? 'FALSE' : 'TRUE',
                     body.tags ? (Array.isArray(body.tags) ? JSON.stringify(body.tags) : body.tags) : '[]'
                 )
@@ -72,10 +95,23 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         }
     }
 
-    // PUT /api/quizzes/:id - Update quiz (delete + re-insert)
+    // PUT /api/quizzes/:id - Update quiz (TEACHER/ADMIN with ownership check)
     if (path.startsWith('/api/quizzes/') && method === 'PUT') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        const { user } = authResult;
+
+        if (!requireTeacher(user)) {
+            return errorResponse('Forbidden: Teacher or admin access required', 403);
+        }
+
         const quizId = extractIdFromPath(path, '/api/quizzes');
         if (!quizId) return errorResponse('Missing quiz ID');
+
+        // Check ownership
+        if (!(await canAccessQuiz(db, user, quizId))) {
+            return errorResponse('Forbidden: You do not have permission to edit this quiz', 403);
+        }
 
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
@@ -84,12 +120,15 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         const id = body.id || quizId;
 
         try {
+            // Fetch original created_by BEFORE deleting
+            const originalQuiz = await db.prepare('SELECT created_by FROM quizzes WHERE id = ?').bind(id).first<{ created_by: string }>();
+            const createdBy = originalQuiz?.created_by || user.username;
+
             const batch = [];
             // Delete old data then re-insert
             batch.push(db.prepare('DELETE FROM questions WHERE quiz_id = ?').bind(id));
             batch.push(db.prepare('DELETE FROM quizzes WHERE id = ?').bind(id));
 
-            // Re-insert quiz
             batch.push(
                 db.prepare(
                     `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home, tags)
@@ -97,7 +136,7 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
                 ).bind(
                     id, body.title, body.classLevel, body.category || '',
                     body.timeLimit, body.createdAt, body.accessCode || '',
-                    body.requireCode ? 'TRUE' : 'FALSE', body.createdBy || '',
+                    body.requireCode ? 'TRUE' : 'FALSE', createdBy,
                     body.showOnHome === false ? 'FALSE' : 'TRUE',
                     body.tags ? (Array.isArray(body.tags) ? JSON.stringify(body.tags) : body.tags) : '[]'
                 )
@@ -133,8 +172,16 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         }
     }
 
-    // POST /api/quizzes/:id/duplicate - Duplicate quiz with all questions
+    // POST /api/quizzes/:id/duplicate - Duplicate quiz with all questions (TEACHER/ADMIN)
     if (path.match(/^\/api\/quizzes\/[^/]+\/duplicate$/) && method === 'POST') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        const { user } = authResult;
+
+        if (!requireTeacher(user)) {
+            return errorResponse('Forbidden: Teacher or admin access required', 403);
+        }
+
         const segments = path.split('/');
         const quizId = segments[3]; // /api/quizzes/{id}/duplicate
         if (!quizId) return errorResponse('Missing quiz ID');
@@ -154,7 +201,7 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
 
             const batch = [];
 
-            // Insert new quiz
+            // Insert new quiz (set created_by to current user)
             batch.push(
                 db.prepare(
                     `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home, tags)
@@ -162,7 +209,7 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
                 ).bind(
                     newQuizId, newTitle, originalQuiz.class_level, originalQuiz.category || '',
                     originalQuiz.time_limit, createdAt, '', // No access code for copy
-                    originalQuiz.require_code || 'FALSE', originalQuiz.created_by || '',
+                    originalQuiz.require_code || 'FALSE', user.username, // Set to current user
                     'FALSE', // Don't show copies on home by default
                     originalQuiz.tags || '[]'
                 )
@@ -205,10 +252,23 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         }
     }
 
-    // DELETE /api/quizzes/:id
+    // DELETE /api/quizzes/:id (TEACHER/ADMIN with ownership check)
     if (path.startsWith('/api/quizzes/') && method === 'DELETE') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        const { user } = authResult;
+
+        if (!requireTeacher(user)) {
+            return errorResponse('Forbidden: Teacher or admin access required', 403);
+        }
+
         const quizId = extractIdFromPath(path, '/api/quizzes');
         if (!quizId) return errorResponse('Missing quiz ID');
+
+        // Check ownership
+        if (!(await canAccessQuiz(db, user, quizId))) {
+            return errorResponse('Forbidden: You do not have permission to delete this quiz', 403);
+        }
 
         await db.prepare('DELETE FROM questions WHERE quiz_id = ?').bind(quizId).run();
         await db.prepare('DELETE FROM quizzes WHERE id = ?').bind(quizId).run();

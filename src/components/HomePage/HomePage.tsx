@@ -54,18 +54,25 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
     const isTeacherLoggedIn = authStore.isLoggedIn;
     const isLoggedIn = isStudentLoggedIn || isTeacherLoggedIn;
 
-    // --- Fetch Assignments on Mount ---
+    // --- Fetch assignments only for authenticated teacher/admin views ---
+    // Student-specific assignments are fetched separately from the student JWT session.
     useEffect(() => {
+        if (!isTeacherLoggedIn) {
+            setAssignments([]);
+            return;
+        }
+
         const fetchAssignments = async () => {
             try {
                 const data = await getAllAssignments();
                 setAssignments(data);
             } catch (error) {
                 console.error('Failed to fetch assignments:', error);
+                setAssignments([]);
             }
         };
         fetchAssignments();
-    }, []);
+    }, [isTeacherLoggedIn]);
 
     // --- Fetch Student Assignments if Logged In ---
     useEffect(() => {

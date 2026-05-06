@@ -40,9 +40,16 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
     const [timePeriod, setTimePeriod] = useState<string>('all');
     const [category, setCategory] = useState<'overall' | 'weekly' | 'speed' | 'accuracy' | 'streak'>('overall');
     const studentSession = useClassroomStore(s => s.studentSession);
+    const isAuthenticated = !!studentSession;
 
-    // Fetch results on mount
+    // Fetch results only for authenticated student session; backend scopes data by JWT.
     useEffect(() => {
+        if (!isAuthenticated) {
+            setResults([]);
+            setIsLoading(false);
+            return;
+        }
+
         const loadResults = async () => {
             setIsLoading(true);
             try {
@@ -87,7 +94,7 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
             }
         };
         loadResults();
-    }, []);
+    }, [isAuthenticated]);
 
     // Process and rank students
     const leaderboard = useMemo<LeaderboardEntry[]>(() => {

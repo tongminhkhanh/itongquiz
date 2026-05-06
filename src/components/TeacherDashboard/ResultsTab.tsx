@@ -17,7 +17,7 @@ import {
     DateRange
 } from '../teacher/ResultsView';
 import { useResults } from '../../hooks';
-import { useQuizStore } from '../../../stores/quizStore';
+import { useQuizStore } from '../../stores/useQuizStore';
 import { fetchResultAnswers } from '../../services/googleSheetService';
 import { RefreshCw, Download, ChevronDown, Search, FileText, Users, BarChart } from 'lucide-react';
 import { checkAnswer } from '../../utils/question/scoring.util';

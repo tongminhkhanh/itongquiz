@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useGameStore } from '../../stores/useGameStore';
-import { useQuizStore } from '../../../stores/quizStore';
+import { useQuizStore } from '../../stores/useQuizStore';
 import { Loader2, Play, RotateCcw, Home } from 'lucide-react';
 import { getRandomQuestions } from './gameQuestions';
 

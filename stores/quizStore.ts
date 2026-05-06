@@ -382,16 +382,19 @@ export const useQuizStore = create<QuizState>()(
 
             submitResult: async (result) => {
                 try {
-                    const res = await callApi('submit_result', {
+                    const res = await callApi<{ status: string; resultId?: number }>('submit_result', {
                         ...result,
                         className: result.studentClass,
                         quizTitle: result.quizTitle || 'Unknown Quiz'
                     });
                     if (res && res.status === 'success') {
                         cacheService.invalidatePrefix('results:');
+                        // Update result with server-generated ID
+                        const updatedResult = res.resultId ? { ...result, id: String(res.resultId) } : result;
                         set((state) => ({
-                            results: [...state.results, result]
+                            results: [...state.results, updatedResult]
                         }));
+                        return updatedResult;
                     } else {
                         throw new Error('Không thể lưu kết quả. Vui lòng thử lại!');
                     }

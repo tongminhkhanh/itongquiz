@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getAnnouncement, saveAnnouncement, Announcement } from '../../services/announcementService';
 import { getSystemSettings, saveSystemSettings } from '../../services/systemSettingsService';
-import { useAuthStore } from '../../../stores/authStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 
 /**
  * Admin UI for managing marquee and banner announcements

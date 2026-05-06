@@ -3,7 +3,7 @@ import { Quiz } from '../../types';
 import { Card, Button } from '../common';
 import { useQuizManager } from '../../hooks';
 import { Search, Key, Edit, Trash2, RefreshCw, Lock, Tag, Copy, Send, MoreVertical, Eye, X, Loader2, CheckCircle2, BookOpen } from 'lucide-react';
-import { useQuizStore } from '../../../stores/quizStore';
+import { useQuizStore } from '../../stores/useQuizStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { SUBJECT_CONFIG } from '../HomePage/StudentDashboardUI';

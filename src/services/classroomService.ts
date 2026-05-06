@@ -127,12 +127,11 @@ export const deleteStudent = async (studentId: string): Promise<boolean> => {
 export const resetStudentPassword = async (
     studentId: string,
     newPassword: string,
-    actorUsername: string
+    _actorUsername?: string
 ): Promise<boolean> => {
     const res = await callGasApi('reset_student_password', {
         studentId,
         newPassword,
-        actorUsername,
     });
     if (res.status !== 'success') {
         throw new Error(res.message || 'Không thể đặt lại mật khẩu.');

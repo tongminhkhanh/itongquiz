@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuizStore } from '../../../stores/quizStore';
+import { useQuizStore } from '../../stores/useQuizStore';
 
 const LandingPage: React.FC = () => {
     const setView = useQuizStore(state => state.setView);

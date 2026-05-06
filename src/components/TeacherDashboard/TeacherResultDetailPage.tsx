@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { StudentDetailModal } from '../teacher/ResultsView';
 import { fetchResultAnswers } from '../../services/googleSheetService';
-import { useQuizStore } from '../../../stores/quizStore';
+import { useQuizStore } from '../../stores/useQuizStore';
 import { useTeacherDashboardUIStore } from '../../stores/useTeacherDashboardUIStore';
 import type { Question, StudentResult } from '../../types';
 

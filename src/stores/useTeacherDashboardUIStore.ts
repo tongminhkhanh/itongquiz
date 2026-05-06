@@ -17,7 +17,8 @@ export type TeacherDashboardTab =
     | 'assignments'
     | 'teachers'
     | 'gift-shop'
-    | 'homework';
+    | 'homework'
+    | 'live-exam';
 
 export type AssignmentComposerDraft = {
     source: 'smart-preview' | 'manual';

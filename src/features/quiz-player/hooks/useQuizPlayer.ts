@@ -270,7 +270,7 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
                 : parseFloat(((mergedCorrectCount / mergedTotalQuestions) * 10).toFixed(1));
 
             const resultData: StudentResult = {
-                id: generateUUID(),
+                id: generateUUID(), // Temporary client ID, will be replaced by server ID
                 quizId: quiz.id,
                 quizTitle: quiz.title,
                 studentName,
@@ -287,8 +287,11 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
                 validationDetails: validationResult.details
             };
 
-            if (!quiz.isPractice) await onSaveResult(resultData);
-            setResult(resultData);
+            let finalResult = resultData;
+            if (!quiz.isPractice) {
+                finalResult = await onSaveResult(resultData);
+            }
+            setResult(finalResult);
 
             // Gamification logic
             const addExp = mergedCorrectCount * 10 + (mergedScore === 10 ? 50 : 0);

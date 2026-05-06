@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
-import { useQuizStore } from '../../../stores/quizStore';
+import { useQuizStore } from '../../stores/useQuizStore';
 import { useGamificationStore } from '../../stores/useGamificationStore';
 import { useGameLoopStore } from '../../stores/useGameLoopStore';
 import { getAvatarUrl } from '../../config/avatars';
-import { getAllAssignments } from '../../services/classroomService';
 import { callApi } from '../../services/apiAdapter';
 import { Assignment } from '../../types/classroom.types';
 import { Quiz } from '../../types';
-import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Camera, Gift, KeyRound, Sparkles, CheckCircle2, Lock, Flame, Medal } from 'lucide-react';
+import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Camera, Gift, KeyRound, Sparkles, CheckCircle2, Lock, Flame, Medal, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
+import { JoinLiveExamModal } from '../LiveExam/JoinLiveExamModal';
 import AvatarSelectorModal from '../common/AvatarSelectorModal';
 import MathSpan from '../common/MathSpan';
 import { StudentFloatingSidebar } from '../gamification/StudentFloatingSidebar';
@@ -229,6 +229,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [isBadgeGalleryOpen, setIsBadgeGalleryOpen] = useState(false);
     const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+    const [isJoinLiveExamModalOpen, setIsJoinLiveExamModalOpen] = useState(false);
     
     // Weekly quests state
     const [weeklyQuests, setWeeklyQuests] = useState<any[]>([]);
@@ -668,6 +669,11 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                         <button type="button" onClick={() => setIsLeaderboardOpen(true)} className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-purple-200 bg-purple-50 text-purple-700 text-xs md:text-sm font-black hover:bg-purple-100 transition-colors">
                             <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
                             <span className="hidden md:inline">Xếp hạng</span>
+                        </button>
+
+                        <button type="button" onClick={() => setIsJoinLiveExamModalOpen(true)} className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-red-200 bg-red-50 text-red-700 text-xs md:text-sm font-black hover:bg-red-100 transition-colors animate-pulse">
+                            <Radio className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                            <span className="hidden md:inline">Thi Trực Tiếp</span>
                         </button>
 
                         <div className="flex items-center gap-3 border-l pl-3 md:pl-4 border-slate-200">
@@ -1145,6 +1151,17 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     </motion.div>
                 )}
             </AnimatePresence>
+            
+            {/* Join Live Exam Modal */}
+            <JoinLiveExamModal 
+                isOpen={isJoinLiveExamModalOpen}
+                onClose={() => setIsJoinLiveExamModalOpen(false)}
+                onJoinSuccess={(sessionId) => {
+                    // Navigate to live exam session - will be handled by the modal
+                    console.log('Joined live exam session:', sessionId);
+                }}
+            />
+            
             <StudentFloatingSidebar />
         </div>
     );

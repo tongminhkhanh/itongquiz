@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Loader2, Pencil, PlusCircle, RefreshCw, Trash2, XCircle } from 'lucide-react';
-import { useAuthStore } from '../../../stores/authStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { useGiftShopStore } from '../../stores/useGiftShopStore';
 import { giftShopService } from '../../services/giftShop.service';
 import type { GiftCatalogItem, GiftCategory, GiftOrderStatus } from '../../types/giftShop.types';

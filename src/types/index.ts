@@ -9,4 +9,5 @@ export * from './ui.types';
 export * from './classroom.types';
 export * from './giftShop.types';
 export * from './gameLoop.types';
+export * from './liveExam.types';
 

@@ -12,6 +12,7 @@ import {
     PlusCircle,
     Gift,
     BookText,
+    Radio,
 } from 'lucide-react';
 import { SCHOOL_NAME } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
@@ -48,6 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             { id: 'create', label: 'Tạo đề mới', icon: <PlusCircle className="w-5 h-5" /> },
             { id: 'manage', label: 'Đề kiểm tra', icon: <List className="w-5 h-5" /> },
             { id: 'results', label: 'Kết quả', icon: <FileText className="w-5 h-5" /> },
+            { id: 'live-exam', label: 'Thi Trực Tiếp', icon: <Radio className="w-5 h-5" /> },
             { id: 'classes', label: 'Lớp học', icon: <GraduationCap className="w-5 h-5" /> },
             { id: 'assignments', label: 'Giao bài', icon: <ClipboardList className="w-5 h-5" /> },
             { id: 'homework', label: 'Bài tập tự luận', icon: <BookText className="w-5 h-5" /> },
