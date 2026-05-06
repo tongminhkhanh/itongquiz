@@ -9,6 +9,9 @@ import React, { useEffect } from 'react';
 import { Clock, Users, Loader2 } from 'lucide-react';
 import { useLiveExamStatus } from '../../hooks';
 import { getStatusLabel } from '../../services/liveExamService';
+import { useWaitingRoomChat } from '../../hooks/useWaitingRoomChat';
+import { useClassroomStore } from '../../stores/useClassroomStore';
+import WaitingRoomChatPanel from './WaitingRoomChatPanel';
 
 interface WaitingRoomStudentProps {
     sessionId: string;
@@ -21,9 +24,15 @@ export const WaitingRoomStudent: React.FC<WaitingRoomStudentProps> = ({
     sessionTitle,
     onExamStart,
 }) => {
+    const studentSession = useClassroomStore((state) => state.studentSession);
     const { status, isLoading } = useLiveExamStatus({
         sessionId,
         enabled: true,
+    });
+    const chat = useWaitingRoomChat({
+        sessionId,
+        enabled: status?.session.status !== 'active' && status?.session.status !== 'closed',
+        asTeacher: false,
     });
 
     // Detect when exam starts
@@ -48,8 +57,9 @@ export const WaitingRoomStudent: React.FC<WaitingRoomStudentProps> = ({
     const duration = status?.session.duration || 0;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+            <div className="max-w-6xl mx-auto grid gap-6 lg:grid-cols-[1.15fr_0.85fr] items-start">
+            <div className="bg-white rounded-2xl shadow-2xl w-full p-8">
                 {/* Header */}
                 <div className="text-center mb-8">
                     <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -119,6 +129,17 @@ export const WaitingRoomStudent: React.FC<WaitingRoomStudentProps> = ({
                         {getStatusLabel(status?.session.status || 'waiting')}
                     </span>
                 </div>
+            </div>
+            <WaitingRoomChatPanel
+                messages={chat.messages}
+                chatEnabled={chat.chatEnabled}
+                isLoading={chat.isLoading}
+                isSending={chat.isSending}
+                currentUsername={studentSession?.username}
+                onSendMessage={async (content) => {
+                    await chat.sendMessage(content);
+                }}
+            />
             </div>
         </div>
     );

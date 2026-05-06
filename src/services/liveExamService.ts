@@ -14,11 +14,15 @@ import type {
     LiveExamParticipantsResponse,
     LiveExamResultsResponse,
     LiveExamSubmissionResponse,
+    WaitingRoomChatMessage,
+    WaitingRoomChatResponse,
     CreateLiveExamRequest,
     JoinLiveExamRequest,
     SubmitAnswersRequest,
     TeacherAction,
     StudentAnswers,
+    SendWaitingRoomMessageRequest,
+    UpdateWaitingRoomChatSettingsRequest,
 } from '../types/liveExam.types';
 import { fetchWithJWTInterceptor } from '../utils/jwtInterceptor';
 
@@ -275,6 +279,74 @@ export async function getResults(
         `/api/live-exam/${sessionId}/results`,
         {},
         getStudentJWTToken
+    );
+}
+
+export async function getWaitingRoomChat(
+    sessionId: string,
+    asTeacher = false
+): Promise<WaitingRoomChatResponse> {
+    return apiCall<WaitingRoomChatResponse>(
+        `/api/live-exam/${sessionId}/chat`,
+        {},
+        asTeacher ? getTeacherJWTToken : getStudentJWTToken
+    );
+}
+
+export async function sendWaitingRoomMessage(
+    sessionId: string,
+    data: SendWaitingRoomMessageRequest
+): Promise<WaitingRoomChatMessage> {
+    const result = await apiCall<{ success: boolean; message: WaitingRoomChatMessage }>(
+        `/api/live-exam/${sessionId}/chat/message`,
+        {
+            method: 'POST',
+            body: JSON.stringify(data),
+        },
+        getStudentJWTToken
+    );
+    return result.message;
+}
+
+export async function sendWaitingRoomAnnouncement(
+    sessionId: string,
+    data: SendWaitingRoomMessageRequest
+): Promise<WaitingRoomChatMessage> {
+    const result = await apiCall<{ success: boolean; message: WaitingRoomChatMessage }>(
+        `/api/live-exam/${sessionId}/chat/announcement`,
+        {
+            method: 'POST',
+            body: JSON.stringify(data),
+        },
+        getTeacherJWTToken
+    );
+    return result.message;
+}
+
+export async function updateWaitingRoomChatSettings(
+    sessionId: string,
+    data: UpdateWaitingRoomChatSettingsRequest
+): Promise<void> {
+    await apiCall<{ success: boolean }>(
+        `/api/live-exam/${sessionId}/chat/settings`,
+        {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        },
+        getTeacherJWTToken
+    );
+}
+
+export async function hideWaitingRoomChatMessage(
+    sessionId: string,
+    messageId: string
+): Promise<void> {
+    await apiCall<{ success: boolean }>(
+        `/api/live-exam/${sessionId}/chat/${messageId}/hide`,
+        {
+            method: 'PUT',
+        },
+        getTeacherJWTToken
     );
 }
 

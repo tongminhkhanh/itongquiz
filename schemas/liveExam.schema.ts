@@ -77,6 +77,17 @@ export const TeacherControlRequestSchema = z.object({
     teacherId: z.string().min(1, 'Teacher ID is required')
 });
 
+export const WaitingRoomChatMessageSchema = z.object({
+    content: z.string()
+        .trim()
+        .min(1, 'Chat message is required')
+        .max(160, 'Chat message must be at most 160 characters')
+});
+
+export const WaitingRoomChatSettingsSchema = z.object({
+    enabled: z.boolean()
+});
+
 // ===============================
 // Anti-cheat Warning Schema
 // ===============================

@@ -13,6 +13,7 @@ import { useQuizStore } from '../../../stores/quizStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { showSuccess, showError } from '../../utils/toast';
 import type { LiveExamSession } from '../../types/liveExam.types';
+import { useWaitingRoomChat } from '../../hooks/useWaitingRoomChat';
 
 export const TeacherLiveExamDashboardContainer: React.FC = () => {
     const [sessions, setSessions] = useState<LiveExamSession[]>([]);
@@ -138,6 +139,11 @@ export const TeacherLiveExamDashboardContainer: React.FC = () => {
     const selectedQuiz = selectedSession
         ? quizzes.find((quiz) => quiz.id === selectedSession.quizId)
         : null;
+    const waitingRoomChat = useWaitingRoomChat({
+        sessionId: selectedSession?.id || '',
+        enabled: selectedSession?.status === 'waiting',
+        asTeacher: true,
+    });
 
     if (selectedSession?.status === 'scheduled') {
         return (
@@ -254,6 +260,18 @@ export const TeacherLiveExamDashboardContainer: React.FC = () => {
             onSelectSession={handleSelectSession}
             onDeleteSession={handleDeleteSession}
             onRefresh={loadSessions}
+            waitingRoomChat={selectedSession?.status === 'waiting' ? {
+                sessionId: selectedSession.id,
+                enabled: waitingRoomChat.chatEnabled,
+                isLoading: waitingRoomChat.isLoading,
+                isSending: waitingRoomChat.isSending,
+                messages: waitingRoomChat.messages,
+                onSendAnnouncement: async (content: string) => {
+                    await waitingRoomChat.sendMessage(content);
+                },
+                onToggleChat: waitingRoomChat.toggleChat,
+                onHideMessage: waitingRoomChat.hideMessage,
+            } : null}
         />
     );
 };

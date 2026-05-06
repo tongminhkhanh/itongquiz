@@ -11,6 +11,8 @@ import { showConfirm } from '../../utils/toast';
 import { CreateLiveExamModal } from './CreateLiveExamModal';
 import { getStatusLabel, getStatusColor, formatAccessCode } from '../../services/liveExamService';
 import type { LiveExamSession } from '../../types/liveExam.types';
+import type { WaitingRoomChatMessage } from '../../types/liveExam.types';
+import WaitingRoomChatTeacherCard from './WaitingRoomChatTeacherCard';
 
 interface TeacherLiveExamDashboardProps {
     sessions: LiveExamSession[];
@@ -20,6 +22,16 @@ interface TeacherLiveExamDashboardProps {
     onSelectSession: (session: LiveExamSession) => void;
     onDeleteSession?: (session: LiveExamSession) => Promise<void>;
     onRefresh?: () => void;
+    waitingRoomChat?: {
+        sessionId: string;
+        enabled: boolean;
+        isLoading?: boolean;
+        isSending?: boolean;
+        messages: WaitingRoomChatMessage[];
+        onSendAnnouncement: (content: string) => Promise<void>;
+        onToggleChat: (enabled: boolean) => Promise<void>;
+        onHideMessage: (messageId: string) => Promise<void>;
+    } | null;
 }
 
 export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> = ({
@@ -30,6 +42,7 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
     onSelectSession,
     onDeleteSession,
     onRefresh,
+    waitingRoomChat = null,
 }) => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -57,10 +70,6 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
             purple: 'bg-purple-100 text-purple-700',
         };
         return colorMap[color] || colorMap.gray;
-    };
-
-    const canDeleteSession = (status: LiveExamSession['status']) => {
-        return status === 'scheduled' || status === 'closed';
     };
 
     return (
@@ -106,6 +115,20 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
                         </div>
                     </div>
                 </div>
+
+                {waitingRoomChat && (
+                    <div className="mb-6">
+                        <WaitingRoomChatTeacherCard
+                            messages={waitingRoomChat.messages}
+                            chatEnabled={waitingRoomChat.enabled}
+                            isLoading={waitingRoomChat.isLoading}
+                            isSending={waitingRoomChat.isSending}
+                            onSendAnnouncement={waitingRoomChat.onSendAnnouncement}
+                            onToggleChat={waitingRoomChat.onToggleChat}
+                            onHideMessage={waitingRoomChat.onHideMessage}
+                        />
+                    </div>
+                )}
 
                 {/* Filters */}
                 <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
@@ -218,7 +241,7 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
                                         <div className="text-xs text-slate-500">
                                             Tạo: {new Date(session.createdAt).toLocaleDateString('vi-VN')}
                                         </div>
-                                        {onDeleteSession && canDeleteSession(session.status) && (
+                                        {onDeleteSession && (
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();

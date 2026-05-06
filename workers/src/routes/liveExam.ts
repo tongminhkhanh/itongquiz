@@ -17,6 +17,8 @@ import {
     SubmitAnswersRequestSchema,
     UpdateActivityRequestSchema,
     TeacherControlRequestSchema,
+    WaitingRoomChatMessageSchema,
+    WaitingRoomChatSettingsSchema,
 } from '../../../schemas/liveExam.schema';
 
 // ============================================================================
@@ -68,6 +70,16 @@ async function getAuthenticatedStudentId(db: D1Database, user: JWTPayload): Prom
         .first<{ id: string }>();
 
     return student?.id || null;
+}
+
+async function requireStudentParticipant(
+    db: D1Database,
+    sessionId: string,
+    studentId: string
+): Promise<any | null> {
+    return db.prepare(
+        'SELECT * FROM live_exam_participants WHERE live_exam_id = ? AND student_id = ?'
+    ).bind(sessionId, studentId).first<any>();
 }
 
 // ============================================================================
@@ -403,6 +415,7 @@ export async function handleLiveExamRoutes(
                     startedAt: session.startedAt,
                     endsAt: session.endsAt,
                     duration: session.duration,
+                    chatEnabled: (session as any).chatEnabled ?? true,
                 },
                 participantCount,
                 timeRemaining,
@@ -589,6 +602,117 @@ export async function handleLiveExamRoutes(
         } catch (error: any) {
             return errorResponse(error.message || 'Failed to get results', 500);
         }
+    }
+
+    if (path.match(/^\/api\/live-exam\/[^/]+\/chat$/) && method === 'GET') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        const user = authResult.user;
+        const sessionId = path.split('/')[3];
+        if (!sessionId) return errorResponse('Invalid session ID');
+
+        const session = await LiveExamService.getLiveExamById(db, sessionId);
+        if (!session) return errorResponse('Session not found', 404);
+
+        if (isStudent(user)) {
+            const studentId = await getAuthenticatedStudentId(db, user);
+            if (!studentId) return errorResponse('Student not found', 404);
+            const participant = await requireStudentParticipant(db, sessionId, studentId);
+            if (!participant) return errorResponse('Forbidden: Join session first', 403);
+            const result = await LiveExamService.getWaitingRoomChat(db, sessionId, false);
+            return jsonResponse({ success: true, messages: result.messages, settings: { enabled: result.enabled } });
+        }
+
+        const authError = await requireTeacherForSession(db, user, sessionId);
+        if (authError) return authError;
+        const result = await LiveExamService.getWaitingRoomChat(db, sessionId, true);
+        return jsonResponse({ success: true, messages: result.messages, settings: { enabled: result.enabled } });
+    }
+
+    if (path.match(/^\/api\/live-exam\/[^/]+\/chat\/message$/) && method === 'POST') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        const user = authResult.user;
+        if (!isStudent(user)) return errorResponse('Forbidden: Student access required', 403);
+        const studentId = await getAuthenticatedStudentId(db, user);
+        if (!studentId) return errorResponse('Student not found', 404);
+        const sessionId = path.split('/')[3];
+        if (!sessionId) return errorResponse('Invalid session ID');
+        const session = await LiveExamService.getLiveExamById(db, sessionId);
+        if (!session) return errorResponse('Session not found', 404);
+        if (session.status !== 'waiting') return errorResponse('Chat is only available in waiting room', 400);
+        if (!(session as any).chatEnabled && (session as any).chatEnabled !== undefined) return errorResponse('Chat is disabled', 403);
+        const participant = await requireStudentParticipant(db, sessionId, studentId);
+        if (!participant) return errorResponse('Forbidden: Join session first', 403);
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+        const validation = WaitingRoomChatMessageSchema.safeParse(body);
+        if (!validation.success) return errorResponse(validation.error.issues.map((e: any) => e.message).join(', '), 400);
+        const message = await LiveExamService.createWaitingRoomChatMessage(db, {
+            sessionId,
+            senderRole: 'student',
+            senderId: studentId,
+            senderName: user.username,
+            content: validation.data.content,
+            kind: 'message',
+        });
+        return jsonResponse({ success: true, message });
+    }
+
+    if (path.match(/^\/api\/live-exam\/[^/]+\/chat\/announcement$/) && method === 'POST') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        const user = authResult.user;
+        const sessionId = path.split('/')[3];
+        if (!sessionId) return errorResponse('Invalid session ID');
+        const authError = await requireTeacherForSession(db, user, sessionId);
+        if (authError) return authError;
+        const session = await LiveExamService.getLiveExamById(db, sessionId);
+        if (!session) return errorResponse('Session not found', 404);
+        if (session.status !== 'waiting') return errorResponse('Announcements are only available in waiting room', 400);
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+        const validation = WaitingRoomChatMessageSchema.safeParse(body);
+        if (!validation.success) return errorResponse(validation.error.issues.map((e: any) => e.message).join(', '), 400);
+        const message = await LiveExamService.createWaitingRoomChatMessage(db, {
+            sessionId,
+            senderRole: 'teacher',
+            senderId: user.username,
+            senderName: user.fullName || user.username,
+            content: validation.data.content,
+            kind: 'announcement',
+        });
+        return jsonResponse({ success: true, message });
+    }
+
+    if (path.match(/^\/api\/live-exam\/[^/]+\/chat\/settings$/) && method === 'PUT') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        const user = authResult.user;
+        const sessionId = path.split('/')[3];
+        if (!sessionId) return errorResponse('Invalid session ID');
+        const authError = await requireTeacherForSession(db, user, sessionId);
+        if (authError) return authError;
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+        const validation = WaitingRoomChatSettingsSchema.safeParse(body);
+        if (!validation.success) return errorResponse(validation.error.issues.map((e: any) => e.message).join(', '), 400);
+        await LiveExamService.updateWaitingRoomChatEnabled(db, sessionId, validation.data.enabled);
+        return jsonResponse({ success: true, settings: { enabled: validation.data.enabled } });
+    }
+
+    if (path.match(/^\/api\/live-exam\/[^/]+\/chat\/[^/]+\/hide$/) && method === 'PUT') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        const user = authResult.user;
+        const parts = path.split('/');
+        const sessionId = parts[3];
+        const messageId = parts[5];
+        if (!sessionId || !messageId) return errorResponse('Invalid path params');
+        const authError = await requireTeacherForSession(db, user, sessionId);
+        if (authError) return authError;
+        await LiveExamService.hideWaitingRoomChatMessage(db, sessionId, messageId);
+        return jsonResponse({ success: true });
     }
 
     // ========================================================================

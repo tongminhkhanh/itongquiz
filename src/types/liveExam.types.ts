@@ -135,9 +135,42 @@ export interface LiveExamStatusResponse {
     startedAt?: string;
     endsAt?: string;
     duration: number;
+    chatEnabled?: boolean;
   };
   participantCount: number;
   timeRemaining?: number;          // Seconds remaining (only when active)
+}
+
+export type WaitingRoomChatSenderRole = 'student' | 'teacher' | 'system';
+export type WaitingRoomChatMessageKind = 'message' | 'announcement';
+
+export interface WaitingRoomChatMessage {
+  id: string;
+  sessionId: string;
+  senderRole: WaitingRoomChatSenderRole;
+  senderId: string;
+  senderName: string;
+  content: string;
+  kind: WaitingRoomChatMessageKind;
+  isHidden: boolean;
+  createdAt: string;
+}
+
+export interface WaitingRoomChatSettings {
+  enabled: boolean;
+}
+
+export interface WaitingRoomChatResponse {
+  messages: WaitingRoomChatMessage[];
+  settings: WaitingRoomChatSettings;
+}
+
+export interface SendWaitingRoomMessageRequest {
+  content: string;
+}
+
+export interface UpdateWaitingRoomChatSettingsRequest {
+  enabled: boolean;
 }
 
 /**
