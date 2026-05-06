@@ -9,6 +9,8 @@ import React, { useState } from 'react';
 import { Users, Play, Copy, Check, Loader2, Clock } from 'lucide-react';
 import { useLiveExamParticipants } from '../../hooks';
 import { startExam, formatAccessCode } from '../../services/liveExamService';
+import type { WaitingRoomChatMessage } from '../../types/liveExam.types';
+import WaitingRoomChatTeacherCard from './WaitingRoomChatTeacherCard';
 
 interface WaitingRoomTeacherProps {
     sessionId: string;
@@ -16,6 +18,15 @@ interface WaitingRoomTeacherProps {
     accessCode: string;
     duration: number;
     onExamStarted: () => void;
+    waitingRoomChat?: {
+        enabled: boolean;
+        isLoading?: boolean;
+        isSending?: boolean;
+        messages: WaitingRoomChatMessage[];
+        onSendAnnouncement: (content: string) => Promise<void>;
+        onToggleChat: (enabled: boolean) => Promise<void>;
+        onHideMessage: (messageId: string) => Promise<void>;
+    } | null;
 }
 
 export const WaitingRoomTeacher: React.FC<WaitingRoomTeacherProps> = ({
@@ -24,6 +35,7 @@ export const WaitingRoomTeacher: React.FC<WaitingRoomTeacherProps> = ({
     accessCode,
     duration,
     onExamStarted,
+    waitingRoomChat = null,
 }) => {
     const { participants, isLoading } = useLiveExamParticipants({
         sessionId,
@@ -82,6 +94,20 @@ export const WaitingRoomTeacher: React.FC<WaitingRoomTeacherProps> = ({
                         </div>
                     </div>
                 </div>
+
+                {waitingRoomChat && (
+                    <div className="mb-6">
+                        <WaitingRoomChatTeacherCard
+                            messages={waitingRoomChat.messages}
+                            chatEnabled={waitingRoomChat.enabled}
+                            isLoading={waitingRoomChat.isLoading}
+                            isSending={waitingRoomChat.isSending}
+                            onSendAnnouncement={waitingRoomChat.onSendAnnouncement}
+                            onToggleChat={waitingRoomChat.onToggleChat}
+                            onHideMessage={waitingRoomChat.onHideMessage}
+                        />
+                    </div>
+                )}
 
                 <div className="grid md:grid-cols-2 gap-6">
                     {/* Access Code Card */}

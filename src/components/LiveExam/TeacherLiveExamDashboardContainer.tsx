@@ -223,6 +223,17 @@ export const TeacherLiveExamDashboardContainer: React.FC = () => {
                     accessCode={selectedSession.accessCode}
                     duration={selectedSession.duration}
                     onExamStarted={handleExamStarted}
+                    waitingRoomChat={{
+                        enabled: waitingRoomChat.chatEnabled,
+                        isLoading: waitingRoomChat.isLoading,
+                        isSending: waitingRoomChat.isSending,
+                        messages: waitingRoomChat.messages,
+                        onSendAnnouncement: async (content: string) => {
+                            await waitingRoomChat.sendMessage(content);
+                        },
+                        onToggleChat: waitingRoomChat.toggleChat,
+                        onHideMessage: waitingRoomChat.hideMessage,
+                    }}
                 />
             </div>
         );
@@ -260,18 +271,7 @@ export const TeacherLiveExamDashboardContainer: React.FC = () => {
             onSelectSession={handleSelectSession}
             onDeleteSession={handleDeleteSession}
             onRefresh={loadSessions}
-            waitingRoomChat={selectedSession?.status === 'waiting' ? {
-                sessionId: selectedSession.id,
-                enabled: waitingRoomChat.chatEnabled,
-                isLoading: waitingRoomChat.isLoading,
-                isSending: waitingRoomChat.isSending,
-                messages: waitingRoomChat.messages,
-                onSendAnnouncement: async (content: string) => {
-                    await waitingRoomChat.sendMessage(content);
-                },
-                onToggleChat: waitingRoomChat.toggleChat,
-                onHideMessage: waitingRoomChat.hideMessage,
-            } : null}
+            waitingRoomChat={null}
         />
     );
 };
