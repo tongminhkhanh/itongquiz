@@ -243,6 +243,8 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         endsAt?: string;
     } | null>(null);
     const [liveExamStage, setLiveExamStage] = useState<'waiting' | 'active' | 'results'>('waiting');
+    const [isPreparingLiveExam, setIsPreparingLiveExam] = useState(false);
+    const [liveExamLoadError, setLiveExamLoadError] = useState<string | null>(null);
 
     const { status: joinedLiveExamStatus } = useLiveExamStatus({
         sessionId: joinedLiveExam?.sessionId || '',
@@ -282,6 +284,55 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             setLiveExamStage('waiting');
         }
     }, [joinedLiveExamStatus?.session?.status]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const ensureLiveExamQuizLoaded = async () => {
+            if (!joinedLiveExam || liveExamStage !== 'active') {
+                if (!cancelled) {
+                    setIsPreparingLiveExam(false);
+                    setLiveExamLoadError(null);
+                }
+                return;
+            }
+
+            if (joinedSessionQuiz) {
+                if (!cancelled) {
+                    setIsPreparingLiveExam(false);
+                    setLiveExamLoadError(null);
+                }
+                return;
+            }
+
+            if (!cancelled) {
+                setIsPreparingLiveExam(true);
+                setLiveExamLoadError(null);
+            }
+
+            try {
+                await quizStore.loadQuizzes();
+                if (!cancelled && !useQuizStore.getState().quizzes.find((q) => q.id === joinedLiveExam.quizId)) {
+                    setLiveExamLoadError('Không tải được đề thi trực tiếp. Vui lòng chờ giây lát rồi thử lại.');
+                }
+            } catch (error) {
+                console.error('Failed to prepare live exam quiz:', error);
+                if (!cancelled) {
+                    setLiveExamLoadError('Không tải được đề thi trực tiếp. Vui lòng thử lại.');
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsPreparingLiveExam(false);
+                }
+            }
+        };
+
+        void ensureLiveExamQuizLoaded();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [joinedLiveExam, liveExamStage, joinedSessionQuiz, quizStore]);
 
     
     // Weekly quests state
@@ -494,6 +545,25 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 sessionTitle={joinedLiveExam.sessionTitle}
                 onExamStart={() => setLiveExamStage('active')}
             />
+        );
+    }
+
+    if (joinedLiveExam && liveExamStage === 'active' && (!joinedSessionQuiz || isPreparingLiveExam)) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 text-center">
+                    <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Đang chuẩn bị bài thi...</h2>
+                    <p className="text-slate-600 mb-4">
+                        Giáo viên đã bắt đầu bài thi. Hệ thống đang tải đề để em vào làm bài.
+                    </p>
+                    {liveExamLoadError && (
+                        <div className="rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold px-4 py-3">
+                            {liveExamLoadError}
+                        </div>
+                    )}
+                </div>
+            </div>
         );
     }
 
