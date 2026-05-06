@@ -12,9 +12,7 @@ import { create } from 'zustand';
 import {
     PetData,
     ShopItem,
-    LeaderboardEntry,
     PetMood,
-    TopGoldStudent,
 } from '../types/gamification.types';
 import * as gamificationService from '../services/gamificationService';
 import { StorageKeys } from '../constants/storageKeys';
@@ -26,8 +24,6 @@ interface GamificationStore {
     pet: PetData | null;
     coins: number;
     shopItems: ShopItem[];
-    leaderboard: LeaderboardEntry[];
-    topGoldLeaderboard: TopGoldStudent[];
     isLoading: boolean;
     error: string | null;
 
@@ -45,8 +41,6 @@ interface GamificationStore {
     updateGameState: (username: string, addExp: number, addCoins: number) => Promise<boolean>;
     fetchPetData: (username: string) => Promise<void>;
     buyItem: (username: string, itemId: string) => Promise<boolean>;
-    fetchLeaderboard: () => Promise<void>;
-    fetchTopGoldLeaderboard: () => Promise<void>;
     clearReward: () => void;
     clearGamification: () => void;
     clearError: () => void;
@@ -67,8 +61,6 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
     pet: null,
     coins: 0,
     shopItems: [],
-    leaderboard: [],
-    topGoldLeaderboard: [],
     isLoading: false,
     error: null,
     lastReward: null,
@@ -183,30 +175,6 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
     },
 
     /**
-     * Fetch leaderboard
-     */
-    fetchLeaderboard: async () => {
-        try {
-            const leaderboard = await gamificationService.getLeaderboard();
-            set({ leaderboard });
-        } catch {
-            console.error('[GamificationStore] Failed to fetch leaderboard');
-        }
-    },
-
-    /**
-     * Fetch top gold leaderboard
-     */
-    fetchTopGoldLeaderboard: async () => {
-        try {
-            const topGoldLeaderboard = await gamificationService.getTopGoldLeaderboard();
-            set({ topGoldLeaderboard });
-        } catch {
-            console.error('[GamificationStore] Failed to fetch top gold leaderboard');
-        }
-    },
-
-    /**
      * Clear reward animation state
      */
     clearReward: () => set({ lastReward: null }),
@@ -220,7 +188,6 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
             pet: null,
             coins: 0,
             shopItems: [],
-            leaderboard: [],
             lastReward: null,
             error: null,
         });

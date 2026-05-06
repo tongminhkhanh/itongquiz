@@ -8,7 +8,6 @@ import Modal from '../common/Modal';
 import LoginModal from '../common/LoginModal';
 import AnnouncementMarquee from '../common/AnnouncementMarquee';
 import QuizListPage from './QuizListPage';
-import LeaderboardPage from './LeaderboardPage';
 import { getAllAssignments } from '../../services/classroomService';
 import { Assignment } from '../../types/classroom.types';
 import LoginLandingPage from './LoginLandingPage';
@@ -36,7 +35,7 @@ interface HomePageProps {
 
 const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIoe }) => {
     // --- State ---
-    const [view, setView] = useState<'home' | 'quiz-list' | 'leaderboard'>('home');
+    const [view, setView] = useState<'home' | 'quiz-list'>('home');
     const [activeTab, setActiveTab] = useState<string>('all');
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [loginTab, setLoginTab] = useState<'student' | 'teacher'>('student');
@@ -304,15 +303,9 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                 isLoggedIn={isLoggedIn}
                 isTeacherLoggedIn={isTeacherLoggedIn}
                 onResetHome={handleResetHome}
-                onNavigateLeaderboard={() => setView('leaderboard')}
                 onOpenLogin={() => openLogin('student')}
                 onActionCta={() => isTeacherLoggedIn ? quizStore.setView('teacher_dash') : quizStore.setView('home')}
             />
-
-            {/* LEADERBOARD VIEW */}
-            {view === 'leaderboard' && (
-                <LeaderboardPage onBack={() => setView('home')} />
-            )}
 
             {/* QUIZ LIST VIEW */}
             {view === 'quiz-list' && (

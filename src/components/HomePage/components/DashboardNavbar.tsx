@@ -5,7 +5,6 @@ interface DashboardNavbarProps {
     isLoggedIn: boolean;
     isTeacherLoggedIn: boolean;
     onResetHome: () => void;
-    onNavigateLeaderboard: () => void;
     onOpenLogin: () => void;
     onActionCta: () => void;
 }
@@ -14,7 +13,6 @@ export const DashboardNavbar: React.FC<DashboardNavbarProps> = ({
     isLoggedIn,
     isTeacherLoggedIn,
     onResetHome,
-    onNavigateLeaderboard,
     onOpenLogin,
     onActionCta
 }) => {
@@ -40,12 +38,6 @@ export const DashboardNavbar: React.FC<DashboardNavbarProps> = ({
                         className="sticker-nav__link"
                     >
                         Trang chủ
-                    </button>
-                    <button
-                        onClick={onNavigateLeaderboard}
-                        className="sticker-nav__link"
-                    >
-                        Xếp hạng
                     </button>
                     <button className="sticker-nav__link">
                         Cửa hàng

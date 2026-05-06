@@ -5,7 +5,7 @@
  * Reuses the same callGasApi pattern as classroomService.
  */
 
-import { PetData as UserPet, ShopItem, PurchaseResult as BuyItemResponse, LeaderboardEntry, GameStateResult, TopGoldStudent } from '../types/gamification.types';
+import { PetData as UserPet, ShopItem, PurchaseResult as BuyItemResponse, GameStateResult } from '../types/gamification.types';
 import { callApi } from './apiAdapter';
 
 // Response type matching GAS API format
@@ -99,32 +99,4 @@ export const buyShopItem = async (
     throw new Error(res.message || 'Không thể mua đồ.');
 };
 
-// ==========================================
-// LEADERBOARD
-// ==========================================
 
-/**
- * Get top 10 students by pet level.
- */
-export const getLeaderboard = async (): Promise<LeaderboardEntry[]> => {
-    const res = await callGasApi<LeaderboardEntry[]>('get_leaderboard');
-    if (res.status === 'success' && Array.isArray(res.data)) {
-        return res.data;
-    }
-    return [];
-};
-
-/**
- * Get top 10 students by gold (coins).
- */
-export const getTopGoldLeaderboard = async (): Promise<TopGoldStudent[]> => {
-    try {
-        const res = await callGasApi<TopGoldStudent[]>('get_top_gold_leaderboard');
-        if (res.status === 'success' && Array.isArray(res.data)) {
-            return res.data;
-        }
-    } catch (e) {
-        console.error('[GamificationService] fetch top gold failed:', e);
-    }
-    return [];
-};

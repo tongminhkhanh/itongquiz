@@ -18,7 +18,6 @@ import { ResultsRoom } from '../LiveExam/ResultsRoom';
 import { useLiveExamStatus } from '../../hooks/useLiveExamStatus';
 import AvatarSelectorModal from '../common/AvatarSelectorModal';
 import MathSpan from '../common/MathSpan';
-import { StudentFloatingSidebar } from '../gamification/StudentFloatingSidebar';
 import { StudentHomeworkSection } from '../../features/homework/components/StudentHomeworkSection';
 import { HomeworkSubmissionModal } from '../../features/homework/components/HomeworkSubmissionModal';
 import { BadgeGallery } from '../gamification/BadgeGallery';
@@ -26,7 +25,6 @@ import { HomeworkAssignment } from '../../features/homework/types';
 import { useHomeworkStore } from '../../features/homework/stores/useHomeworkStore';
 import type { GameLoopMission, GameLoopRewardResult } from '../../types/gameLoop.types';
 import type { LiveExamSubmissionResponse } from '../../types/liveExam.types';
-import LeaderboardPage from './LeaderboardPage';
 import { getAchievementBadgeAlt, getAchievementBadgeImage } from '../../config/achievementBadges';
 
 // --- Subject Config (Reused from HomePage) ---
@@ -234,7 +232,6 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const [changePasswordError, setChangePasswordError] = useState('');
     const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [isBadgeGalleryOpen, setIsBadgeGalleryOpen] = useState(false);
-    const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
     const [isJoinLiveExamModalOpen, setIsJoinLiveExamModalOpen] = useState(false);
     const [joinedLiveExam, setJoinedLiveExam] = useState<{
         sessionId: string;
@@ -862,11 +859,6 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                             </button>
                         )}
 
-                        <button type="button" onClick={() => setIsLeaderboardOpen(true)} className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-purple-200 bg-purple-50 text-purple-700 text-xs md:text-sm font-black hover:bg-purple-100 transition-colors">
-                            <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                            <span className="hidden md:inline">Xếp hạng</span>
-                        </button>
-
                         <button type="button" onClick={() => setIsJoinLiveExamModalOpen(true)} className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-red-200 bg-red-50 text-red-700 text-xs md:text-sm font-black hover:bg-red-100 transition-colors animate-pulse">
                             <Radio className="w-3.5 h-3.5 md:w-4 md:h-4" />
                             <span className="hidden md:inline">Thi Trực Tiếp</span>
@@ -1340,28 +1332,6 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 onClose={() => setIsBadgeGalleryOpen(false)}
                 achievements={dashboard?.achievements || []}
             />
-            <AnimatePresence>
-                {isLeaderboardOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-                        onClick={() => setIsLeaderboardOpen(false)}
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="w-full max-w-6xl max-h-[90vh] bg-white rounded-3xl shadow-2xl overflow-hidden"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <LeaderboardPage onBack={() => setIsLeaderboardOpen(false)} />
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             <JoinLiveExamModal
                 isOpen={isJoinLiveExamModalOpen}
                 onClose={() => setIsJoinLiveExamModalOpen(false)}
@@ -1380,7 +1350,6 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 }}
             />
 
-            <StudentFloatingSidebar />
         </div>
     );
 };

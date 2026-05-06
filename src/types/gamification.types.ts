@@ -61,25 +61,6 @@ export interface PurchaseResult {
     };
 }
 
-// --- Leaderboard ---
-
-export interface LeaderboardEntry {
-    username: string;
-    fullName: string;
-    petId: string;
-    petName: string;
-    level: number;
-    exp: number;
-    avatar: string;
-}
-
-export interface TopGoldStudent {
-    username: string;
-    fullName: string;
-    avatar: string;
-    coins: number;
-}
-
 // --- Pet Selection (for registration / onboarding) ---
 
 export interface PetOption {
