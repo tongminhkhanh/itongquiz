@@ -581,7 +581,7 @@ export async function calculateScoresAndClose(
     // Get quiz questions with correct answers
     const questions = await db
         .prepare(`
-            SELECT id, correct_answer, points
+            SELECT id, correct_answer
             FROM questions
             WHERE quiz_id = ?
         `)
@@ -589,7 +589,7 @@ export async function calculateScoresAndClose(
         .all();
 
     const questionMap = new Map(
-        questions.results.map((q: any) => [q.id, { correctAnswer: q.correct_answer, points: q.points || 1 }])
+        questions.results.map((q: any) => [q.id, { correctAnswer: q.correct_answer, points: 1 }])
     );
 
     // Get all participants
