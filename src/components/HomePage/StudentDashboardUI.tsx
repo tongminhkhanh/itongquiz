@@ -163,6 +163,13 @@ const getMissionProgressPercent = (mission: GameLoopMission) => {
     return Math.min(100, Math.round((mission.progress / mission.target) * 100));
 };
 
+const isAssignmentClosed = (assignment?: Assignment): boolean => {
+    if (!assignment) return false;
+    if (assignment.status === 'CLOSED') return true;
+    const deadline = Date.parse(assignment.deadline || '');
+    return Number.isFinite(deadline) && deadline < Date.now();
+};
+
 const getRewardSummary = (reward: GameLoopRewardResult | null) => {
     if (!reward) return null;
     if (reward.type === 'COINS') {
@@ -1212,14 +1219,15 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                 {pagedAssignmentQuizzes.map((quiz, i) => {
                                     const assignment = quiz._assignmentData;
                                     const isCompleted = (assignment?.attemptCount || 0) >= (assignment?.maxAttempts || 1);
+                                    const isClosed = isAssignmentClosed(assignment);
                                     return (
                                         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} key={quiz._assignmentData?.id || quiz.id} className={`bg-white rounded-[24px] p-4 md:p-6 border-2 flex flex-col sm:flex-row sm:items-center gap-4 md:gap-6 ${isCompleted ? 'border-emerald-100 opacity-80' : 'border-slate-100'}`}>
                                             <div className="flex sm:flex-col justify-between items-center w-full sm:w-20 gap-3 shrink-0">
                                                 <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center ${isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-indigo-50 text-indigo-500'}`}><BookOpen className="w-6 h-6 md:w-7 md:h-7" /></div>
-                                                {isCompleted ? <span className="bg-emerald-100 text-emerald-600 text-[10px] font-black uppercase px-2 py-1 rounded-lg">Đã xong</span> : <span className="bg-red-50 text-red-600 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">Bắt buộc</span>}
+                                                {isCompleted ? <span className="bg-emerald-100 text-emerald-600 text-[10px] font-black uppercase px-2 py-1 rounded-lg">Đã xong</span> : isClosed ? <span className="bg-slate-200 text-slate-600 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">Đã đóng</span> : <span className="bg-red-50 text-red-600 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">Bắt buộc</span>}
                                             </div>
                                             <div className="flex-1 min-w-0"><h3 className="text-lg md:text-xl font-bold text-slate-800 mb-2 line-clamp-2">{quiz.title}</h3><div className="flex items-center gap-3"><p className="text-xs font-bold text-slate-400 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {quiz.timeLimit}'</p><p className={`text-xs font-black px-2 py-0.5 rounded-md ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>Lượt làm: {assignment?.attemptCount || 0}/{assignment?.maxAttempts || 1}</p></div></div>
-                                            <button onClick={() => !isCompleted && handleStartQuiz(quiz)} disabled={isCompleted} className={`w-full sm:w-auto sm:min-w-[160px] font-extrabold py-3 md:py-3.5 px-4 rounded-xl md:rounded-2xl transition-all ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'}`}>{isCompleted ? 'Xem kết quả' : <><Play className="w-4 h-4 fill-current inline mr-2" /> Làm bài ngay</>}</button>
+                                            <button onClick={() => !isCompleted && !isClosed && handleStartQuiz(quiz)} disabled={isCompleted || isClosed} className={`w-full sm:w-auto sm:min-w-[160px] font-extrabold py-3 md:py-3.5 px-4 rounded-xl md:rounded-2xl transition-all ${isCompleted ? 'bg-emerald-50 text-emerald-600' : isClosed ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'}`}>{isCompleted ? 'Xem kết quả' : isClosed ? 'Đã đóng' : <><Play className="w-4 h-4 fill-current inline mr-2" /> Làm bài ngay</>}</button>
                                         </motion.div>
                                     );
                                 })}

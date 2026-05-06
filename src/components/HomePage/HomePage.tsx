@@ -33,6 +33,13 @@ interface HomePageProps {
     onRefreshIoe: () => void;
 }
 
+const isAssignmentClosed = (assignment?: Assignment): boolean => {
+    if (!assignment) return false;
+    if (assignment.status === 'CLOSED') return true;
+    const deadline = Date.parse(assignment.deadline || '');
+    return Number.isFinite(deadline) && deadline < Date.now();
+};
+
 const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIoe }) => {
     // --- State ---
     const [view, setView] = useState<'home' | 'quiz-list'>('home');
@@ -193,6 +200,11 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                     const maxAttempts = freshAssignment.maxAttempts || 1;
                     const usedAttempts = freshAssignment.attemptCount || 0;
 
+                    if (isAssignmentClosed(freshAssignment)) {
+                        alert('Bài tập này đã đóng nên không thể làm nữa.');
+                        return;
+                    }
+
                     if (usedAttempts >= maxAttempts) {
                         alert(`Bạn đã hết lượt làm bài này! (${usedAttempts}/${maxAttempts} lượt)`);
                         return;
@@ -212,6 +224,11 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                     const studentId = classroomStore.studentSession.studentId;
                     const attemptCount = linkedAssignment._assignmentData.attemptCount || 0;
                     const maxAttempts = linkedAssignment._assignmentData.maxAttempts || 1;
+
+                    if (isAssignmentClosed(linkedAssignment._assignmentData)) {
+                        alert('Bài tập này đã đóng nên không thể làm nữa.');
+                        return;
+                    }
 
                     if (attemptCount >= maxAttempts) {
                         alert(`Bạn đã hết lượt làm bài tập này (${attemptCount}/${maxAttempts}).`);

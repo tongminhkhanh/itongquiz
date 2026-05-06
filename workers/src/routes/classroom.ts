@@ -56,6 +56,7 @@ const requireTeacherForAssignment = async (db: D1Database, user: JWTPayload, ass
 export async function handleClassroomRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
     const url = new URL(request.url);
+    const nowIso = new Date().toISOString();
 
     // ===== STUDENT LOGIN =====
 
@@ -521,7 +522,7 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
 
         // Auto-close expired
         await db.prepare(`UPDATE assignments SET status = 'CLOSED' WHERE status = 'OPEN' AND deadline < ?`)
-            .bind(new Date().toISOString()).run();
+            .bind(nowIso).run();
 
         // Get all assignments (admin only)
         if (all === 'true') {
@@ -766,11 +767,23 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
 
         const asn = await db.prepare('SELECT * FROM assignments WHERE id = ?').bind(assignmentId).first<any>();
         if (!asn) return jsonResponse({ status: 'error', message: 'Assignment not found' });
+
+        const deadline = String(asn.deadline || '');
+        const isExpired = deadline ? deadline < nowIso : false;
+        const isClosed = String(asn.status || '').toUpperCase() === 'CLOSED' || isExpired;
+
+        if (isExpired && String(asn.status || '').toUpperCase() !== 'CLOSED') {
+            await db.prepare("UPDATE assignments SET status = 'CLOSED' WHERE id = ?").bind(assignmentId).run();
+        }
+
         if (String(asn.class_id || '') !== String(stu.class_id || '')) {
             return errorResponse('Forbidden: Assignment is not for your class', 403);
         }
         if (String(asn.student_id || '') && String(asn.student_id || '') !== String(stu.id || '')) {
             return errorResponse('Forbidden: Assignment is not assigned to you', 403);
+        }
+        if (isClosed) {
+            return jsonResponse({ status: 'error', message: 'Assignment is closed', code: 'ASSIGNMENT_CLOSED' });
         }
 
         const cnt = await db.prepare(
