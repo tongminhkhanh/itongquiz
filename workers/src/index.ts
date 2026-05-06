@@ -24,6 +24,7 @@ import { handleLogoutRoute } from './routes/logout';
 import { handleLiveExamRoutes } from './routes/liveExam';
 import { Env } from './types';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
+import { checkAndAutoCloseExpiredExams } from './services/liveExamService';
 
 export default {
     async fetch(request: Request, env: Env): Promise<Response> {
@@ -104,6 +105,8 @@ export default {
         console.log('[Cron] Running weekly leaderboard rewards...');
         
         try {
+            await checkAndAutoCloseExpiredExams(env.DB);
+
             const db = env.DB;
             const lastWeekKey = getLastWeekKey();
             

@@ -86,7 +86,7 @@ const LoginLandingPage: React.FC = () => {
                 const isTeacherAdmin = String(teacher.role || '').trim().toLowerCase() === 'admin';
                 const tClass = teacher.class ? String(teacher.class).trim() : undefined;
                 if (teacher.token) {
-                    localStorage.setItem('itongquiz_jwt_token', teacher.token);
+                    localStorage.setItem('itongquiz_teacher_jwt_token', teacher.token);
                 }
                 
                 authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass, teacher.token || null);

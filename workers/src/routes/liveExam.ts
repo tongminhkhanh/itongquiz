@@ -352,6 +352,8 @@ export async function handleLiveExamRoutes(
         if (!sessionId) return errorResponse('Invalid session ID');
 
         try {
+            await LiveExamService.checkAndAutoCloseExpiredExams(db);
+
             const session = await LiveExamService.getLiveExamById(db, sessionId);
             if (!session) return errorResponse('Session not found', 404);
 
@@ -496,6 +498,8 @@ export async function handleLiveExamRoutes(
         if (!sessionId) return errorResponse('Invalid session ID');
 
         try {
+            await LiveExamService.checkAndAutoCloseExpiredExams(db);
+
             const session = await LiveExamService.getLiveExamById(db, sessionId);
             if (!session) return errorResponse('Session not found', 404);
 

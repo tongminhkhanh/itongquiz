@@ -23,10 +23,12 @@ import type {
 import { fetchWithJWTInterceptor } from '../utils/jwtInterceptor';
 
 const API_BASE = import.meta.env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+const STUDENT_JWT_STORAGE_KEY = 'itongquiz_jwt_token';
+const TEACHER_JWT_STORAGE_KEY = 'itongquiz_teacher_jwt_token';
 
 function getStudentJWTToken(): string {
     try {
-        const directToken = localStorage.getItem('itongquiz_jwt_token');
+        const directToken = localStorage.getItem(STUDENT_JWT_STORAGE_KEY);
         if (directToken) return directToken;
 
         return '';
@@ -37,7 +39,7 @@ function getStudentJWTToken(): string {
 
 function getTeacherJWTToken(): string {
     try {
-        const directToken = localStorage.getItem('itongquiz_jwt_token');
+        const directToken = localStorage.getItem(TEACHER_JWT_STORAGE_KEY);
         if (directToken) return directToken;
 
         const authStorage = localStorage.getItem('auth-storage');

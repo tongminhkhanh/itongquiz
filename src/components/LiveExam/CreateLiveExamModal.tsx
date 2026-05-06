@@ -42,8 +42,20 @@ export const CreateLiveExamModal: React.FC<CreateLiveExamModalProps> = ({
     const [createdSession, setCreatedSession] = useState<{ id: string; accessCode: string } | null>(null);
 
     const handleCreate = async () => {
-        if (!title.trim() || !quizId) {
+        const normalizedTitle = title.trim();
+
+        if (!normalizedTitle || !quizId) {
             setError('Vui lòng điền đầy đủ thông tin');
+            return;
+        }
+
+        if (normalizedTitle.length < 3) {
+            setError('Tên phiên thi phải có ít nhất 3 ký tự');
+            return;
+        }
+
+        if (duration < 5 || duration > 180) {
+            setError('Thời gian làm bài phải từ 5 đến 180 phút');
             return;
         }
 
@@ -52,7 +64,7 @@ export const CreateLiveExamModal: React.FC<CreateLiveExamModalProps> = ({
 
         try {
             const data: CreateLiveExamRequest = {
-                title: title.trim(),
+                title: normalizedTitle,
                 quizId,
                 duration,
                 settings,
@@ -128,6 +140,7 @@ export const CreateLiveExamModal: React.FC<CreateLiveExamModalProps> = ({
                                     onChange={(e) => setTitle(e.target.value)}
                                     placeholder="Ví dụ: Kiểm tra Toán Giữa Kỳ"
                                     className="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                                    minLength={3}
                                     disabled={isLoading}
                                 />
                             </div>
@@ -224,7 +237,7 @@ export const CreateLiveExamModal: React.FC<CreateLiveExamModalProps> = ({
                                 </button>
                                 <button
                                     onClick={handleCreate}
-                                    disabled={isLoading || !title.trim() || !quizId}
+                                    disabled={isLoading || title.trim().length < 3 || !quizId || duration < 5 || duration > 180}
                                     className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-slate-300 flex items-center justify-center gap-2"
                                 >
                                     {isLoading ? (
