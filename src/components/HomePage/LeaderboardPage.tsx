@@ -33,6 +33,32 @@ interface LeaderboardPageProps {
     onBack: () => void;
 }
 
+const normalizeResultsPayload = (data: any): StudentResult[] => {
+    let rawRows: any[] = [];
+
+    if (Array.isArray(data)) {
+        rawRows = data;
+    } else if (data?.data && Array.isArray(data.data)) {
+        rawRows = data.data;
+    } else if (data?.results && Array.isArray(data.results)) {
+        rawRows = data.results;
+    }
+
+    return rawRows.map((row: any) => ({
+        id: String(row.id ?? ''),
+        studentName: row.studentName ?? row['Student Name'] ?? '',
+        studentClass: row.studentClass ?? row['Class'] ?? '',
+        quizId: row.quizId ?? row['Quiz ID'] ?? '',
+        quizTitle: row.quizTitle ?? row['Quiz Title'] ?? '',
+        score: Number(row.score ?? row['Score'] ?? 0),
+        correctCount: Number(row.correctCount ?? row['correctCount'] ?? 0),
+        totalQuestions: Number(row.totalQuestions ?? row['Total Questions'] ?? 0),
+        timeTaken: Number(row.timeTaken ?? row['Time Taken'] ?? 0),
+        submittedAt: row.submittedAt ?? row['Submitted At'] ?? '',
+        answers: row.answers ?? {},
+    })) as StudentResult[];
+};
+
 const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
     const [results, setResults] = useState<StudentResult[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -58,29 +84,9 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onBack }) => {
                 console.log('📊 Data type:', typeof data);
                 console.log('📊 Is array?', Array.isArray(data));
                 
-                // Handle different response formats
-                let resultsArray: StudentResult[] = [];
+                const resultsArray = normalizeResultsPayload(data);
                 
-                if (Array.isArray(data)) {
-                    // Direct array response
-                    resultsArray = data;
-                    console.log('✅ Data is array, length:', data.length);
-                } else if (data && typeof data === 'object') {
-                    // Object response - check common patterns
-                    if (data.data && Array.isArray(data.data)) {
-                        resultsArray = data.data;
-                        console.log('✅ Found data.data array, length:', data.data.length);
-                    } else if (data.results && Array.isArray(data.results)) {
-                        resultsArray = data.results;
-                        console.log('✅ Found data.results array, length:', data.results.length);
-                    } else {
-                        console.warn('⚠️ Data is object but no array found. Keys:', Object.keys(data));
-                    }
-                } else {
-                    console.warn('⚠️ Unexpected data format');
-                }
-                
-                console.log('📊 Final results array length:', resultsArray.length);
+                console.log('📊 Final normalized results array length:', resultsArray.length);
                 
                 if (resultsArray.length === 0) {
                     console.warn('⚠️ No leaderboard data available. Make sure students have completed quizzes.');
