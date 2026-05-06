@@ -283,42 +283,6 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         }
     }, [joinedLiveExamStatus?.session?.status]);
 
-    if (joinedLiveExam && liveExamStage === 'waiting') {
-        return (
-            <WaitingRoomStudent
-                sessionId={joinedLiveExam.sessionId}
-                sessionTitle={joinedLiveExam.sessionTitle}
-                onExamStart={() => setLiveExamStage('active')}
-            />
-        );
-    }
-
-    if (
-        joinedLiveExam &&
-        liveExamStage === 'active' &&
-        joinedSessionQuiz &&
-        joinedLiveExamStatus?.session?.endsAt
-    ) {
-        return (
-            <LiveExamQuiz
-                sessionId={joinedLiveExam.sessionId}
-                questions={liveExamQuestions}
-                duration={joinedLiveExamStatus.session.duration}
-                endsAt={joinedLiveExamStatus.session.endsAt}
-                onComplete={() => setLiveExamStage('results')}
-            />
-        );
-    }
-
-    if (joinedLiveExam && liveExamStage === 'results') {
-        return (
-            <ResultsRoom
-                sessionId={joinedLiveExam.sessionId}
-                sessionTitle={joinedLiveExam.sessionTitle}
-            />
-        );
-    }
-
     
     // Weekly quests state
     const [weeklyQuests, setWeeklyQuests] = useState<any[]>([]);
@@ -522,6 +486,42 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         };
         loadAttendanceStatus();
     }, [studentSession?.username, attendanceTodayKey]);
+
+    if (joinedLiveExam && liveExamStage === 'waiting') {
+        return (
+            <WaitingRoomStudent
+                sessionId={joinedLiveExam.sessionId}
+                sessionTitle={joinedLiveExam.sessionTitle}
+                onExamStart={() => setLiveExamStage('active')}
+            />
+        );
+    }
+
+    if (
+        joinedLiveExam &&
+        liveExamStage === 'active' &&
+        joinedSessionQuiz &&
+        joinedLiveExamStatus?.session?.endsAt
+    ) {
+        return (
+            <LiveExamQuiz
+                sessionId={joinedLiveExam.sessionId}
+                questions={liveExamQuestions}
+                duration={joinedLiveExamStatus.session.duration}
+                endsAt={joinedLiveExamStatus.session.endsAt}
+                onComplete={() => setLiveExamStage('results')}
+            />
+        );
+    }
+
+    if (joinedLiveExam && liveExamStage === 'results') {
+        return (
+            <ResultsRoom
+                sessionId={joinedLiveExam.sessionId}
+                sessionTitle={joinedLiveExam.sessionTitle}
+            />
+        );
+    }
 
     if (!studentSession) return null;
 
