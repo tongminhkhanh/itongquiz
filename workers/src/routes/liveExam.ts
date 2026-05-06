@@ -421,11 +421,12 @@ export async function handleLiveExamRoutes(
         }
 
         try {
-            await LiveExamService.submitAnswers(db, validation.data);
+            const submission = await LiveExamService.submitAnswers(db, validation.data);
 
             return jsonResponse({
                 success: true,
                 message: 'Answers submitted successfully',
+                participant: submission,
             });
         } catch (error: any) {
             return errorResponse(error.message || 'Failed to submit answers', 500);

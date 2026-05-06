@@ -13,6 +13,7 @@ import type {
     LiveExamStatusResponse,
     LiveExamParticipantsResponse,
     LiveExamResultsResponse,
+    LiveExamSubmissionResponse,
     CreateLiveExamRequest,
     JoinLiveExamRequest,
     SubmitAnswersRequest,
@@ -199,14 +200,18 @@ export async function getSessionStatus(
 export async function submitAnswers(
     sessionId: string,
     answers: StudentAnswers
-): Promise<void> {
-    await apiCall<{ success: boolean }>(
+): Promise<LiveExamSubmissionResponse> {
+    const result = await apiCall<{ success: boolean; participant: LiveExamSubmissionResponse['participant'] }>(
         `/api/live-exam/${sessionId}/submit`,
         {
             method: 'POST',
             body: JSON.stringify({ answers }),
         }
     );
+
+    return {
+        participant: result.participant,
+    };
 }
 
 /**

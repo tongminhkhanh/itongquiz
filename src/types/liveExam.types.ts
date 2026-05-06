@@ -184,6 +184,18 @@ export interface LiveExamResultsResponse {
 }
 
 /**
+ * Temporary score returned immediately after submit.
+ */
+export interface LiveExamSubmissionResponse {
+  participant: {
+    score: number;
+    correctCount: number;
+    wrongCount: number;
+    submittedAt: string;
+  };
+}
+
+/**
  * Create Live Exam Request
  */
 export interface CreateLiveExamRequest {

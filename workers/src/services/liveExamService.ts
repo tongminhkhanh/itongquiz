@@ -43,6 +43,13 @@ export interface SubmitAnswersParams {
     answers: StudentAnswers;
 }
 
+export interface SubmissionScoreSummary {
+    score: number;
+    correctCount: number;
+    wrongCount: number;
+    submittedAt: string;
+}
+
 export interface UpdateActivityParams {
     liveExamId: string;
     studentId: string;
@@ -493,23 +500,67 @@ export async function getParticipants(
 export async function submitAnswers(
     db: D1Database,
     params: SubmitAnswersParams
-): Promise<void> {
+): Promise<SubmissionScoreSummary> {
     const timestamp = now();
+
+    const session = await getLiveExamById(db, params.liveExamId);
+    if (!session) {
+        throw new Error('Session not found');
+    }
+
+    const questions = await db
+        .prepare(`
+            SELECT id, correct_answer
+            FROM questions
+            WHERE quiz_id = ?
+        `)
+        .bind(session.quizId)
+        .all();
+
+    const questionMap = new Map(
+        questions.results.map((q: any) => [String(q.id), String(q.correct_answer ?? '')])
+    );
+
+    let score = 0;
+    let correctCount = 0;
+    let wrongCount = 0;
+
+    for (const [questionId, answer] of Object.entries(params.answers || {})) {
+        const correctAnswer = questionMap.get(questionId);
+        if (correctAnswer === undefined) continue;
+
+        if (String(answer) === correctAnswer) {
+            score += 1;
+            correctCount += 1;
+        } else {
+            wrongCount += 1;
+        }
+    }
 
     await db
         .prepare(`
             UPDATE live_exam_participants
-            SET answers = ?, submitted_at = ?, updated_at = ?
+            SET answers = ?, submitted_at = ?, score = ?, correct_count = ?, wrong_count = ?, updated_at = ?
             WHERE live_exam_id = ? AND student_id = ?
         `)
         .bind(
             JSON.stringify(params.answers),
             timestamp,
+            score,
+            correctCount,
+            wrongCount,
             timestamp,
             params.liveExamId,
             params.studentId
         )
         .run();
+
+    return {
+        score,
+        correctCount,
+        wrongCount,
+        submittedAt: timestamp,
+    };
 }
 
 /**

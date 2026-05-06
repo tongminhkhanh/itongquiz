@@ -7,7 +7,7 @@ import { useGameLoopStore } from '../../stores/useGameLoopStore';
 import { getAvatarUrl } from '../../config/avatars';
 import { callApi } from '../../services/apiAdapter';
 import { Assignment } from '../../types/classroom.types';
-import { Quiz } from '../../types';
+import { Question, Quiz } from '../../types';
 import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Camera, Gift, KeyRound, Sparkles, CheckCircle2, Lock, Flame, Medal, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
@@ -25,6 +25,7 @@ import { BadgeGallery } from '../gamification/BadgeGallery';
 import { HomeworkAssignment } from '../../features/homework/types';
 import { useHomeworkStore } from '../../features/homework/stores/useHomeworkStore';
 import type { GameLoopMission, GameLoopRewardResult } from '../../types/gameLoop.types';
+import type { LiveExamSubmissionResponse } from '../../types/liveExam.types';
 import LeaderboardPage from './LeaderboardPage';
 
 // --- Subject Config (Reused from HomePage) ---
@@ -242,9 +243,10 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         startedAt?: string;
         endsAt?: string;
     } | null>(null);
-    const [liveExamStage, setLiveExamStage] = useState<'waiting' | 'active' | 'results'>('waiting');
+    const [liveExamStage, setLiveExamStage] = useState<'waiting' | 'active' | 'submitted' | 'results'>('waiting');
     const [isPreparingLiveExam, setIsPreparingLiveExam] = useState(false);
     const [liveExamLoadError, setLiveExamLoadError] = useState<string | null>(null);
+    const [liveExamSubmission, setLiveExamSubmission] = useState<LiveExamSubmissionResponse['participant'] | null>(null);
 
     const { status: joinedLiveExamStatus } = useLiveExamStatus({
         sessionId: joinedLiveExam?.sessionId || '',
@@ -256,21 +258,8 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         return quizStore.quizzes.find((q) => q.id === joinedLiveExam.quizId);
     }, [joinedLiveExam, quizStore.quizzes]);
 
-    const liveExamQuestions = useMemo(() => {
-        const quiz = joinedSessionQuiz;
-        if (!quiz?.questions) return [];
-
-        return quiz.questions
-            .filter((q: any) => Array.isArray(q.options) && q.options.length > 0)
-            .map((q: any) => ({
-                id: q.id,
-                text: q.question || q.mainQuestion || 'Câu hỏi',
-                imageUrl: q.image,
-                answers: (q.options || []).map((option: string, index: number) => ({
-                    id: String.fromCharCode(65 + index),
-                    text: option,
-                })),
-            }));
+    const liveExamQuestions = useMemo<Question[]>(() => {
+        return Array.isArray(joinedSessionQuiz?.questions) ? joinedSessionQuiz.questions : [];
     }, [joinedSessionQuiz]);
 
     useEffect(() => {
@@ -280,10 +269,10 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             setLiveExamStage('active');
         } else if (joinedLiveExamStatus.session.status === 'closed') {
             setLiveExamStage('results');
-        } else {
+        } else if (liveExamStage !== 'submitted') {
             setLiveExamStage('waiting');
         }
-    }, [joinedLiveExamStatus?.session?.status]);
+    }, [joinedLiveExamStatus?.session?.status, liveExamStage]);
 
     useEffect(() => {
         let cancelled = false;
@@ -577,10 +566,57 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             <LiveExamQuiz
                 sessionId={joinedLiveExam.sessionId}
                 questions={liveExamQuestions}
+                quizTitle={joinedLiveExam.sessionTitle}
                 duration={joinedLiveExamStatus.session.duration}
                 endsAt={joinedLiveExamStatus.session.endsAt}
-                onComplete={() => setLiveExamStage('results')}
+                onComplete={(submission) => {
+                    setLiveExamSubmission(submission.participant);
+                    setLiveExamStage('submitted');
+                }}
             />
+        );
+    }
+
+    if (joinedLiveExam && liveExamStage === 'submitted') {
+        const submittedAtLabel = liveExamSubmission?.submittedAt
+            ? new Date(liveExamSubmission.submittedAt).toLocaleTimeString('vi-VN')
+            : '';
+
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 text-center">
+                    <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+                    </div>
+                    <h2 className="text-3xl font-bold text-slate-800 mb-2">Em đã nộp bài thành công!</h2>
+                    <p className="text-slate-600 mb-6">
+                        Đây là điểm tạm thời của em. Kết quả chính thức và xếp hạng sẽ hiện khi giáo viên kết thúc phiên thi.
+                    </p>
+
+                    {liveExamSubmission && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div className="rounded-2xl bg-blue-50 border border-blue-200 p-4">
+                                <div className="text-sm font-semibold text-blue-700 mb-1">Điểm tạm thời</div>
+                                <div className="text-3xl font-bold text-blue-600">{liveExamSubmission.score}</div>
+                            </div>
+                            <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4">
+                                <div className="text-sm font-semibold text-emerald-700 mb-1">Câu đúng</div>
+                                <div className="text-3xl font-bold text-emerald-600">{liveExamSubmission.correctCount}</div>
+                            </div>
+                            <div className="rounded-2xl bg-rose-50 border border-rose-200 p-4">
+                                <div className="text-sm font-semibold text-rose-700 mb-1">Câu sai</div>
+                                <div className="text-3xl font-bold text-rose-600">{liveExamSubmission.wrongCount}</div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 text-left text-slate-600 space-y-2">
+                        <p>• Bài làm của em đã được ghi nhận an toàn.</p>
+                        <p>• Thời gian nộp: {submittedAtLabel || 'Vừa xong'}.</p>
+                        <p>• Hệ thống sẽ tự chuyển sang kết quả chính thức khi phiên thi đóng.</p>
+                    </div>
+                </div>
+            </div>
         );
     }
 
@@ -1323,6 +1359,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                         startedAt: session.startedAt,
                         endsAt: session.endsAt,
                     });
+                    setLiveExamSubmission(null);
                     setLiveExamStage(session.status === 'active' ? 'active' : 'waiting');
                     setIsJoinLiveExamModalOpen(false);
                 }}
