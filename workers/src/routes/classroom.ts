@@ -112,6 +112,7 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
 
         const jwtToken = await signJWT(
             {
+                id: studentData.id,
                 username: studentData.username,
                 role: 'student',
                 fullName: studentData.full_name,

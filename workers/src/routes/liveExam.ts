@@ -57,6 +57,17 @@ function calculateTimeRemaining(endsAt: string): number {
     return remaining;
 }
 
+async function getAuthenticatedStudentId(db: D1Database, user: JWTPayload): Promise<string | null> {
+    if (user.id) return user.id;
+
+    const student = await db
+        .prepare('SELECT id FROM students WHERE username = ?')
+        .bind(user.username)
+        .first<{ id: string }>();
+
+    return student?.id || null;
+}
+
 // ============================================================================
 // Route Handler
 // ============================================================================
@@ -279,13 +290,16 @@ export async function handleLiveExamRoutes(
             return errorResponse('Forbidden: Student access required', 403);
         }
 
+        const studentId = await getAuthenticatedStudentId(db, user);
+        if (!studentId) return errorResponse('Student not found', 404);
+
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
         // Validate request
         const validation = JoinLiveExamRequestSchema.safeParse({
             ...body,
-            studentId: user.id,
+            studentId,
             username: user.username,
         });
 
@@ -325,6 +339,9 @@ export async function handleLiveExamRoutes(
         if (!isStudent(user)) {
             return errorResponse('Forbidden: Student access required', 403);
         }
+
+        const studentId = await getAuthenticatedStudentId(db, user);
+        if (!studentId) return errorResponse('Student not found', 404);
 
         const sessionId = path.split('/')[3];
         if (!sessionId) return errorResponse('Invalid session ID');
@@ -375,6 +392,9 @@ export async function handleLiveExamRoutes(
             return errorResponse('Forbidden: Student access required', 403);
         }
 
+        const studentId = await getAuthenticatedStudentId(db, user);
+        if (!studentId) return errorResponse('Student not found', 404);
+
         const sessionId = path.split('/')[3];
         if (!sessionId) return errorResponse('Invalid session ID');
 
@@ -385,7 +405,7 @@ export async function handleLiveExamRoutes(
         const validation = SubmitAnswersRequestSchema.safeParse({
             ...body,
             liveExamId: sessionId,
-            studentId: user.id,
+            studentId,
         });
 
         if (!validation.success) {
@@ -418,6 +438,9 @@ export async function handleLiveExamRoutes(
             return errorResponse('Forbidden: Student access required', 403);
         }
 
+        const studentId = await getAuthenticatedStudentId(db, user);
+        if (!studentId) return errorResponse('Student not found', 404);
+
         const sessionId = path.split('/')[3];
         if (!sessionId) return errorResponse('Invalid session ID');
 
@@ -428,7 +451,7 @@ export async function handleLiveExamRoutes(
         const validation = UpdateActivityRequestSchema.safeParse({
             ...body,
             liveExamId: sessionId,
-            studentId: user.id,
+            studentId,
         });
 
         if (!validation.success) {
@@ -460,6 +483,9 @@ export async function handleLiveExamRoutes(
             return errorResponse('Forbidden: Student access required', 403);
         }
 
+        const studentId = await getAuthenticatedStudentId(db, user);
+        if (!studentId) return errorResponse('Student not found', 404);
+
         const sessionId = path.split('/')[3];
         if (!sessionId) return errorResponse('Invalid session ID');
 
@@ -477,7 +503,7 @@ export async function handleLiveExamRoutes(
                     SELECT * FROM live_exam_participants
                     WHERE live_exam_id = ? AND student_id = ?
                 `)
-                .bind(sessionId, user.id)
+                .bind(sessionId, studentId)
                 .first<any>();
 
             if (!participant) {
