@@ -24,7 +24,18 @@ import { fetchWithJWTInterceptor } from '../utils/jwtInterceptor';
 
 const API_BASE = import.meta.env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
 
-function getStoredJWTToken(): string {
+function getStudentJWTToken(): string {
+    try {
+        const directToken = localStorage.getItem('itongquiz_jwt_token');
+        if (directToken) return directToken;
+
+        return '';
+    } catch {
+        return '';
+    }
+}
+
+function getTeacherJWTToken(): string {
     try {
         const directToken = localStorage.getItem('itongquiz_jwt_token');
         if (directToken) return directToken;
@@ -44,9 +55,10 @@ function getStoredJWTToken(): string {
  */
 async function apiCall<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    tokenResolver: () => string = getTeacherJWTToken
 ): Promise<T> {
-    const jwtToken = getStoredJWTToken();
+    const jwtToken = tokenResolver();
     const response = await fetchWithJWTInterceptor(`${API_BASE}${endpoint}`, {
         ...options,
         credentials: 'include', // Include JWT cookie
@@ -178,7 +190,8 @@ export async function joinLiveExam(
         {
             method: 'POST',
             body: JSON.stringify({ accessCode }),
-        }
+        },
+        getStudentJWTToken
     );
 }
 
@@ -190,7 +203,9 @@ export async function getSessionStatus(
     sessionId: string
 ): Promise<LiveExamStatusResponse> {
     return apiCall<LiveExamStatusResponse>(
-        `/api/live-exam/${sessionId}/status`
+        `/api/live-exam/${sessionId}/status`,
+        {},
+        getStudentJWTToken
     );
 }
 
@@ -206,7 +221,8 @@ export async function submitAnswers(
         {
             method: 'POST',
             body: JSON.stringify({ answers }),
-        }
+        },
+        getStudentJWTToken
     );
 
     return {
@@ -230,7 +246,8 @@ export async function updateActivity(
         {
             method: 'POST',
             body: JSON.stringify(data),
-        }
+        },
+        getStudentJWTToken
     );
 }
 
@@ -241,7 +258,9 @@ export async function getResults(
     sessionId: string
 ): Promise<LiveExamResultsResponse> {
     return apiCall<LiveExamResultsResponse>(
-        `/api/live-exam/${sessionId}/results`
+        `/api/live-exam/${sessionId}/results`,
+        {},
+        getStudentJWTToken
     );
 }
 

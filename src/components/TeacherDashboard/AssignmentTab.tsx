@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useClassroomStore } from '../../stores/useClassroomStore';
-import { useAuthStore } from '../../stores/useAuthStore';
-import { useQuizStore } from '../../stores/useQuizStore';
+import { useAuthStore } from '../../../stores/authStore';
+import { useQuizStore } from '../../../stores/quizStore';
 import {
     CreateAssignmentPayload,
     Classroom,
@@ -523,5 +523,7 @@ const CreateAssignmentSection: React.FC<{
 
 
 export default AssignmentTab;
+
+
 
 
