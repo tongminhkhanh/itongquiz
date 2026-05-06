@@ -58,7 +58,9 @@ function calculateTimeRemaining(endsAt: string): number {
 }
 
 async function getAuthenticatedStudentId(db: D1Database, user: JWTPayload): Promise<string | null> {
-    if (user.id) return user.id;
+    if (user.id !== undefined && user.id !== null) {
+        return String(user.id);
+    }
 
     const student = await db
         .prepare('SELECT id FROM students WHERE username = ?')
