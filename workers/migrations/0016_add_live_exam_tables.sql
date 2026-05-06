@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS live_exam_sessions (
   updated_at TEXT NOT NULL,
   
   FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE,
-  FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE,
+  FOREIGN KEY (teacher_id) REFERENCES teachers(username) ON DELETE CASCADE,
   FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE SET NULL
 );
 
