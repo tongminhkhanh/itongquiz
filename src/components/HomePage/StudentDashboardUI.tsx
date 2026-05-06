@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
-import { useQuizStore } from '../../stores/useQuizStore';
+import { useQuizStore } from '../../../stores/quizStore';
 import { useGamificationStore } from '../../stores/useGamificationStore';
 import { useGameLoopStore } from '../../stores/useGameLoopStore';
 import { getAvatarUrl } from '../../config/avatars';
