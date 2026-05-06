@@ -4,6 +4,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 
 export interface JWTPayload {
+    id?: string;
     username: string;
     role: 'student' | 'teacher' | 'admin';
     fullName?: string;
@@ -51,7 +52,7 @@ export async function verifyJWT(
 
         const { payload } = await jwtVerify(token, secretKey);
 
-        return payload as JWTPayload;
+        return payload as unknown as JWTPayload;
     } catch (error) {
         console.error('[JWT] Verification failed:', error);
         return null;
@@ -73,6 +74,19 @@ export function extractJWTFromCookie(request: Request): string | null {
     if (!authCookie) return null;
 
     return authCookie.split('=')[1];
+}
+
+/**
+ * Extract JWT from Authorization bearer header or cookie.
+ * Bearer support is needed when browsers block third-party cookies.
+ */
+export function extractJWTFromRequest(request: Request): string | null {
+    const authorization = request.headers.get('Authorization') || '';
+    if (authorization.toLowerCase().startsWith('bearer ')) {
+        return authorization.slice(7).trim() || null;
+    }
+
+    return extractJWTFromCookie(request);
 }
 
 /**

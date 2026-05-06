@@ -8,12 +8,13 @@ interface AuthState {
     teacherName: string | null;
     isAdmin: boolean;
     teacherClass: string | null; // Class this teacher is responsible for
+    token: string | null;
     isLoggingIn: boolean;
     loginError: boolean;
 
     // Actions
     loginStart: () => void;
-    loginSuccess: (username: string, name: string, isAdmin: boolean, teacherClass?: string | null) => void; // Update signature
+    loginSuccess: (username: string, name: string, isAdmin: boolean, teacherClass?: string | null, token?: string | null) => void; // Update signature
     loginFailure: () => void;
     logout: () => void;
     resetError: () => void;
@@ -28,18 +29,20 @@ export const useAuthStore = create<AuthState>()(
             teacherName: null,
             isAdmin: false,
             teacherClass: null,
+            token: null,
             isLoggingIn: false,
             loginError: false,
 
             // Actions
             loginStart: () => set({ isLoggingIn: true, loginError: false }),
 
-            loginSuccess: (username, name, isAdmin, teacherClass) => set({
+            loginSuccess: (username, name, isAdmin, teacherClass, token) => set({
                 isLoggedIn: true,
                 username,
                 teacherName: name,
                 isAdmin,
                 teacherClass: teacherClass || null,
+                token: token || null,
                 isLoggingIn: false,
                 loginError: false
             }),
@@ -50,11 +53,16 @@ export const useAuthStore = create<AuthState>()(
             }),
 
             logout: () => set({
+                ...(() => {
+                    try { localStorage.removeItem('itongquiz_jwt_token'); } catch {}
+                    return {};
+                })(),
                 isLoggedIn: false,
                 username: null,
                 teacherName: null,
                 isAdmin: false,
                 teacherClass: null,
+                token: null,
                 isLoggingIn: false,
                 loginError: false
             }),
@@ -68,7 +76,8 @@ export const useAuthStore = create<AuthState>()(
                 username: state.username,
                 teacherName: state.teacherName,
                 isAdmin: state.isAdmin,
-                teacherClass: state.teacherClass
+                teacherClass: state.teacherClass,
+                token: state.token
             })
         }
     )

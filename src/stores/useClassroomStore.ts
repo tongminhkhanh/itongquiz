@@ -375,6 +375,9 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
             const session = await classroomService.studentLogin(payload);
             if (session) {
                 localStorage.setItem(StorageKeys.STUDENT_SESSION, JSON.stringify(session));
+                if (session.token) {
+                    localStorage.setItem('itongquiz_jwt_token', session.token);
+                }
                 set({ studentSession: session, isLoading: false });
 
                 // Initialize gamification data from login response
@@ -409,6 +412,7 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
 
     logoutStudent: () => {
         localStorage.removeItem(StorageKeys.STUDENT_SESSION);
+        localStorage.removeItem('itongquiz_jwt_token');
         set({ studentSession: null, assignments: [] });
         // Clear gamification data on logout
         useGamificationStore.getState().clearGamification();

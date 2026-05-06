@@ -3,7 +3,7 @@
 
 import { Env } from '../types';
 import { errorResponse } from '../utils/response';
-import { extractJWTFromCookie, verifyJWT, JWTPayload } from '../utils/jwt';
+import { extractJWTFromRequest, verifyJWT, JWTPayload } from '../utils/jwt';
 
 // Extend Request type to include user context
 export interface AuthenticatedRequest extends Request {
@@ -19,7 +19,7 @@ export async function verifyJWTMiddleware(
     request: Request,
     env: Env
 ): Promise<{ user: JWTPayload } | Response> {
-    const token = extractJWTFromCookie(request);
+    const token = extractJWTFromRequest(request);
 
     if (!token) {
         return errorResponse('Unauthorized: Missing authentication token', 401);

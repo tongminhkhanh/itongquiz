@@ -21,6 +21,7 @@ import { handleAnalyticsRoutes } from './routes/analytics';
 import { handleTestBankRoutes } from './routes/testBank';
 import { handleTeacherAiQuotaRoutes } from './routes/teacherAiQuota';
 import { handleLogoutRoute } from './routes/logout';
+import { handleLiveExamRoutes } from './routes/liveExam';
 import { Env } from './types';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
 
@@ -83,6 +84,8 @@ export default {
                 response = await handleTestBankRoutes(request, env, path, method);
             } else if (path.startsWith('/api/teacher-ai-quota')) {
                 response = await handleTeacherAiQuotaRoutes(request, env, path, method);
+            } else if (path.startsWith('/api/live-exam')) {
+                response = await handleLiveExamRoutes(request, env, path, method);
             } else if (path === '/api/health') {
                 response = jsonResponse({ status: 'ok', timestamp: new Date().toISOString() });
             }

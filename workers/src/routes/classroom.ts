@@ -7,343 +7,59 @@ import { mapAssignment, mapAssignments, hashSHA256, parseBody, extractIdFromPath
 import { generateId, hashPassword } from '../utils/response';
 import { getSmartAssignmentPreview } from '../services/smartAssignment';
 import { signJWT, createJWTCookie } from '../utils/jwt';
+import { JWTPayload } from '../utils/jwt';
+import { verifyJWTMiddleware, requireAdmin, requireTeacher, isStudent } from '../middleware/jwtAuth';
+
+const getStudentById = async (db: D1Database, studentId: string): Promise<any | null> => {
+    return await db.prepare('SELECT id, username, full_name, class_id FROM students WHERE id = ?')
+        .bind(studentId)
+        .first<any>();
+};
+
+const getClassroomById = async (db: D1Database, classId: string): Promise<any | null> => {
+    return await db.prepare('SELECT id, name, teacher_username, created_at FROM classes WHERE id = ?')
+        .bind(classId)
+        .first<any>();
+};
+
+const canAccessClass = (user: JWTPayload, classroom: any): boolean => {
+    if (requireAdmin(user)) return true;
+    if (user.role === 'teacher') return String(classroom?.teacher_username || '') === user.username;
+    if (user.role === 'student') return String(classroom?.id || '') === String(user.classId || '');
+    return false;
+};
+
+const requireTeacherForClass = async (db: D1Database, user: JWTPayload, classId: string): Promise<Response | null> => {
+    if (!requireTeacher(user)) return errorResponse('Forbidden: Teacher access required', 403);
+    const classroom = await getClassroomById(db, classId);
+    if (!classroom) return errorResponse('Class not found', 404);
+    if (!canAccessClass(user, classroom)) return errorResponse('Forbidden: You do not manage this class', 403);
+    return null;
+};
+
+const requireTeacherForStudent = async (db: D1Database, user: JWTPayload, studentId: string): Promise<Response | null> => {
+    if (!requireTeacher(user)) return errorResponse('Forbidden: Teacher access required', 403);
+    const student = await getStudentById(db, studentId);
+    if (!student) return errorResponse('Student not found', 404);
+    return await requireTeacherForClass(db, user, student.class_id);
+};
+
+const requireTeacherForAssignment = async (db: D1Database, user: JWTPayload, assignmentId: string): Promise<Response | null> => {
+    if (!requireTeacher(user)) return errorResponse('Forbidden: Teacher access required', 403);
+    const assignment = await db.prepare('SELECT id, class_id FROM assignments WHERE id = ?')
+        .bind(assignmentId)
+        .first<any>();
+    if (!assignment) return errorResponse('Assignment not found', 404);
+    return await requireTeacherForClass(db, user, assignment.class_id);
+};
 
 export async function handleClassroomRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
     const url = new URL(request.url);
 
-    // ===== CLASSES =====
-
-    // GET /api/classes
-    if (path === '/api/classes' && method === 'GET') {
-        const teacherUsername = url.searchParams.get('teacherUsername');
-        let query = `
-            SELECT
-                c.*,
-                t.full_name AS teacher_full_name
-            FROM classes c
-            LEFT JOIN teachers t ON t.username = c.teacher_username
-        `;
-        const params: any[] = [];
-        if (teacherUsername) {
-            query += ' WHERE c.teacher_username = ?';
-            params.push(teacherUsername);
-        }
-        const rows = await db.prepare(query).bind(...params).all();
-        return jsonResponse({
-            status: 'success',
-            data: rows.results.map((r: any) => ({
-                id: r.id,
-                name: r.name,
-                teacherUsername: r.teacher_username,
-                teacherFullName: r.teacher_full_name || '',
-                createdAt: r.created_at,
-            })),
-        });
-    }
-
-    // POST /api/classes
-    if (path === '/api/classes' && method === 'POST') {
-        const body = await parseBody(request);
-        if (!body) return errorResponse('Invalid JSON body');
-
-        const id = generateId('c');
-        const createdAt = new Date().toISOString();
-        await db.prepare('INSERT INTO classes (id, name, teacher_username, created_at) VALUES (?, ?, ?, ?)')
-            .bind(id, body.name, body.teacherUsername, createdAt).run();
-
-        const teacher = await db.prepare('SELECT full_name FROM teachers WHERE username = ?')
-            .bind(body.teacherUsername || '')
-            .first<any>();
-
-        return jsonResponse({
-            status: 'success',
-            data: {
-                id,
-                name: body.name,
-                teacherUsername: body.teacherUsername,
-                teacherFullName: teacher?.full_name || '',
-                createdAt,
-            },
-        });
-    }
-
-    // PATCH /api/classes/:id/teacher
-    if (path.match(/\/api\/classes\/[^/]+\/teacher/) && method === 'PATCH') {
-        const parts = path.split('/');
-        const classId = parts[3]; // /api/classes/{id}/teacher
-        if (!classId) return errorResponse('Missing class ID');
-
-        const body = await parseBody(request);
-        if (!body) return errorResponse('Invalid JSON body');
-
-        const actorUsername = String(body.actorUsername || '').trim();
-        const newTeacherUsername = String(body.teacherUsername || '').trim();
-        if (!actorUsername) return errorResponse('Missing actorUsername');
-        if (!newTeacherUsername) return errorResponse('Missing teacherUsername');
-
-        const actor = await db.prepare('SELECT role FROM teachers WHERE username = ?').bind(actorUsername).first<any>();
-        const actorRole = String(actor?.role || '').trim().toLowerCase();
-        if (actorRole !== 'admin') {
-            return errorResponse('Forbidden', 403);
-        }
-
-        const classroom = await db.prepare('SELECT id, name, teacher_username, created_at FROM classes WHERE id = ?')
-            .bind(classId)
-            .first<any>();
-        if (!classroom) return errorResponse('Class not found', 404);
-
-        const teacher = await db.prepare('SELECT username, full_name FROM teachers WHERE username = ?')
-            .bind(newTeacherUsername)
-            .first<any>();
-        if (!teacher) return errorResponse('Teacher not found', 404);
-
-        const className = String(classroom.name || '').trim();
-        const oldTeacherUsername = String(classroom.teacher_username || '').trim();
-
-        const conflictClass = await db.prepare(`
-            SELECT id, name
-            FROM classes
-            WHERE teacher_username = ?
-              AND id <> ?
-            LIMIT 1
-        `).bind(newTeacherUsername, classId).first<any>();
-        if (conflictClass) {
-            return errorResponse(
-                `Giáo viên "${newTeacherUsername}" đang phụ trách lớp "${conflictClass.name}". Vui lòng chuyển lớp đó trước.`,
-                409
-            );
-        }
-
-        await db.prepare('UPDATE classes SET teacher_username = ? WHERE id = ?').bind(newTeacherUsername, classId).run();
-
-        if (oldTeacherUsername && oldTeacherUsername !== newTeacherUsername) {
-            await db.prepare('UPDATE teachers SET class = ? WHERE username = ? AND class = ?')
-                .bind('', oldTeacherUsername, className)
-                .run();
-        }
-
-        await db.prepare('UPDATE teachers SET class = ? WHERE username = ?')
-            .bind(className, newTeacherUsername)
-            .run();
-
-        return jsonResponse({
-            status: 'success',
-            data: {
-                id: classroom.id,
-                name: classroom.name,
-                teacherUsername: newTeacherUsername,
-                teacherFullName: teacher.full_name || '',
-                createdAt: classroom.created_at,
-            },
-        });
-    }
-
-    // DELETE /api/classes/:id
-    if (path.startsWith('/api/classes/') && method === 'DELETE') {
-        const classId = extractIdFromPath(path, '/api/classes');
-        if (!classId) return errorResponse('Missing class ID');
-
-        await db.prepare('DELETE FROM students WHERE class_id = ?').bind(classId).run();
-        await db.prepare('DELETE FROM assignments WHERE class_id = ?').bind(classId).run();
-        await db.prepare('DELETE FROM classes WHERE id = ?').bind(classId).run();
-        return jsonResponse({ status: 'success' });
-    }
-
-    // ===== STUDENTS =====
-
-    // GET /api/students?classId=X
-    if (path === '/api/students' && method === 'GET') {
-        const classId = url.searchParams.get('classId');
-        if (!classId) return errorResponse('Missing classId parameter');
-
-        const role = url.searchParams.get('role') || '';
-        const students = await db.prepare('SELECT * FROM students WHERE class_id = ?').bind(classId).all();
-        const mapped = students.results.map((s: any) => {
-            const base: any = { id: s.id, fullName: s.full_name, username: s.username, classId: s.class_id, avatar: s.avatar || '' };
-            if (role !== 'student') {
-                base.parentPhone = s.parent_phone || '';
-                base.createdAt = s.created_at;
-            }
-            return base;
-        });
-        return jsonResponse({ status: 'success', data: mapped });
-    }
-
-    // POST /api/students
-    if (path === '/api/students' && method === 'POST') {
-        const body = await parseBody(request);
-        if (!body) return errorResponse('Invalid JSON body');
-
-        // Check duplicate username
-        const existing = await db.prepare('SELECT id FROM students WHERE username = ?').bind(body.username).first();
-        if (existing) return jsonResponse({ status: 'error', message: 'Tên đăng nhập đã tồn tại: ' + body.username });
-
-        const pwdHash = await hashPassword(body.password);
-        const sId = generateId('s');
-        const createdAt = new Date().toISOString();
-
-        await db.prepare(
-            'INSERT INTO students (id, full_name, username, password_hash, class_id, parent_phone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        ).bind(sId, body.fullName, body.username, pwdHash, body.classId, body.parentPhone || '', createdAt).run();
-
-        return jsonResponse({
-            status: 'success',
-            data: { id: sId, fullName: body.fullName, username: body.username, classId: body.classId, parentPhone: body.parentPhone || '', createdAt },
-        });
-    }
-
-    // POST /api/students/batch
-    if (path === '/api/students/batch' && method === 'POST') {
-        const body = await parseBody(request);
-        if (!body || !Array.isArray(body.students)) return errorResponse('Invalid JSON body');
-
-        if (body.students.length === 0) {
-            return jsonResponse({ status: 'success', data: { successCount: 0, errorCount: 0, successes: [], errors: [] }});
-        }
-
-        // 1. Get existing usernames to avoid duplicates
-        const usernames = body.students.map((s: any) => s.username);
-        // SQLite has a limit on variables, but 50-100 is fine.
-        const placeholders = usernames.map(() => '?').join(',');
-        const existingResults = await db.prepare(
-            `SELECT username FROM students WHERE username IN (${placeholders})`
-        ).bind(...usernames).all();
-        
-        const existingUsernames = new Set(existingResults.results.map((r: any) => r.username));
-
-        const stmts = [];
-        const successList = [];
-        const errorList = [];
-
-        for (const student of body.students) {
-            if (existingUsernames.has(student.username)) {
-                errorList.push({ username: student.username, fullName: student.fullName, reason: 'Tên đăng nhập đã tồn tại' });
-                continue;
-            }
-
-            const pwdHash = await hashPassword(student.password);
-            const sId = generateId('s');
-            const createdAt = new Date().toISOString();
-            
-            // In D1, batch expects an array of statement objects. 
-            // Return from db.prepare(...) is the statement.
-            stmts.push(db.prepare(
-                'INSERT INTO students (id, full_name, username, password_hash, class_id, parent_phone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-            ).bind(sId, student.fullName, student.username, pwdHash, student.classId, student.parentPhone || '', createdAt));
-
-            successList.push({ id: sId, fullName: student.fullName, username: student.username, classId: student.classId, parentPhone: student.parentPhone || '', createdAt });
-            // Add to Set to prevent duplicates within the same batch payload
-            existingUsernames.add(student.username);
-        }
-
-        if (stmts.length > 0) {
-            try {
-                await db.batch(stmts);
-            } catch (dbErr: any) {
-                return errorResponse(`Database batch error: ${dbErr.cause?.message || dbErr.message}`);
-            }
-        }
-
-        return jsonResponse({
-            status: 'success',
-            data: { successCount: successList.length, errorCount: errorList.length, successes: successList, errors: errorList }
-        });
-    }
-
-    // DELETE /api/students/:id
-    if (
-        path.startsWith('/api/students/')
-        && !path.includes('/reset-password')
-        && !path.includes('/change-password')
-        && !path.includes('/avatar')
-        && method === 'DELETE'
-    ) {
-        const studentId = extractIdFromPath(path, '/api/students');
-        if (!studentId) return errorResponse('Missing student ID');
-
-        await db.prepare('DELETE FROM students WHERE id = ?').bind(studentId).run();
-        return jsonResponse({ status: 'success' });
-    }
-
-    // POST /api/students/:id/change-password
-    if (path.match(/\/api\/students\/[^/]+\/change-password/) && method === 'POST') {
-        const parts = path.split('/');
-        const studentId = parts[3]; // /api/students/{id}/change-password
-        if (!studentId) return errorResponse('Missing student ID');
-
-        const body = await parseBody(request);
-        if (!body) return errorResponse('Invalid JSON body');
-
-        const currentPassword = String(body.currentPassword || '').trim();
-        const newPassword = String(body.newPassword || '').trim();
-        if (!currentPassword || !newPassword) {
-            return errorResponse('Missing currentPassword or newPassword');
-        }
-        if (newPassword.length < 6) {
-            return errorResponse('Mật khẩu mới phải từ 6 ký tự.', 400);
-        }
-
-        const student = await db.prepare('SELECT id, password_hash FROM students WHERE id = ?').bind(studentId).first<any>();
-        if (!student) return errorResponse('Student not found', 404);
-
-        const currentHash = await hashPassword(currentPassword);
-        if (String(student.password_hash || '') !== currentHash) {
-            return errorResponse('Mật khẩu cũ không đúng.', 400);
-        }
-
-        const newHash = await hashPassword(newPassword);
-        await db.prepare('UPDATE students SET password_hash = ? WHERE id = ?').bind(newHash, studentId).run();
-        return jsonResponse({ status: 'success' });
-    }
-
-    // POST /api/students/:id/reset-password
-    if (path.match(/\/api\/students\/[^/]+\/reset-password/) && method === 'POST') {
-        const parts = path.split('/');
-        const studentId = parts[3]; // /api/students/{id}/reset-password
-        if (!studentId) return errorResponse('Missing student ID');
-
-        const body = await parseBody(request);
-        if (!body) return errorResponse('Invalid JSON body');
-
-        const actorUsername = String(body.actorUsername || '').trim();
-        const newPassword = String(body.newPassword || '').trim();
-        if (!actorUsername) return errorResponse('Missing actorUsername');
-        if (!newPassword) return errorResponse('Missing newPassword');
-        if (newPassword.length < 6) {
-            return errorResponse('Mật khẩu mới phải từ 6 ký tự.', 400);
-        }
-
-        const actor = await db.prepare('SELECT role FROM teachers WHERE username = ?').bind(actorUsername).first<any>();
-        const actorRole = String(actor?.role || '').toLowerCase();
-        if (actorRole !== 'admin') {
-            return errorResponse('Forbidden', 403);
-        }
-
-        const student = await db.prepare('SELECT id FROM students WHERE id = ?').bind(studentId).first<any>();
-        if (!student) return errorResponse('Student not found', 404);
-
-        const hash = await hashPassword(newPassword);
-        await db.prepare('UPDATE students SET password_hash = ? WHERE id = ?').bind(hash, studentId).run();
-        return jsonResponse({ status: 'success' });
-    }
-
-    // PUT /api/students/:id/avatar
-    if (path.match(/\/api\/students\/[^/]+\/avatar/) && method === 'PUT') {
-        const parts = path.split('/');
-        const studentId = parts[3]; // /api/students/{id}/avatar
-        if (!studentId) return errorResponse('Missing student ID');
-
-        const body = await parseBody(request);
-        if (!body) return errorResponse('Invalid JSON body');
-
-        await db.prepare('UPDATE students SET avatar = ? WHERE id = ?').bind(body.avatar || '', studentId).run();
-        return jsonResponse({ status: 'success', data: { avatar: body.avatar } });
-    }
-
     // ===== STUDENT LOGIN =====
 
-    // POST /api/student-login
+    // POST /api/student-login remains public because it creates the JWT session.
     if (path === '/api/student-login' && method === 'POST') {
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
@@ -411,6 +127,7 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
                 studentId: studentData.id,
                 fullName: studentData.full_name,
                 username: studentData.username,
+                token: jwtToken,
                 classId: studentData.class_id,
                 className: studentData.class_name || '',
                 avatar: studentData.avatar || '',
@@ -434,6 +151,364 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         });
     }
 
+    const authResult = await verifyJWTMiddleware(request, env);
+    if (authResult instanceof Response) return authResult;
+    const { user } = authResult;
+
+    // ===== CLASSES =====
+
+    // GET /api/classes
+    if (path === '/api/classes' && method === 'GET') {
+        if (!requireTeacher(user)) return errorResponse('Forbidden: Teacher access required', 403);
+
+        let query = `
+            SELECT
+                c.*,
+                t.full_name AS teacher_full_name
+            FROM classes c
+            LEFT JOIN teachers t ON t.username = c.teacher_username
+        `;
+        const params: any[] = [];
+        if (!requireAdmin(user)) {
+            query += ' WHERE c.teacher_username = ?';
+            params.push(user.username);
+        }
+        const rows = await db.prepare(query).bind(...params).all();
+        return jsonResponse({
+            status: 'success',
+            data: rows.results.map((r: any) => ({
+                id: r.id,
+                name: r.name,
+                teacherUsername: r.teacher_username,
+                teacherFullName: r.teacher_full_name || '',
+                createdAt: r.created_at,
+            })),
+        });
+    }
+
+    // POST /api/classes
+    if (path === '/api/classes' && method === 'POST') {
+        if (!requireAdmin(user)) return errorResponse('Forbidden: Admin access required', 403);
+
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+
+        const teacherUsername = String(body.teacherUsername || '').trim();
+        if (!teacherUsername) return errorResponse('Missing teacherUsername');
+
+        const id = generateId('c');
+        const createdAt = new Date().toISOString();
+        await db.prepare('INSERT INTO classes (id, name, teacher_username, created_at) VALUES (?, ?, ?, ?)')
+            .bind(id, body.name, teacherUsername, createdAt).run();
+
+        const teacher = await db.prepare('SELECT full_name FROM teachers WHERE username = ?')
+            .bind(teacherUsername)
+            .first<any>();
+
+        return jsonResponse({
+            status: 'success',
+            data: {
+                id,
+                name: body.name,
+                teacherUsername,
+                teacherFullName: teacher?.full_name || '',
+                createdAt,
+            },
+        });
+    }
+
+    // PATCH /api/classes/:id/teacher
+    if (path.match(/\/api\/classes\/[^/]+\/teacher/) && method === 'PATCH') {
+        const parts = path.split('/');
+        const classId = parts[3]; // /api/classes/{id}/teacher
+        if (!classId) return errorResponse('Missing class ID');
+
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+
+        if (!requireAdmin(user)) return errorResponse('Forbidden: Admin access required', 403);
+
+        const newTeacherUsername = String(body.teacherUsername || '').trim();
+        if (!newTeacherUsername) return errorResponse('Missing teacherUsername');
+
+        const classroom = await db.prepare('SELECT id, name, teacher_username, created_at FROM classes WHERE id = ?')
+            .bind(classId)
+            .first<any>();
+        if (!classroom) return errorResponse('Class not found', 404);
+
+        const teacher = await db.prepare('SELECT username, full_name FROM teachers WHERE username = ?')
+            .bind(newTeacherUsername)
+            .first<any>();
+        if (!teacher) return errorResponse('Teacher not found', 404);
+
+        const className = String(classroom.name || '').trim();
+        const oldTeacherUsername = String(classroom.teacher_username || '').trim();
+
+        const conflictClass = await db.prepare(`
+            SELECT id, name
+            FROM classes
+            WHERE teacher_username = ?
+              AND id <> ?
+            LIMIT 1
+        `).bind(newTeacherUsername, classId).first<any>();
+        if (conflictClass) {
+            return errorResponse(
+                `Giáo viên "${newTeacherUsername}" đang phụ trách lớp "${conflictClass.name}". Vui lòng chuyển lớp đó trước.`,
+                409
+            );
+        }
+
+        await db.prepare('UPDATE classes SET teacher_username = ? WHERE id = ?').bind(newTeacherUsername, classId).run();
+
+        if (oldTeacherUsername && oldTeacherUsername !== newTeacherUsername) {
+            await db.prepare('UPDATE teachers SET class = ? WHERE username = ? AND class = ?')
+                .bind('', oldTeacherUsername, className)
+                .run();
+        }
+
+        await db.prepare('UPDATE teachers SET class = ? WHERE username = ?')
+            .bind(className, newTeacherUsername)
+            .run();
+
+        return jsonResponse({
+            status: 'success',
+            data: {
+                id: classroom.id,
+                name: classroom.name,
+                teacherUsername: newTeacherUsername,
+                teacherFullName: teacher.full_name || '',
+                createdAt: classroom.created_at,
+            },
+        });
+    }
+
+    // DELETE /api/classes/:id
+    if (path.startsWith('/api/classes/') && method === 'DELETE') {
+        if (!requireAdmin(user)) return errorResponse('Forbidden: Admin access required', 403);
+
+        const classId = extractIdFromPath(path, '/api/classes');
+        if (!classId) return errorResponse('Missing class ID');
+
+        await db.prepare('DELETE FROM students WHERE class_id = ?').bind(classId).run();
+        await db.prepare('DELETE FROM assignments WHERE class_id = ?').bind(classId).run();
+        await db.prepare('DELETE FROM classes WHERE id = ?').bind(classId).run();
+        return jsonResponse({ status: 'success' });
+    }
+
+    // ===== STUDENTS =====
+
+    // GET /api/students?classId=X
+    if (path === '/api/students' && method === 'GET') {
+        const classId = url.searchParams.get('classId');
+        if (!classId) return errorResponse('Missing classId parameter');
+
+        if (isStudent(user) && user.classId !== classId) return errorResponse('Forbidden: You can only access your class', 403);
+        if (!isStudent(user)) {
+            const classError = await requireTeacherForClass(db, user, classId);
+            if (classError) return classError;
+        }
+
+        const role = isStudent(user) ? 'student' : 'teacher';
+        const students = await db.prepare('SELECT * FROM students WHERE class_id = ?').bind(classId).all();
+        const mapped = students.results.map((s: any) => {
+            const base: any = { id: s.id, fullName: s.full_name, username: s.username, classId: s.class_id, avatar: s.avatar || '' };
+            if (role !== 'student') {
+                base.parentPhone = s.parent_phone || '';
+                base.createdAt = s.created_at;
+            }
+            return base;
+        });
+        return jsonResponse({ status: 'success', data: mapped });
+    }
+
+    // POST /api/students
+    if (path === '/api/students' && method === 'POST') {
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+
+        const classError = await requireTeacherForClass(db, user, body.classId);
+        if (classError) return classError;
+
+        // Check duplicate username
+        const existing = await db.prepare('SELECT id FROM students WHERE username = ?').bind(body.username).first();
+        if (existing) return jsonResponse({ status: 'error', message: 'Tên đăng nhập đã tồn tại: ' + body.username });
+
+        const pwdHash = await hashPassword(body.password);
+        const sId = generateId('s');
+        const createdAt = new Date().toISOString();
+
+        await db.prepare(
+            'INSERT INTO students (id, full_name, username, password_hash, class_id, parent_phone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).bind(sId, body.fullName, body.username, pwdHash, body.classId, body.parentPhone || '', createdAt).run();
+
+        return jsonResponse({
+            status: 'success',
+            data: { id: sId, fullName: body.fullName, username: body.username, classId: body.classId, parentPhone: body.parentPhone || '', createdAt },
+        });
+    }
+
+    // POST /api/students/batch
+    if (path === '/api/students/batch' && method === 'POST') {
+        const body = await parseBody(request);
+        if (!body || !Array.isArray(body.students)) return errorResponse('Invalid JSON body');
+
+        if (body.students.length === 0) {
+            return jsonResponse({ status: 'success', data: { successCount: 0, errorCount: 0, successes: [], errors: [] }});
+        }
+
+        const classIds = [...new Set(body.students.map((s: any) => String(s.classId || '').trim()))] as string[];
+        if (classIds.length !== 1 || !classIds[0]) return errorResponse('All students must target one valid classId');
+        const classError = await requireTeacherForClass(db, user, classIds[0]);
+        if (classError) return classError;
+
+        // 1. Get existing usernames to avoid duplicates
+        const usernames = body.students.map((s: any) => s.username);
+        // SQLite has a limit on variables, but 50-100 is fine.
+        const placeholders = usernames.map(() => '?').join(',');
+        const existingResults = await db.prepare(
+            `SELECT username FROM students WHERE username IN (${placeholders})`
+        ).bind(...usernames).all();
+        
+        const existingUsernames = new Set(existingResults.results.map((r: any) => r.username));
+
+        const stmts = [];
+        const successList = [];
+        const errorList = [];
+
+        for (const student of body.students) {
+            if (existingUsernames.has(student.username)) {
+                errorList.push({ username: student.username, fullName: student.fullName, reason: 'Tên đăng nhập đã tồn tại' });
+                continue;
+            }
+
+            const pwdHash = await hashPassword(student.password);
+            const sId = generateId('s');
+            const createdAt = new Date().toISOString();
+            
+            // In D1, batch expects an array of statement objects. 
+            // Return from db.prepare(...) is the statement.
+            stmts.push(db.prepare(
+                'INSERT INTO students (id, full_name, username, password_hash, class_id, parent_phone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            ).bind(sId, student.fullName, student.username, pwdHash, student.classId, student.parentPhone || '', createdAt));
+
+            successList.push({ id: sId, fullName: student.fullName, username: student.username, classId: student.classId, parentPhone: student.parentPhone || '', createdAt });
+            // Add to Set to prevent duplicates within the same batch payload
+            existingUsernames.add(student.username);
+        }
+
+        if (stmts.length > 0) {
+            try {
+                await db.batch(stmts);
+            } catch (dbErr: any) {
+                return errorResponse(`Database batch error: ${dbErr.cause?.message || dbErr.message}`);
+            }
+        }
+
+        return jsonResponse({
+            status: 'success',
+            data: { successCount: successList.length, errorCount: errorList.length, successes: successList, errors: errorList }
+        });
+    }
+
+    // DELETE /api/students/:id
+    if (
+        path.startsWith('/api/students/')
+        && !path.includes('/reset-password')
+        && !path.includes('/change-password')
+        && !path.includes('/avatar')
+        && method === 'DELETE'
+    ) {
+        const studentId = extractIdFromPath(path, '/api/students');
+        if (!studentId) return errorResponse('Missing student ID');
+
+        const studentError = await requireTeacherForStudent(db, user, studentId);
+        if (studentError) return studentError;
+
+        await db.prepare('DELETE FROM students WHERE id = ?').bind(studentId).run();
+        return jsonResponse({ status: 'success' });
+    }
+
+    // POST /api/students/:id/change-password
+    if (path.match(/\/api\/students\/[^/]+\/change-password/) && method === 'POST') {
+        const parts = path.split('/');
+        const studentId = parts[3]; // /api/students/{id}/change-password
+        if (!studentId) return errorResponse('Missing student ID');
+
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+
+        const student = await getStudentById(db, studentId);
+        if (!student) return errorResponse('Student not found', 404);
+        if (!isStudent(user) || user.username !== student.username) {
+            return errorResponse('Forbidden: You can only change your own password', 403);
+        }
+
+        const currentPassword = String(body.currentPassword || '').trim();
+        const newPassword = String(body.newPassword || '').trim();
+        if (!currentPassword || !newPassword) {
+            return errorResponse('Missing currentPassword or newPassword');
+        }
+        if (newPassword.length < 6) {
+            return errorResponse('Mật khẩu mới phải từ 6 ký tự.', 400);
+        }
+
+        const studentWithPassword = await db.prepare('SELECT id, password_hash FROM students WHERE id = ?').bind(studentId).first<any>();
+        if (!studentWithPassword) return errorResponse('Student not found', 404);
+
+        const currentHash = await hashPassword(currentPassword);
+        if (String(studentWithPassword.password_hash || '') !== currentHash) {
+            return errorResponse('Mật khẩu cũ không đúng.', 400);
+        }
+
+        const newHash = await hashPassword(newPassword);
+        await db.prepare('UPDATE students SET password_hash = ? WHERE id = ?').bind(newHash, studentId).run();
+        return jsonResponse({ status: 'success' });
+    }
+
+    // POST /api/students/:id/reset-password
+    if (path.match(/\/api\/students\/[^/]+\/reset-password/) && method === 'POST') {
+        const parts = path.split('/');
+        const studentId = parts[3]; // /api/students/{id}/reset-password
+        if (!studentId) return errorResponse('Missing student ID');
+
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+
+        if (!requireAdmin(user)) return errorResponse('Forbidden: Admin access required', 403);
+
+        const newPassword = String(body.newPassword || '').trim();
+        if (!newPassword) return errorResponse('Missing newPassword');
+        if (newPassword.length < 6) {
+            return errorResponse('Mật khẩu mới phải từ 6 ký tự.', 400);
+        }
+
+        const student = await db.prepare('SELECT id FROM students WHERE id = ?').bind(studentId).first<any>();
+        if (!student) return errorResponse('Student not found', 404);
+
+        const hash = await hashPassword(newPassword);
+        await db.prepare('UPDATE students SET password_hash = ? WHERE id = ?').bind(hash, studentId).run();
+        return jsonResponse({ status: 'success' });
+    }
+
+    // PUT /api/students/:id/avatar
+    if (path.match(/\/api\/students\/[^/]+\/avatar/) && method === 'PUT') {
+        const parts = path.split('/');
+        const studentId = parts[3]; // /api/students/{id}/avatar
+        if (!studentId) return errorResponse('Missing student ID');
+
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+
+        const student = await getStudentById(db, studentId);
+        if (!student) return errorResponse('Student not found', 404);
+        if (!isStudent(user) || user.username !== student.username) {
+            return errorResponse('Forbidden: You can only update your own avatar', 403);
+        }
+
+        await db.prepare('UPDATE students SET avatar = ? WHERE id = ?').bind(body.avatar || '', studentId).run();
+        return jsonResponse({ status: 'success', data: { avatar: body.avatar } });
+    }
+
     // ===== ASSIGNMENTS =====
 
     // GET /api/assignments
@@ -447,8 +522,10 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         await db.prepare(`UPDATE assignments SET status = 'CLOSED' WHERE status = 'OPEN' AND deadline < ?`)
             .bind(new Date().toISOString()).run();
 
-        // Get all assignments (for teacher dashboard)
+        // Get all assignments (admin only)
         if (all === 'true') {
+            if (!requireAdmin(user)) return errorResponse('Forbidden: Admin access required', 403);
+
             const assignments = await db.prepare(`
                 SELECT 
                     a.*, 
@@ -483,7 +560,10 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
 
         // Get teacher assignments
         if (teacherUsername) {
-            const teacherClasses = await db.prepare('SELECT id FROM classes WHERE teacher_username = ?').bind(teacherUsername).all();
+            if (!requireTeacher(user)) return errorResponse('Forbidden: Teacher access required', 403);
+            const effectiveTeacherUsername = requireAdmin(user) ? teacherUsername : user.username;
+
+            const teacherClasses = await db.prepare('SELECT id FROM classes WHERE teacher_username = ?').bind(effectiveTeacherUsername).all();
             const classIds = teacherClasses.results.map((c: any) => c.id);
             if (classIds.length === 0) return jsonResponse({ status: 'success', data: [] });
 
@@ -522,6 +602,11 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         if (studentId) {
             const stu = await db.prepare('SELECT * FROM students WHERE id = ?').bind(studentId).first<any>();
             if (!stu) return jsonResponse({ status: 'error', message: 'Student not found' });
+            if (isStudent(user) && user.username !== stu.username) return errorResponse('Forbidden: You can only access your own assignments', 403);
+            if (!isStudent(user)) {
+                const studentError = await requireTeacherForStudent(db, user, studentId);
+                if (studentError) return studentError;
+            }
 
             const asns = await db.prepare(
                 `SELECT * FROM assignments WHERE class_id = ? AND (student_id = '' OR student_id = ?) ORDER BY created_at DESC`
@@ -553,6 +638,9 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
 
         // Get assignments by classId
         if (classId) {
+            const classError = await requireTeacherForClass(db, user, classId);
+            if (classError) return classError;
+
             const rows = await db.prepare(`
                 SELECT a.*, s.full_name as student_name 
                 FROM assignments a 
@@ -571,6 +659,8 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
 
     // POST /api/assignments
     if (path === '/api/assignments/smart-preview' && method === 'POST') {
+        if (!requireTeacher(user)) return errorResponse('Forbidden: Teacher access required', 403);
+
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
@@ -586,6 +676,13 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
     if (path === '/api/assignments' && method === 'POST') {
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
+
+        const classError = await requireTeacherForClass(db, user, body.classId);
+        if (classError) return classError;
+        if (body.studentId) {
+            const studentError = await requireTeacherForStudent(db, user, body.studentId);
+            if (studentError) return studentError;
+        }
 
         const aId = generateId('a');
         const createdAt = new Date().toISOString();
@@ -604,6 +701,9 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         const assignmentId = extractIdFromPath(path, '/api/assignments');
         if (!assignmentId) return errorResponse('Missing assignment ID');
 
+        const assignmentError = await requireTeacherForAssignment(db, user, assignmentId);
+        if (assignmentError) return assignmentError;
+
         await db.prepare('DELETE FROM assignments WHERE id = ?').bind(assignmentId).run();
         return jsonResponse({ status: 'success' });
     }
@@ -613,6 +713,9 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         const parts = path.split('/');
         const assignmentId = parts[3];
         if (!assignmentId) return errorResponse('Missing assignment ID');
+
+        const assignmentError = await requireTeacherForAssignment(db, user, assignmentId);
+        if (assignmentError) return assignmentError;
 
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
@@ -635,6 +738,9 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         const assignmentId = parts[3];
         if (!assignmentId) return errorResponse('Missing assignment ID');
 
+        const assignmentError = await requireTeacherForAssignment(db, user, assignmentId);
+        if (assignmentError) return assignmentError;
+
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
@@ -652,11 +758,19 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        const stu = await db.prepare('SELECT * FROM students WHERE id = ?').bind(body.studentId).first<any>();
+        if (!isStudent(user)) return errorResponse('Forbidden: Student access required', 403);
+
+        const stu = await db.prepare('SELECT * FROM students WHERE username = ?').bind(user.username).first<any>();
         if (!stu) return jsonResponse({ status: 'error', message: 'Student not found' });
 
         const asn = await db.prepare('SELECT * FROM assignments WHERE id = ?').bind(assignmentId).first<any>();
         if (!asn) return jsonResponse({ status: 'error', message: 'Assignment not found' });
+        if (String(asn.class_id || '') !== String(stu.class_id || '')) {
+            return errorResponse('Forbidden: Assignment is not for your class', 403);
+        }
+        if (String(asn.student_id || '') && String(asn.student_id || '') !== String(stu.id || '')) {
+            return errorResponse('Forbidden: Assignment is not assigned to you', 403);
+        }
 
         const cnt = await db.prepare(
             `SELECT COUNT(*) as cnt FROM results WHERE student_name = ? AND quiz_id = ? AND answers != '{"status":"STARTED"}'`

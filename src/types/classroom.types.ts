@@ -48,6 +48,7 @@ export interface StudentSession {
     studentId: string;
     fullName: string;
     username: string;
+    token?: string;
     classId: string;
     className?: string;
     avatar?: string;           // Avatar sticker key

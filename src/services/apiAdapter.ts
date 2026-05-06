@@ -4,6 +4,21 @@ import { WORKERS_API_URL } from '../config/constants';
 // JWT authentication is now used for student and teacher sessions
 const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
 
+function getStoredJWTToken(): string {
+    try {
+        const directToken = localStorage.getItem('itongquiz_jwt_token');
+        if (directToken) return directToken;
+
+        const authStorage = localStorage.getItem('auth-storage');
+        if (!authStorage) return '';
+
+        const parsed = JSON.parse(authStorage);
+        return parsed?.state?.token || '';
+    } catch {
+        return '';
+    }
+}
+
 /**
  * The API Adapter - routes all requests to Cloudflare Workers (D1)
  *
@@ -25,7 +40,6 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'delete_teacher':
             method = 'DELETE';
             path = `/api/teachers/${encodeURIComponent(payload.username)}`;
-            if (payload.actorUsername) urlParams.append('actorUsername', payload.actorUsername);
             break;
         case 'login': method = 'POST'; path = '/api/login'; break;
         case 'logout': method = 'POST'; path = '/api/logout'; break;
@@ -57,7 +71,7 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'get_practice_quiz': method = 'GET'; path = '/api/practice'; if (payload.topic) urlParams.append('topic', payload.topic); if (payload.limit) urlParams.append('limit', payload.limit); break;
 
         // --- Classroom ---
-        case 'get_classes': method = 'GET'; path = '/api/classes'; if (payload.teacherUsername) urlParams.append('teacherUsername', payload.teacherUsername); break;
+        case 'get_classes': method = 'GET'; path = '/api/classes'; break;
         case 'create_class': method = 'POST'; path = '/api/classes'; break;
         case 'transfer_class_teacher': method = 'PATCH'; path = `/api/classes/${encodeURIComponent(payload.classId)}/teacher`; break;
         case 'delete_class': method = 'DELETE'; path = `/api/classes/${payload.classId}`; break;
@@ -74,7 +88,7 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
 
         // --- Assignments ---
         case 'get_assignments': method = 'GET'; path = '/api/assignments'; urlParams.append('classId', payload.classId); break;
-        case 'get_teacher_assignments': method = 'GET'; path = '/api/assignments'; urlParams.append('teacherUsername', payload.teacherUsername); break;
+        case 'get_teacher_assignments': method = 'GET'; path = '/api/assignments'; urlParams.append('teacherUsername', payload.teacherUsername || 'me'); break;
         case 'get_all_assignments': method = 'GET'; path = '/api/assignments'; urlParams.append('all', 'true'); break;
         case 'get_student_assignments': method = 'GET'; path = '/api/assignments'; urlParams.append('studentId', payload.studentId); break;
         case 'create_assignment': method = 'POST'; path = '/api/assignments'; break;
@@ -138,13 +152,20 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'get_system_settings': method = 'GET'; path = '/api/system-settings'; break;
         case 'save_system_settings': method = 'POST'; path = '/api/system-settings'; break;
 
-        default: 
-            // Fallback for legacy actions (like hw_assignments)
+        // --- Legacy Homework Center (temporary allowlist only) ---
+        case 'get_hw_assignments':
+        case 'save_hw_assignment':
+        case 'delete_hw_assignment':
+        case 'submit_hw':
+        case 'get_hw_submissions':
             method = 'POST';
             path = '/api/gas';
             // Legacy workers endpoint expects 'action' and 'token' inside the body
             payload = { ...payload, action, token: API_SECRET_TOKEN };
             break;
+
+        default:
+            throw new Error(`Unknown API action: ${action}`);
     }
 
     try {
@@ -158,14 +179,27 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         };
 
         // Add legacy API token for non-JWT routes
-        // JWT routes (login, logout, game-loop) use cookies instead
+        // JWT routes use cookies instead
         const isJWTRoute = path === '/api/login' ||
                           path === '/api/student-login' ||
                           path === '/api/logout' ||
-                          path.startsWith('/api/game-loop');
+                          path.startsWith('/api/game-loop') ||
+                          path.startsWith('/api/teachers') ||
+                          path.startsWith('/api/classes') ||
+                          path.startsWith('/api/students') ||
+                          path.startsWith('/api/assignments') ||
+                          path.startsWith('/api/results') ||
+                          path === '/api/validate' ||
+                          path.startsWith('/api/quizzes') ||
+                          path.startsWith('/api/questions');
 
         if (!isJWTRoute && API_SECRET_TOKEN) {
             (fetchOptions.headers as Record<string, string>)['X-API-Token'] = API_SECRET_TOKEN;
+        }
+
+        const jwtToken = getStoredJWTToken();
+        if (isJWTRoute && jwtToken) {
+            (fetchOptions.headers as Record<string, string>)['Authorization'] = `Bearer ${jwtToken}`;
         }
 
         // GET và DELETE thường không có body

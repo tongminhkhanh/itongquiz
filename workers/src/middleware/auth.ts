@@ -32,7 +32,22 @@ export function verifyToken(request: Request, env: Env): Response | null {
     // 7. SECURITY: Logout endpoint requires JWT (handled in route)
     if (path === '/api/logout') return null;
 
-    // 8. Verify token from header for REST API routes (legacy auth for non-JWT routes)
+    // 8. SECURITY: Teacher management routes now use JWT authentication (handled in teachers.ts)
+    if (path.startsWith('/api/teachers')) return null;
+
+    // 9. SECURITY: Classroom routes now use JWT authentication (handled in classroom.ts)
+    if (path.startsWith('/api/classes') || path.startsWith('/api/students') || path.startsWith('/api/assignments')) return null;
+
+    // 10. SECURITY: Results and validation routes now use JWT authentication (handled in results.ts)
+    if (path.startsWith('/api/results') || path === '/api/validate') return null;
+
+    // 11. SECURITY: Quiz/Questions routes - READ operations are public, WRITE operations use JWT (handled in quizzes.ts)
+    if (path.startsWith('/api/quizzes') || path.startsWith('/api/questions')) return null;
+
+    // 12. SECURITY: Live Exam routes use JWT authentication (handled in liveExam.ts)
+    if (path.startsWith('/api/live-exam')) return null;
+
+    // 13. Verify token from header for REST API routes (legacy auth for non-JWT routes)
     const headerToken = request.headers.get('X-API-Token') || request.headers.get('Authorization')?.replace('Bearer ', '');
 
     if (headerToken === env.API_SECRET_TOKEN) return null;

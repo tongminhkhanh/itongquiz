@@ -12,6 +12,7 @@ import Sidebar from './Sidebar';
 import BottomNavigation from './BottomNavigation';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '../../utils/toast';
+import { checkAndWarnJWTExpiry } from '../../utils/jwtInterceptor';
 
 // Lazy load tab components
 const OverviewTab = React.lazy(() => import('./OverviewTab'));
@@ -27,6 +28,7 @@ const AssignmentTab = React.lazy(() => import('./AssignmentTab'));
 const TeacherManagementTab = React.lazy(() => import('./TeacherManagementTab'));
 const GiftShopTab = React.lazy(() => import('./GiftShopTab'));
 const HomeworkTab = React.lazy(() => import('../../features/homework/components/HomeworkTab').then(m => ({ default: m.HomeworkTab })));
+const LiveExamTab = React.lazy(() => import('../LiveExam/TeacherLiveExamDashboardContainer'));
 
 const TeacherDashboard: React.FC = () => {
     // --- STORES ---
@@ -51,8 +53,17 @@ const TeacherDashboard: React.FC = () => {
         // AUTO-LOAD RESULTS for Teacher Dashboard so it's not empty
         quizStore.loadResults();
 
+        // Check JWT expiry on mount
+        checkAndWarnJWTExpiry();
+
+        // Check JWT expiry every 5 minutes
+        const expiryCheckInterval = setInterval(() => {
+            checkAndWarnJWTExpiry();
+        }, 5 * 60 * 1000);
+
         return () => {
             setStripAnswersEnabled(true);
+            clearInterval(expiryCheckInterval);
         };
     }, []);
 
@@ -100,6 +111,7 @@ const TeacherDashboard: React.FC = () => {
             case 'teachers': return 'Quản lý Giáo viên';
             case 'gift-shop': return 'Tiệm Tạp Hóa';
             case 'homework': return 'Phiếu bài tập (AI)';
+            case 'live-exam': return 'Thi Trực Tiếp';
             default: return 'Bảng điều khiển';
         }
     };
@@ -304,6 +316,10 @@ const TeacherDashboard: React.FC = () => {
 
                             {activeTab === 'homework' && (
                                 <HomeworkTab />
+                            )}
+
+                            {activeTab === 'live-exam' && (
+                                <LiveExamTab />
                             )}
 
                         </Suspense>
