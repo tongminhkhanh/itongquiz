@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, Trophy, Star } from 'lucide-react';
 import type { GameLoopAchievement } from '../../types/gameLoop.types';
+import { getAchievementBadgeAlt, getAchievementBadgeImage } from '../../config/achievementBadges';
 
 interface BadgeGalleryProps {
     isOpen: boolean;
@@ -196,6 +197,7 @@ export const BadgeGallery: React.FC<BadgeGalleryProps> = ({
                                         const isUnlocked = unlockedCodes.has(badge.code);
                                         const colors = RARITY_COLORS[badge.rarity as keyof typeof RARITY_COLORS];
                                         const unlockedData = achievements.find(a => a.code === badge.code);
+                                        const badgeImage = getAchievementBadgeImage(badge.code);
 
                                         return (
                                             <motion.div
@@ -208,12 +210,21 @@ export const BadgeGallery: React.FC<BadgeGalleryProps> = ({
                                                 }`}
                                             >
                                                 {/* Badge icon */}
-                                                <div className="text-4xl mb-2 text-center relative">
-                                                    {isUnlocked ? (
-                                                        badge.icon
+                                                <div className="mb-2 flex justify-center text-center relative">
+                                                    {badgeImage ? (
+                                                        <div className="relative inline-flex">
+                                                            <img
+                                                                src={badgeImage}
+                                                                alt={getAchievementBadgeAlt(badge)}
+                                                                className={`h-16 w-16 object-contain drop-shadow-sm ${isUnlocked ? '' : 'opacity-30 grayscale'}`}
+                                                            />
+                                                            {!isUnlocked && <Lock className="absolute inset-0 m-auto w-6 h-6 text-slate-400" />}
+                                                        </div>
+                                                    ) : isUnlocked ? (
+                                                        <span className="text-4xl">{badge.icon}</span>
                                                     ) : (
                                                         <div className="relative">
-                                                            <span className="opacity-30">{badge.icon}</span>
+                                                            <span className="opacity-30 text-4xl">{badge.icon}</span>
                                                             <Lock className="absolute inset-0 m-auto w-6 h-6 text-slate-400" />
                                                         </div>
                                                     )}

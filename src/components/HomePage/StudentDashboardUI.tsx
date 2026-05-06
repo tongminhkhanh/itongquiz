@@ -27,6 +27,7 @@ import { useHomeworkStore } from '../../features/homework/stores/useHomeworkStor
 import type { GameLoopMission, GameLoopRewardResult } from '../../types/gameLoop.types';
 import type { LiveExamSubmissionResponse } from '../../types/liveExam.types';
 import LeaderboardPage from './LeaderboardPage';
+import { getAchievementBadgeAlt, getAchievementBadgeImage } from '../../config/achievementBadges';
 
 // --- Subject Config (Reused from HomePage) ---
 export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color: string; desc: string; showOnHome?: boolean }> = {
@@ -1159,15 +1160,29 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                 )}
                             </div>
                             <div className="grid grid-cols-1 gap-3 mb-4">
-                                {(dashboard?.achievements.slice(0, 3) || []).map((achievement) => (
+                                {(dashboard?.achievements.slice(0, 3) || []).map((achievement) => {
+                                    const badgeImage = getAchievementBadgeImage(achievement.code);
+
+                                    return (
                                     <div key={achievement.code} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 flex items-center gap-3">
-                                        <div className="w-11 h-11 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-xl">{achievement.icon}</div>
+                                        <div className="w-11 h-11 rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden">
+                                            {badgeImage ? (
+                                                <img
+                                                    src={badgeImage}
+                                                    alt={getAchievementBadgeAlt(achievement)}
+                                                    className="h-9 w-9 object-contain"
+                                                />
+                                            ) : (
+                                                <span className="text-xl">{achievement.icon}</span>
+                                            )}
+                                        </div>
                                         <div className="min-w-0">
                                             <p className="text-sm font-black text-slate-800">{achievement.title}</p>
                                             <p className="text-xs text-slate-500 font-medium">{achievement.description}</p>
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                                 {(dashboard?.achievements.length || 0) === 0 && (
                                     <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-5 text-center text-sm font-semibold text-slate-500">
                                         Hoàn thành bài đầu tiên để mở huy hiệu đầu tiên nhé.
