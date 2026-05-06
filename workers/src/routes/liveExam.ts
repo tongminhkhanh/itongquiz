@@ -128,11 +128,8 @@ export async function handleLiveExamRoutes(
     // GET /api/live-exam/:id
     // Get session details (teacher only)
     if (
-        path.startsWith('/api/live-exam/') &&
         method === 'GET' &&
-        !path.includes('/status') &&
-        !path.includes('/participants') &&
-        !path.startsWith('/api/live-exam/teacher/')
+        /^\/api\/live-exam\/[^/]+$/.test(path)
     ) {
         const authResult = await verifyJWTMiddleware(request, env);
         if (authResult instanceof Response) return authResult;
