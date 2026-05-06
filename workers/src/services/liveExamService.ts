@@ -349,6 +349,31 @@ export async function endExamEarly(
 }
 
 /**
+ * Delete a live exam session and all related participant/activity data.
+ */
+export async function deleteLiveExam(
+    db: D1Database,
+    sessionId: string,
+    teacherId: string
+): Promise<void> {
+    const session = await getLiveExamById(db, sessionId);
+
+    if (!session) {
+        throw new Error('Session not found');
+    }
+
+    if (session.teacherId !== teacherId) {
+        throw new Error('Unauthorized');
+    }
+
+    await db.batch([
+        db.prepare('DELETE FROM live_exam_activity WHERE live_exam_id = ?').bind(sessionId),
+        db.prepare('DELETE FROM live_exam_participants WHERE live_exam_id = ?').bind(sessionId),
+        db.prepare('DELETE FROM live_exam_sessions WHERE id = ?').bind(sessionId),
+    ]);
+}
+
+/**
  * Auto-submit incomplete answers when time expires
  */
 async function autoSubmitIncompleteAnswers(

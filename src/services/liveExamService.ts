@@ -128,6 +128,18 @@ export async function getLiveExamSession(
 }
 
 /**
+ * Delete a Live Exam Session (teacher only)
+ */
+export async function deleteLiveExamSession(sessionId: string): Promise<void> {
+    await apiCall<{ success: boolean; message: string }>(
+        `/api/live-exam/${sessionId}`,
+        {
+            method: 'DELETE',
+        }
+    );
+}
+
+/**
  * Control Live Exam Session (open, start, end)
  */
 export async function controlLiveExam(

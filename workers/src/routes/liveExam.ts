@@ -207,6 +207,33 @@ export async function handleLiveExamRoutes(
         }
     }
 
+    // DELETE /api/live-exam/:id
+    // Delete session and related data (teacher only)
+    if (
+        method === 'DELETE' &&
+        /^\/api\/live-exam\/[^/]+$/.test(path)
+    ) {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        const user = authResult.user;
+
+        const sessionId = extractIdFromPath(path, '/api/live-exam/');
+        if (!sessionId) return errorResponse('Invalid session ID');
+
+        const authError = await requireTeacherForSession(db, user, sessionId);
+        if (authError) return authError;
+
+        try {
+            await LiveExamService.deleteLiveExam(db, sessionId, user.username);
+            return jsonResponse({
+                success: true,
+                message: 'Session deleted successfully',
+            });
+        } catch (error: any) {
+            return errorResponse(error.message || 'Failed to delete session', 500);
+        }
+    }
+
     // GET /api/live-exam/:id/participants
     // Get participants list (teacher polling endpoint)
     if (path.match(/^\/api\/live-exam\/[^/]+\/participants$/) && method === 'GET') {

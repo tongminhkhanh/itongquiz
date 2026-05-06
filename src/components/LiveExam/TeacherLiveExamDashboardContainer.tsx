@@ -70,6 +70,20 @@ export const TeacherLiveExamDashboardContainer: React.FC = () => {
         setSelectedSession(session);
     };
 
+    const handleDeleteSession = async (session: LiveExamSession) => {
+        try {
+            await liveExamService.deleteLiveExamSession(session.id);
+            setSessions((prev) => prev.filter((item) => item.id !== session.id));
+            if (selectedSession?.id === session.id) {
+                setSelectedSession(null);
+            }
+            showSuccess('Đã xóa phiên thi');
+        } catch (error: any) {
+            console.error('Failed to delete session:', error);
+            showError(error?.message || 'Không thể xóa phiên thi');
+        }
+    };
+
     const handleBackToList = async () => {
         setSelectedSession(null);
         await loadSessions();
@@ -238,6 +252,7 @@ export const TeacherLiveExamDashboardContainer: React.FC = () => {
             isLoading={isLoading}
             onCreateSession={handleCreateSession}
             onSelectSession={handleSelectSession}
+            onDeleteSession={handleDeleteSession}
             onRefresh={loadSessions}
         />
     );

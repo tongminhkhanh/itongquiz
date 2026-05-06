@@ -6,7 +6,8 @@
  */
 
 import React, { useState } from 'react';
-import { Plus, Clock, Users, Filter, Loader2 } from 'lucide-react';
+import { Plus, Clock, Users, Filter, Loader2, Trash2 } from 'lucide-react';
+import { showConfirm } from '../../utils/toast';
 import { CreateLiveExamModal } from './CreateLiveExamModal';
 import { getStatusLabel, getStatusColor, formatAccessCode } from '../../services/liveExamService';
 import type { LiveExamSession } from '../../types/liveExam.types';
@@ -17,6 +18,7 @@ interface TeacherLiveExamDashboardProps {
     isLoading?: boolean;
     onCreateSession: (sessionId: string, accessCode: string) => void;
     onSelectSession: (session: LiveExamSession) => void;
+    onDeleteSession?: (session: LiveExamSession) => Promise<void>;
     onRefresh?: () => void;
 }
 
@@ -26,6 +28,7 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
     isLoading = false,
     onCreateSession,
     onSelectSession,
+    onDeleteSession,
     onRefresh,
 }) => {
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -207,8 +210,29 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
 
                                 {/* Footer */}
                                 <div className="pt-4 border-t border-slate-100">
-                                    <div className="text-xs text-slate-500">
-                                        Tạo: {new Date(session.createdAt).toLocaleDateString('vi-VN')}
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="text-xs text-slate-500">
+                                            Tạo: {new Date(session.createdAt).toLocaleDateString('vi-VN')}
+                                        </div>
+                                        {onDeleteSession && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    showConfirm({
+                                                        message: `Xóa phiên thi "${session.title}"? Tất cả dữ liệu tham gia và kết quả của phiên này sẽ bị xóa.`,
+                                                        confirmLabel: 'Xóa phiên',
+                                                        destructive: true,
+                                                        onConfirm: async () => {
+                                                            await onDeleteSession(session);
+                                                        },
+                                                    });
+                                                }}
+                                                className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                            >
+                                                <Trash2 size={14} />
+                                                Xóa
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>
