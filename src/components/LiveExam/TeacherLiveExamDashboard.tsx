@@ -59,6 +59,10 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
         return colorMap[color] || colorMap.gray;
     };
 
+    const canDeleteSession = (status: LiveExamSession['status']) => {
+        return status === 'scheduled' || status === 'closed';
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-4">
             <div className="max-w-7xl mx-auto">
@@ -214,7 +218,7 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
                                         <div className="text-xs text-slate-500">
                                             Tạo: {new Date(session.createdAt).toLocaleDateString('vi-VN')}
                                         </div>
-                                        {onDeleteSession && (
+                                        {onDeleteSession && canDeleteSession(session.status) && (
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
