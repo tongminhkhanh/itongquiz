@@ -131,6 +131,15 @@ export const LiveExamQuiz: React.FC<LiveExamQuizProps> = ({
         }
     };
 
+    useEffect(() => {
+        if (questions.length === 0 || isSubmitting) return;
+
+        void updateActivity({
+            currentQuestion: Math.min(currentPage * QUESTIONS_PER_PAGE, totalQuestions),
+            answeredCount,
+        });
+    }, [currentPage, answeredCount, isSubmitting, questions.length, totalQuestions, updateActivity]);
+
     if (questions.length === 0) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">

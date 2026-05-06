@@ -46,7 +46,7 @@ export const JoinLiveExamRequestSchema = z.object({
 // ===============================
 export const StudentAnswersSchema = z.record(
     z.string(), // questionId
-    z.string()  // selected answer ("A", "B", "C", "D", etc.)
+    z.any()     // answers can be strings, arrays, or objects depending on question type
 );
 
 // ===============================
