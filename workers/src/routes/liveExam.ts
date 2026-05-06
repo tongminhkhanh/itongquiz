@@ -325,7 +325,7 @@ export async function handleLiveExamRoutes(
                 },
             });
         } catch (error: any) {
-            return errorResponse(error.message || 'Failed to join session', 500);
+            return errorResponse(error.message || 'Failed to join session', 400);
         }
     }
 

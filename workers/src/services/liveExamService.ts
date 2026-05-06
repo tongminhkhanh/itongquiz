@@ -390,14 +390,31 @@ export async function joinSession(
     // Check if student already joined
     const existing = await db
         .prepare(`
-            SELECT id FROM live_exam_participants
+            SELECT * FROM live_exam_participants
             WHERE live_exam_id = ? AND student_id = ?
         `)
         .bind(session.id, params.studentId)
-        .first();
+        .first<any>();
 
     if (existing) {
-        throw new Error('Already joined this session');
+        return {
+            id: existing.id,
+            liveExamId: existing.live_exam_id,
+            studentId: existing.student_id,
+            username: existing.username,
+            joinedAt: existing.joined_at,
+            startedAt: existing.started_at || undefined,
+            submittedAt: existing.submitted_at || undefined,
+            answers: existing.answers ? JSON.parse(existing.answers) : undefined,
+            score: existing.score || undefined,
+            correctCount: existing.correct_count || undefined,
+            wrongCount: existing.wrong_count || undefined,
+            rank: existing.rank || undefined,
+            tabSwitches: existing.tab_switches || 0,
+            warnings: existing.warnings ? JSON.parse(existing.warnings) : undefined,
+            createdAt: existing.created_at,
+            updatedAt: existing.updated_at,
+        };
     }
 
     // Create participant record
