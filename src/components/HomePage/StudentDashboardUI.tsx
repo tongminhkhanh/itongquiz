@@ -265,7 +265,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     useEffect(() => {
         if (!joinedLiveExamStatus?.session?.status) return;
 
-        if (joinedLiveExamStatus.session.status === 'active') {
+        if (joinedLiveExamStatus.session.status === 'active' && liveExamStage !== 'submitted') {
             setLiveExamStage('active');
         } else if (joinedLiveExamStatus.session.status === 'closed') {
             setLiveExamStage('results');
