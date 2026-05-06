@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useQuizStore } from '../../stores/useQuizStore';
+import { useQuizStore } from '../../../stores/quizStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { FileText, CheckCircle, Clock, TrendingUp, Sparkles } from 'lucide-react';
 import { calculateResultsStatistics } from '../../utils/statisticsUtils';
