@@ -6,8 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { Users, Clock, AlertCircle, Loader2, StopCircle, BarChart3 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Users, Clock, AlertCircle, Loader2, StopCircle } from 'lucide-react';
 import { useLiveExamParticipants, useLiveExamTimer } from '../../hooks';
 import { endExamEarly } from '../../services/liveExamService';
 
@@ -26,8 +25,6 @@ export const ActiveExamMonitor: React.FC<ActiveExamMonitorProps> = ({
     totalQuestions,
     onExamEnded,
 }) => {
-    const navigate = useNavigate();
-    
     const { participants, isLoading } = useLiveExamParticipants({
         sessionId,
         enabled: true,
@@ -75,13 +72,6 @@ export const ActiveExamMonitor: React.FC<ActiveExamMonitorProps> = ({
                             <p className="text-slate-600">Đang theo dõi bài thi trực tiếp</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => navigate(`/live-exam/${sessionId}/analytics`)}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                            >
-                                <BarChart3 size={18} />
-                                Xem Analytics
-                            </button>
                             <div className="text-right">
                                 <div className="text-sm text-slate-600 mb-1">Trạng thái</div>
                                 <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">

@@ -60,58 +60,71 @@ export async function calculateSessionAnalytics(
   db: D1Database,
   sessionId: string
 ): Promise<SessionAnalytics> {
-  // Fetch session details
-  const session = await db
-    .prepare('SELECT id, title, status, quiz_id FROM live_exam_sessions WHERE id = ?')
-    .bind(sessionId)
-    .first<{ id: string; title: string; status: string; quiz_id: string }>();
+  try {
+    // Fetch session details
+    const session = await db
+      .prepare('SELECT id, title, status, quiz_id FROM live_exam_sessions WHERE id = ?')
+      .bind(sessionId)
+      .first<{ id: string; title: string; status: string; quiz_id: string }>();
 
-  if (!session) {
-    throw new Error('Session not found');
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    // Fetch quiz to get questions
+    const quiz = await db
+      .prepare('SELECT questions FROM quizzes WHERE id = ?')
+      .bind(session.quiz_id)
+      .first<{ questions: string }>();
+
+    let questions = [];
+    try {
+      questions = quiz && quiz.questions ? JSON.parse(quiz.questions) : [];
+    } catch (parseError) {
+      console.error('[Analytics] Failed to parse quiz questions:', parseError);
+      questions = [];
+    }
+    const totalQuestions = questions.length;
+
+    // Calculate progress
+    const progress = await calculateProgress(db, sessionId);
+
+    // Calculate score distribution
+    const scores = await calculateScoreDistribution(db, sessionId);
+
+    // Calculate question analytics
+    const questionAnalytics = await calculateQuestionAnalytics(db, sessionId, questions);
+
+    // Get top 3 difficult questions
+    const topDifficult = questionAnalytics
+      .filter(q => q.correctRate < 1) // Has some incorrect answers
+      .sort((a, b) => a.correctRate - b.correctRate)
+      .slice(0, 3)
+      .map(q => ({
+        questionIndex: q.questionIndex,
+        questionText: q.questionText,
+        correctRate: q.correctRate,
+        incorrectCount: Math.round((1 - q.correctRate) * progress.submittedCount),
+      }));
+
+    return {
+      session: {
+        id: session.id,
+        title: session.title,
+        status: session.status,
+        totalQuestions,
+      },
+      progress,
+      scores,
+      questions: questionAnalytics,
+      topDifficultQuestions: topDifficult,
+    };
+  } catch (error: any) {
+    console.error('[Analytics] Error calculating session analytics:', error);
+    console.error('[Analytics] SessionId:', sessionId);
+    console.error('[Analytics] Error stack:', error.stack);
+    throw new Error(`Failed to calculate analytics: ${error.message}`);
   }
-
-  // Fetch quiz to get questions
-  const quiz = await db
-    .prepare('SELECT questions FROM quizzes WHERE id = ?')
-    .bind(session.quiz_id)
-    .first<{ questions: string }>();
-
-  const questions = quiz ? JSON.parse(quiz.questions) : [];
-  const totalQuestions = questions.length;
-
-  // Calculate progress
-  const progress = await calculateProgress(db, sessionId);
-
-  // Calculate score distribution
-  const scores = await calculateScoreDistribution(db, sessionId);
-
-  // Calculate question analytics
-  const questionAnalytics = await calculateQuestionAnalytics(db, sessionId, questions);
-
-  // Get top 3 difficult questions
-  const topDifficult = questionAnalytics
-    .filter(q => q.correctRate < 1) // Has some incorrect answers
-    .sort((a, b) => a.correctRate - b.correctRate)
-    .slice(0, 3)
-    .map(q => ({
-      questionIndex: q.questionIndex,
-      questionText: q.questionText,
-      correctRate: q.correctRate,
-      incorrectCount: Math.round((1 - q.correctRate) * progress.submittedCount),
-    }));
-
-  return {
-    session: {
-      id: session.id,
-      title: session.title,
-      status: session.status,
-      totalQuestions,
-    },
-    progress,
-    scores,
-    questions: questionAnalytics,
-    topDifficultQuestions: topDifficult,
-  };
 }
 
 /**
@@ -224,7 +237,14 @@ async function calculateQuestionAnalytics(
     .bind(sessionId)
     .all<{ answers: string }>();
 
-  const allAnswers = participants.results?.map(s => JSON.parse(s.answers)) || [];
+  const allAnswers = participants.results?.map(s => {
+    try {
+      return JSON.parse(s.answers);
+    } catch (e) {
+      console.error('[Analytics] Failed to parse participant answers:', e);
+      return [];
+    }
+  }).filter(Boolean) || [];
 
   // Get timing data
   const timingData = await db

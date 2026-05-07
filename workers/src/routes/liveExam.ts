@@ -799,30 +799,6 @@ export async function handleLiveExamRoutes(
     // ANALYTICS ENDPOINTS
     // ========================================================================
 
-    // GET /api/live-exam/:id/analytics
-    // Get comprehensive analytics for a session (teacher only)
-    if (path.match(/^\/api\/live-exam\/[^/]+\/analytics$/) && method === 'GET') {
-        const authResult = await verifyJWTMiddleware(request, env);
-        if (authResult instanceof Response) return authResult;
-        const user = authResult.user;
-
-        const sessionId = path.split('/')[3];
-        if (!sessionId) return errorResponse('Invalid session ID');
-
-        const authError = await requireTeacherForSession(db, user, sessionId);
-        if (authError) return authError;
-
-        try {
-            const analytics = await LiveExamAnalyticsService.calculateSessionAnalytics(db, sessionId);
-            return jsonResponse({
-                success: true,
-                analytics,
-            });
-        } catch (error: any) {
-            return errorResponse(error.message || 'Failed to get analytics', 500);
-        }
-    }
-
     // POST /api/live-exam/:id/track-timing
     // Track time spent on a question (student only)
     if (path.match(/^\/api\/live-exam\/[^/]+\/track-timing$/) && method === 'POST') {
