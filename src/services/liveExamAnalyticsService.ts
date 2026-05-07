@@ -6,6 +6,22 @@
 import { fetchWithJWTInterceptor } from '../utils/jwtInterceptor';
 
 const API_BASE = import.meta.env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+const TEACHER_JWT_STORAGE_KEY = 'itongquiz_teacher_jwt_token';
+
+function getTeacherJWTToken(): string {
+  try {
+    const directToken = localStorage.getItem(TEACHER_JWT_STORAGE_KEY);
+    if (directToken) return directToken;
+
+    const authStorage = localStorage.getItem('auth-storage');
+    if (!authStorage) return '';
+
+    const parsed = JSON.parse(authStorage);
+    return parsed?.state?.token || '';
+  } catch {
+    return '';
+  }
+}
 
 export interface SessionAnalytics {
   session: {
@@ -56,8 +72,14 @@ export interface SessionAnalytics {
  * Fetch comprehensive analytics for a session
  */
 export async function fetchAnalytics(sessionId: string): Promise<SessionAnalytics> {
+  const jwtToken = getTeacherJWTToken();
   const response = await fetchWithJWTInterceptor(`${API_BASE}/api/live-exam/${sessionId}/analytics`, {
     method: 'GET',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(jwtToken ? { Authorization: `Bearer ${jwtToken}` } : {}),
+    },
   });
 
   if (!response.ok) {
