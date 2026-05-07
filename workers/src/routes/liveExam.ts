@@ -582,9 +582,17 @@ export async function handleLiveExamRoutes(
             const baseXP = (participant.score || 0) * 10;
             let bonusCoins = 0;
 
-            // Top 3 bonus
-            if (participant.rank <= 3) {
-                bonusCoins = [100, 75, 50][participant.rank - 1];
+            // Rank-based bonus rewards
+            if (participant.rank === 1) {
+                bonusCoins = 500; // 🥇 Hạng 1
+            } else if (participant.rank === 2) {
+                bonusCoins = 300; // 🥈 Hạng 2
+            } else if (participant.rank === 3) {
+                bonusCoins = 200; // 🥉 Hạng 3
+            } else if (participant.rank === 4) {
+                bonusCoins = 100; // 🏅 Hạng 4
+            } else if (participant.rank > 4) {
+                bonusCoins = 50;  // 💰 Còn lại
             }
 
             return jsonResponse({
