@@ -18,6 +18,7 @@ const StudentView = React.lazy(() => import('./src/components/StudentView'));
 const IoeStudentView = React.lazy(() => import('./src/components/IoeStudentView'));
 const TeacherDashboard = React.lazy(() => import('./src/components/TeacherDashboard'));
 const TeacherResultDetailPage = React.lazy(() => import('./src/components/TeacherDashboard/TeacherResultDetailPage'));
+const LiveExamAnalyticsDashboard = React.lazy(() => import('./src/components/LiveExam/Analytics/LiveExamAnalyticsDashboard'));
 const GiftShop = React.lazy(() => import('./src/components/gamification/GiftShop'));
 const HomePage = React.lazy(() => import('./src/components/HomePage/HomePage'));
 const PrivacyPolicy = React.lazy(() => import('./src/components/legal/PrivacyPolicy'));
@@ -255,6 +256,14 @@ const App: React.FC = () => {
                     element={
                         <Suspense fallback={<PageLoading />}>
                             <TeacherResultDetailPage />
+                        </Suspense>
+                    }
+                />
+                <Route
+                    path="/live-exam/:sessionId/analytics"
+                    element={
+                        <Suspense fallback={<PageLoading />}>
+                            <LiveExamAnalyticsDashboard />
                         </Suspense>
                     }
                 />
