@@ -120,24 +120,19 @@ export async function calculateSessionAnalytics(
 async function calculateProgress(db: D1Database, sessionId: string) {
   // Get all participants
   const participants = await db
-    .prepare('SELECT id, username, joined_at FROM live_exam_participants WHERE session_id = ?')
+    .prepare('SELECT id, username, joined_at, submitted_at FROM live_exam_participants WHERE live_exam_id = ?')
     .bind(sessionId)
-    .all<{ id: string; username: string; joined_at: string }>();
+    .all<{ id: string; username: string; joined_at: string; submitted_at: string | null }>();
 
   const totalParticipants = participants.results?.length || 0;
 
-  // Get submitted participants
-  const submissions = await db
-    .prepare('SELECT participant_id FROM live_exam_submissions WHERE session_id = ?')
-    .bind(sessionId)
-    .all<{ participant_id: string }>();
-
-  const submittedIds = new Set(submissions.results?.map(s => s.participant_id) || []);
-  const submittedCount = submittedIds.size;
+  // Count submitted participants (those with submitted_at timestamp)
+  const submittedParticipants = (participants.results || []).filter(p => p.submitted_at);
+  const submittedCount = submittedParticipants.length;
 
   // Find not submitted students
   const notSubmittedStudents = (participants.results || [])
-    .filter(p => !submittedIds.has(p.id))
+    .filter(p => !p.submitted_at)
     .map(p => ({
       username: p.username,
       joinedAt: p.joined_at,
@@ -155,12 +150,12 @@ async function calculateProgress(db: D1Database, sessionId: string) {
  * Calculate score distribution and statistics
  */
 async function calculateScoreDistribution(db: D1Database, sessionId: string) {
-  const submissions = await db
-    .prepare('SELECT score FROM live_exam_submissions WHERE session_id = ?')
+  const participants = await db
+    .prepare('SELECT score FROM live_exam_participants WHERE live_exam_id = ? AND score IS NOT NULL')
     .bind(sessionId)
     .all<{ score: number }>();
 
-  const scores = submissions.results?.map(s => s.score) || [];
+  const scores = participants.results?.map(s => s.score) || [];
 
   if (scores.length === 0) {
     return {
@@ -223,13 +218,13 @@ async function calculateQuestionAnalytics(
   sessionId: string,
   questions: any[]
 ) {
-  // Get all submissions
-  const submissions = await db
-    .prepare('SELECT answers FROM live_exam_submissions WHERE session_id = ?')
+  // Get all participants with answers
+  const participants = await db
+    .prepare('SELECT answers FROM live_exam_participants WHERE live_exam_id = ? AND answers IS NOT NULL')
     .bind(sessionId)
     .all<{ answers: string }>();
 
-  const allAnswers = submissions.results?.map(s => JSON.parse(s.answers)) || [];
+  const allAnswers = participants.results?.map(s => JSON.parse(s.answers)) || [];
 
   // Get timing data
   const timingData = await db
