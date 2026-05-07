@@ -43,7 +43,14 @@ async function requireTeacherForSession(
         return errorResponse('Session not found', 404);
     }
 
-    if (session.teacherId !== user.username) {
+    // Check if user owns this session
+    // Support both user.id and user.username for flexibility
+    const teacherIdentifier = user.id || user.username;
+    const isOwner = session.teacherId === user.username || 
+                    session.teacherId === teacherIdentifier ||
+                    session.teacherId === String(user.id);
+
+    if (!isOwner) {
         return errorResponse('Forbidden: You do not own this session', 403);
     }
 

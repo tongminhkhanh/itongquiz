@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Analytics 403 Error</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #2196F3;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.secondary {
+            background: #2196F3;
+        }
+        button.secondary:hover {
+            background: #0b7dda;
+        }
+        .output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ff9800;
+            font-weight: bold;
+        }
+        .info {
+            color: #2196F3;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Test Analytics 403 Error</h1>
+        
+        <div class="section">
+            <h2>Step 1: Login as Teacher</h2>
+            <div class="input-group">
+                <label>Username:</label>
+                <input type="text" id="username" placeholder="Enter teacher username">
+            </div>
+            <div class="input-group">
+                <label>Password:</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+            <div class="input-group">
+                <label>API URL:</label>
+                <input type="text" id="apiUrl" value="https://itongquiz-api.sample_user_baf53feb.workers.dev">
+            </div>
+            <button onclick="loginTeacher()">🔐 Login Teacher</button>
+        </div>
+
+        <div class="section">
+            <h2>Step 2: Get Sessions</h2>
+            <button onclick="getSessions()" class="secondary">📋 Get My Sessions</button>
+        </div>
+
+        <div class="section">
+            <h2>Step 3: Test Analytics</h2>
+            <div class="input-group">
+                <label>Session ID:</label>
+                <input type="text" id="sessionId" placeholder="Enter session ID or select from list above">
+            </div>
+            <button onclick="testAnalytics()" class="secondary">📊 Test Analytics</button>
+            <button onclick="debugAuth()" class="secondary">🔍 Debug Auth</button>
+        </div>
+
+        <div class="section">
+            <h2>Output:</h2>
+            <div id="output" class="output">Ready to test...</div>
+        </div>
+    </div>
+
+    <script>
+        let teacherToken = null;
+        let sessions = [];
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                success: '#4CAF50',
+                error: '#f44336',
+                warning: '#ff9800',
+                info: '#2196F3'
+            };
+            output.innerHTML += `<span style="color: ${colors[type]}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clear() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        async function loginTeacher() {
+            clear();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const apiUrl = document.getElementById('apiUrl').value;
+
+            if (!username || !password) {
+                log('❌ Please enter username and password', 'error');
+                return;
+            }
+
+            log('🔐 Logging in as teacher...', 'info');
+            log(`Username: ${username}`, 'info');
+
+            try {
+                const response = await fetch(`${apiUrl}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.token) {
+                    teacherToken = data.token;
+                    log('✅ Login successful!', 'success');
+                    log(`Token: ${teacherToken.substring(0, 50)}...`, 'success');
+
+                    // Decode JWT
+                    const payload = JSON.parse(atob(teacherToken.split('.')[1]));
+                    log('\n📋 JWT Payload:', 'info');
+                    log(JSON.stringify(payload, null, 2), 'info');
+                    log(`\n✅ Username in JWT: ${payload.username}`, 'success');
+                    log(`✅ Role: ${payload.role}`, 'success');
+                    log(`✅ ID: ${payload.id || 'N/A'}`, 'success');
+                } else {
+                    log(`❌ Login failed: ${data.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Request failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function getSessions() {
+            if (!teacherToken) {
+                log('❌ Please login first', 'error');
+                return;
+            }
+
+            log('\n📋 Fetching teacher sessions...', 'info');
+            const apiUrl = document.getElementById('apiUrl').value;
+
+            try {
+                const response = await fetch(`${apiUrl}/api/live-exam/teacher/sessions`, {
+                    headers: {
+                        'Authorization': `Bearer ${teacherToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.sessions) {
+                    sessions = data.sessions;
+                    log(`✅ Found ${sessions.length} sessions`, 'success');
+                    
+                    sessions.forEach((session, index) => {
+                        log(`\n[${index + 1}] Session ID: ${session.id}`, 'info');
+                        log(`    Title: ${session.title}`, 'info');
+                        log(`    Status: ${session.status}`, 'info');
+                        log(`    Teacher ID: ${session.teacherId}`, 'warning');
+                        log(`    Access Code: ${session.accessCode}`, 'info');
+                    });
+
+                    if (sessions.length > 0) {
+                        document.getElementById('sessionId').value = sessions[0].id;
+                        log(`\n✅ Auto-filled first session ID`, 'success');
+                    }
+                } else {
+                    log(`❌ Failed to get sessions: ${data.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Request failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAnalytics() {
+            if (!teacherToken) {
+                log('❌ Please login first', 'error');
+                return;
+            }
+
+            const sessionId = document.getElementById('sessionId').value;
+            if (!sessionId) {
+                log('❌ Please enter session ID', 'error');
+                return;
+            }
+
+            log(`\n📊 Testing analytics for session: ${sessionId}`, 'info');
+            const apiUrl = document.getElementById('apiUrl').value;
+
+            try {
+                const response = await fetch(`${apiUrl}/api/live-exam/${sessionId}/analytics`, {
+                    headers: {
+                        'Authorization': `Bearer ${teacherToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                log(`Response status: ${response.status}`, response.ok ? 'success' : 'error');
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    log('✅ Analytics fetched successfully!', 'success');
+                    log('\n📊 Analytics Data:', 'info');
+                    log(JSON.stringify(data, null, 2), 'info');
+                } else {
+                    log(`❌ Analytics failed: ${data.error || 'Unknown error'}`, 'error');
+                    
+                    if (response.status === 403) {
+                        log('\n🔍 403 Forbidden - Debugging...', 'warning');
+                        await debugAuth();
+                    }
+                }
+            } catch (error) {
+                log(`❌ Request failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function debugAuth() {
+            if (!teacherToken) {
+                log('❌ Please login first', 'error');
+                return;
+            }
+
+            const sessionId = document.getElementById('sessionId').value;
+            if (!sessionId) {
+                log('❌ Please enter session ID', 'error');
+                return;
+            }
+
+            log('\n🔍 DEBUG: Comparing JWT username with session teacherId', 'warning');
+
+            // Decode JWT
+            const payload = JSON.parse(atob(teacherToken.split('.')[1]));
+            log(`\nJWT Payload:`, 'info');
+            log(`  username: "${payload.username}"`, 'info');
+            log(`  id: "${payload.id || 'N/A'}"`, 'info');
+            log(`  role: "${payload.role}"`, 'info');
+
+            // Get session details
+            const apiUrl = document.getElementById('apiUrl').value;
+            try {
+                const response = await fetch(`${apiUrl}/api/live-exam/${sessionId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${teacherToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const session = data.session;
+                    
+                    log(`\nSession Data:`, 'info');
+                    log(`  teacherId: "${session.teacherId}"`, 'info');
+                    log(`  title: "${session.title}"`, 'info');
+                    log(`  status: "${session.status}"`, 'info');
+
+                    log(`\n🔍 COMPARISON:`, 'warning');
+                    log(`  JWT username: "${payload.username}"`, 'info');
+                    log(`  Session teacherId: "${session.teacherId}"`, 'info');
+                    
+                    if (payload.username === session.teacherId) {
+                        log(`  ✅ MATCH! Should work`, 'success');
+                    } else {
+                        log(`  ❌ MISMATCH! This is the problem!`, 'error');
+                        log(`\n💡 ROOT CAUSE:`, 'error');
+                        log(`  JWT username (${payload.username}) !== Session teacherId (${session.teacherId})`, 'error');
+                        log(`\n🔧 SOLUTION:`, 'warning');
+                        log(`  Need to fix comparison in requireTeacherForSession()`, 'warning');
+                        log(`  Or ensure JWT username matches teacher_id in database`, 'warning');
+                    }
+                } else {
+                    log(`❌ Failed to get session: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Debug failed: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
