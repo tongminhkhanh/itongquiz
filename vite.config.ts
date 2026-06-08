@@ -24,6 +24,11 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api\/deepseek/, ''),
         },
+        '/api': {
+          target: 'https://itongquiz-api.sample_user_baf53feb.workers.dev',
+          changeOrigin: true,
+          rewrite: (path) => path,
+        },
       },
     },
     plugins: [react()],

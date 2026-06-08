@@ -7,6 +7,112 @@ import { cacheService } from '../src/services/CacheService';
 
 type ViewType = 'home' | 'student' | 'teacher_login' | 'teacher_dash' | 'student_portal' | 'shop';
 
+const parseMultipleSelectAnswersForQuestion = (raw: any): string[] => {
+    if (Array.isArray(raw)) {
+        return raw.map((v: any) => String(v).trim().toUpperCase()).filter(Boolean);
+    }
+
+    if (raw === undefined || raw === null) return [];
+
+    const str = String(raw).trim();
+    if (!str) return [];
+
+    const normalized = str.startsWith("'") ? str.substring(1).trim() : str;
+    if (normalized.startsWith('[') && normalized.endsWith(']')) {
+        try {
+            const parsed = JSON.parse(normalized);
+            if (Array.isArray(parsed)) {
+                return parsed.map((v: any) => String(v).trim().toUpperCase()).filter(Boolean);
+            }
+        } catch {
+            // Fall through to pipe format.
+        }
+    }
+
+    return normalized.split('|').map((v: string) => v.trim().toUpperCase()).filter(Boolean);
+};
+
+const normalizeQuestionRow = (q: any): any => {
+    const parsed = { ...q };
+    if (typeof q.items === 'string') try { parsed.items = JSON.parse(q.items); } catch { }
+    if (typeof q.pairs === 'string') try { parsed.pairs = JSON.parse(q.pairs); } catch { }
+    if (typeof q.categories === 'string') try { parsed.categories = JSON.parse(q.categories); } catch { }
+    if (typeof q.blanks === 'string') try { parsed.blanks = JSON.parse(q.blanks); } catch { }
+    if (typeof q.distractors === 'string') try { parsed.distractors = JSON.parse(q.distractors); } catch { }
+    if (typeof q.options === 'string') parsed.options = q.options.split('|');
+    if (typeof q.correctAnswers === 'string') try { parsed.correctAnswers = JSON.parse(q.correctAnswers); } catch { }
+    if (typeof q.letters === 'string') try { parsed.letters = JSON.parse(q.letters); } catch { }
+    if (typeof q.riddleLines === 'string') try { parsed.riddleLines = JSON.parse(q.riddleLines); } catch { }
+    if (typeof q.words === 'string') try { parsed.words = JSON.parse(q.words); } catch { }
+    if (typeof q.correctWordIndexes === 'string') try { parsed.correctWordIndexes = JSON.parse(q.correctWordIndexes); } catch { }
+    if (typeof q.correctOrder === 'string') try { parsed.correctOrder = JSON.parse(q.correctOrder); } catch { }
+    if (typeof q.optionImages === 'string') try { parsed.optionImages = JSON.parse(q.optionImages); } catch { }
+
+    parsed.quizId = parsed.quizId || parsed.quiz_id;
+    parsed.correctAnswer = parsed.correctAnswer || parsed.correct_answer;
+    parsed.mainQuestion = parsed.mainQuestion || parsed.main_question || parsed.question;
+    parsed.correctWord = parsed.correctWord || parsed.correct_word;
+    parsed.correctWordIndexes = parsed.correctWordIndexes || parsed.correct_word_indexes;
+    parsed.text = parsed.text || parsed.text_field;
+
+    if (typeof parsed.question === 'string' && /^'\d+\s*\/\s*\d+/.test(parsed.question)) {
+        parsed.question = parsed.question.substring(1);
+    }
+    if (typeof parsed.mainQuestion === 'string' && /^'\d+\s*\/\s*\d+/.test(parsed.mainQuestion)) {
+        parsed.mainQuestion = parsed.mainQuestion.substring(1);
+    }
+
+    const qType = parsed.type;
+    if (qType === 'IMAGE_QUESTION') {
+        parsed.optionImages = parsed.distractors || [];
+    } else if (qType === 'UNDERLINE') {
+        parsed.words = parsed.items || [];
+        let parsedIndexes = [];
+        try {
+            parsedIndexes = typeof parsed.correctAnswer === 'string' ? JSON.parse(parsed.correctAnswer) : parsed.correctAnswer;
+        } catch (e) { }
+        parsed.correctWordIndexes = Array.isArray(parsedIndexes) ? parsedIndexes : [];
+    } else if (qType === 'RIDDLE') {
+        parsed.riddleLines = parsed.items || [];
+        parsed.answerLabel = parsed.text || '';
+        parsed.hint = parsed.sentence || '';
+    } else if (qType === 'CATEGORIZATION') {
+        parsed.categories = parsed.distractors || [];
+    } else if (qType === 'WORD_SCRAMBLE') {
+        parsed.letters = parsed.items || [];
+        parsed.correctWord = parsed.correctAnswer || '';
+        parsed.hint = parsed.text || '';
+    } else if (qType === 'ERROR_CORRECTION') {
+        parsed.passage = parsed.text || '';
+        parsed.wrongWord = parsed.distractors || '';
+        parsed.correctWord = parsed.correctAnswer || '';
+    } else if (qType === 'MATCHING') {
+        parsed.pairs = parsed.items || [];
+    } else if (qType === 'MULTIPLE_SELECT') {
+        const sourceCorrect = parsed.correctAnswers ?? parsed.correctAnswer;
+        parsed.correctAnswers = parseMultipleSelectAnswersForQuestion(sourceCorrect);
+        if (!parsed.correctAnswer && parsed.correctAnswers.length > 0) {
+            parsed.correctAnswer = JSON.stringify(parsed.correctAnswers);
+        }
+    }
+
+    parsed.options = Array.isArray(parsed.options) ? parsed.options : [];
+    parsed.items = Array.isArray(parsed.items) ? parsed.items : [];
+    parsed.pairs = Array.isArray(parsed.pairs) ? parsed.pairs : [];
+    parsed.categories = Array.isArray(parsed.categories) ? parsed.categories : [];
+    parsed.blanks = Array.isArray(parsed.blanks) ? parsed.blanks : [];
+    parsed.distractors = Array.isArray(parsed.distractors) ? parsed.distractors : [];
+    parsed.letters = Array.isArray(parsed.letters) ? parsed.letters : [];
+    parsed.riddleLines = Array.isArray(parsed.riddleLines) ? parsed.riddleLines : [];
+    parsed.words = Array.isArray(parsed.words) ? parsed.words : [];
+    parsed.correctWordIndexes = Array.isArray(parsed.correctWordIndexes) ? parsed.correctWordIndexes : [];
+    parsed.correctOrder = Array.isArray(parsed.correctOrder) ? parsed.correctOrder : [];
+    parsed.optionImages = Array.isArray(parsed.optionImages) ? parsed.optionImages : [];
+    parsed.correctAnswers = Array.isArray(parsed.correctAnswers) ? parsed.correctAnswers : [];
+
+    return parsed;
+};
+
 interface QuizState {
     // State
     view: ViewType;
@@ -41,6 +147,7 @@ interface QuizState {
 
     // Async Actions
     loadQuizzes: () => Promise<void>;
+    loadQuizQuestions: (quizId: string) => Promise<Quiz | null>;
     loadResults: () => Promise<void>;
     createQuiz: (quiz: Quiz) => Promise<void>;
     modifyQuiz: (quiz: Quiz) => Promise<void>;
@@ -83,7 +190,12 @@ export const useQuizStore = create<QuizState>()(
             deleteQuiz: (id) => set((state) => ({
                 quizzes: state.quizzes.filter(q => q.id !== id)
             })),
-            selectQuiz: (quiz) => set({ selectedQuiz: quiz }),
+            selectQuiz: (quiz) => {
+                set({ selectedQuiz: quiz });
+                if (quiz && quiz.category !== 'ioe' && (!Array.isArray(quiz.questions) || quiz.questions.length === 0)) {
+                    void get().loadQuizQuestions(quiz.id);
+                }
+            },
             setClassLevel: (level) => set({ selectedClassLevel: level, selectedCategory: null }),
             setCategory: (category) => set({ selectedCategory: category }),
 
@@ -117,7 +229,6 @@ export const useQuizStore = create<QuizState>()(
             loadQuizzes: async () => {
                 set({ isLoading: true, error: null });
                 try {
-                    // Fetch quizzes and questions from D1 via Workers API
                     const [quizData, questionData] = await Promise.all([
                         callApi<any[]>('get_quizzes'),
                         callApi<any[]>('get_questions')
@@ -128,129 +239,20 @@ export const useQuizStore = create<QuizState>()(
                         return;
                     }
 
-                    const qDataArray = Array.isArray(questionData) ? questionData : [];
-                    const parseMultipleSelectAnswers = (raw: any): string[] => {
-                        if (Array.isArray(raw)) {
-                            return raw.map((v: any) => String(v).trim().toUpperCase()).filter(Boolean);
-                        }
+                    const existingById = new Map(get().quizzes.map((quiz) => [quiz.id, quiz]));
+                    const questionsByQuizId = new Map<string, any[]>();
 
-                        if (raw === undefined || raw === null) {
-                            return [];
-                        }
+                    if (Array.isArray(questionData)) {
+                        questionData.forEach((row: any) => {
+                            const question = normalizeQuestionRow(row);
+                            const quizId = question.quizId || row.quiz_id;
+                            if (!quizId) return;
 
-                        const str = String(raw).trim();
-                        if (!str) return [];
-
-                        const normalized = str.startsWith("'") ? str.substring(1).trim() : str;
-
-                        if (normalized.startsWith('[') && normalized.endsWith(']')) {
-                            try {
-                                const parsed = JSON.parse(normalized);
-                                if (Array.isArray(parsed)) {
-                                    return parsed.map((v: any) => String(v).trim().toUpperCase()).filter(Boolean);
-                                }
-                            } catch {
-                                // Fall through to pipe format.
-                            }
-                        }
-
-                        return normalized
-                            .split('|')
-                            .map((v: string) => v.trim().toUpperCase())
-                            .filter(Boolean);
-                    };
-
-                    // Group questions by quizId
-                    const questionsByQuizId: Record<string, any[]> = {};
-                    qDataArray.forEach((q: any) => {
-                        const qId = q.quizId || q.quiz_id;
-                        if (!questionsByQuizId[qId]) questionsByQuizId[qId] = [];
-                        // Parse JSON fields if they come as strings from D1
-                        let parsed = { ...q };
-                        if (typeof q.items === 'string') try { parsed.items = JSON.parse(q.items); } catch { }
-                        if (typeof q.pairs === 'string') try { parsed.pairs = JSON.parse(q.pairs); } catch { }
-                        if (typeof q.categories === 'string') try { parsed.categories = JSON.parse(q.categories); } catch { }
-                        if (typeof q.blanks === 'string') try { parsed.blanks = JSON.parse(q.blanks); } catch { }
-                        if (typeof q.distractors === 'string') try { parsed.distractors = JSON.parse(q.distractors); } catch { }
-                        if (typeof q.options === 'string') parsed.options = q.options.split('|');
-                        if (typeof q.correctAnswers === 'string') try { parsed.correctAnswers = JSON.parse(q.correctAnswers); } catch { }
-                        if (typeof q.letters === 'string') try { parsed.letters = JSON.parse(q.letters); } catch { }
-                        if (typeof q.riddleLines === 'string') try { parsed.riddleLines = JSON.parse(q.riddleLines); } catch { }
-                        // UNDERLINE question fields
-                        if (typeof q.words === 'string') try { parsed.words = JSON.parse(q.words); } catch { }
-                        if (typeof q.correctWordIndexes === 'string') try { parsed.correctWordIndexes = JSON.parse(q.correctWordIndexes); } catch { }
-                        // ORDERING / IMAGE_QUESTION fields
-                        if (typeof q.correctOrder === 'string') try { parsed.correctOrder = JSON.parse(q.correctOrder); } catch { }
-                        if (typeof q.optionImages === 'string') try { parsed.optionImages = JSON.parse(q.optionImages); } catch { }
-                        // Normalize snake_case to camelCase
-                        parsed.quizId = parsed.quizId || parsed.quiz_id;
-                        parsed.correctAnswer = parsed.correctAnswer || parsed.correct_answer;
-                        parsed.mainQuestion = parsed.mainQuestion || parsed.main_question || parsed.question;
-                        parsed.correctWord = parsed.correctWord || parsed.correct_word;
-                        parsed.correctWordIndexes = parsed.correctWordIndexes || parsed.correct_word_indexes;
-                        parsed.text = parsed.text || parsed.text_field;
-
-                        // Fix legacy escaped fractions (e.g. "'1/2" -> "1/2")
-                        // Only remove quotes if it matches the legacy escape pattern to avoid cutting real quotes
-                        if (typeof parsed.question === 'string' && /^'\d+\s*\/\s*\d+/.test(parsed.question)) {
-                            parsed.question = parsed.question.substring(1);
-                        }
-                        if (typeof parsed.mainQuestion === 'string' && /^'\d+\s*\/\s*\d+/.test(parsed.mainQuestion)) {
-                            parsed.mainQuestion = parsed.mainQuestion.substring(1);
-                        }
-
-                        // DATA UNMAPPING: Reconstruct specific question types from generic DB columns
-                        const qType = parsed.type;
-                        if (qType === 'IMAGE_QUESTION') {
-                            parsed.optionImages = parsed.distractors || [];
-                        } else if (qType === 'UNDERLINE') {
-                            parsed.words = parsed.items || [];
-                            let parsedIndexes = [];
-                            try {
-                                parsedIndexes = typeof parsed.correctAnswer === 'string' ? JSON.parse(parsed.correctAnswer) : parsed.correctAnswer;
-                            } catch (e) { }
-                            parsed.correctWordIndexes = Array.isArray(parsedIndexes) ? parsedIndexes : [];
-                        } else if (qType === 'RIDDLE') {
-                            parsed.riddleLines = parsed.items || [];
-                            parsed.answerLabel = parsed.text || '';
-                            parsed.hint = parsed.sentence || '';
-                        } else if (qType === 'CATEGORIZATION') {
-                            parsed.categories = parsed.distractors || [];
-                        } else if (qType === 'WORD_SCRAMBLE') {
-                            parsed.letters = parsed.items || [];
-                            parsed.correctWord = parsed.correctAnswer || '';
-                            parsed.hint = parsed.text || '';
-                        } else if (qType === 'ERROR_CORRECTION') {
-                            parsed.passage = parsed.text || '';
-                            parsed.wrongWord = parsed.distractors || '';
-                            parsed.correctWord = parsed.correctAnswer || '';
-                        } else if (qType === 'MATCHING') {
-                            parsed.pairs = parsed.items || [];
-                        } else if (qType === 'MULTIPLE_SELECT') {
-                            const sourceCorrect = parsed.correctAnswers ?? parsed.correctAnswer;
-                            parsed.correctAnswers = parseMultipleSelectAnswers(sourceCorrect);
-                            if (!parsed.correctAnswer && parsed.correctAnswers.length > 0) {
-                                parsed.correctAnswer = JSON.stringify(parsed.correctAnswers);
-                            }
-                        }
-
-                        // BẢO ĐẢM CÁC TRƯỜNG ARRAY KHÔNG BAO GIỜ UNDEFINED ĐỂ TRÁNH CRASH GIAO DIỆN
-                        parsed.options = Array.isArray(parsed.options) ? parsed.options : [];
-                        parsed.items = Array.isArray(parsed.items) ? parsed.items : [];
-                        parsed.pairs = Array.isArray(parsed.pairs) ? parsed.pairs : [];
-                        parsed.categories = Array.isArray(parsed.categories) ? parsed.categories : [];
-                        parsed.blanks = Array.isArray(parsed.blanks) ? parsed.blanks : [];
-                        parsed.distractors = Array.isArray(parsed.distractors) ? parsed.distractors : [];
-                        parsed.letters = Array.isArray(parsed.letters) ? parsed.letters : [];
-                        parsed.riddleLines = Array.isArray(parsed.riddleLines) ? parsed.riddleLines : [];
-                        parsed.words = Array.isArray(parsed.words) ? parsed.words : [];
-                        parsed.correctWordIndexes = Array.isArray(parsed.correctWordIndexes) ? parsed.correctWordIndexes : [];
-                        parsed.correctOrder = Array.isArray(parsed.correctOrder) ? parsed.correctOrder : [];
-                        parsed.optionImages = Array.isArray(parsed.optionImages) ? parsed.optionImages : [];
-                        parsed.correctAnswers = Array.isArray(parsed.correctAnswers) ? parsed.correctAnswers : [];
-
-                        questionsByQuizId[qId].push(parsed);
-                    });
+                            const questions = questionsByQuizId.get(quizId) || [];
+                            questions.push(question);
+                            questionsByQuizId.set(quizId, questions);
+                        });
+                    }
 
                     // Build Quiz objects
                     const quizzes: Quiz[] = quizData.map((row: any) => ({
@@ -270,7 +272,7 @@ export const useQuizStore = create<QuizState>()(
                             }
                             return Array.isArray(row.tags) ? row.tags : [];
                         })(),
-                        questions: questionsByQuizId[row.id] || []
+                        questions: questionsByQuizId.get(row.id) || existingById.get(row.id)?.questions || []
                     }));
 
                     // Sync selectedQuiz with fresh data
@@ -283,6 +285,43 @@ export const useQuizStore = create<QuizState>()(
                     set({ quizzes, selectedQuiz: updatedSelectedQuiz, isLoading: false });
                 } catch (err: any) {
                     set({ error: err.message || 'Failed to load quizzes', isLoading: false });
+                }
+            },
+
+            loadQuizQuestions: async (quizId: string) => {
+                const currentQuiz = get().quizzes.find(q => q.id === quizId) || get().selectedQuiz;
+                if (currentQuiz?.id === quizId && Array.isArray(currentQuiz.questions) && currentQuiz.questions.length > 0) {
+                    return currentQuiz;
+                }
+
+                set({ isLoading: true, error: null });
+                try {
+                    const questionData = await callApi<any[]>('get_questions', { quizId });
+                    const questions = Array.isArray(questionData) ? questionData.map(normalizeQuestionRow) : [];
+                    let loadedQuiz: Quiz | null = null;
+
+                    set((state) => {
+                        const quizzes = state.quizzes.map((quiz) => {
+                            if (quiz.id !== quizId) return quiz;
+                            loadedQuiz = { ...quiz, questions };
+                            return loadedQuiz;
+                        });
+
+                        const selectedQuiz = state.selectedQuiz?.id === quizId
+                            ? { ...state.selectedQuiz, questions }
+                            : state.selectedQuiz;
+
+                        if (!loadedQuiz && selectedQuiz?.id === quizId) {
+                            loadedQuiz = selectedQuiz;
+                        }
+
+                        return { quizzes, selectedQuiz, isLoading: false };
+                    });
+
+                    return loadedQuiz;
+                } catch (err: any) {
+                    set({ error: err.message || 'Failed to load quiz questions', isLoading: false });
+                    throw err;
                 }
             },
 

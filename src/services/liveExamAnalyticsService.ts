@@ -5,8 +5,17 @@
 
 import { fetchWithJWTInterceptor } from '../utils/jwtInterceptor';
 
-const API_BASE = import.meta.env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+const REMOTE_WORKERS_API_URL = 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+const API_BASE = (import.meta.env.VITE_WORKERS_API_URL || REMOTE_WORKERS_API_URL).replace(/\/$/, '');
 const TEACHER_JWT_STORAGE_KEY = 'itongquiz_teacher_jwt_token';
+
+function getLiveExamApiBaseUrl(): string {
+  if (import.meta.env.DEV && API_BASE === REMOTE_WORKERS_API_URL) {
+    return '';
+  }
+
+  return API_BASE;
+}
 
 function getTeacherJWTToken(): string {
   try {
@@ -73,7 +82,7 @@ export interface SessionAnalytics {
  */
 export async function fetchAnalytics(sessionId: string): Promise<SessionAnalytics> {
   const jwtToken = getTeacherJWTToken();
-  const response = await fetchWithJWTInterceptor(`${API_BASE}/api/live-exam/${sessionId}/analytics`, {
+  const response = await fetchWithJWTInterceptor(`${getLiveExamApiBaseUrl()}/api/live-exam/${sessionId}/analytics`, {
     method: 'GET',
     credentials: 'include',
     headers: {
@@ -99,7 +108,7 @@ export async function trackQuestionTiming(
   questionIndex: number,
   timeSpentSeconds: number
 ): Promise<void> {
-  const response = await fetchWithJWTInterceptor(`${API_BASE}/api/live-exam/${sessionId}/track-timing`, {
+  const response = await fetchWithJWTInterceptor(`${getLiveExamApiBaseUrl()}/api/live-exam/${sessionId}/track-timing`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -123,7 +132,7 @@ export async function batchTrackQuestionTiming(
   sessionId: string,
   timings: Array<{ questionIndex: number; timeSpentSeconds: number }>
 ): Promise<void> {
-  const response = await fetchWithJWTInterceptor(`${API_BASE}/api/live-exam/${sessionId}/track-timing`, {
+  const response = await fetchWithJWTInterceptor(`${getLiveExamApiBaseUrl()}/api/live-exam/${sessionId}/track-timing`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

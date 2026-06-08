@@ -26,9 +26,18 @@ import type {
 } from '../types/liveExam.types';
 import { fetchWithJWTInterceptor } from '../utils/jwtInterceptor';
 
-const API_BASE = import.meta.env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+const REMOTE_WORKERS_API_URL = 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+const API_BASE = (import.meta.env.VITE_WORKERS_API_URL || REMOTE_WORKERS_API_URL).replace(/\/$/, '');
 const STUDENT_JWT_STORAGE_KEY = 'itongquiz_jwt_token';
 const TEACHER_JWT_STORAGE_KEY = 'itongquiz_teacher_jwt_token';
+
+function getLiveExamApiBaseUrl(): string {
+    if (import.meta.env.DEV && API_BASE === REMOTE_WORKERS_API_URL) {
+        return '';
+    }
+
+    return API_BASE;
+}
 
 function getStudentJWTToken(): string {
     try {
@@ -65,7 +74,7 @@ async function apiCall<T>(
     tokenResolver: () => string = getTeacherJWTToken
 ): Promise<T> {
     const jwtToken = tokenResolver();
-    const response = await fetchWithJWTInterceptor(`${API_BASE}${endpoint}`, {
+    const response = await fetchWithJWTInterceptor(`${getLiveExamApiBaseUrl()}${endpoint}`, {
         ...options,
         credentials: 'include', // Include JWT cookie
         headers: {

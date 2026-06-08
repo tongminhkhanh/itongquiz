@@ -3,6 +3,7 @@ import { WORKERS_API_URL } from '../config/constants';
 // API Token for authentication (DEPRECATED - will be removed after JWT migration)
 // JWT authentication is now used for student and teacher sessions
 const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
+const REMOTE_WORKERS_API_URL = 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
 
 function getStoredJWTToken(): string {
     try {
@@ -17,6 +18,16 @@ function getStoredJWTToken(): string {
     } catch {
         return '';
     }
+}
+
+function getWorkersApiBaseUrl(): string {
+    const configuredUrl = WORKERS_API_URL.replace(/\/$/, '');
+
+    if (import.meta.env.DEV && configuredUrl === REMOTE_WORKERS_API_URL) {
+        return '';
+    }
+
+    return configuredUrl;
 }
 
 /**
@@ -169,7 +180,8 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
     }
 
     try {
-        const urlStr = urlParams.toString() ? `${WORKERS_API_URL}${path}?${urlParams.toString()}` : `${WORKERS_API_URL}${path}`;
+        const apiBaseUrl = getWorkersApiBaseUrl();
+        const urlStr = urlParams.toString() ? `${apiBaseUrl}${path}?${urlParams.toString()}` : `${apiBaseUrl}${path}`;
         const fetchOptions: RequestInit = {
             method,
             headers: {
