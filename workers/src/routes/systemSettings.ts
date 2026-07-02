@@ -1,6 +1,7 @@
 import { Env } from '../types';
 import { errorResponse, jsonResponse } from '../utils/response';
 import { parseBody } from '../utils/helpers';
+import { isTransientD1Error, withD1Retry } from '../utils/d1';
 
 type SystemSettingRow = {
     setting_key: string;
@@ -47,15 +48,25 @@ export async function handleSystemSettingsRoutes(request: Request, env: Env, pat
     if (path !== '/api/system-settings') return null;
 
     const db = env.DB;
-    await ensureSystemSettingsTable(db);
 
     if (method === 'GET') {
-        const row = await db.prepare(`
-            SELECT setting_key, setting_value, updated_at
-            FROM system_settings
-            WHERE setting_key = ?
-            LIMIT 1
-        `).bind(AI_ASSISTANT_KEY).first<SystemSettingRow>();
+        let row: SystemSettingRow | null = null;
+        try {
+            row = await withD1Retry(
+                () => db.prepare(`
+                    SELECT setting_key, setting_value, updated_at
+                    FROM system_settings
+                    WHERE setting_key = ?
+                    LIMIT 1
+                `).bind(AI_ASSISTANT_KEY).first<SystemSettingRow>(),
+                'GET /api/system-settings'
+            );
+        } catch (error) {
+            if (!isTransientD1Error(error) && !String(error).includes('no such table')) {
+                throw error;
+            }
+            console.warn('[system-settings] Returning defaults after D1 read failure:', error);
+        }
 
         const aiAssistantEnabled = parseBool(row?.setting_value ?? 'true', true);
         return jsonResponse({
@@ -68,6 +79,8 @@ export async function handleSystemSettingsRoutes(request: Request, env: Env, pat
     }
 
     if (method === 'POST') {
+        await ensureSystemSettingsTable(db);
+
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
@@ -97,4 +110,3 @@ export async function handleSystemSettingsRoutes(request: Request, env: Env, pat
 
     return errorResponse('Method not allowed', 405);
 }
-

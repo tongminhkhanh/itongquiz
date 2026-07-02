@@ -8,6 +8,7 @@ import { jsonResponse, errorResponse } from '../utils/response';
 import { handleValidateAnswers, parseBody } from '../utils/helpers';
 import { JWTPayload } from '../utils/jwt';
 import { verifyJWTMiddleware, requireAdmin, requireTeacher, isStudent } from '../middleware/jwtAuth';
+import { withD1Retry } from '../utils/d1';
 import {
     buildResultSkillBreakdownFromData,
     buildWeaknessProfileFromData,
@@ -107,10 +108,16 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
 
         dataQuery += ' ORDER BY submitted_at DESC LIMIT ? OFFSET ?';
 
-        const countResult = await db.prepare(countQuery).bind(...bindings).first<{ total: number }>();
+        const countResult = await withD1Retry(
+            () => db.prepare(countQuery).bind(...bindings).first<{ total: number }>(),
+            'GET /api/results count'
+        );
         const total = countResult?.total || 0;
 
-        const rows = await db.prepare(dataQuery).bind(...bindings, limit, offset).all<import('../types').ResultRow>();
+        const rows = await withD1Retry(
+            () => db.prepare(dataQuery).bind(...bindings, limit, offset).all<import('../types').ResultRow>(),
+            'GET /api/results page'
+        );
 
         // Map column names to match GAS output format
         const mapped = rows.results.map((r) => ({

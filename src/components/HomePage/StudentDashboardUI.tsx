@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
+import { useAssignmentStore } from '../../stores/useAssignmentStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import { useGamificationStore } from '../../stores/useGamificationStore';
 import { useGameLoopStore } from '../../stores/useGameLoopStore';
@@ -203,6 +204,7 @@ const getRewardSummary = (reward: GameLoopRewardResult | null) => {
 const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = [] }) => {
     // --- Stores ---
     const classroomStore = useClassroomStore();
+    const assignmentStore = useAssignmentStore();
     const quizStore = useQuizStore();
     const { pet, coins } = useGamificationStore();
     const {
@@ -292,7 +294,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 return;
             }
 
-            if (joinedSessionQuiz) {
+            if (joinedSessionQuiz && Array.isArray(joinedSessionQuiz.questions) && joinedSessionQuiz.questions.length > 0) {
                 if (!cancelled) {
                     setIsPreparingLiveExam(false);
                     setLiveExamLoadError(null);
@@ -307,6 +309,10 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
             try {
                 await quizStore.loadQuizzes();
+                const loadedQuiz = useQuizStore.getState().quizzes.find((q) => q.id === joinedLiveExam.quizId);
+                if (loadedQuiz && (!Array.isArray(loadedQuiz.questions) || loadedQuiz.questions.length === 0)) {
+                    await quizStore.loadQuizQuestions(joinedLiveExam.quizId);
+                }
                 if (!cancelled && !useQuizStore.getState().quizzes.find((q) => q.id === joinedLiveExam.quizId)) {
                     setLiveExamLoadError('Không tải được đề thi trực tiếp. Vui lòng chờ giây lát rồi thử lại.');
                 }
@@ -341,7 +347,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             setIsLoadingTasks(true);
             try {
                 if (studentSession?.studentId) {
-                    await classroomStore.fetchStudentAssignments(studentSession.studentId);
+                    await assignmentStore.fetchStudentAssignments(studentSession.studentId);
                 }
             } catch (error) {
                 console.error('Failed to fetch assignments:', error);
@@ -392,7 +398,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     // --- Derived Data ---
     const myAssignmentQuizzes = useMemo(() => {
         if (!studentSession) return [];
-        const mappedAssignments = classroomStore.assignments.map(assignment => {
+        const mappedAssignments = assignmentStore.assignments.map(assignment => {
             const realQuiz = quizStore.quizzes.find(q => q.id === assignment.quizId) || ioeQuizzes.find(q => q.id === assignment.quizId);
             if (realQuiz) {
                 return { ...realQuiz, _assignmentData: assignment } as Quiz & { _assignmentData?: Assignment };
@@ -443,7 +449,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
             return String(a.title || '').localeCompare(String(b.title || ''), 'vi');
         });
-    }, [classroomStore.assignments, studentSession, quizStore.quizzes, ioeQuizzes]);
+    }, [assignmentStore.assignments, studentSession, quizStore.quizzes, ioeQuizzes]);
 
     const publicCategories = useMemo(() => {
         const categories = Object.keys(SUBJECT_CONFIG).filter(cat => SUBJECT_CONFIG[cat].showOnHome !== false);

@@ -122,7 +122,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     setDeadline={logic.setDeadline}
                     maxAttempts={logic.maxAttempts}
                     setMaxAttempts={logic.setMaxAttempts}
-                    classes={logic.classroomStore.classes}
+                    classes={logic.classStore.classes}
                     isOpen={logic.expandedSections.assign}
                     onToggle={logic.toggleSection}
                 />

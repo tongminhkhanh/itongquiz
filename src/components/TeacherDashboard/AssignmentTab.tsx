@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useClassroomStore } from '../../stores/useClassroomStore';
+import { useAssignmentStore } from '../../stores/useAssignmentStore';
+import { useClassStore } from '../../stores/useClassStore';
+import { useRosterStore } from '../../stores/useRosterStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import {
@@ -30,7 +32,8 @@ import {
 
 const AssignmentTab: React.FC = () => {
     const authStore = useAuthStore();
-    const store = useClassroomStore();
+    const classStore = useClassStore();
+    const assignmentStore = useAssignmentStore();
     const quizStore = useQuizStore();
     const assignmentComposerDraft = useTeacherDashboardUIStore((state) => state.assignmentComposerDraft);
     const clearAssignmentComposerDraft = useTeacherDashboardUIStore((state) => state.clearAssignmentComposerDraft);
@@ -38,31 +41,31 @@ const AssignmentTab: React.FC = () => {
     const refreshAssignments = async () => {
         if (!authStore.username) return;
         if (authStore.isAdmin) {
-            await store.fetchAllAssignments();
+            await assignmentStore.fetchAllAssignments();
             return;
         }
-        await store.fetchTeacherAssignments(authStore.username);
+        await assignmentStore.fetchTeacherAssignments(authStore.username);
     };
 
     // Load data on mount
     useEffect(() => {
         if (!authStore.username) return;
         if (authStore.isAdmin) {
-            store.fetchClasses();
-            store.fetchAllAssignments();
+            classStore.fetchClasses();
+            assignmentStore.fetchAllAssignments();
             return;
         }
-        store.fetchClasses(authStore.username);
-        store.fetchTeacherAssignments(authStore.username);
+        classStore.fetchClasses(authStore.username);
+        assignmentStore.fetchTeacherAssignments(authStore.username);
     }, [authStore.username, authStore.isAdmin]);
 
     return (
         <div className="space-y-8">
             {/* Error */}
-            {store.error && (
+            {(classStore.error || assignmentStore.error) && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 flex items-center justify-between">
-                    <span>{store.error}</span>
-                    <button onClick={store.clearError} className="text-red-400 hover:text-red-600">
+                    <span>{classStore.error || assignmentStore.error}</span>
+                    <button onClick={() => { classStore.clearError(); assignmentStore.clearError(); }} className="text-red-400 hover:text-red-600">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
@@ -70,30 +73,30 @@ const AssignmentTab: React.FC = () => {
 
             {/* Section 1: Create Assignment */}
             <CreateAssignmentSection
-                classes={store.classes}
+                classes={classStore.classes}
                 quizzes={quizStore.quizzes}
                 draft={assignmentComposerDraft}
                 onClearDraft={clearAssignmentComposerDraft}
                 onCreateAssignment={async (payload) => {
-                    const result = await store.addAssignment(payload);
+                    const result = await assignmentStore.addAssignment(payload);
                     if (result) {
                         await refreshAssignments();
                     }
                     return !!result;
                 }}
-                isLoading={store.isLoading}
+                isLoading={classStore.isLoading || assignmentStore.isLoading}
             />
 
             {/* Section 2: Assignment Tracking */}
             <AssignmentTrackingSection
-                assignments={store.assignments}
+                assignments={assignmentStore.assignments}
                 onDelete={async (id) => {
                     showConfirm({
                         message: 'Xoa bai giao nay?',
                         confirmLabel: 'Xoa',
                         destructive: true,
                         onConfirm: async () => {
-                            const ok = await store.removeAssignment(id);
+                            const ok = await assignmentStore.removeAssignment(id);
                             if (ok) {
                                 await refreshAssignments();
                             }
@@ -101,20 +104,20 @@ const AssignmentTab: React.FC = () => {
                     });
                 }}
                 onUpdateDeadline={async (assignmentId, newDeadline) => {
-                    const ok = await store.updateAssignmentDeadline(assignmentId, newDeadline);
+                    const ok = await assignmentStore.updateAssignmentDeadline(assignmentId, newDeadline);
                     if (ok) {
                         await refreshAssignments();
                     }
                     return ok;
                 }}
                 onUpdateStatus={async (assignmentId, newStatus) => {
-                    const ok = await store.updateAssignmentStatus(assignmentId, newStatus);
+                    const ok = await assignmentStore.updateAssignmentStatus(assignmentId, newStatus);
                     if (ok) {
                         await refreshAssignments();
                     }
                     return ok;
                 }}
-                isLoading={store.isLoading}
+                isLoading={assignmentStore.isLoading}
             />
         </div>
     );
@@ -145,8 +148,9 @@ const CreateAssignmentSection: React.FC<{
     const isHydratingDraftRef = useRef(false);
 
     // Get students for selected class from store
-    const store = useClassroomStore();
-    const studentsInClass = store.students[selectedClassId] || [];
+    const students = useRosterStore((state) => state.students);
+    const fetchStudents = useRosterStore((state) => state.fetchStudents);
+    const studentsInClass = students[selectedClassId] || [];
 
     const getDefaultDeadline = () => {
         const nextDeadline = new Date();
@@ -191,7 +195,7 @@ const CreateAssignmentSection: React.FC<{
             return;
         }
 
-        store.fetchStudents(selectedClassId);
+        fetchStudents(selectedClassId);
 
         if (isHydratingDraftRef.current) {
             isHydratingDraftRef.current = false;
@@ -246,9 +250,9 @@ const CreateAssignmentSection: React.FC<{
 
     useEffect(() => {
         if (!activeDraft || !activeDraft.studentId || selectedClassId !== activeDraft.classId) return;
-        if (!store.students[activeDraft.classId]) return;
+        if (!students[activeDraft.classId]) return;
 
-        const hasStudent = (store.students[activeDraft.classId] || []).some((student) => student.id === activeDraft.studentId);
+        const hasStudent = (students[activeDraft.classId] || []).some((student) => student.id === activeDraft.studentId);
         if (!hasStudent) {
             setSelectedStudentId('');
             clearDraftState({
@@ -256,7 +260,7 @@ const CreateAssignmentSection: React.FC<{
                 manualNotice: 'Khong tim thay hoc sinh trong lop nay nua. He thong da giu lai de va lop de thay co giao thu cong.',
             });
         }
-    }, [activeDraft, selectedClassId, store.students]);
+    }, [activeDraft, selectedClassId, students]);
 
     const handleSubmit = async () => {
         if (!selectedQuizId || !selectedClassId || !deadline) return;

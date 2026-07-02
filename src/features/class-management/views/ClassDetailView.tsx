@@ -4,7 +4,7 @@ import { Classroom, CreateStudentPayload } from '../types';
 import { Button } from '../../../components/common';
 import { StudentTable } from '../components/StudentTable';
 import { AddStudentModal } from '../components/Modals';
-import { useClassroomStore } from '../../../stores/useClassroomStore';
+import { useRosterStore } from '../../../stores/useRosterStore';
 import { callApi } from '../../../services/apiAdapter';
 import { showSuccess, showError } from '../../../utils/toast';
 
@@ -15,7 +15,7 @@ interface ClassDetailViewProps {
 }
 
 export const ClassDetailView: React.FC<ClassDetailViewProps> = ({ classroom, isAdmin, onBack }) => {
-    const store = useClassroomStore();
+    const store = useRosterStore();
     const students = store.students[classroom.id] || [];
     const isLoadingStudents = store.isLoading;
     

@@ -161,7 +161,7 @@ export const generateWithOpenAIResilient = async (
   // Build fetch URL & headers
   const WORKERS_API_URL =
     (import.meta as any).env.VITE_WORKERS_API_URL ||
-    'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+    'https://phieu.thitong.site';
   const workerToken = (import.meta as any).env.VITE_API_SECRET_TOKEN || '';
 
   let targetUrl = resolveTargetUrl(API_URL.endsWith('/chat/completions') ? API_URL : `${baseUrl}/chat/completions`);

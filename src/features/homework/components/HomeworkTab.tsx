@@ -4,13 +4,13 @@ import { Button } from '../../../components/common';
 import { AssignmentCreator } from './AssignmentCreator';
 import { useHomeworkStore } from '../stores/useHomeworkStore';
 import { useAuthStore } from '../../../../stores/authStore';
-import { useClassroomStore } from '../../../stores/useClassroomStore';
+import { useClassStore } from '../../../stores/useClassStore';
 import { AssignmentSubmissionsView } from './AssignmentSubmissionsView';
 import { HomeworkAssignment } from '../types';
 
 export const HomeworkTab: React.FC = () => {
   const { assignments, deleteAssignment, fetchTeacherAssignments, isLoading } = useHomeworkStore();
-  const { fetchClasses } = useClassroomStore();
+  const fetchClasses = useClassStore((state) => state.fetchClasses);
   const { username } = useAuthStore();
   const [showCreator, setShowCreator] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');

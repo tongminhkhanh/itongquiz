@@ -27,9 +27,6 @@ const QuestionRenderer: React.FC<BaseRendererProps> = (props) => {
     const rawType = (q.type || 'MCQ').toString().toUpperCase();
     const normalizedType = rawType.replace(/-/g, '_');
 
-    // DEBUG LOG - Sẽ xóa sau khi tìm ra lỗi
-    // Question UI Rendering
-
     // Dispatcher Mapping
     const renderers: Record<string, React.FC<BaseRendererProps>> = {
         'MCQ': MCQRenderer,

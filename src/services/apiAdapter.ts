@@ -3,7 +3,7 @@ import { WORKERS_API_URL } from '../config/constants';
 // API Token for authentication (DEPRECATED - will be removed after JWT migration)
 // JWT authentication is now used for student and teacher sessions
 const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
-const REMOTE_WORKERS_API_URL = 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+const REMOTE_WORKERS_API_URL = 'https://phieu.thitong.site';
 
 function getStoredJWTToken(): string {
     try {

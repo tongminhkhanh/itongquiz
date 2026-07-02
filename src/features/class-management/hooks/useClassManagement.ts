@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react';
-import { useClassroomStore } from '../../../stores/useClassroomStore';
+import { useClassStore } from '../../../stores/useClassStore';
+import { useRosterStore } from '../../../stores/useRosterStore';
 import { callApi } from '../../../services/apiAdapter';
 import { Classroom, TeacherRecord } from '../types';
 import { showConfirm } from '../../../utils/toast';
 
 export const useClassManagement = (isAdmin: boolean, username: string | null) => {
-    const store = useClassroomStore();
+    const classStore = useClassStore();
+    const rosterStore = useRosterStore();
     
     // View State
     const [selectedClass, setSelectedClass] = useState<Classroom | null>(null);
@@ -23,7 +25,7 @@ export const useClassManagement = (isAdmin: boolean, username: string | null) =>
 
     const handleCreateClass = async (name: string) => {
         if (!username) return false;
-        const result = await store.addClass({
+        const result = await classStore.addClass({
             name,
             teacherUsername: username,
         });
@@ -36,7 +38,7 @@ export const useClassManagement = (isAdmin: boolean, username: string | null) =>
             message: `Xóa lớp "${classroom.name}"? Tất cả học sinh và bài tập trong lớp sẽ bị xóa.`,
             confirmLabel: 'Xóa',
             destructive: true,
-            onConfirm: () => store.removeClass(classroom.id),
+            onConfirm: () => classStore.removeClass(classroom.id),
         });
     };
 
@@ -91,7 +93,7 @@ export const useClassManagement = (isAdmin: boolean, username: string | null) =>
                 return;
             }
 
-            await store.fetchClasses(); // Refresh
+            await classStore.fetchClasses(); // Refresh
             setTransferClassroom(null);
             setTransferTeacherUsername('');
             setTeachers([]);
@@ -136,6 +138,15 @@ export const useClassManagement = (isAdmin: boolean, username: string | null) =>
         transferError,
         
         // Store Bindings
-        store,
+        store: {
+            ...classStore,
+            ...rosterStore,
+            isLoading: classStore.isLoading || rosterStore.isLoading,
+            error: classStore.error || rosterStore.error,
+            clearError: () => {
+                classStore.clearError();
+                rosterStore.clearError();
+            },
+        },
     };
 };

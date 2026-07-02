@@ -5,24 +5,28 @@
 import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
 import { parseBody } from '../utils/helpers';
+import { withD1Retry } from '../utils/d1';
 
 export async function handleAnnouncementRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
 
     // GET /api/announcements
     if (path === '/api/announcements' && method === 'GET') {
-        const row = await db.prepare('SELECT * FROM announcements WHERE id = ?').bind('1').first<{
-            id: string;
-            content: string;
-            is_active: string;
-            updated_at: string;
-            banner_title: string;
-            banner_subtitle: string;
-            banner_link: string;
-            banner_image: string;
-            is_banner_active: string;
-            days_to_live: number;
-        }>();
+        const row = await withD1Retry(
+            () => db.prepare('SELECT * FROM announcements WHERE id = ?').bind('1').first<{
+                id: string;
+                content: string;
+                is_active: string;
+                updated_at: string;
+                banner_title: string;
+                banner_subtitle: string;
+                banner_link: string;
+                banner_image: string;
+                is_banner_active: string;
+                days_to_live: number;
+            }>(),
+            'GET /api/announcements'
+        );
         if (!row) {
             return jsonResponse({ status: 'success', announcement: null });
         }

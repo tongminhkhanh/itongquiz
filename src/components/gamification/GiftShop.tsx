@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ClipboardCopy, Gift, Loader2, Receipt, Sparkles } from 'lucide-react';
-import { useQuizStore } from '../../stores/useQuizStore';
+import { useQuizStore } from '../../../stores/quizStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useGamificationStore } from '../../stores/useGamificationStore';
 import { useGiftShopStore } from '../../stores/useGiftShopStore';
@@ -22,6 +22,7 @@ const randomKey = () => {
 
 const GiftShop: React.FC = () => {
     const quizStore = useQuizStore();
+    const goHome = quizStore.goHome;
     const { studentSession } = useClassroomStore();
     const coins = useGamificationStore((s) => s.coins);
     const {
@@ -96,7 +97,7 @@ const GiftShop: React.FC = () => {
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
                     <p className="text-slate-700 font-semibold mb-4">Không tìm thấy phiên đăng nhập học sinh.</p>
                     <button
-                        onClick={() => quizStore.setView('home')}
+                        onClick={goHome}
                         className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-semibold"
                     >
                         Về trang chủ
@@ -111,7 +112,7 @@ const GiftShop: React.FC = () => {
             <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
                 <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
                     <button
-                        onClick={() => quizStore.setView('home')}
+                        onClick={goHome}
                         className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-100"
                     >
                         <ArrowLeft className="w-4 h-4" /> Quay lại

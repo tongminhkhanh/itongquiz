@@ -2,7 +2,7 @@ export const SCHOOL_NAME = "Trường Tiểu học Ít Ong";
 
 // --- BACKEND ENDPOINTS ---
 // All data now goes through Cloudflare Workers + D1
-export const WORKERS_API_URL = import.meta.env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+export const WORKERS_API_URL = import.meta.env.VITE_WORKERS_API_URL || 'https://phieu.thitong.site';
 export const USE_D1 = true; // Always use D1 - Google Sheets removed
 
 // Danh mục quiz theo môn học (đồng bộ với SUBJECT_CONFIG)

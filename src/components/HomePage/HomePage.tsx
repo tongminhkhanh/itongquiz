@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Quiz } from '../../types';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
+import { useAssignmentStore } from '../../stores/useAssignmentStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { Lock, Search, Clock, ChevronRight } from 'lucide-react';
 import Modal from '../common/Modal';
@@ -54,6 +55,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
     const authStore = useAuthStore();
     const quizStore = useQuizStore();
     const classroomStore = useClassroomStore();
+    const assignmentStore = useAssignmentStore();
 
     // --- Derived State ---
     const isStudentLoggedIn = !!classroomStore.studentSession;
@@ -83,7 +85,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
     // --- Fetch Student Assignments if Logged In ---
     useEffect(() => {
         if (isStudentLoggedIn && classroomStore.studentSession) {
-            classroomStore.fetchStudentAssignments(classroomStore.studentSession.studentId);
+            assignmentStore.fetchStudentAssignments(classroomStore.studentSession.studentId);
         }
     }, [isStudentLoggedIn, classroomStore.studentSession?.studentId]);
 
@@ -117,7 +119,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
     const myAssignmentQuizzes = useMemo(() => {
         if (!isStudentLoggedIn || !classroomStore.studentSession) return [];
 
-        const studentAssignments = classroomStore.assignments;
+        const studentAssignments = assignmentStore.assignments;
         const allQuizzes = quizStore.quizzes;
 
         return studentAssignments.map((assignment) => {
@@ -139,7 +141,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                 _assignmentData: assignment
             } as Quiz & { _assignmentData?: Assignment; duration?: number; maxScore?: number };
         });
-    }, [isStudentLoggedIn, classroomStore.studentSession, classroomStore.assignments, quizStore.quizzes]);
+    }, [isStudentLoggedIn, classroomStore.studentSession, assignmentStore.assignments, quizStore.quizzes]);
 
     // --- Filter Quizzes ---
     const filteredQuizzes = useMemo(() => {
@@ -192,8 +194,8 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                 const assignmentId = q._assignmentData.id;
                 const studentId = classroomStore.studentSession.studentId;
 
-                await classroomStore.fetchStudentAssignments(studentId);
-                const freshAssignments = useClassroomStore.getState().assignments;
+                await assignmentStore.fetchStudentAssignments(studentId);
+                const freshAssignments = useAssignmentStore.getState().assignments;
                 const freshAssignment = freshAssignments.find(a => a.id === assignmentId);
 
                 if (freshAssignment) {
@@ -211,12 +213,12 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                     }
                 }
 
-                const success = await classroomStore.startAssignmentAttempt(assignmentId, studentId);
+                const success = await assignmentStore.startAssignmentAttempt(assignmentId, studentId);
                 if (!success) {
                     alert('Lỗi khi bắt đầu làm bài. Vui lòng thử lại.');
                     return;
                 }
-                await classroomStore.fetchStudentAssignments(studentId);
+                await assignmentStore.fetchStudentAssignments(studentId);
             } else {
                 const linkedAssignment = myAssignmentQuizzes.find(aq => aq.id === q.id);
                 if (linkedAssignment && linkedAssignment._assignmentData) {
@@ -235,12 +237,12 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                         return;
                     }
 
-                    const success = await classroomStore.startAssignmentAttempt(assignmentId, studentId);
+                    const success = await assignmentStore.startAssignmentAttempt(assignmentId, studentId);
                     if (!success) {
                         alert('Lỗi khi bắt đầu làm bài. Vui lòng thử lại.');
                         return;
                     }
-                    await classroomStore.fetchStudentAssignments(studentId);
+                    await assignmentStore.fetchStudentAssignments(studentId);
                 }
             }
         }

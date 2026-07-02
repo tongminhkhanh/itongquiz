@@ -74,7 +74,7 @@ const extractWithLlmMux = async (file: File, base64Data: string, apiKey: string)
   const fetchHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
   if (apiKey) fetchHeaders.Authorization = `Bearer ${apiKey}`;
 
-  const WORKERS_API_URL = (import.meta as any).env.VITE_WORKERS_API_URL || 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+  const WORKERS_API_URL = (import.meta as any).env.VITE_WORKERS_API_URL || 'https://phieu.thitong.site';
   const workerToken = (import.meta as any).env.VITE_API_SECRET_TOKEN || '';
   if (!apiKey && workerToken) {
     Object.assign(fetchHeaders, { 'X-API-Token': workerToken, 'x-target-url': API_URL, 'x-target-token': '' });

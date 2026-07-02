@@ -12,7 +12,8 @@ import {
 import { generateTrangNguyenQuiz } from '../../../services/trangNguyenGeminiService';
 import { getTeacherAiQuota, consumeTeacherAiQuota } from '../../../services/teacherAiQuotaService';
 import { useAuthStore } from '../../../../stores/authStore';
-import { useClassroomStore } from '../../../stores/useClassroomStore';
+import { useAssignmentStore } from '../../../stores/useAssignmentStore';
+import { useClassStore } from '../../../stores/useClassStore';
 import { normalizeTagValue, normalizeTags, normalizeAiCategory } from '../utils/quizNormalizers';
 
 const MAX_OCR_CONTENT_LENGTH = 60000;
@@ -70,7 +71,8 @@ interface UseCreateQuizLogicProps {
 
 export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSuccess }: UseCreateQuizLogicProps) => {
     const authStore = useAuthStore();
-    const classroomStore = useClassroomStore();
+    const classStore = useClassStore();
+    const assignmentStore = useAssignmentStore();
 
     const isTeacherAccount = !authStore.isAdmin;
     const isClassLocked = !authStore.isAdmin && !!authStore.teacherClass;
@@ -217,7 +219,7 @@ export const useCreateQuizLogic = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSu
 
     useEffect(() => {
         if (authStore.username) {
-            classroomStore.fetchClasses(authStore.username);
+            classStore.fetchClasses(authStore.username);
         }
     }, [authStore.username]);
 
@@ -603,7 +605,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
 
             if (assignToClass && selectedClassId) {
                 try {
-                    await classroomStore.addAssignment({
+                    await assignmentStore.addAssignment({
                         classId: selectedClassId,
                         quizId: generatedQuiz.id,
                         quizTitle: generatedQuiz.title,
@@ -713,7 +715,7 @@ ${customPrompt.trim() ? `\nYêu cầu thêm từ giáo viên: ${customPrompt.tri
         handleRegenerateSingle,
         handleSaveQuiz,
         handleCopyLink,
-        classroomStore,
+        classStore,
         authStore
     };
 };

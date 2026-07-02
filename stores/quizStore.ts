@@ -153,7 +153,7 @@ interface QuizState {
     modifyQuiz: (quiz: Quiz) => Promise<void>;
     removeQuiz: (id: string) => Promise<void>;
     duplicateQuiz: (quizId: string) => Promise<boolean>;
-    submitResult: (result: StudentResult) => Promise<void>;
+    submitResult: (result: StudentResult) => Promise<StudentResult>;
     removeResult: (id: string) => Promise<void>;
 }
 

@@ -5,7 +5,7 @@ import { homeworkService } from '../services/homeworkService';
 import { useHomeworkUpload } from '../hooks/useHomeworkUpload';
 import { useHomeworkStore } from '../stores/useHomeworkStore';
 import { useAuthStore } from '../../../../stores/authStore';
-import { useClassroomStore } from '../../../stores/useClassroomStore';
+import { useClassStore } from '../../../stores/useClassStore';
 import { showSuccess, showError } from '../../../utils/toast';
 
 interface AssignmentCreatorProps {
@@ -23,7 +23,7 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const { addAssignment, isLoading: isSaving } = useHomeworkStore();
   const { username, teacherClass } = useAuthStore();
-  const { classes } = useClassroomStore();
+  const classes = useClassStore((state) => state.classes);
   
   const { uploadHomework, isUploading, progress, url } = useHomeworkUpload();
 

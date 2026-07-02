@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/api/game-loop': {
-          target: 'https://itongquiz-api.sample_user_baf53feb.workers.dev',
+          target: 'https://phieu.thitong.site',
           changeOrigin: true,
           rewrite: (path) => path,
         },
@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/api\/deepseek/, ''),
         },
         '/api': {
-          target: 'https://itongquiz-api.sample_user_baf53feb.workers.dev',
+          target: 'https://phieu.thitong.site',
           changeOrigin: true,
           rewrite: (path) => path,
         },

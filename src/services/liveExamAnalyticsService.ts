@@ -5,7 +5,7 @@
 
 import { fetchWithJWTInterceptor } from '../utils/jwtInterceptor';
 
-const REMOTE_WORKERS_API_URL = 'https://itongquiz-api.sample_user_baf53feb.workers.dev';
+const REMOTE_WORKERS_API_URL = 'https://phieu.thitong.site';
 const API_BASE = (import.meta.env.VITE_WORKERS_API_URL || REMOTE_WORKERS_API_URL).replace(/\/$/, '');
 const TEACHER_JWT_STORAGE_KEY = 'itongquiz_teacher_jwt_token';
 

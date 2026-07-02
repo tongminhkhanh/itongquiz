@@ -11,6 +11,7 @@ import { jsonResponse, errorResponse, generateId } from '../utils/response';
 import { mapQuestionForSave, parseBody, extractIdFromPath } from '../utils/helpers';
 import { verifyJWTMiddleware, requireAdmin, requireTeacher } from '../middleware/jwtAuth';
 import { JWTPayload } from '../utils/jwt';
+import { withD1Retry } from '../utils/d1';
 
 const canAccessQuiz = async (db: D1Database, user: JWTPayload, quizId: string): Promise<boolean> => {
     if (requireAdmin(user)) return true;
@@ -27,7 +28,10 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
 
     // GET /api/quizzes
     if (path === '/api/quizzes' && method === 'GET') {
-        const rows = await db.prepare('SELECT * FROM quizzes').all<import('../types').Quiz>();
+        const rows = await withD1Retry(
+            () => db.prepare('SELECT * FROM quizzes').all<import('../types').Quiz>(),
+            'GET /api/quizzes'
+        );
         return jsonResponse(rows.results);
     }
 
@@ -36,10 +40,16 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         const url = new URL(request.url);
         const quizId = url.searchParams.get('quizId');
         if (quizId) {
-            const rows = await db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all<import('../types').Question>();
+            const rows = await withD1Retry(
+                () => db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all<import('../types').Question>(),
+                'GET /api/questions by quizId'
+            );
             return jsonResponse(rows.results);
         }
-        const rows = await db.prepare('SELECT * FROM questions').all<import('../types').Question>();
+        const rows = await withD1Retry(
+            () => db.prepare('SELECT * FROM questions').all<import('../types').Question>(),
+            'GET /api/questions'
+        );
         return jsonResponse(rows.results);
     }
 

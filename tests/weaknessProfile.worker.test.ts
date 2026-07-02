@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Env, Question } from '../workers/src/types';
 import {
     buildResultSkillBreakdownFromData,
@@ -6,6 +6,54 @@ import {
     type ResultRowWithAnswers,
 } from '../workers/src/services/weaknessProfile';
 import { handleResultRoutes } from '../workers/src/routes/results';
+
+vi.mock('../workers/src/utils/jwt', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../workers/src/utils/jwt')>();
+    return {
+        ...actual,
+        verifyJWT: async (token: string) => {
+            try {
+                return JSON.parse(Buffer.from(token.split('.')[1] || '', 'base64url').toString('utf8'));
+            } catch {
+                return null;
+            }
+        },
+    };
+});
+
+const TEST_JWT_SECRET = 'test-secret';
+
+function base64UrlEncode(input: string | Uint8Array): string {
+    const buffer = typeof input === 'string' ? Buffer.from(input) : Buffer.from(input);
+    return buffer.toString('base64url');
+}
+
+async function createTestJwt(payload: Record<string, unknown>, secret: string): Promise<string> {
+    const now = Math.floor(Date.now() / 1000);
+    const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const body = base64UrlEncode(JSON.stringify({ ...payload, iat: now, exp: now + 3600 }));
+    const data = `${header}.${body}`;
+    const key = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign'],
+    );
+    const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+    return `${data}.${base64UrlEncode(new Uint8Array(signature))}`;
+}
+
+async function createAdminRequest(url: string, init: RequestInit): Promise<Request> {
+    const token = await createTestJwt({ username: 'admin', role: 'admin', fullName: 'Admin' }, TEST_JWT_SECRET);
+    return new Request(url, {
+        ...init,
+        headers: {
+            ...Object.fromEntries(new Headers(init.headers || {}).entries()),
+            Authorization: `Bearer ${token}`,
+        },
+    });
+}
 
 function createAnswerEntry(selectedAnswer: any, isCorrect: boolean, questionSnapshot?: Record<string, any>) {
     return {
@@ -279,10 +327,11 @@ describe('weakness profile analytics', () => {
             API_SECRET_TOKEN: 'token',
             CLIPROXY_API: '',
             CLIPROXY_TOKEN: '',
+            JWT_SECRET: TEST_JWT_SECRET,
         };
 
         const breakdownResponse = await handleResultRoutes(
-            new Request('https://example.com/api/results/201/skill-breakdown', { method: 'GET' }),
+            await createAdminRequest('https://example.com/api/results/201/skill-breakdown', { method: 'GET' }),
             env,
             '/api/results/201/skill-breakdown',
             'GET',
@@ -298,7 +347,7 @@ describe('weakness profile analytics', () => {
         }));
 
         const profileResponse = await handleResultRoutes(
-            new Request('https://example.com/api/results/201/weakness-profile', { method: 'GET' }),
+            await createAdminRequest('https://example.com/api/results/201/weakness-profile', { method: 'GET' }),
             env,
             '/api/results/201/weakness-profile',
             'GET',
@@ -311,7 +360,7 @@ describe('weakness profile analytics', () => {
         expect(profileJson.coveragePercent).toBe(100);
 
         const missingResponse = await handleResultRoutes(
-            new Request('https://example.com/api/results/999/weakness-profile', { method: 'GET' }),
+            await createAdminRequest('https://example.com/api/results/999/weakness-profile', { method: 'GET' }),
             env,
             '/api/results/999/weakness-profile',
             'GET',

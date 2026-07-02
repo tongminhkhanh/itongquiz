@@ -5,7 +5,8 @@ import { useQuizManager } from '../../hooks';
 import { Search, Key, Edit, Trash2, RefreshCw, Lock, Tag, Copy, Send, MoreVertical, Eye, X, Loader2, CheckCircle2, BookOpen } from 'lucide-react';
 import { useQuizStore } from '../../../stores/quizStore';
 import { useAuthStore } from '../../../stores/authStore';
-import { useClassroomStore } from '../../stores/useClassroomStore';
+import { useAssignmentStore } from '../../stores/useAssignmentStore';
+import { useClassStore } from '../../stores/useClassStore';
 import { SUBJECT_CONFIG } from '../HomePage/StudentDashboardUI';
 import { showError, showConfirm, showSuccess } from '../../utils/toast';
 import WorksheetExportModal from './WorksheetExportModal';
@@ -109,7 +110,9 @@ const QuickAssignModal: React.FC<{
     onClose: () => void;
 }> = ({ quiz, onClose }) => {
     const authStore = useAuthStore();
-    const classroomStore = useClassroomStore();
+    const classes = useClassStore((state) => state.classes);
+    const fetchClasses = useClassStore((state) => state.fetchClasses);
+    const addAssignment = useAssignmentStore((state) => state.addAssignment);
     const [selectedClassId, setSelectedClassId] = useState('');
     const [deadline, setDeadline] = useState('');
     const [maxAttempts, setMaxAttempts] = useState(1);
@@ -119,9 +122,9 @@ const QuickAssignModal: React.FC<{
     // Fetch classes on mount
     useEffect(() => {
         if (authStore.isAdmin) {
-            classroomStore.fetchClasses();
+            fetchClasses();
         } else if (authStore.username) {
-            classroomStore.fetchClasses(authStore.username);
+            fetchClasses(authStore.username);
         }
         // Set default deadline to tomorrow
         const tomorrow = new Date();
@@ -134,7 +137,7 @@ const QuickAssignModal: React.FC<{
         if (!selectedClassId || !deadline) return;
         setIsSubmitting(true);
         try {
-            const result = await classroomStore.addAssignment({
+            const result = await addAssignment({
                 quizId: quiz.id,
                 classId: selectedClassId,
                 deadline: new Date(deadline).toISOString(),
@@ -186,7 +189,7 @@ const QuickAssignModal: React.FC<{
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-50 transition-colors"
                             >
                                 <option value="">-- Chọn lớp --</option>
-                                {classroomStore.classes.map((c) => (
+                                {classes.map((c) => (
                                     <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
                             </select>

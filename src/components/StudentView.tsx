@@ -25,7 +25,7 @@ import QuizPagination from '../features/quiz-player/components/QuizPagination';
 interface Props {
   quiz: Quiz;
   onExit: () => void;
-  onSaveResult: (result: StudentResult) => void | Promise<void>;
+  onSaveResult: (result: StudentResult) => void | StudentResult | Promise<void | StudentResult>;
 }
 
 const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {

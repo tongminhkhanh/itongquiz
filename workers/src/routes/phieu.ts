@@ -9,7 +9,7 @@ export async function handlePhieuSubdomain(request: Request, db: D1Database): Pr
 
     const [scope, publicToken] = url.pathname.replace(/^\//, '').split('/');
     if (scope !== 'p' || !publicToken) {
-        return new Response('Khong tim thay phieu', { status: 404 });
+        return null;
     }
 
     const record = await getPublicPhieuRecord(db, publicToken);

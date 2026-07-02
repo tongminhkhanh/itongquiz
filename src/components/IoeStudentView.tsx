@@ -112,20 +112,6 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
             }
         }
     }, [currentIndex, step]);
-
-    // Prevent navigation
-    useEffect(() => {
-        if (step === 'quiz') {
-            const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-                e.preventDefault();
-                e.returnValue = 'Bạn đang làm bài! Nếu thoát, bài làm sẽ mất.';
-                return e.returnValue;
-            };
-            window.addEventListener('beforeunload', handleBeforeUnload);
-            return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-        }
-    }, [step]);
-
     const handleCodeVerify = () => {
         if (enteredCode.toUpperCase() === quiz.accessCode?.toUpperCase()) {
             setCodeError('');

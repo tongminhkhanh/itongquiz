@@ -4,7 +4,9 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import AssignmentTab from '../src/components/TeacherDashboard/AssignmentTab';
 import { StudentDetailModal } from '../src/components/teacher/ResultsView/StudentDetailModal';
 import { useTeacherDashboardUIStore } from '../src/stores/useTeacherDashboardUIStore';
-import { useClassroomStore } from '../src/stores/useClassroomStore';
+import { useAssignmentStore } from '../src/stores/useAssignmentStore';
+import { useClassStore } from '../src/stores/useClassStore';
+import { useRosterStore } from '../src/stores/useRosterStore';
 import { useAuthStore } from '../stores/authStore';
 import { useQuizStore } from '../stores/quizStore';
 import { fetchWeaknessProfile } from '../src/services/weaknessProfileService';
@@ -295,16 +297,36 @@ function resetStores() {
         error: null,
     });
 
-    useClassroomStore.setState({
+    useClassStore.setState({
         classes,
-        students: { 'c-001': students },
-        assignments: [],
         isLoading: false,
         error: null,
         fetchClasses: vi.fn(async () => undefined),
+        addClass: vi.fn(async () => null),
+        removeClass: vi.fn(async () => true),
+        clearError: vi.fn(),
+    });
+
+    useRosterStore.setState({
+        students: { 'c-001': students },
+        isLoading: false,
+        error: null,
+        fetchStudents: vi.fn(async () => undefined),
+        addStudent: vi.fn(async () => null),
+        addStudentsBulk: vi.fn(async () => null),
+        removeStudent: vi.fn(async () => true),
+        resetPassword: vi.fn(async () => true),
+        clearError: vi.fn(),
+    });
+
+    useAssignmentStore.setState({
+        assignments: [],
+        isLoading: false,
+        error: null,
         fetchTeacherAssignments: vi.fn(async () => undefined),
         fetchAllAssignments: vi.fn(async () => undefined),
-        fetchStudents: vi.fn(async () => undefined),
+        fetchAssignments: vi.fn(async () => undefined),
+        fetchStudentAssignments: vi.fn(async () => undefined),
         addAssignment: vi.fn(async (payload) => ({
             id: 'assignment-001',
             quizId: payload.quizId,
@@ -318,6 +340,9 @@ function resetStores() {
         removeAssignment: vi.fn(async () => true),
         updateAssignmentDeadline: vi.fn(async () => true),
         updateAssignmentStatus: vi.fn(async () => true),
+        startAssignmentAttempt: vi.fn(async () => true),
+        resetAssignments: vi.fn(),
+        clearError: vi.fn(),
     });
 }
 
@@ -531,7 +556,7 @@ describe('assignment prefill integration flow', () => {
             expect(useTeacherDashboardUIStore.getState().assignmentComposerDraft).toBeNull();
         });
 
-        const addAssignment = useClassroomStore.getState().addAssignment as ReturnType<typeof vi.fn>;
+        const addAssignment = useAssignmentStore.getState().addAssignment as ReturnType<typeof vi.fn>;
         expect(addAssignment).toHaveBeenCalledWith(
             expect.objectContaining({
                 quizId: 'quiz-phan-so-01',

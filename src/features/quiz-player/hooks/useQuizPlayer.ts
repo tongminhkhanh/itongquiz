@@ -10,7 +10,7 @@ import { playTingSound, showError } from '../../../utils/toast';
 interface UseQuizPlayerProps {
     quiz: Quiz;
     onExit: () => void;
-    onSaveResult: (result: StudentResult) => void | Promise<void>;
+    onSaveResult: (result: StudentResult) => void | StudentResult | Promise<void | StudentResult>;
 }
 
 export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps) => {
@@ -111,13 +111,6 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
     // Browser navigation protection
     useEffect(() => {
         if (step !== 'quiz') return;
-
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            e.preventDefault();
-            e.returnValue = 'Bạn đang làm bài! Nếu rời đi, bài làm sẽ bị mất.';
-            return e.returnValue;
-        };
-
         const handlePopState = (e: PopStateEvent) => {
             e.preventDefault();
             if (window.confirm('Bạn đang làm bài! Nếu quay lại, bài làm sẽ bị mất. Bạn có chắc muốn thoát?')) {
@@ -128,11 +121,9 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
         };
 
         window.history.pushState(null, '', window.location.href);
-        window.addEventListener('beforeunload', handleBeforeUnload);
         window.addEventListener('popstate', handlePopState);
 
         return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
             window.removeEventListener('popstate', handlePopState);
         };
     }, [step, onExit]);
@@ -289,7 +280,10 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
 
             let finalResult = resultData;
             if (!quiz.isPractice) {
-                finalResult = await onSaveResult(resultData);
+                const savedResult = await onSaveResult(resultData);
+                if (savedResult) {
+                    finalResult = savedResult;
+                }
             }
             setResult(finalResult);
 
