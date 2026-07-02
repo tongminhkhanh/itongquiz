@@ -22,6 +22,7 @@ import { handleTestBankRoutes } from './routes/testBank';
 import { handleTeacherAiQuotaRoutes } from './routes/teacherAiQuota';
 import { handleLogoutRoute } from './routes/logout';
 import { handleLiveExamRoutes } from './routes/liveExam';
+import { handlePhieuSubdomain, handlePublicPhieuApi } from './routes/phieu';
 import { Env } from './types';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
 import { checkAndAutoCloseExpiredExams } from './services/liveExamService';
@@ -32,15 +33,21 @@ export default {
         const corsResponse = handleCors(request);
         if (corsResponse) return corsResponse;
 
+        const url = new URL(request.url);
+        const path = url.pathname;
+        const method = request.method;
+
+        const phieuSubdomainResponse = await handlePhieuSubdomain(request, env.DB);
+        if (phieuSubdomainResponse) return addCors(phieuSubdomainResponse, request);
+
+        const publicPhieuResponse = await handlePublicPhieuApi(env.DB, path, method);
+        if (publicPhieuResponse) return addCors(publicPhieuResponse, request);
+
         // Auth check from header
         const authError = verifyToken(request, env);
         if (authError) return addCors(authError, request);
 
         try {
-            const url = new URL(request.url);
-            const path = url.pathname;
-            const method = request.method;
-
             // ============ LEGACY GAS COMPATIBILITY MODE ============
             // Support POST with action param (same as GAS doPost)
             // This allows frontend to work WITHOUT changes initially

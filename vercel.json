@@ -1,10 +1,20 @@
 {
   "rewrites": [
+    { "source": "/phieu/:path*", "destination": "/index.html" },
     { "source": "/api/cliproxy/:path*", "destination": "https://api.thitong.site/v1/:path*" },
     { "source": "/api/deepseek/:path*", "destination": "https://api.deepseek.com/:path*" },
     { "source": "/((?!api/|assets/|.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
+    {
+      "source": "/phieu/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
     {
       "source": "/index.html",
       "headers": [

@@ -157,6 +157,20 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
         case 'cancel_gift_shop_order': method = 'PATCH'; path = `/api/gift-shop/orders/${encodeURIComponent(payload.orderId)}/cancel`; break;
         case 'get_gift_shop_event_logs': method = 'GET'; path = '/api/gift-shop/events'; break;
 
+        // --- Phiếu kết quả nhận xét ---
+        case 'get_public_phieu':
+            method = 'GET';
+            path = `/api/phieu/public/${encodeURIComponent(payload.publicToken)}`;
+            break;
+        case 'upsert_phieu':
+        case 'get_phieu_by_submission':
+        case 'publish_phieu_batch':
+        case 'deactivate_public_phieu_link':
+            method = 'POST';
+            path = '/api/gas';
+            payload = { ...payload, action, token: API_SECRET_TOKEN };
+            break;
+
         // --- Announcements ---
         case 'get_announcement': method = 'GET'; path = '/api/announcements'; break;
         case 'save_announcement': method = 'POST'; path = '/api/announcements'; break;

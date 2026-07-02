@@ -25,6 +25,7 @@ const TermsOfService = React.lazy(() => import('./src/components/legal/TermsOfSe
 const Footer = React.lazy(() => import('./src/components/common/Footer'));
 const AboutPage = React.lazy(() => import('./src/components/schoolPage/AboutPage'));
 const ContactPage = React.lazy(() => import('./src/components/schoolPage/ContactPage'));
+const PhieuPublicPage = React.lazy(() => import('./src/pages/PhieuPublicPage'));
 
 type RoutePath = '/' | '/about' | '/contact' | '/privacy' | '/tos';
 
@@ -211,6 +212,43 @@ const App: React.FC = () => {
 
         if (quizStore.view === 'student' && quizStore.selectedQuiz) {
             const isIoeQuiz = quizStore.selectedQuiz.category === 'ioe';
+            const hasLoadedQuestions = Array.isArray(quizStore.selectedQuiz.questions) && quizStore.selectedQuiz.questions.length > 0;
+            if (!isIoeQuiz && !hasLoadedQuestions) {
+                if (quizStore.isLoading) {
+                    return <PageLoading />;
+                }
+
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB] px-4">
+                        <div className="max-w-md w-full rounded-2xl bg-white border border-slate-200 shadow-lg p-6 text-center">
+                            <h2 className="text-xl font-bold text-slate-800 mb-2">Dang tai cau hoi...</h2>
+                            <p className="text-slate-600 mb-5">
+                                He thong chua tai duoc cau hoi cho bai nay. Vui long thu lai.
+                            </p>
+                            {quizStore.error && (
+                                <p className="text-sm text-red-600 font-semibold mb-4">{quizStore.error}</p>
+                            )}
+                            <div className="flex justify-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => quizStore.goHome()}
+                                    className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50"
+                                >
+                                    Ve trang chu
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => quizStore.loadQuizQuestions(quizStore.selectedQuiz!.id)}
+                                    className="px-4 py-2 rounded-xl bg-[#6C5CE7] text-white font-semibold hover:bg-[#5b4bd8]"
+                                >
+                                    Thu lai
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
             return (
                 <Suspense fallback={<PageLoading />}>
                     {isIoeQuiz ? (
@@ -281,6 +319,14 @@ const App: React.FC = () => {
                                 </main>
                                 <Footer onNavigate={handleRouteNavigate} />
                             </div>
+                        </Suspense>
+                    }
+                />
+                <Route
+                    path="/phieu/p/:publicToken"
+                    element={
+                        <Suspense fallback={<PageLoading />}>
+                            <PhieuPublicPage />
                         </Suspense>
                     }
                 />

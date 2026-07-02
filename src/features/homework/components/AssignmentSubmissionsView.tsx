@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { HomeworkAssignment, HomeworkSubmission } from '../types';
 import { useHomeworkStore } from '../stores/useHomeworkStore';
-import { useClassroomStore } from '../../../stores/useClassroomStore';
+import { useRosterStore } from '../../../stores/useRosterStore';
 import { ArrowLeft, User, Clock, CheckCircle2, Sparkles, Send, Eye, MessageSquare, Trophy, Loader2 } from 'lucide-react';
 import { Button } from '../../../components/common';
 import MathSpan from '../../../components/common/MathSpan';
@@ -9,6 +9,7 @@ import { homeworkBackendService } from '../services/homeworkBackendService';
 import { homeworkService } from '../services/homeworkService';
 import { ClassHeatmap, StudentProgressChart, ProgressData } from '../../analytics';
 import { analyticsService, ClassAnalyticsResponse } from '../../analytics/services/analyticsService';
+import { PhieuBatchPanel } from './PhieuBatchPanel';
 
 interface AssignmentSubmissionsViewProps {
   assignment: HomeworkAssignment;
@@ -20,13 +21,14 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
   onBack
 }) => {
   const { submissions, fetchClassAssignments } = useHomeworkStore();
-  const { students, fetchStudents } = useClassroomStore();
+  const students = useRosterStore((state) => state.students);
+  const fetchStudents = useRosterStore((state) => state.fetchStudents);
   const [localSubmissions, setLocalSubmissions] = useState<HomeworkSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<HomeworkSubmission | null>(null);
   const [isGrading, setIsGrading] = useState(false);
   const [isAILoading, setIsAILoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'GRADING' | 'ANALYTICS'>('GRADING');
+  const [activeTab, setActiveTab] = useState<'GRADING' | 'ANALYTICS' | 'PHIEU'>('GRADING');
 
   // For editing
   const [editScore, setEditScore] = useState<number>(0);
@@ -158,9 +160,19 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
         >
           <Sparkles className="w-4 h-4" /> BÁO CÁO NHANH
         </button>
+        <button
+          onClick={() => setActiveTab('PHIEU')}
+          className={`px-4 py-3 font-bold text-sm tracking-wide border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'PHIEU' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" /> PHIEU KQ
+        </button>
       </div>
 
-      {activeTab === 'ANALYTICS' ? (
+      {activeTab === 'PHIEU' ? (
+        <PhieuBatchPanel assignment={assignment} submissions={localSubmissions} />
+      ) : activeTab === 'ANALYTICS' ? (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">

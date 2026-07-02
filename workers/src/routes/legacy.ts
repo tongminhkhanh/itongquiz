@@ -1,6 +1,12 @@
 
 import { jsonResponse, errorResponse } from '../utils/response';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from '../utils/helpers';
+import {
+    handleDeactivatePublicPhieuLink,
+    handleGetPhieuBySubmission,
+    handlePublishPhieuBatch,
+    handleUpsertPhieu,
+} from './phieu';
 
 export async function handleLegacyAction(db: D1Database, action: string, body: any): Promise<Response> {
     switch (action) {
@@ -220,6 +226,19 @@ export async function handleLegacyAction(db: D1Database, action: string, body: a
 
         case 'get_hw_submissions':
             return await handleGetHwSubmissions(db, body);
+
+        // --- Phiếu kết quả nhận xét ---
+        case 'upsert_phieu':
+            return await handleUpsertPhieu(db, body);
+
+        case 'get_phieu_by_submission':
+            return await handleGetPhieuBySubmission(db, body);
+
+        case 'publish_phieu_batch':
+            return await handlePublishPhieuBatch(db, body);
+
+        case 'deactivate_public_phieu_link':
+            return await handleDeactivatePublicPhieuLink(db, body);
 
         // --- Gamification ---
         case 'get_pet_data':
