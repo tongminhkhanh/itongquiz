@@ -9,6 +9,7 @@ import React, { useCallback, useState } from 'react';
 import { ExternalLink, Copy, Trash2, Loader2, Check } from 'lucide-react';
 import type { PhieuNhanXet, PhieuNhanXetInput, PhieuPublicLink } from '../../homework/types/phieu.types';
 import { resultPhieuLinkService } from '../services/resultPhieuLinkService';
+import ShareBar from './ShareBar';
 
 interface Props {
   /** phieuInput đã build sẵn từ modal state — luôn có */
@@ -98,6 +99,7 @@ const PhieuLinkSection: React.FC<Props> = ({ phieuInput, savedPhieu, onPhieuSave
       )}
 
       {link && (
+        <div className="space-y-2">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2">
           <a
             href={link.url}
@@ -126,6 +128,11 @@ const PhieuLinkSection: React.FC<Props> = ({ phieuInput, savedPhieu, onPhieuSave
               ? <Loader2 className="w-4 h-4 animate-spin" />
               : <Trash2 className="w-4 h-4" />}
           </button>
+        </div>
+        <ShareBar
+          url={link.url}
+          studentName={phieuInput.student_name}
+        />
         </div>
       )}
 
