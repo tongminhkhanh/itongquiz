@@ -23,6 +23,7 @@ import { handleTeacherAiQuotaRoutes } from './routes/teacherAiQuota';
 import { handleLogoutRoute } from './routes/logout';
 import { handleLiveExamRoutes } from './routes/liveExam';
 import { handleAdminCertificateRoutes } from './routes/adminCertificates';
+import { handleCertificateRoutes } from './routes/certificates';
 import { handlePhieuSubdomain, handlePublicPhieuApi } from './routes/phieu';
 import { Env } from './types';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
@@ -95,6 +96,8 @@ export default {
                 response = await handleTeacherAiQuotaRoutes(request, env, path, method);
             } else if (path.startsWith('/api/live-exam')) {
                 response = await handleLiveExamRoutes(request, env, path, method);
+            } else if (path.startsWith('/api/certificate-batches') || path.startsWith('/api/certificates')) {
+                response = await handleCertificateRoutes(request, env, path, method);
             } else if (path.startsWith('/api/admin/certificate-templates')) {
                 response = await handleAdminCertificateRoutes(request, env, path, method);
             } else if (path === '/api/health') {
