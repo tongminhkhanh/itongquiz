@@ -405,7 +405,7 @@ function renderOgHtml(record: any, publicToken: string): string {
     const ogDesc = studentName
         ? `${studentName} dat ${diemText}, xep loai ${xepLoai}. Xem phieu ket qua va nhan xet giao vien.`
         : 'Xem phieu ket qua va nhan xet giao vien danh cho hoc sinh.';
-    const ogImage = `https://r2.thitong.site/og/${encodeURIComponent(publicToken)}.png`;
+    const ogImage = `https://${PUBLIC_PHIEU_HOST}/p/${encodeURIComponent(publicToken)}/og-image`;
     const url = `https://${PUBLIC_PHIEU_HOST}/p/${encodeURIComponent(publicToken)}`;
     return `<!DOCTYPE html>
 <html lang="vi">

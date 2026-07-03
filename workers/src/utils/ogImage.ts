@@ -1,13 +1,11 @@
 import { initWasm, Resvg } from '@resvg/resvg-wasm';
+import wasmModule from '@resvg/resvg-wasm/index_bg.wasm';
 
-// WASM chỉ init 1 lần per isolate
+// WASM import trực tiếp (ES module, Cloudflare Workers bundler tự handle)
 let wasmInitialized = false;
 async function ensureWasm() {
     if (wasmInitialized) return;
-    const wasmArrayBuffer = await fetch(
-        'https://unpkg.com/@resvg/resvg-wasm/index_bg.wasm'
-    ).then(r => r.arrayBuffer());
-    await initWasm(wasmArrayBuffer);
+    await initWasm(wasmModule as WebAssembly.Module);
     wasmInitialized = true;
 }
 
