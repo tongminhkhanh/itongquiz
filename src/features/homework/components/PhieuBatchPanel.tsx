@@ -105,7 +105,7 @@ export const PhieuBatchPanel: React.FC<PhieuBatchPanelProps> = ({ assignment, su
         teacherId: assignment.teacher_id || 'teacher',
         title: assignment.title,
         phieuIds,
-        expiresInDays: 30,
+        expiresInDays: undefined,
       });
       setLinks(result.links);
       alert('Da xuat link phu huynh.');

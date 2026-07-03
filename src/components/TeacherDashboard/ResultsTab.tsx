@@ -19,7 +19,9 @@ import {
 import { useResults } from '../../hooks';
 import { useQuizStore } from '../../../stores/quizStore';
 import { fetchResultAnswers } from '../../services/googleSheetService';
-import { RefreshCw, Download, ChevronDown, Search, FileText, Users, BarChart } from 'lucide-react';
+import { RefreshCw, Download, ChevronDown, Search, FileText, Users, BarChart, ClipboardList } from 'lucide-react';
+import ResultRowPhieuModal from '../../features/results/components/ResultRowPhieuModal';
+import { PhieuFromResultsPanel } from '../../features/results/components/PhieuFromResultsPanel';
 import { checkAnswer } from '../../utils/question/scoring.util';
 import {
     calculateResultsStatistics,
@@ -59,6 +61,8 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
     const [activeQuizId, setActiveQuizId] = useState<string>('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [resultOverrides, setResultOverrides] = useState<Record<string, ResultDisplayOverride>>({});
+    const [showPhieuPanel, setShowPhieuPanel] = useState(false);
+    const [phieuResult, setPhieuResult] = useState<StudentResult | null>(null);
 
     const isAnswerSkipped = (value: any): boolean => (
         value === undefined ||
@@ -334,6 +338,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
     }, [navigate]);
 
     return (
+        <>
         <div className="space-y-6">
             {/* Top Filter Bar */}
             <div className="bg-white rounded-xl border p-3 md:p-4 shadow-sm">
@@ -388,6 +393,16 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                             icon={<RefreshCw className="w-4 h-4" />}
                         >
                             Làm mới
+                        </Button>
+
+                        {/* Phiếu KQ Button */}
+                        <Button
+                            onClick={() => setShowPhieuPanel(true)}
+                            variant="primary"
+                            icon={<ClipboardList className="w-4 h-4" />}
+                            disabled={filteredResults.length === 0}
+                        >
+                            Phiếu KQ
                         </Button>
 
                         {/* Export Dropdown */}
@@ -484,6 +499,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                     }}
                     onRowClick={handleViewDetail}
                     isLoading={isNavigatingDetail}
+                    onPhieuClick={(result) => setPhieuResult(result)}
                     onDeleteClick={async (result) => {
                         try {
                             await useQuizStore.getState().removeResult(result.id);
@@ -543,6 +559,28 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
             )}
 
         </div>
+
+        {/* Panel phiếu hàng loạt */}
+        {showPhieuPanel && (
+            <PhieuFromResultsPanel
+                results={filteredResults as any[]}
+                onClose={() => setShowPhieuPanel(false)}
+            />
+        )}
+
+        {/* Modal phiếu kết quả cho từng học sinh */}
+        {phieuResult && (
+            <ResultRowPhieuModal
+                result={phieuResult}
+                quizTitle={
+                    phieuResult.quizTitle ||
+                    quizzes.find(q => q.id === phieuResult.quizId)?.title ||
+                    'Bài kiểm tra'
+                }
+                onClose={() => setPhieuResult(null)}
+            />
+        )}
+        </>
     );
 };
 

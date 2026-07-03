@@ -43,3 +43,9 @@ design_preview.html
 .vercel
 .gitnexus
 workers/.wrangler/
+
+# AI Agent configs
+.agents/
+.claude/
+itongquiz/
+skills-lock.json

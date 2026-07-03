@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { StudentResult, Quiz } from '../../../types';
-import { ArrowUpDown, Eye, Trash2, Loader2 } from 'lucide-react';
+import { ArrowUpDown, Eye, Trash2, Loader2, Printer } from 'lucide-react';
 import { ResponsiveDataView } from '../../common';
 import { checkAnswer } from '../../../utils/question/scoring.util';
 
@@ -20,6 +20,8 @@ export interface ResultsTableProps {
     onRowClick?: (result: StudentResult) => void;
     onDeleteClick?: (result: StudentResult) => void;
     isLoading?: boolean;
+    /** Mở modal phiếu kết quả cho học sinh này */
+    onPhieuClick?: (result: StudentResult) => void;
 }
 
 export const ResultsTable: React.FC<ResultsTableProps> = ({
@@ -32,6 +34,7 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
     onRowClick,
     onDeleteClick,
     isLoading,
+    onPhieuClick,
 }) => {
     const isAnswerSkipped = (value: any): boolean => (
         value === undefined ||
@@ -95,11 +98,9 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
 
     // Get quiz title by ID, prioritize quizTitle from result if available
     const getQuizTitle = (result: StudentResult) => {
-        // First try to use quizTitle from result (from Google Sheets)
         if (result.quizTitle) {
             return result.quizTitle;
         }
-        // Fallback to finding quiz by ID
         const quiz = quizzes.find(q => q.id === result.quizId);
         return quiz ? quiz.title : 'Không xác định';
     };
@@ -127,8 +128,9 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
     const SortButton: React.FC<{ field: 'score' | 'submittedAt'; label: string }> = ({ field, label }) => (
         <button
             onClick={() => onSortChange(field)}
-            className={`flex items-center gap-1 font-semibold ${sortField === field ? 'text-orange-600' : 'text-gray-600'
-                }`}
+            className={`flex items-center gap-1 font-semibold ${
+                sortField === field ? 'text-orange-600' : 'text-gray-600'
+            }`}
         >
             {label}
             <ArrowUpDown className="w-3 h-3" />
@@ -142,6 +144,8 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
             </div>
         );
     }
+
+    const hasActions = onRowClick || onPhieuClick || onDeleteClick;
 
     return (
         <ResponsiveDataView
@@ -170,9 +174,9 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                                 <th className="px-4 py-3 text-right">
                                     <SortButton field="submittedAt" label="Thời gian" />
                                 </th>
-                                {onRowClick && (
+                                {hasActions && (
                                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">
-                                        Chi tiết
+                                        Thao tác
                                     </th>
                                 )}
                             </tr>
@@ -210,24 +214,38 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                                             {formatDate(result.submittedAt)}
                                         </span>
                                     </td>
-                                    {onRowClick && (
+                                    {hasActions && (
                                         <td className="px-4 py-3 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onRowClick(result);
-                                                    }}
-                                                    className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50"
-                                                    title="Xem chi tiết"
-                                                    disabled={isLoading}
-                                                >
-                                                    {isLoading ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : (
-                                                        <Eye className="w-4 h-4" />
-                                                    )}
-                                                </button>
+                                            <div className="flex items-center justify-center gap-1">
+                                                {onRowClick && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onRowClick(result);
+                                                        }}
+                                                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50"
+                                                        title="Xem chi tiết"
+                                                        disabled={isLoading}
+                                                    >
+                                                        {isLoading ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                        ) : (
+                                                            <Eye className="w-4 h-4" />
+                                                        )}
+                                                    </button>
+                                                )}
+                                                {onPhieuClick && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onPhieuClick(result);
+                                                        }}
+                                                        className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
+                                                        title="Xuất phiếu kết quả"
+                                                    >
+                                                        <Printer className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                                 {onDeleteClick && (
                                                     <button
                                                         onClick={(e) => {
@@ -273,7 +291,7 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                         <span>{getDisplayedCorrectCount(displayResult)}/{getDisplayedTotalQuestions(displayResult)} câu đúng</span>
                         <span>{formatDate(result.submittedAt)}</span>
                     </div>
-                    {(onRowClick || onDeleteClick) && (
+                    {hasActions && (
                         <div className="flex items-center justify-end gap-2 pt-1">
                             {onRowClick && (
                                 <button
@@ -286,6 +304,18 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
                                 >
                                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
                                     Chi tiết
+                                </button>
+                            )}
+                            {onPhieuClick && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onPhieuClick(result);
+                                    }}
+                                    className="h-11 px-4 rounded-xl bg-orange-50 text-orange-700 font-semibold text-sm inline-flex items-center gap-2"
+                                >
+                                    <Printer className="w-4 h-4" />
+                                    Phiếu
                                 </button>
                             )}
                             {onDeleteClick && (

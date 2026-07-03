@@ -1,0 +1,32 @@
+{
+  "goal": "Thêm tính năng 'Link phụ huynh vĩnh viễn có thể thu hồi' vào trang Kết quả (BT trắc nghiệm) — tái sử dụng toàn bộ service có sẵn từ Bài tập tự luận",
+  "steps": [
+    {
+      "text": "TASK 1 — Fix expiresInDays: Sửa PhieuBatchPanel.tsx đổi expiresInDays: 30 → undefined (link vĩnh viễn, không tự hết hạn)",
+      "done": true
+    },
+    {
+      "text": "TASK 2 — Thêm type PublishResultLinkInput: Mở rộng phieu.types.ts thêm interface cho kết quả BT trắc nghiệm (submission_id của results, không phải homework)",
+      "done": false
+    },
+    {
+      "text": "TASK 3 — Tạo resultPhieuLinkService.ts: Service gọi API publish_phieu_batch + deactivate_public_phieu_link tái sử dụng callApi, đặt tại src/features/results/services/",
+      "done": false
+    },
+    {
+      "text": "TASK 4 — Tạo component PhieuLinkSection.tsx: UI hiển thị nút 'Xuất link phụ huynh', danh sách link đã tạo, nút Copy, nút Thu hồi — đặt tại src/features/results/components/",
+      "done": false
+    },
+    {
+      "text": "TASK 5 — Tích hợp vào ResultRowPhieuModal.tsx: Import PhieuLinkSection vào modal phiếu kết quả, truyền submission data, render bên dưới phần lời động viên",
+      "done": false
+    },
+    {
+      "text": "TASK 6 — Kiểm tra & commit: Chạy lint/build, test thủ công luồng tạo link → copy → thu hồi, commit theo conventional commits",
+      "done": false
+    }
+  ],
+  "created": "2026-07-03T01:59:44.492Z",
+  "updated": "2026-07-03T01:59:59.569Z",
+  "status": "in_progress"
+}
