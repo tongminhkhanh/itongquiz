@@ -1,6 +1,6 @@
 /**
  * ShareBar
- * Nút chia sẻ phiếu kết quả qua Facebook, Zalo, Native Share (mobile), và Copy link.
+ * Nút chia sẻ phiếu kết quả qua Facebook, Native Share (mobile), và Copy link.
  *
  * Props:
  *   url          — URL đầy đủ của phiếu cần chia sẻ
@@ -40,12 +40,6 @@ const ShareBar: React.FC<ShareBarProps> = ({ url, studentName, title }) => {
     window.open(fbUrl, '_blank', 'noopener,noreferrer,width=600,height=400');
   }, [url]);
 
-  // --- Zalo ---
-  const handleZalo = useCallback(() => {
-    const zaloUrl = `https://zalo.me/share?url=${encodeURIComponent(url)}&title=${encodeURIComponent(shareTitle)}`;
-    window.open(zaloUrl, '_blank', 'noopener,noreferrer,width=600,height=400');
-  }, [url, shareTitle]);
-
   // --- Copy link ---
   const handleCopy = useCallback(async () => {
     await navigator.clipboard.writeText(url);
@@ -81,17 +75,6 @@ const ShareBar: React.FC<ShareBarProps> = ({ url, studentName, title }) => {
             Facebook
           </button>
 
-          {/* Zalo */}
-          <button
-            onClick={handleZalo}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg transition-colors"
-            style={{ background: '#0068FF' }}
-          >
-            <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm4.9 16.1c-.7.3-1.5.5-2.3.5-1.1 0-2.2-.3-3.1-.9-.5.1-2.9.8-3.2.9-.3 0-.4-.1-.3-.4l.7-2.2c-1-1.1-1.6-2.5-1.6-4 0-3.3 2.7-6 6-6s6 2.7 6 6c0 2.2-1.2 4.2-3.2 5.1z" />
-            </svg>
-            Zalo
-          </button>
         </>
       )}
 
