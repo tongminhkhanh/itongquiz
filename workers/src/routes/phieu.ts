@@ -425,6 +425,7 @@ function renderOgHtml(record: any, publicToken: string): string {
   <meta name="twitter:title" content="${ogTitle}"/>
   <meta name="twitter:description" content="${ogDesc}"/>
   <meta name="twitter:image" content="${ogImage}"/>
+  <meta http-equiv="refresh" content="0;url=${url}"/>
 </head>
 <body>
   <h1>${ogTitle}</h1>
