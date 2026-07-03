@@ -5,6 +5,7 @@ import { Button } from '../components/common';
 import { PhieuKetQuaCardV2 } from '../features/results/components/PhieuKetQuaCardV2';
 import { phieuService } from '../features/homework/services/phieuService';
 import { PublicPhieuResult } from '../features/homework/types/phieu.types';
+import ShareBar from '../features/results/components/ShareBar';
 
 const PhieuPublicPage: React.FC = () => {
   const { publicToken } = useParams<{ publicToken: string }>();
@@ -80,6 +81,15 @@ const PhieuPublicPage: React.FC = () => {
           editable={false}
           tenGVCN={data.phieu.created_by ?? ''}
         />
+
+        {/* Chia sẻ phiếu — ẩn khi in */}
+        <div className="print:hidden">
+          <ShareBar
+            url={`${window.location.origin}/phieu/${publicToken}`}
+            studentName={data.phieu.student_name}
+            title={`Phiếu kết quả bài tập của ${data.phieu.student_name}`}
+          />
+        </div>
 
       </div>
     </main>
