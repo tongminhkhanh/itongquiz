@@ -63,6 +63,62 @@ const InfoRow: React.FC<{ label: string; value?: string | number; bold?: boolean
   </div>
 );
 
+// Editable version of InfoRow — renders an input instead of a static span
+const EditableInfoRow: React.FC<{
+  label: string; value: string; onChange: (v: string) => void; bold?: boolean;
+}> = ({ label, value, onChange, bold }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 13 }}>
+    <span style={{ fontWeight: 700, color: '#334155', whiteSpace: 'nowrap', minWidth: 130, flexShrink: 0 }}>
+      {label}:
+    </span>
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        flex: 1,
+        border: 'none',
+        borderBottom: '1.5px solid #3b82f6',
+        background: 'transparent',
+        fontSize: 13,
+        fontWeight: bold ? 800 : 600,
+        color: '#1e293b',
+        outline: 'none',
+        padding: '1px 2px',
+        minWidth: 0,
+      }}
+    />
+  </div>
+);
+
+// Editable compact version for short labels (e.g. "Lớp")
+const EditableInfoRowCompact: React.FC<{
+  label: string; value: string; onChange: (v: string) => void;
+}> = ({ label, value, onChange }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8, fontSize: 13 }}>
+    <span style={{ fontWeight: 700, color: '#334155', whiteSpace: 'nowrap', flexShrink: 0 }}>
+      {label}:
+    </span>
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        flex: 1,
+        border: 'none',
+        borderBottom: '1.5px solid #3b82f6',
+        background: 'transparent',
+        fontSize: 13,
+        fontWeight: 600,
+        color: '#1e293b',
+        outline: 'none',
+        padding: '1px 2px',
+        minWidth: 0,
+      }}
+    />
+  </div>
+);
+
 // Compact version for short labels (e.g. "Lớp") — no fixed minWidth
 const InfoRowCompact: React.FC<{ label: string; value?: string | number }> = ({ label, value }) => (
   <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 8, fontSize: 13 }}>
@@ -249,14 +305,39 @@ export const PhieuBTCard: React.FC<Props> = ({
         {/* Họ tên + Lớp cùng hàng */}
         <div style={{ display: 'flex', gap: 16 }}>
           <div style={{ flex: 2 }}>
-            <InfoRow label="Họ và tên" value={phieu.student_name} bold />
+            {editable ? (
+              <EditableInfoRow
+                label="Họ và tên"
+                value={phieu.student_name ?? ''}
+                onChange={(v) => update('student_name', v)}
+                bold
+              />
+            ) : (
+              <InfoRow label="Họ và tên" value={phieu.student_name} bold />
+            )}
           </div>
           <div style={{ flex: 1 }}>
-            <InfoRowCompact label="Lớp" value={phieu.class_id} />
+            {editable ? (
+              <EditableInfoRowCompact
+                label="Lớp"
+                value={phieu.class_id ?? ''}
+                onChange={(v) => update('class_id', v)}
+              />
+            ) : (
+              <InfoRowCompact label="Lớp" value={phieu.class_id} />
+            )}
           </div>
         </div>
 
-        <InfoRow label="Môn học"          value={phieu.mon_hoc}     />
+        {editable ? (
+          <EditableInfoRow
+            label="Môn học"
+            value={phieu.mon_hoc ?? ''}
+            onChange={(v) => update('mon_hoc', v)}
+          />
+        ) : (
+          <InfoRow label="Môn học" value={phieu.mon_hoc} />
+        )}
         <InfoRow label="Tên bài kiểm tra" value={phieu.ten_bai_tap} />
         <InfoRow label="Ngày làm bài"     value={ngay}              />
       </div>

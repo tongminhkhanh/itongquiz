@@ -126,6 +126,7 @@ const PhieuLinkSection: React.FC<Props> = ({ phieuInput, savedPhieu, onPhieuSave
           Tạo link vĩnh viễn để phụ huynh xem phiếu kết quả. Có thể thu hồi bất cứ lúc nào.
         </p>
       )}
+
     </div>
   );
 };
