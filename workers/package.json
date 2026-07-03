@@ -29,6 +29,7 @@
         "rag:sync:remote": "node scripts/rag-sync.cjs --remote"
     },
     "dependencies": {
+        "@resvg/resvg-wasm": "^2.6.2",
         "jose": "^5.2.0",
         "nanoid": "^5.1.5",
         "zod": "^4.2.1"

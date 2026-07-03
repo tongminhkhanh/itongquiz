@@ -37,7 +37,7 @@ export default {
         const path = url.pathname;
         const method = request.method;
 
-        const phieuSubdomainResponse = await handlePhieuSubdomain(request, env.DB);
+        const phieuSubdomainResponse = await handlePhieuSubdomain(request, env);
         if (phieuSubdomainResponse) return addCors(phieuSubdomainResponse, request);
 
         const publicPhieuResponse = await handlePublicPhieuApi(env.DB, path, method);
@@ -242,5 +242,5 @@ async function handleLegacyGasRequest(request: Request, env: Env): Promise<Respo
     const action = body.action;
     const db = env.DB;
 
-    return await handleLegacyAction(db, action, body);
+    return await handleLegacyAction(db, action, body, env.OG_IMAGES);
 }

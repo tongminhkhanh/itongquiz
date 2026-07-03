@@ -13,6 +13,10 @@ binding = "DB"
 database_name = "itongquiz-db"
 database_id = "340c3a89-3941-43b1-bc81-fb37b8b6ac00"
 
+[[r2_buckets]]
+binding = "OG_IMAGES"
+bucket_name = "phieu-og-images"
+
 [[routes]]
 pattern = "phieu.thitong.site/*"
 zone_name = "thitong.site"
@@ -23,6 +27,7 @@ zone_name = "thitong.site"
 
 [vars]
 CLIPROXY_API = "https://api.thitong.site/v1"
+R2_PUBLIC_URL = "https://r2.thitong.site"
 
 # Cron triggers
 [triggers]

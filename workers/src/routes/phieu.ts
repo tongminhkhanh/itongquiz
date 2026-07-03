@@ -1,13 +1,17 @@
 import { errorResponse, jsonResponse } from '../utils/response';
+import { renderOgPng, PhieuRecord } from '../utils/ogImage';
+import { Env } from '../types';
 
 const PUBLIC_PHIEU_HOST = 'phieu.thitong.site';
 const PUBLIC_APP_ORIGIN = 'https://thitong.site';
 
-export async function handlePhieuSubdomain(request: Request, db: D1Database): Promise<Response | null> {
+export async function handlePhieuSubdomain(request: Request, env: Env): Promise<Response | null> {
+    const db = env.DB;
     const url = new URL(request.url);
     if (url.hostname !== PUBLIC_PHIEU_HOST) return null;
 
-    const [scope, publicToken] = url.pathname.replace(/^\//, '').split('/');
+    const pathParts = url.pathname.replace(/^\//, '').split('/');
+    const [scope, publicToken, subpath] = pathParts;
     if (scope !== 'p' || !publicToken) {
         return null;
     }
@@ -17,8 +21,35 @@ export async function handlePhieuSubdomain(request: Request, db: D1Database): Pr
         return new Response('Phieu da het han hoac khong ton tai', { status: 404 });
     }
 
+    // Serve OG image PNG (R2 cached)
+    if (subpath === 'og-image') {
+        const r2Key = `og/${publicToken}.png`;
+        const cached = await env.OG_IMAGES.get(r2Key);
+        if (cached) {
+            return new Response(cached.body, {
+                headers: {
+                    'Content-Type': 'image/png',
+                    'Cache-Control': 'public, max-age=604800',
+                    'X-Cache': 'HIT',
+                },
+            });
+        }
+        const png = await renderOgPng(record as PhieuRecord);
+        // Store in R2 non-blocking
+        env.OG_IMAGES.put(r2Key, png, {
+            httpMetadata: { contentType: 'image/png', cacheControl: 'public, max-age=604800' },
+        });
+        return new Response(png, {
+            headers: {
+                'Content-Type': 'image/png',
+                'Cache-Control': 'public, max-age=604800',
+                'X-Cache': 'MISS',
+            },
+        });
+    }
+
     const userAgent = request.headers.get('User-Agent') || '';
-    const isBot = /bot|crawl|facebookexternalhit|zalo|telegram|twitter|linkedin/i.test(userAgent);
+    const isBot = /bot|crawl|spider|facebookexternalhit|zalo|zalocrawler|telegram|whatsapp|viber|slack|twitter|linkedin|line|kakaotalk|discordbot|iframely/i.test(userAgent);
 
     await db.prepare('UPDATE phieu_public_links SET view_count = view_count + 1 WHERE public_token = ?')
         .bind(publicToken)
@@ -64,7 +95,7 @@ export async function handlePublicPhieuApi(db: D1Database, path: string, method:
     });
 }
 
-export async function handleUpsertPhieu(db: D1Database, body: any): Promise<Response> {
+export async function handleUpsertPhieu(db: D1Database, body: any, ogImages?: R2Bucket): Promise<Response> {
     const data = body.data || body;
     if (!data.submission_id) return errorResponse('Missing submission_id');
     if (!data.student_id) return errorResponse('Missing student_id');
@@ -144,6 +175,16 @@ export async function handleUpsertPhieu(db: D1Database, body: any): Promise<Resp
     }
 
     const saved = await db.prepare('SELECT * FROM phieu_nhanxet WHERE id = ?').bind(id).first<any>();
+
+    // Invalidate R2 OG cache on update
+    if (ogImages) {
+        const link = await db.prepare('SELECT public_token FROM phieu_public_links WHERE phieu_id = ?')
+            .bind(id).first<{ public_token: string }>();
+        if (link?.public_token) {
+            await ogImages.delete(`og/${link.public_token}.png`);
+        }
+    }
+
     return jsonResponse({ status: 'success', data: mapPhieu(saved) });
 }
 
@@ -275,32 +316,118 @@ function getXepLoai(score: number): string {
     return 'Yeu';
 }
 
+function renderOgImageSvg(record: any): string {
+    const name = escapeHtml(record.student_name || 'Hoc sinh');
+    const diem = Number(record.diem_so) || 0;
+    const diemText = diem % 1 === 0 ? `${diem}.0` : `${diem}`;
+    const xepLoai = escapeHtml(record.xep_loai || 'Trung binh');
+    const tenBai = escapeHtml(record.batch_title || record.ten_bai_tap || 'Phieu Ket Qua Hoc Tap');
+
+    const xepLoaiColors: Record<string, string> = {
+        'Xuat sac': '#22c55e',
+        'Gioi': '#60a5fa',
+        'Kha': '#f59e0b',
+        'Trung binh': '#f97316',
+        'Yeu': '#ef4444',
+    };
+    const badgeColor = xepLoaiColors[record.xep_loai] || '#818cf8';
+
+    // Truncate long names
+    const displayName = name.length > 28 ? name.slice(0, 26) + '...' : name;
+    const displayBai = tenBai.length > 50 ? tenBai.slice(0, 48) + '...' : tenBai;
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f2044"/>
+      <stop offset="100%" stop-color="#0a1628"/>
+    </linearGradient>
+    <linearGradient id="scoreGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+
+  <!-- Decorative glow circles -->
+  <circle cx="1080" cy="100" r="220" fill="#6366f1" fill-opacity="0.07"/>
+  <circle cx="120" cy="530" r="180" fill="#3b82f6" fill-opacity="0.06"/>
+
+  <!-- Top accent bar -->
+  <rect x="0" y="0" width="1200" height="6" fill="#6366f1"/>
+
+  <!-- Brand -->
+  <text x="60" y="72" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="bold" fill="#818cf8">ThiTong.site</text>
+  <text x="60" y="108" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#475569">Phieu Ket Qua Hoc Tap</text>
+
+  <!-- Bai tap -->
+  <text x="60" y="155" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#64748b">${displayBai}</text>
+
+  <!-- Divider -->
+  <line x1="60" y1="175" x2="1140" y2="175" stroke="#1e3a5f" stroke-width="1.5"/>
+
+  <!-- Student name -->
+  <text x="60" y="270" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="bold" fill="#f1f5f9">${displayName}</text>
+
+  <!-- Bottom section divider -->
+  <line x1="60" y1="310" x2="1140" y2="310" stroke="#1e3a5f" stroke-width="1"/>
+
+  <!-- Score label -->
+  <text x="60" y="370" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#64748b">Diem so</text>
+  <!-- Score value -->
+  <text x="60" y="470" font-family="Arial, Helvetica, sans-serif" font-size="110" font-weight="bold" fill="url(#scoreGrad)">${diemText}</text>
+  <text x="240" y="470" font-family="Arial, Helvetica, sans-serif" font-size="48" fill="#94a3b8">/10</text>
+
+  <!-- Xep loai badge -->
+  <rect x="720" y="345" width="420" height="140" rx="20" fill="${badgeColor}" fill-opacity="0.12"/>
+  <rect x="720" y="345" width="420" height="140" rx="20" stroke="${badgeColor}" stroke-width="2.5" fill="none"/>
+  <text x="930" y="400" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#94a3b8" text-anchor="middle">Xep loai</text>
+  <text x="930" y="465" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="bold" fill="${badgeColor}" text-anchor="middle">${xepLoai}</text>
+
+  <!-- Footer -->
+  <text x="60" y="600" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#1e3a5f">phieu.thitong.site</text>
+  <text x="1140" y="600" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#1e3a5f" text-anchor="end">iTong Quiz</text>
+</svg>`;
+}
+
 function renderOgHtml(record: any, publicToken: string): string {
     const title = escapeHtml(record.batch_title || record.ten_bai_tap || 'Phieu Ket Qua Hoc Tap');
+    const studentName = escapeHtml(record.student_name || '');
+    const diem = Number(record.diem_so) || 0;
+    const diemText = diem % 1 === 0 ? `${diem}.0/10` : `${diem}/10`;
+    const xepLoai = escapeHtml(record.xep_loai || '');
+    const ogTitle = studentName ? `${studentName} - ${diemText} (${xepLoai})` : title;
+    const ogDesc = studentName
+        ? `${studentName} dat ${diemText}, xep loai ${xepLoai}. Xem phieu ket qua va nhan xet giao vien.`
+        : 'Xem phieu ket qua va nhan xet giao vien danh cho hoc sinh.';
+    const ogImage = `https://r2.thitong.site/og/${encodeURIComponent(publicToken)}.png`;
     const url = `https://${PUBLIC_PHIEU_HOST}/p/${encodeURIComponent(publicToken)}`;
     return `<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>${title} | ThiTong</title>
-  <meta name="description" content="Xem phieu ket qua va nhan xet giao vien danh cho hoc sinh."/>
+  <title>${ogTitle} | ThiTong</title>
+  <meta name="description" content="${ogDesc}"/>
   <meta property="og:type" content="website"/>
   <meta property="og:site_name" content="ThiTong"/>
-  <meta property="og:title" content="${title}"/>
-  <meta property="og:description" content="Xem phieu ket qua va nhan xet giao vien danh cho hoc sinh."/>
-  <meta property="og:image" content="https://thitong.site/og-phieu.png"/>
+  <meta property="og:title" content="${ogTitle}"/>
+  <meta property="og:description" content="${ogDesc}"/>
+  <meta property="og:image" content="${ogImage}"/>
   <meta property="og:image:width" content="1200"/>
   <meta property="og:image:height" content="630"/>
+  <meta property="og:image:type" content="image/png"/>
   <meta property="og:url" content="${url}"/>
   <meta property="og:locale" content="vi_VN"/>
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="${title}"/>
-  <meta name="twitter:description" content="Xem phieu ket qua va nhan xet giao vien danh cho hoc sinh."/>
-  <meta name="twitter:image" content="https://thitong.site/og-phieu.png"/>
+  <meta name="twitter:title" content="${ogTitle}"/>
+  <meta name="twitter:description" content="${ogDesc}"/>
+  <meta name="twitter:image" content="${ogImage}"/>
 </head>
 <body>
-  <h1>${title}</h1>
+  <h1>${ogTitle}</h1>
   <p>Dang chuyen huong den phieu ket qua...</p>
 </body>
 </html>`;

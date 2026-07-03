@@ -8,7 +8,7 @@ import {
     handleUpsertPhieu,
 } from './phieu';
 
-export async function handleLegacyAction(db: D1Database, action: string, body: any): Promise<Response> {
+export async function handleLegacyAction(db: D1Database, action: string, body: any, ogImages?: R2Bucket): Promise<Response> {
     switch (action) {
         // --- Teachers ---
         case 'get_teachers': {
@@ -229,7 +229,7 @@ export async function handleLegacyAction(db: D1Database, action: string, body: a
 
         // --- Phiếu kết quả nhận xét ---
         case 'upsert_phieu':
-            return await handleUpsertPhieu(db, body);
+            return await handleUpsertPhieu(db, body, ogImages);
 
         case 'get_phieu_by_submission':
             return await handleGetPhieuBySubmission(db, body);
