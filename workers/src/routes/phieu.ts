@@ -205,8 +205,11 @@ export async function handlePublishPhieuBatch(db: D1Database, body: any): Promis
 
     const now = new Date().toISOString();
     const batchId = `pb-${crypto.randomUUID().slice(0, 12)}`;
-    const expiresInDays = Number(data.expiresInDays) || 30;
-    const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
+    // undefined / null / NaN → link vĩnh viễn (expires_at = NULL)
+    const rawDays = data.expiresInDays != null ? Number(data.expiresInDays) : NaN;
+    const expiresAt = Number.isFinite(rawDays) && rawDays > 0
+        ? new Date(Date.now() + rawDays * 24 * 60 * 60 * 1000).toISOString()
+        : null;
 
     await db.prepare(`
         INSERT INTO phieu_batch (id, assignment_id, class_id, teacher_id, title, created_at, expires_at, view_count, is_active)

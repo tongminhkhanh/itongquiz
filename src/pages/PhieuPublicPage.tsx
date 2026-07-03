@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { WORKERS_API_URL } from '../config/constants';
 import { Loader2, Printer } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { Button } from '../components/common';
@@ -85,7 +86,7 @@ const PhieuPublicPage: React.FC = () => {
         {/* Chia sẻ phiếu — ẩn khi in */}
         <div className="print:hidden">
           <ShareBar
-            url={`${window.location.origin}/phieu/${publicToken}`}
+            url={`${WORKERS_API_URL}/p/${publicToken}`}
             studentName={data.phieu.student_name}
             title={`Phiếu kết quả bài tập của ${data.phieu.student_name}`}
           />
