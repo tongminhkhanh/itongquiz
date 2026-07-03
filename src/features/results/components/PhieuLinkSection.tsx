@@ -17,10 +17,16 @@ interface Props {
   savedPhieu?: PhieuNhanXet | null;
   /** Callback để modal cập nhật savedPhieu sau khi upsert xong */
   onPhieuSaved?: (phieu: PhieuNhanXet) => void;
+  /** Link đã xuất trước đó — để hiển thị lại khi mở lại modal */
+  existingLink?: PhieuPublicLink | null;
+  /** Callback khi link mới được tạo — để lưu lên parent */
+  onLinkPublished?: (link: PhieuPublicLink) => void;
+  /** Callback khi link bị thu hồi — để xoá khỏi parent cache */
+  onLinkRevoked?: () => void;
 }
 
-const PhieuLinkSection: React.FC<Props> = ({ phieuInput, savedPhieu, onPhieuSaved }) => {
-  const [link, setLink]           = useState<PhieuPublicLink | null>(null);
+const PhieuLinkSection: React.FC<Props> = ({ phieuInput, savedPhieu, onPhieuSaved, existingLink, onLinkPublished, onLinkRevoked }) => {
+  const [link, setLink]           = useState<PhieuPublicLink | null>(existingLink ?? null);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isRevoking,   setIsRevoking]   = useState(false);
   const [copied,       setCopied]       = useState(false);
@@ -36,6 +42,7 @@ const PhieuLinkSection: React.FC<Props> = ({ phieuInput, savedPhieu, onPhieuSave
       });
       onPhieuSaved?.(phieu);
       setLink(newLink);
+      onLinkPublished?.(newLink);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lỗi không xác định');
     } finally {
@@ -57,6 +64,7 @@ const PhieuLinkSection: React.FC<Props> = ({ phieuInput, savedPhieu, onPhieuSave
     try {
       await resultPhieuLinkService.revokeLink(link.publicToken);
       setLink(null);
+      onLinkRevoked?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lỗi không xác định');
     } finally {

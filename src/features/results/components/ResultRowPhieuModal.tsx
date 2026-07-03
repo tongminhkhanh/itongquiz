@@ -9,7 +9,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { X, Printer, FileDown, ImageDown, Loader2, Sparkles } from 'lucide-react';
 import type { StudentResult } from '../../../types';
-import type { PhieuNhanXetInput, PhieuNhanXet } from '../../homework/types/phieu.types';
+import type { PhieuNhanXetInput, PhieuNhanXet, PhieuPublicLink } from '../../homework/types/phieu.types';
 import { buildPhieuFromResult } from '../utils/buildPhieuFromResult';
 import { exportPhieuAsPDF, exportPhieuAsImage } from '../utils/exportPhieu';
 import { useAuthStore } from '../../../../stores/authStore';
@@ -19,17 +19,30 @@ import PhieuLinkSection from './PhieuLinkSection';
 interface Props {
   result: StudentResult;
   quizTitle: string;
+  initialSavedPhieu?: PhieuNhanXet | null;
+  initialPublishedLink?: PhieuPublicLink | null;
+  onSavedPhieuChange?: (p: PhieuNhanXet | null) => void;
+  onPublishedLinkChange?: (l: PhieuPublicLink | null) => void;
   onClose: () => void;
 }
 
-const ResultRowPhieuModal: React.FC<Props> = ({ result, quizTitle, onClose }) => {
-  const { username } = useAuthStore();
+const ResultRowPhieuModal: React.FC<Props> = ({
+  result, quizTitle, onClose,
+  initialSavedPhieu, initialPublishedLink,
+  onSavedPhieuChange, onPublishedLinkChange,
+}) => {
+  const { username, teacherName } = useAuthStore();
   const phieuRef = useRef<HTMLDivElement>(null);
   const [loadingPDF, setLoadingPDF]   = useState(false);
   const [loadingPNG, setLoadingPNG]   = useState(false);
   const [loadingAI,  setLoadingAI]    = useState(false);
   // savedPhieu: khi được lưu lên server thì có id — dùng cho xuất link
-  const [savedPhieu, setSavedPhieu]   = useState<PhieuNhanXet | null>(null);
+  const [savedPhieu, setSavedPhieu]   = useState<PhieuNhanXet | null>(initialSavedPhieu ?? null);
+  const [publishedLink, setPublishedLink] = useState<PhieuPublicLink | null>(initialPublishedLink ?? null);
+
+  const handleSavedPhieu   = (p: PhieuNhanXet)      => { setSavedPhieu(p);   onSavedPhieuChange?.(p); };
+  const handlePublishedLink = (l: PhieuPublicLink)   => { setPublishedLink(l); onPublishedLinkChange?.(l); };
+  const handleRevoke        = ()                     => { setPublishedLink(null); onPublishedLinkChange?.(null); };
 
   // Local editable state — khởi tạo từ builder
   const [phieu, setPhieu] = useState<PhieuNhanXetInput>(() =>
@@ -39,8 +52,9 @@ const ResultRowPhieuModal: React.FC<Props> = ({ result, quizTitle, onClose }) =>
   const studentName = result.studentName ?? 'hoc_sinh';
 
   // Merge partial update từ PhieuBTCard onChange
+  // Luôn đánh dấu 'manual' để server không overwrite nội dung giáo viên đã sửa
   const handleChange = useCallback((patch: Partial<PhieuNhanXetInput>) => {
-    setPhieu((prev) => ({ ...prev, ...patch }));
+    setPhieu((prev) => ({ ...prev, ...patch, nhan_xet_mode: 'manual' }));
   }, []);
 
   // Tái tạo nhận xét AI (gọi lại buildPhieu với style mới hoặc cùng style)
@@ -149,7 +163,7 @@ const ResultRowPhieuModal: React.FC<Props> = ({ result, quizTitle, onClose }) =>
             phieu={phieu}
             editable={true}
             onChange={handleChange}
-            tenGVCN={username ?? ''}
+            tenGVCN={teacherName ?? username ?? ''}
           />
         </div>
 
@@ -157,7 +171,10 @@ const ResultRowPhieuModal: React.FC<Props> = ({ result, quizTitle, onClose }) =>
         <PhieuLinkSection
           phieuInput={phieu}
           savedPhieu={savedPhieu}
-          onPhieuSaved={setSavedPhieu}
+          onPhieuSaved={handleSavedPhieu}
+          existingLink={publishedLink}
+          onLinkPublished={handlePublishedLink}
+          onLinkRevoked={handleRevoke}
         />
 
         {/* ── Footer actions ── */}

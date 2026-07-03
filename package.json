@@ -7,13 +7,14 @@
     "dev": "vite",
     "sitemap:generate": "node scripts/generate_sitemap.cjs",
     "build": "npm run sitemap:generate && vite build",
-    "preview": "vite preview",
+    "preview": "npm run build && wrangler dev",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "cypress": "cypress open",
     "cypress:run": "cypress run",
-    "learn:sonlaedu": "node scripts/auto_learn_sonla.mjs"
+    "learn:sonlaedu": "node scripts/auto_learn_sonla.mjs",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -43,6 +44,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.43.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
@@ -60,7 +62,8 @@
     "tailwindcss": "^4.1.18",
     "typescript": "~5.8.2",
     "vite": "^6.4.2",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "wrangler": "^4.107.0"
   },
   "overrides": {
     "uuid": ">=14.0.0"

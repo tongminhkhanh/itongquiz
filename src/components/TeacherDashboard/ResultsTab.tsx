@@ -23,6 +23,8 @@ import { RefreshCw, Download, ChevronDown, Search, FileText, Users, BarChart, Cl
 import ResultRowPhieuModal from '../../features/results/components/ResultRowPhieuModal';
 import { PhieuFromResultsPanel } from '../../features/results/components/PhieuFromResultsPanel';
 import { checkAnswer } from '../../utils/question/scoring.util';
+import type { PhieuNhanXet, PhieuPublicLink } from '../../features/homework/types/phieu.types';
+import { resultPhieuLinkService } from '../../features/results/services/resultPhieuLinkService';
 import {
     calculateResultsStatistics,
     analyzeQuestionDifficulty,
@@ -63,6 +65,29 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
     const [resultOverrides, setResultOverrides] = useState<Record<string, ResultDisplayOverride>>({});
     const [showPhieuPanel, setShowPhieuPanel] = useState(false);
     const [phieuResult, setPhieuResult] = useState<StudentResult | null>(null);
+    // Cache {savedPhieu, publishedLink} theo submission_id — tồn tại qua lần đóng/mở modal
+    const [phieuCache, setPhieuCache] = useState<Record<string, { savedPhieu: PhieuNhanXet | null; publishedLink: PhieuPublicLink | null }>>({});
+
+    const handleOpenPhieu = async (result: StudentResult) => {
+        setPhieuResult(result);
+        const sid = result.submissionId ?? result.id;
+        if (!sid || phieuCache[sid] !== undefined) return; // đã fetch hoặc không có id
+        try {
+            const fetched = await resultPhieuLinkService.getActiveLinkBySubmission(sid);
+            setPhieuCache(prev => ({
+                ...prev,
+                [sid]: fetched
+                    ? { savedPhieu: fetched.phieu, publishedLink: fetched.link }
+                    : { savedPhieu: null, publishedLink: null },
+            }));
+        } catch {
+            setPhieuCache(prev => ({ ...prev, [sid]: { savedPhieu: null, publishedLink: null } }));
+        }
+    };
+
+    const handlePhieuCacheUpdate = (sid: string, patch: Partial<{ savedPhieu: PhieuNhanXet | null; publishedLink: PhieuPublicLink | null }>) => {
+        setPhieuCache(prev => ({ ...prev, [sid]: { ...(prev[sid] ?? { savedPhieu: null, publishedLink: null }), ...patch } }));
+    };
 
     const isAnswerSkipped = (value: any): boolean => (
         value === undefined ||
@@ -499,7 +524,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
                     }}
                     onRowClick={handleViewDetail}
                     isLoading={isNavigatingDetail}
-                    onPhieuClick={(result) => setPhieuResult(result)}
+                    onPhieuClick={handleOpenPhieu}
                     onDeleteClick={async (result) => {
                         try {
                             await useQuizStore.getState().removeResult(result.id);
@@ -569,17 +594,25 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
         )}
 
         {/* Modal phiếu kết quả cho từng học sinh */}
-        {phieuResult && (
-            <ResultRowPhieuModal
-                result={phieuResult}
-                quizTitle={
-                    phieuResult.quizTitle ||
-                    quizzes.find(q => q.id === phieuResult.quizId)?.title ||
-                    'Bài kiểm tra'
-                }
-                onClose={() => setPhieuResult(null)}
-            />
-        )}
+        {phieuResult && (() => {
+            const sid = phieuResult.submissionId ?? phieuResult.id ?? '';
+            const cache = phieuCache[sid] ?? { savedPhieu: null, publishedLink: null };
+            return (
+                <ResultRowPhieuModal
+                    result={phieuResult}
+                    quizTitle={
+                        phieuResult.quizTitle ||
+                        quizzes.find(q => q.id === phieuResult.quizId)?.title ||
+                        'Bài kiểm tra'
+                    }
+                    initialSavedPhieu={cache.savedPhieu}
+                    initialPublishedLink={cache.publishedLink}
+                    onSavedPhieuChange={(p) => handlePhieuCacheUpdate(sid, { savedPhieu: p })}
+                    onPublishedLinkChange={(l) => handlePhieuCacheUpdate(sid, { publishedLink: l })}
+                    onClose={() => setPhieuResult(null)}
+                />
+            );
+        })()}
         </>
     );
 };

@@ -14,14 +14,13 @@ interface ResultRow {
   quiz_id: string;
   quiz_title: string;
   score: number;
-  correctCount: number;
+  correctCount?: number;
   total_questions: number;
   submitted_at: string;
   'Student Name'?: string;
   'Class'?: string;
   'Quiz Title'?: string;
   'Score'?: number;
-  'correctCount'?: number;
   'Total Questions'?: number;
   'Submitted At'?: string;
 }
@@ -137,12 +136,22 @@ export const PhieuFromResultsPanel: React.FC<Props> = ({ results, onClose }) => 
   };
 
   const handlePublish = async () => {
-    const phieuIds = Object.values(drafts)
-      .filter((p): p is PhieuNhanXet => Boolean((p as PhieuNhanXet).id))
-      .map((p) => p.id);
-    if (phieuIds.length === 0) return alert('Chưa có phiếu nào để xuất link.');
+    if (Object.keys(drafts).length === 0) return alert('Chưa có phiếu nào để xuất link.');
     setIsPublishing(true);
     try {
+      // Auto-save: sync mọi draft (kể cả đã có id lẫn chưa có) lên server
+      // để đảm bảo nội dung giáo viên vừa sửa được lưu trước khi publish
+      const syncedDrafts: Record<string, PhieuNhanXet> = {};
+      for (const [id, phieu] of Object.entries(drafts)) {
+        const input: PhieuNhanXetInput = (phieu as PhieuNhanXet).id
+          ? { ...(phieu as PhieuNhanXetInput), id: (phieu as PhieuNhanXet).id }
+          : (phieu as PhieuNhanXetInput);
+        const saved = await phieuService.upsertPhieu(input);
+        syncedDrafts[id] = saved;
+      }
+      setDrafts(syncedDrafts);
+
+      const phieuIds = Object.values(syncedDrafts).map((p) => p.id);
       const title = results[0]
         ? (results[0]['Quiz Title'] || results[0].quiz_title || 'Kết quả bài kiểm tra')
         : 'Kết quả bài kiểm tra';
@@ -271,7 +280,7 @@ export const PhieuFromResultsPanel: React.FC<Props> = ({ results, onClose }) => 
                     onChange={(patch) =>
                       setDrafts((prev) => ({
                         ...prev,
-                        [activeId]: { ...activePhieu, ...patch },
+                        [activeId]: { ...activePhieu, ...patch, nhan_xet_mode: 'manual' },
                       }))
                     }
                   />

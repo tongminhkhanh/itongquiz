@@ -18,12 +18,44 @@ export interface PublishResultLinkInput {
 
 export const resultPhieuLinkService = {
   /**
+   * Fetch phiếu đã lưu + link active theo submission_id.
+   * Trả về null nếu chưa có phiếu, hoặc { phieu, link: null } nếu có phiếu nhưng chưa publish.
+   */
+  async getActiveLinkBySubmission(
+    submissionId: string,
+  ): Promise<{ phieu: PhieuNhanXet; link: PhieuPublicLink | null } | null> {
+    const phieu = await phieuService.getPhieuBySubmission(submissionId);
+    if (!phieu) return null;
+
+    // Re-publish để lấy lại link hiện tại (idempotent — server trả về link cũ nếu đã tồn tại)
+    try {
+      const response = await callApi<{ status: string; data: PublishPhieuBatchResult; message?: string }>(
+        'publish_phieu_batch',
+        {
+          assignmentId:  phieu.submission_id,
+          classId:       phieu.class_id,
+          teacherId:     phieu.created_by,
+          title:         phieu.ten_bai_tap,
+          phieuIds:      [phieu.id],
+          expiresInDays: undefined,
+        },
+      );
+      if (response.status === 'success' && response.data.links.length > 0) {
+        return { phieu, link: response.data.links[0] };
+      }
+    } catch {
+      // link chưa tồn tại hoặc lỗi → trả về phiếu không có link
+    }
+    return { phieu, link: null };
+  },
+
+  /**
    * Auto-upsert phiếu (nếu chưa có id) rồi publish → trả về { phieu, link }.
    */
   async upsertAndPublish(input: PublishResultLinkInput): Promise<{ phieu: PhieuNhanXet; link: PhieuPublicLink }> {
     // Bước 1: upsert phiếu nếu chưa có id
     const phieu = input.existingPhieuId
-      ? ({ id: input.existingPhieuId } as PhieuNhanXet)  // đủ để lấy id
+      ? await phieuService.upsertPhieu({ ...input.phieuInput, id: input.existingPhieuId })  // luôn sync nội dung mới nhất lên DB
       : await phieuService.upsertPhieu(input.phieuInput);
 
     // Bước 2: publish để lấy link
