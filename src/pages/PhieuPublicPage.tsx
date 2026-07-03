@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Loader2, Printer } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { Button } from '../components/common';
-import { PhieuKetQuaCard } from '../features/homework/components/PhieuKetQuaCard';
+import { PhieuBTCard } from '../features/results/components/PhieuBTCard';
 import { phieuService } from '../features/homework/services/phieuService';
 import { PublicPhieuResult } from '../features/homework/types/phieu.types';
 
@@ -15,7 +15,7 @@ const PhieuPublicPage: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       if (!publicToken) {
-        setError('Link phieu khong hop le.');
+        setError('Link phiếu không hợp lệ.');
         setLoading(false);
         return;
       }
@@ -23,7 +23,7 @@ const PhieuPublicPage: React.FC = () => {
       try {
         setData(await phieuService.getPublicPhieu(publicToken));
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Khong the tai phieu.');
+        setError(err instanceof Error ? err.message : 'Không thể tải phiếu.');
       } finally {
         setLoading(false);
       }
@@ -37,7 +37,7 @@ const PhieuPublicPage: React.FC = () => {
       <main className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mx-auto mb-4" />
-          <p className="font-bold text-slate-500">Dang tai phieu ket qua...</p>
+          <p className="font-bold text-slate-500">Đang tải phiếu kết quả...</p>
         </div>
       </main>
     );
@@ -47,20 +47,22 @@ const PhieuPublicPage: React.FC = () => {
     return (
       <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
         <div className="max-w-md rounded-3xl bg-white border border-slate-200 p-8 text-center shadow-sm">
-          <h1 className="text-2xl font-black text-slate-800">Khong tim thay phieu</h1>
-          <p className="text-slate-500 mt-3">{error || 'Phieu co the da het han hoac da bi thu hoi.'}</p>
+          <h1 className="text-2xl font-black text-slate-800">Không tìm thấy phiếu</h1>
+          <p className="text-slate-500 mt-3">{error || 'Phiếu có thể đã hết hạn hoặc đã bị thu hồi.'}</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 print:bg-white print:p-0">
-      <div className="max-w-4xl mx-auto space-y-5">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
+    <main className="min-h-screen bg-slate-100 px-4 py-8 print:bg-white print:p-0">
+      <div className="max-w-lg mx-auto space-y-5">
+
+        {/* Header — ẩn khi in */}
+        <header className="flex items-center justify-between print:hidden">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.25em] text-indigo-600">ThiTong</p>
-            <h1 className="text-2xl font-black text-slate-800">{data.title}</h1>
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-indigo-600">iTongQuiz</p>
+            <h1 className="text-lg font-black text-slate-800">{data.phieu.ten_bai_tap || data.title}</h1>
           </div>
           <Button
             variant="secondary"
@@ -68,11 +70,17 @@ const PhieuPublicPage: React.FC = () => {
             className="rounded-2xl"
             icon={<Printer className="w-4 h-4" />}
           >
-            In phieu
+            In phiếu
           </Button>
         </header>
 
-        <PhieuKetQuaCard phieu={data.phieu} />
+        {/* Phiếu kết quả — dùng đúng mẫu PhieuBTCard */}
+        <PhieuBTCard
+          phieu={data.phieu}
+          editable={false}
+          tenGVCN={data.phieu.created_by}
+        />
+
       </div>
     </main>
   );
