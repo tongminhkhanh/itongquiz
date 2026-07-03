@@ -5,10 +5,11 @@ interface Props {
   phieu: PhieuNhanXet | PhieuNhanXetInput;
   editable?: boolean;
   onChange?: (patch: Partial<PhieuNhanXetInput>) => void;
+  tenGVCN?: string;
 }
 
 // Mẫu phiếu theo thiết kế: nền trắng, viền xanh dương, có icon từng mục
-export const PhieuKetQuaCardV2: React.FC<Props> = ({ phieu, editable = false, onChange }) => {
+export const PhieuKetQuaCardV2: React.FC<Props> = ({ phieu, editable = false, onChange, tenGVCN }) => {
   const update = (field: keyof PhieuNhanXetInput, value: string) => onChange?.({ [field]: value });
 
   const score = Number(phieu.diem_so || 0);
@@ -140,7 +141,16 @@ export const PhieuKetQuaCardV2: React.FC<Props> = ({ phieu, editable = false, on
         rows={2}
       />
 
-      <div className="pb-5" />
+      {/* Chữ ký GVCN */}
+      <div className="px-6 pb-6 pt-2">
+        <div className="flex flex-col items-center gap-1">
+          <p className="text-xs text-slate-500 italic">Giáo viên chủ nhiệm</p>
+          <div className="w-32 border-b border-slate-400 mt-4 mb-1" />
+          <p className="text-sm font-black text-slate-700 tracking-wide">
+            {tenGVCN || (phieu as PhieuNhanXet).created_by || ''}
+          </p>
+        </div>
+      </div>
     </article>
   );
 };

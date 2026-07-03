@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Loader2, Printer } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { Button } from '../components/common';
-import { PhieuBTCard } from '../features/results/components/PhieuBTCard';
+import { PhieuKetQuaCardV2 } from '../features/results/components/PhieuKetQuaCardV2';
 import { phieuService } from '../features/homework/services/phieuService';
 import { PublicPhieuResult } from '../features/homework/types/phieu.types';
 
@@ -74,11 +74,11 @@ const PhieuPublicPage: React.FC = () => {
           </Button>
         </header>
 
-        {/* Phiếu kết quả — dùng đúng mẫu PhieuBTCard */}
-        <PhieuBTCard
+        {/* Phiếu kết quả — dùng mẫu PhieuKetQuaCardV2 khớp mockup */}
+        <PhieuKetQuaCardV2
           phieu={data.phieu}
           editable={false}
-          tenGVCN={data.phieu.created_by}
+          tenGVCN={data.phieu.created_by ?? ''}
         />
 
       </div>
