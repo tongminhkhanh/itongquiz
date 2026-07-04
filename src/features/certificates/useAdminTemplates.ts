@@ -4,7 +4,7 @@ import type { FieldConfig } from './certificates.types';
 
 function getTeacherJwt(): string {
     try {
-        const direct = localStorage.getItem('itongquiz_jwt_token');
+        const direct = localStorage.getItem('itongquiz_teacher_jwt_token');
         if (direct) return direct;
         const raw = localStorage.getItem('auth-storage');
         if (!raw) return '';
