@@ -17,9 +17,7 @@ export async function handleAdminCertificateRoutes(
 
   // GET /api/admin/certificate-templates
   if (path === '/api/admin/certificate-templates' && method === 'GET') {
-    const templates = await env.DB.prepare(
-      'SELECT * FROM certificate_templates WHERE school_id = ? ORDER BY created_at DESC'
-    ).bind(user.school_id).all<CertificateTemplate>();
+    const templates = await env.DB.prepare(\r\n      'SELECT * FROM certificate_templates WHERE school_id = ? ORDER BY created_at DESC'\r\n    ).bind(user.school_id ?? user.username).all<CertificateTemplate>();
     return Response.json({ data: templates.results });
   }
 
@@ -39,7 +37,7 @@ export async function handleAdminCertificateRoutes(
     await env.DB.prepare(
       `INSERT INTO certificate_templates (id, school_id, name, bg_image_r2_key, fields_config, created_by)
        VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(id, user.school_id, body.name, body.bg_image_r2_key, body.fields_config ?? '[]', user.id).run();
+    ).bind(id, user.school_id ?? user.username, body.name, body.bg_image_r2_key, body.fields_config ?? '[]', user.id).run();
 
     return Response.json({ data: { id } }, { status: 201 });
   }
@@ -62,7 +60,7 @@ export async function handleAdminCertificateRoutes(
 
     if (fields.length === 0) return Response.json({ error: 'Nothing to update' }, { status: 400 });
 
-    values.push(templateId, user.school_id);
+    values.push(templateId, user.school_id ?? user.username);
     await env.DB.prepare(
       `UPDATE certificate_templates SET ${fields.join(', ')} WHERE id = ? AND school_id = ?`
     ).bind(...values).run();
