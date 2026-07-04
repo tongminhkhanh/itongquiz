@@ -11,7 +11,7 @@ import { getAvatarUrl } from '../../config/avatars';
 import { callApi } from '../../services/apiAdapter';
 import { Assignment } from '../../types/classroom.types';
 import { Question, Quiz } from '../../types';
-import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Camera, Gift, KeyRound, Sparkles, CheckCircle2, Lock, Flame, Medal, Radio } from 'lucide-react';
+import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Camera, Gift, KeyRound, Sparkles, CheckCircle2, Lock, Flame, Medal, Radio, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import { JoinLiveExamModal } from '../LiveExam/JoinLiveExamModal';
@@ -224,6 +224,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
     // --- State ---
     const [activeSection, setActiveSection] = useState<'dashboard' | 'achievements'>('dashboard');
+    const [isJourneyExpanded, setIsJourneyExpanded] = useState(false);
     const [isLoadingTasks, setIsLoadingTasks] = useState(true);
     const [selectedHw, setSelectedHw] = useState<HomeworkAssignment | null>(null);
     const hwStore = useHomeworkStore();
@@ -980,7 +981,11 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
                 <section className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-6">
                     <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
-                        <div className="flex items-center justify-between gap-4 mb-5">
+                        <button
+                            type="button"
+                            onClick={() => setIsJourneyExpanded((prev) => !prev)}
+                            className="w-full flex items-center justify-between gap-4 text-left"
+                        >
                             <div className="flex items-center gap-3">
                                 <div className="bg-violet-100 p-2 rounded-2xl text-violet-600"><Sparkles className="w-5 h-5" /></div>
                                 <div>
@@ -988,24 +993,29 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                     <p className="text-sm text-slate-500 font-medium">Giữ nhịp học mỗi ngày với nhiệm vụ, rương và huy hiệu.</p>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <p className="text-xs uppercase font-black text-slate-400 tracking-wider">Chuỗi ngày</p>
-                                <p className="text-lg font-black text-orange-500 flex items-center justify-end gap-1"><Flame className="w-4 h-4" /> {dashboard?.profile.dailyStreak || 0}</p>
+                            <div className="flex items-center gap-4 shrink-0">
+                                <div className="text-right">
+                                    <p className="text-xs uppercase font-black text-slate-400 tracking-wider">Chuỗi ngày</p>
+                                    <p className="text-lg font-black text-orange-500 flex items-center justify-end gap-1"><Flame className="w-4 h-4" /> {dashboard?.profile.dailyStreak || 0}</p>
+                                </div>
+                                <div className="w-10 h-10 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-500">
+                                    {isJourneyExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                                </div>
                             </div>
-                        </div>
+                        </button>
 
                         {gameLoopError && (
-                            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                            <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                                 {gameLoopError}
                             </div>
                         )}
 
-                        {isGameLoopLoading && !dashboard ? (
-                            <div className="flex justify-center py-10">
+                        {isJourneyExpanded && (isGameLoopLoading && !dashboard ? (
+                            <div className="flex justify-center py-10 mt-5">
                                 <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
                             </div>
                         ) : dashboard ? (
-                            <div className="space-y-4">
+                            <div className="space-y-4 mt-5">
                                 {dashboard.missions.map((mission) => {
                                     const progressPercent = getMissionProgressPercent(mission);
                                     return (
@@ -1055,7 +1065,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                     );
                                 })}
                             </div>
-                        ) : null}
+                        ) : null)}
 
                     </div>
 
