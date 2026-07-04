@@ -4,7 +4,15 @@ import { WORKERS_API_URL } from '../../config/constants';
 
 function getStudentJwt(): string {
     try {
-        // Student JWT is stored in classroom-storage zustand persist
+        const direct = localStorage.getItem('itongquiz_jwt_token');
+        if (direct) return direct;
+
+        const sessionRaw = localStorage.getItem('student_session');
+        if (sessionRaw) {
+            const session = JSON.parse(sessionRaw);
+            if (session?.token) return session.token;
+        }
+
         const raw = localStorage.getItem('classroom-storage');
         if (!raw) return '';
         const parsed = JSON.parse(raw);
@@ -46,8 +54,13 @@ export function useCertificates() {
                 throw new Error(`Lỗi tải chứng nhận: ${res.status}`);
             }
 
-            const data = await res.json() as Certificate[];
-            setCertificates(Array.isArray(data) ? data : []);
+            const payload = await res.json() as { data?: Certificate[] } | Certificate[];
+            const list = Array.isArray(payload)
+                ? payload
+                : Array.isArray(payload?.data)
+                    ? payload.data
+                    : [];
+            setCertificates(list);
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : 'Lỗi không xác định';
             // Nếu endpoint chưa deploy → không hiện lỗi đỏ, chỉ để trống
