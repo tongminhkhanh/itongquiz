@@ -10,6 +10,10 @@ export async function handlePhieuSubdomain(request: Request, env: Env): Promise<
     const url = new URL(request.url);
     if (url.hostname !== PUBLIC_PHIEU_HOST) return null;
 
+    // Let all /api/* requests fall through to normal API routing
+    // (phieu.thitong.site is also the main API domain)
+    if (url.pathname.startsWith('/api/')) return null;
+
     const pathParts = url.pathname.replace(/^\//, '').split('/');
     const [scope, publicToken, subpath] = pathParts;
     if (scope !== 'p' || !publicToken) {

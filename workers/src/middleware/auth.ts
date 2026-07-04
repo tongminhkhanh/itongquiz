@@ -50,6 +50,10 @@ export function verifyToken(request: Request, env: Env): Response | null {
     // 13. SECURITY: Live Exam routes use JWT authentication (handled in liveExam.ts)
     if (path.startsWith('/api/live-exam')) return null;
 
+    // 14. SECURITY: Certificate routes use JWT authentication (handled in adminCertificates.ts / certificates.ts)
+    if (path.startsWith('/api/admin/certificate-templates')) return null;
+    if (path.startsWith('/api/certificate-batches') || path.startsWith('/api/certificates')) return null;
+
     // 14. Verify token from header for REST API routes (legacy auth for non-JWT routes)
     const headerToken = request.headers.get('X-API-Token') || request.headers.get('Authorization')?.replace('Bearer ', '');
 

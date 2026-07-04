@@ -2,12 +2,15 @@
 import type { Env } from '../types';
 import type { Certificate } from '../types/certificates';
 import { processBatch, type BatchStudent } from '../services/certificateBatchProcessor';
+import { verifyJWTMiddleware, requireTeacher } from '../middleware/jwtAuth';
 
 // POST /api/certificate-batches  (Giáo viên tạo + gửi batch)
 export async function handleCreateBatch(request: Request, env: Env): Promise<Response> {
-  const user = (request as any).user;
-  if (!user || user.role !== 'teacher') {
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  const authResult = await verifyJWTMiddleware(request, env);
+  if (authResult instanceof Response) return authResult;
+  const user = authResult.user;
+  if (!requireTeacher(user)) {
+    return Response.json({ error: 'Forbidden: teacher role required' }, { status: 403 });
   }
 
   const body = await request.json() as {
@@ -68,9 +71,11 @@ export async function handleCreateBatch(request: Request, env: Env): Promise<Res
 
 // GET /api/certificate-batches  (Giáo viên xem lịch sử)
 export async function handleGetBatches(request: Request, env: Env): Promise<Response> {
-  const user = (request as any).user;
-  if (!user || user.role !== 'teacher') {
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  const authResult = await verifyJWTMiddleware(request, env);
+  if (authResult instanceof Response) return authResult;
+  const user = authResult.user;
+  if (!requireTeacher(user)) {
+    return Response.json({ error: 'Forbidden: teacher role required' }, { status: 403 });
   }
 
   const batches = await env.DB.prepare(
@@ -91,8 +96,9 @@ export async function handleGetBatches(request: Request, env: Env): Promise<Resp
 
 // GET /api/certificates/my  (Học sinh xem chứng nhận)
 export async function handleGetMyCertificates(request: Request, env: Env): Promise<Response> {
-  const user = (request as any).user;
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  const authResult = await verifyJWTMiddleware(request, env);
+  if (authResult instanceof Response) return authResult;
+  const user = authResult.user;
 
   const certs = await env.DB.prepare(
     `SELECT c.id, c.student_name, c.student_score, c.quiz_title, c.png_r2_key,

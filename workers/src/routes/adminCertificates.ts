@@ -3,6 +3,7 @@
 //         PATCH   /api/admin/certificate-templates/:id
 import type { Env } from '../types';
 import type { CertificateTemplate } from '../types/certificates';
+import { verifyJWTMiddleware, requireAdmin } from '../middleware/jwtAuth';
 
 export async function handleAdminCertificateRoutes(
   request: Request,
@@ -10,14 +11,19 @@ export async function handleAdminCertificateRoutes(
   path: string,
   method: string
 ): Promise<Response | null> {
-  const user = (request as any).user;
-  if (!user || user.role !== 'admin') {
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  const authResult = await verifyJWTMiddleware(request, env);
+  if (authResult instanceof Response) return authResult;
+  const user = authResult.user;
+  if (!requireAdmin(user)) {
+    return Response.json({ error: 'Forbidden: admin role required' }, { status: 403 });
   }
 
   // GET /api/admin/certificate-templates
   if (path === '/api/admin/certificate-templates' && method === 'GET') {
-    const templates = await env.DB.prepare(\r\n      'SELECT * FROM certificate_templates WHERE school_id = ? ORDER BY created_at DESC'\r\n    ).bind(user.school_id ?? user.username).all<CertificateTemplate>();
+    const schoolId = user.school_id ?? user.username;
+    const templates = await env.DB.prepare(
+      'SELECT * FROM certificate_templates WHERE school_id = ? ORDER BY created_at DESC'
+    ).bind(schoolId).all<CertificateTemplate>();
     return Response.json({ data: templates.results });
   }
 
@@ -34,10 +40,11 @@ export async function handleAdminCertificateRoutes(
     }
 
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+    const schoolId = user.school_id ?? user.username;
     await env.DB.prepare(
       `INSERT INTO certificate_templates (id, school_id, name, bg_image_r2_key, fields_config, created_by)
        VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(id, user.school_id ?? user.username, body.name, body.bg_image_r2_key, body.fields_config ?? '[]', user.id).run();
+    ).bind(id, schoolId, body.name, body.bg_image_r2_key, body.fields_config ?? '[]', user.username).run();
 
     return Response.json({ data: { id } }, { status: 201 });
   }
@@ -60,7 +67,8 @@ export async function handleAdminCertificateRoutes(
 
     if (fields.length === 0) return Response.json({ error: 'Nothing to update' }, { status: 400 });
 
-    values.push(templateId, user.school_id ?? user.username);
+    const schoolId = user.school_id ?? user.username;
+    values.push(templateId, schoolId);
     await env.DB.prepare(
       `UPDATE certificate_templates SET ${fields.join(', ')} WHERE id = ? AND school_id = ?`
     ).bind(...values).run();
