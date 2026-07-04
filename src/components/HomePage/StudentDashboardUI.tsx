@@ -223,6 +223,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const giftShopEnabled = String(import.meta.env.VITE_FEATURE_GIFT_SHOP_V2 || 'false').toLowerCase() === 'true';
 
     // --- State ---
+    const [activeSection, setActiveSection] = useState<'dashboard' | 'achievements'>('dashboard');
     const [isLoadingTasks, setIsLoadingTasks] = useState(true);
     const [selectedHw, setSelectedHw] = useState<HomeworkAssignment | null>(null);
     const hwStore = useHomeworkStore();
@@ -878,6 +879,34 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                             </div>
                         </div>
 
+                        <div className="hidden lg:flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setActiveSection('dashboard')}
+                                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs md:text-sm font-black transition-colors ${activeSection === 'dashboard' ? 'border-sky-200 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                <BookOpen className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                Trang chủ
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveSection('achievements')}
+                                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs md:text-sm font-black transition-colors ${activeSection === 'achievements' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                Thành tích
+                            </button>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setActiveSection('achievements')}
+                            className={`lg:hidden inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border text-xs md:text-sm font-black transition-colors ${activeSection === 'achievements' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+                        >
+                            <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                            <span className="hidden sm:inline">Thành tích</span>
+                        </button>
+
                         {giftShopEnabled && (
                             <button type="button" onClick={handleOpenGiftShop} className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs md:text-sm font-black hover:bg-indigo-100 transition-colors">
                                 <Gift className="w-3.5 h-3.5 md:w-4 md:h-4" />
@@ -920,6 +949,10 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             </header>
 
             <main className="w-full max-w-7xl mx-auto px-3 md:px-8 py-5 md:py-12 flex-1 flex flex-col gap-7 md:gap-10">
+                {activeSection === 'achievements' ? (
+                    <StudentAchievementsPage />
+                ) : (
+                    <>
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full bg-gradient-to-r from-indigo-600 to-blue-500 rounded-[24px] md:rounded-[32px] p-5 sm:p-6 md:p-12 relative overflow-hidden shadow-lg shadow-indigo-200">
                     <div className="absolute right-0 top-0 w-1/2 h-full opacity-10 pointer-events-none">
                         <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -1303,21 +1336,6 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     onSelectAssignment={setSelectedHw}
                 />
 
-                {/* --- THÀNH TÍCH & CHỨNG NHẬN --- */}
-                <section>
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="bg-amber-100 p-2 rounded-xl text-amber-600">
-                            <Trophy className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-black text-slate-800">Thành tích của tôi</h2>
-                            <p className="text-sm text-slate-500 font-medium">Chứng nhận bạn đã đạt được từ giáo viên.</p>
-                        </div>
-                    </div>
-                    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
-                        <StudentAchievementsPage />
-                    </div>
-                </section>
 
                 <section>
                     <div className="flex items-center gap-3 mb-6"><div className="bg-teal-100 p-2 rounded-xl text-teal-600"><Rocket className="w-6 h-6" /></div><h2 className="text-2xl font-black text-slate-800">Thư viện luyện tập</h2></div>
@@ -1336,6 +1354,8 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     </div>
                 </section>
                 <div className="pb-12 text-center hidden md:block"><p className="text-slate-400 font-medium text-sm">ÍtOngQuiz © 2026 - Môi trường học tập tích cực</p></div>
+                    </>
+                )}
             </main>
 
             {/* --- MODALS --- */}

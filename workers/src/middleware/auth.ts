@@ -25,9 +25,15 @@ export function verifyToken(request: Request, env: Env): Response | null {
     // 5. Allow public UI feature flags; writes are still protected in systemSettings.ts
     if (path === '/api/system-settings' && method === 'GET') return null;
 
-    // 6. SECURITY: Game-loop routes now use JWT authentication (handled in gameLoop.ts)
-    // Skip legacy token check here - JWT middleware will validate in the route handler
-    if (path.startsWith('/api/game-loop')) return null;
+    // 6. SECURITY: Student gamification routes use JWT authentication in route handlers.
+    // Skip legacy token check here - JWT middleware will validate in each route handler.
+    if (
+        path.startsWith('/api/game-loop') ||
+        path.startsWith('/api/game-state') ||
+        path.startsWith('/api/pets') ||
+        path.startsWith('/api/shop') ||
+        path.startsWith('/api/leaderboard')
+    ) return null;
 
     // 7. SECURITY: Login endpoints don't require auth (they create auth)
     if (path === '/api/login' || path === '/api/student-login') return null;
@@ -41,8 +47,9 @@ export function verifyToken(request: Request, env: Env): Response | null {
     // 10. SECURITY: Classroom routes now use JWT authentication (handled in classroom.ts)
     if (path.startsWith('/api/classes') || path.startsWith('/api/students') || path.startsWith('/api/assignments')) return null;
 
-    // 11. SECURITY: Results and validation routes now use JWT authentication (handled in results.ts)
+    // 11. SECURITY: Results, validation, and gift-shop routes now use JWT authentication in route handlers
     if (path.startsWith('/api/results') || path === '/api/validate') return null;
+    if (path.startsWith('/api/gift-shop')) return null;
 
     // 12. SECURITY: Quiz/Questions routes - READ operations are public, WRITE operations use JWT (handled in quizzes.ts)
     if (path.startsWith('/api/quizzes') || path.startsWith('/api/questions')) return null;

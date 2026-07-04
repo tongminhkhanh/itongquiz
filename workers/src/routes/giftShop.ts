@@ -1,6 +1,8 @@
 import { Env } from '../types';
 import { errorResponse, generateId, jsonResponse } from '../utils/response';
 import { extractIdFromPath, parseBody } from '../utils/helpers';
+import { verifyJWTMiddleware, requireAdmin, requireTeacher } from '../middleware/jwtAuth';
+import { JWTPayload } from '../utils/jwt';
 
 type GiftOrderStatus = 'CREATED' | 'VOUCHER_ISSUED' | 'DELIVERED' | 'CANCELLED_REFUNDED';
 
@@ -162,10 +164,22 @@ const resolveActorAccess = async (
 
 const ensureCanManageOrder = (order: GiftOrderRow, actorIsAdmin: boolean, actorTeacherClass: string) => {
     if (actorIsAdmin) return;
-    if (!actorTeacherClass || actorTeacherClass !== order.class_id) {
+    const scopedClass = String(actorTeacherClass || '').trim();
+    if (!scopedClass || (scopedClass !== order.class_id && scopedClass !== order.class_name)) {
         throw new Error('Ban khong co quyen xu ly don cua lop nay.');
     }
 };
+
+const getAuthenticatedUser = async (request: Request, env: Env): Promise<JWTPayload | Response> => {
+    const authResult = await verifyJWTMiddleware(request, env);
+    if (authResult instanceof Response) return authResult;
+    return authResult.user;
+};
+
+const getActorAccessFromUser = (user: JWTPayload): { isAdmin: boolean; teacherClass: string } => ({
+    isAdmin: requireAdmin(user),
+    teacherClass: String(user.classId || '').trim(),
+});
 
 const generateVoucherCode = () => {
     const randomPart = Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -208,10 +222,9 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        // SECURITY WARNING: This trusts actorIsAdmin from client request body
-        // TODO: Replace with server-side session/JWT validation
-        // Current implementation allows authorization bypass if API token is compromised
-        if (!toBool(body.actorIsAdmin)) return errorResponse('Forbidden', 403);
+        const userOrResponse = await getAuthenticatedUser(request, env);
+        if (userOrResponse instanceof Response) return userOrResponse;
+        if (!requireAdmin(userOrResponse)) return errorResponse('Forbidden', 403);
 
         const name = String(body.name || '').trim();
         const category = String(body.category || '').trim().toUpperCase();
@@ -248,9 +261,9 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        // SECURITY WARNING: This trusts actorIsAdmin from client request body
-        // TODO: Replace with server-side session/JWT validation
-        if (!toBool(body.actorIsAdmin)) return errorResponse('Forbidden', 403);
+        const userOrResponse = await getAuthenticatedUser(request, env);
+        if (userOrResponse instanceof Response) return userOrResponse;
+        if (!requireAdmin(userOrResponse)) return errorResponse('Forbidden', 403);
 
         const name = String(body.name || '').trim();
         const category = String(body.category || '').trim().toUpperCase();
@@ -283,11 +296,10 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
         const itemId = extractIdFromPath(path, '/api/gift-shop/catalog');
         if (!itemId) return errorResponse('Missing catalog item ID');
 
-        // SECURITY WARNING: This trusts actorIsAdmin from client query string
-        // TODO: Replace with server-side session/JWT validation
-        const actorIsAdmin = toBool(url.searchParams.get('actorIsAdmin'));
-        if (!actorIsAdmin) return errorResponse('Forbidden', 403);
-        const actorUsername = String(url.searchParams.get('actorUsername') || '').trim() || 'admin';
+        const userOrResponse = await getAuthenticatedUser(request, env);
+        if (userOrResponse instanceof Response) return userOrResponse;
+        if (!requireAdmin(userOrResponse)) return errorResponse('Forbidden', 403);
+        const actorUsername = userOrResponse.username || 'admin';
 
         const existingItem = await db.prepare('SELECT * FROM gift_catalog_items WHERE id = ?').bind(itemId).first<any>();
         if (!existingItem) return errorResponse('Catalog item not found', 404);
@@ -313,11 +325,9 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
     if (path === '/api/gift-shop/orders' && method === 'GET') {
         const studentId = String(url.searchParams.get('studentId') || '').trim();
         const classId = String(url.searchParams.get('classId') || '').trim();
-        const actorUsername = String(url.searchParams.get('actorUsername') || '').trim();
-        const actorAccess = await resolveActorAccess(
-            db,
-            actorUsername
-        );
+        const userOrResponse = await getAuthenticatedUser(request, env);
+        if (userOrResponse instanceof Response) return userOrResponse;
+        const actorAccess = getActorAccessFromUser(userOrResponse);
         const status = normalizeStatus(url.searchParams.get('status'));
         const hasStudentScope = Boolean(studentId);
         const hasStaffScope = actorAccess.isAdmin || Boolean(actorAccess.teacherClass);
@@ -327,11 +337,9 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
             return errorResponse('Teacher class assignment not found', 403);
         }
 
-        if (!actorAccess.isAdmin && actorAccess.teacherClass && classId && classId !== actorAccess.teacherClass) {
-            return errorResponse('Forbidden', 403);
-        }
-
-        const effectiveClassId = actorAccess.isAdmin
+        // Do not reject teacher requests here: classId may be an internal class id while
+        // teacherClass from JWT is the display class name. The SQL scope below supports both.
+        const effectiveClassScope = actorAccess.isAdmin
             ? classId
             : (actorAccess.teacherClass || '');
         const conditions: string[] = [];
@@ -341,9 +349,9 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
             conditions.push('o.student_id = ?');
             params.push(studentId);
         }
-        if (effectiveClassId) {
-            conditions.push('o.class_id = ?');
-            params.push(effectiveClassId);
+        if (effectiveClassScope) {
+            conditions.push('(o.class_id = ? OR c.name = ?)');
+            params.push(effectiveClassScope, effectiveClassScope);
         }
         if (status && status !== 'ALL') {
             conditions.push('o.status = ?');
@@ -376,7 +384,17 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
+        const userOrResponse = await getAuthenticatedUser(request, env);
+        if (userOrResponse instanceof Response) return userOrResponse;
+
         const studentId = String(body.studentId || '').trim();
+        if (userOrResponse.role === 'student' && String(userOrResponse.id || '') !== studentId) {
+            return errorResponse('Forbidden', 403);
+        }
+        if (userOrResponse.role !== 'student' && !requireTeacher(userOrResponse)) {
+            return errorResponse('Forbidden', 403);
+        }
+
         const itemId = String(body.itemId || '').trim();
         const idempotencyKey = String(body.idempotencyKey || '').trim();
         if (!studentId || !itemId || !idempotencyKey) {
@@ -522,11 +540,11 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        const actorUsername = String(body.username || '').trim() || 'system';
-        const actorAccess = await resolveActorAccess(
-            db,
-            actorUsername
-        );
+        const userOrResponse = await getAuthenticatedUser(request, env);
+        if (userOrResponse instanceof Response) return userOrResponse;
+        if (!requireTeacher(userOrResponse)) return errorResponse('Forbidden', 403);
+        const actorUsername = userOrResponse.username || 'system';
+        const actorAccess = getActorAccessFromUser(userOrResponse);
 
         const order = await getOrderById(db, orderId);
         if (!order) return errorResponse('Order not found', 404);
@@ -572,11 +590,11 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
         if (!body) return errorResponse('Invalid JSON body');
 
         const reason = String(body.reason || '').trim() || 'Cancelled by staff';
-        const actorUsername = String(body.username || '').trim() || 'system';
-        const actorAccess = await resolveActorAccess(
-            db,
-            actorUsername
-        );
+        const userOrResponse = await getAuthenticatedUser(request, env);
+        if (userOrResponse instanceof Response) return userOrResponse;
+        if (!requireTeacher(userOrResponse)) return errorResponse('Forbidden', 403);
+        const actorUsername = userOrResponse.username || 'system';
+        const actorAccess = getActorAccessFromUser(userOrResponse);
 
         const order = await getOrderById(db, orderId);
         if (!order) return errorResponse('Order not found', 404);
@@ -634,6 +652,10 @@ export async function handleGiftShopRoutes(request: Request, env: Env, path: str
     }
 
     if (path === '/api/gift-shop/events' && method === 'GET') {
+        const userOrResponse = await getAuthenticatedUser(request, env);
+        if (userOrResponse instanceof Response) return userOrResponse;
+        if (!requireAdmin(userOrResponse)) return errorResponse('Forbidden', 403);
+
         const rows = await db.prepare(`
             SELECT *
             FROM gift_order_events

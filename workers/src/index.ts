@@ -21,6 +21,7 @@ import { handleAnalyticsRoutes } from './routes/analytics';
 import { handleTestBankRoutes } from './routes/testBank';
 import { handleTeacherAiQuotaRoutes } from './routes/teacherAiQuota';
 import { handleLogoutRoute } from './routes/logout';
+import { verifyJWTMiddleware } from './middleware/jwtAuth';
 import { handleLiveExamRoutes } from './routes/liveExam';
 import { handleAdminCertificateRoutes } from './routes/adminCertificates';
 import { handleCertificateRoutes } from './routes/certificates';
@@ -240,9 +241,11 @@ async function handleLegacyGasRequest(request: Request, env: Env): Promise<Respo
         return errorResponse('Invalid JSON body');
     }
 
-    // Verify token from body (GAS style)
+    // Verify token from body (GAS style) or a valid JWT session.
+    // This keeps legacy actions working after frontend auth migrated away from exposing API_SECRET_TOKEN.
     if (body.token !== env.API_SECRET_TOKEN) {
-        return errorResponse('Unauthorized: Invalid Token', 401);
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
     }
 
     const action = body.action;

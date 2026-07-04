@@ -5,12 +5,23 @@ import { WORKERS_API_URL } from '../config/constants';
 const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
 const REMOTE_WORKERS_API_URL = 'https://phieu.thitong.site';
 
-function getStoredJWTToken(): string {
+function getStoredJWTToken(path = ''): string {
     try {
-        const teacherToken = localStorage.getItem('itongquiz_teacher_jwt_token');
+        const studentToken = localStorage.getItem('itongquiz_jwt_token') || '';
+        const teacherToken = localStorage.getItem('itongquiz_teacher_jwt_token') || '';
+
+        // Student/game routes must not accidentally use a stale teacher token,
+        // otherwise the Worker rejects them with "Game-loop routes are for students only".
+        const prefersStudentToken = path.startsWith('/api/game-loop') ||
+            path.startsWith('/api/game-state') ||
+            path.startsWith('/api/pets') ||
+            path.startsWith('/api/shop') ||
+            path.startsWith('/api/leaderboard') ||
+            path === '/api/student-login';
+
+        if (prefersStudentToken && studentToken) return studentToken;
         if (teacherToken) return teacherToken;
-        const directToken = localStorage.getItem('itongquiz_jwt_token');
-        if (directToken) return directToken;
+        if (studentToken) return studentToken;
 
         const authStorage = localStorage.getItem('auth-storage');
         if (!authStorage) return '';
@@ -212,11 +223,17 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
                           path === '/api/student-login' ||
                           path === '/api/logout' ||
                           path.startsWith('/api/game-loop') ||
+                          path.startsWith('/api/game-state') ||
+                          path.startsWith('/api/pets') ||
+                          path.startsWith('/api/shop') ||
+                          path.startsWith('/api/leaderboard') ||
+                          path === '/api/gas' ||
                           path.startsWith('/api/teachers') ||
                           path.startsWith('/api/classes') ||
                           path.startsWith('/api/students') ||
                           path.startsWith('/api/assignments') ||
                           path.startsWith('/api/results') ||
+                          path.startsWith('/api/gift-shop') ||
                           path === '/api/validate' ||
                           path.startsWith('/api/quizzes') ||
                           path.startsWith('/api/questions');
@@ -225,7 +242,7 @@ export const callApi = async <T = any>(action: string, payload: Record<string, a
             (fetchOptions.headers as Record<string, string>)['X-API-Token'] = API_SECRET_TOKEN;
         }
 
-        const jwtToken = getStoredJWTToken();
+        const jwtToken = getStoredJWTToken(path);
         if (isJWTRoute && jwtToken) {
             (fetchOptions.headers as Record<string, string>)['Authorization'] = `Bearer ${jwtToken}`;
         }

@@ -53,9 +53,11 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
 
         const jwtToken = await signJWT(
             {
+                id: teacher.username,
                 username: teacher.username,
                 role: teacher.role === 'admin' ? 'admin' : 'teacher',
                 fullName: teacher.full_name,
+                classId: teacher.class,
                 school_id: teacher.username,
             },
             env.JWT_SECRET,

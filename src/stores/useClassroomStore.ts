@@ -31,6 +31,7 @@ export const useClassroomStore = create<ClassroomStore>((set, get) => ({
             const session = await classroomService.studentLogin(payload);
             if (session) {
                 localStorage.setItem(StorageKeys.STUDENT_SESSION, JSON.stringify(session));
+                localStorage.removeItem('itongquiz_teacher_jwt_token');
                 if (session.token) {
                     localStorage.setItem('itongquiz_jwt_token', session.token);
                 }

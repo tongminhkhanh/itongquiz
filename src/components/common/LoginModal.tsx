@@ -44,8 +44,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
     const handleTeacherLogin = async () => {
         authStore.loginStart();
         
-        // TEST BYPASS
-        if (username === 'admin' && password === 'admin') {
+        // DEV-only bypass. Production must use real login so JWT is issued.
+        if (import.meta.env.DEV && username === 'admin' && password === 'admin') {
             authStore.loginSuccess('admin', 'Admin Test', true, '4A');
             onClose();
             return;
@@ -62,7 +62,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                 const isTeacherAdmin = String(teacher.role || '').trim().toLowerCase() === 'admin';
                 const tClass = teacher.class ? String(teacher.class).trim() : undefined;
                 const tToken = (teacher.token as string | undefined) ?? null;
-                if (tToken) localStorage.setItem('itongquiz_teacher_jwt_token', tToken);
+                if (tToken) {
+                    localStorage.removeItem('itongquiz_jwt_token');
+                    localStorage.setItem('itongquiz_teacher_jwt_token', tToken);
+                }
                 authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass, tToken);
                 onClose();
                 return;
