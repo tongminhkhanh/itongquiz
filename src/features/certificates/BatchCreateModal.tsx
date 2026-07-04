@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { X, Plus, Trash2, Send, Loader2, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { X, Send, Loader2, ChevronDown, Users, BookOpen, Search, CheckSquare, Square, AlertCircle } from 'lucide-react';
 import { showSuccess, showError } from '../../utils/toast';
 import type { BatchStudent } from './useBatches';
 import { fetchTemplateOptions } from './useBatches';
 import type { TemplateOption } from './useBatches';
+import { WORKERS_API_URL } from '../../config/constants';
 
 interface Props {
     onClose: () => void;
@@ -16,51 +17,166 @@ interface Props {
     }) => Promise<{ batch_id: string }>;
 }
 
-const emptyStudent = (): BatchStudent => ({
-    student_id: '',
-    student_name: '',
-    student_score: null,
-    quiz_title: null,
-});
+interface ClassOption { id: string; name: string; }
+interface StudentOption { id: string; fullName: string; username: string; }
+interface QuizOption { id: string; title: string; }
+interface ResultRecord {
+    'Student Name': string;
+    'Score': number;
+    'Quiz ID': string;
+    'Quiz Title': string;
+}
+
+function getTeacherJwt(): string {
+    try {
+        const direct = localStorage.getItem('itongquiz_teacher_jwt_token');
+        if (direct) return direct;
+        const raw = localStorage.getItem('auth-storage');
+        if (!raw) return '';
+        return JSON.parse(raw)?.state?.token || '';
+    } catch { return ''; }
+}
+
+function authH(): HeadersInit {
+    return { 'Content-Type': 'application/json', Authorization: `Bearer ${getTeacherJwt()}` };
+}
+
+const apiBase = () => (WORKERS_API_URL || '').replace(/\/$/, '');
 
 const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) => {
     const [templates, setTemplates] = useState<TemplateOption[]>([]);
     const [templateId, setTemplateId] = useState('');
     const [title, setTitle] = useState('');
     const [customNote, setCustomNote] = useState('');
-    const [students, setStudents] = useState<BatchStudent[]>([emptyStudent()]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Class + students
+    const [classes, setClasses] = useState<ClassOption[]>([]);
+    const [classId, setClassId] = useState('');
+    const [loadingClasses, setLoadingClasses] = useState(false);
+    const [classStudents, setClassStudents] = useState<StudentOption[]>([]);
+    const [loadingStudents, setLoadingStudents] = useState(false);
+
+    // Quiz + results
+    const [quizzes, setQuizzes] = useState<QuizOption[]>([]);
+    const [quizId, setQuizId] = useState('');
+    const [results, setResults] = useState<ResultRecord[]>([]);
+    const [loadingResults, setLoadingResults] = useState(false);
+
+    // Selection + search
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [search, setSearch] = useState('');
+
+    // On mount: load templates, classes, quizzes
     useEffect(() => {
         fetchTemplateOptions().then((opts) => {
             setTemplates(opts);
             if (opts.length > 0) setTemplateId(opts[0].id);
         });
+
+        setLoadingClasses(true);
+        fetch(`${apiBase()}/api/classes`, { headers: authH() })
+            .then(r => r.json() as Promise<{ data: ClassOption[] }>)
+            .then(j => {
+                const list = j.data ?? [];
+                setClasses(list);
+                if (list.length > 0) setClassId(list[0].id);
+            })
+            .catch(() => {})
+            .finally(() => setLoadingClasses(false));
+
+        fetch(`${apiBase()}/api/quizzes`, { headers: authH() })
+            .then(r => r.json() as Promise<QuizOption[]>)
+            .then(arr => setQuizzes(Array.isArray(arr) ? arr : []))
+            .catch(() => {});
     }, []);
 
-    const addStudent = useCallback(() => {
-        setStudents((prev) => [...prev, emptyStudent()]);
-    }, []);
+    // When class changes: load students
+    useEffect(() => {
+        if (!classId) return;
+        setLoadingStudents(true);
+        setClassStudents([]);
+        setSelectedIds(new Set());
+        fetch(`${apiBase()}/api/students?classId=${classId}`, { headers: authH() })
+            .then(r => r.json() as Promise<{ data: StudentOption[] }>)
+            .then(j => {
+                const list = j.data ?? [];
+                setClassStudents(list);
+                setSelectedIds(new Set(list.map(s => s.id)));
+            })
+            .catch(() => {})
+            .finally(() => setLoadingStudents(false));
+    }, [classId]);
 
-    const removeStudent = useCallback((idx: number) => {
-        setStudents((prev) => prev.filter((_, i) => i !== idx));
-    }, []);
+    // When quiz changes: load results
+    useEffect(() => {
+        if (!quizId || !classId) { setResults([]); return; }
+        setLoadingResults(true);
+        fetch(`${apiBase()}/api/results?quizId=${quizId}&limit=200`, { headers: authH() })
+            .then(r => r.json() as Promise<{ data?: ResultRecord[] }>)
+            .then(j => setResults(j.data ?? []))
+            .catch(() => {})
+            .finally(() => setLoadingResults(false));
+    }, [quizId, classId]);
 
-    const updateStudent = useCallback((idx: number, field: keyof BatchStudent, value: string) => {
-        setStudents((prev) =>
-            prev.map((s, i) =>
-                i === idx
-                    ? { ...s, [field]: field === 'student_score' ? (value === '' ? null : Number(value)) : value }
-                    : s
-            )
-        );
+    // Merge students with results
+    const studentRows = useMemo(() =>
+        classStudents.map(s => {
+            const r = results.find(r2 =>
+                r2['Student Name']?.trim().toLowerCase() === s.fullName?.trim().toLowerCase()
+            );
+            return {
+                id: s.id,
+                fullName: s.fullName,
+                username: s.username,
+                score: r?.['Score'] ?? null,
+                quizTitle: r?.['Quiz Title'] ?? (quizzes.find(q => q.id === quizId)?.title ?? null),
+            };
+        }),
+        [classStudents, results, quizId, quizzes]
+    );
+
+    const filtered = useMemo(() =>
+        studentRows.filter(s =>
+            s.fullName.toLowerCase().includes(search.toLowerCase()) ||
+            s.username.toLowerCase().includes(search.toLowerCase())
+        ),
+        [studentRows, search]
+    );
+
+    const toggleAll = useCallback(() => {
+        const ids = filtered.map(s => s.id);
+        setSelectedIds(prev => {
+            const allSelected = ids.every(id => prev.has(id));
+            const next = new Set(prev);
+            if (allSelected) ids.forEach(id => next.delete(id));
+            else ids.forEach(id => next.add(id));
+            return next;
+        });
+    }, [filtered]);
+
+    const toggleOne = useCallback((id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
     }, []);
 
     const handleSubmit = useCallback(async () => {
         if (!templateId) { showError('Vui lòng chọn mẫu chứng nhận'); return; }
         if (!title.trim()) { showError('Vui lòng nhập tiêu đề'); return; }
-        const valid = students.filter((s) => s.student_name.trim() && s.student_id.trim());
-        if (valid.length === 0) { showError('Cần ít nhất 1 học sinh hợp lệ'); return; }
+
+        const selectedStudents: BatchStudent[] = studentRows
+            .filter(s => selectedIds.has(s.id))
+            .map(s => ({
+                student_id: s.id,
+                student_name: s.fullName,
+                student_score: s.score,
+                quiz_title: s.quizTitle,
+            }));
+
+        if (selectedStudents.length === 0) { showError('Cần chọn ít nhất 1 học sinh'); return; }
 
         setIsSubmitting(true);
         try {
@@ -68,20 +184,20 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
                 template_id: templateId,
                 title: title.trim(),
                 custom_note: customNote.trim() || undefined,
-                students: valid,
+                students: selectedStudents,
             });
-            showSuccess(`Đã gửi chứng nhận cho ${valid.length} học sinh!`);
+            showSuccess(`Đã tạo chứng nhận cho ${selectedStudents.length} học sinh!`);
             onCreated();
         } catch (e: unknown) {
             showError(e instanceof Error ? e.message : 'Gửi thất bại');
         } finally {
             setIsSubmitting(false);
         }
-    }, [templateId, title, customNote, students, createBatch, onCreated]);
+    }, [templateId, title, customNote, studentRows, selectedIds, createBatch, onCreated]);
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                     <h2 className="text-lg font-bold text-slate-800">Cấp phát chứng nhận</h2>
@@ -91,7 +207,8 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
                 </div>
 
                 <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
-                    {/* Template */}
+
+                    {/* Mẫu chứng nhận */}
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1">Mẫu chứng nhận</label>
                         <div className="relative">
@@ -100,9 +217,7 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
                                 onChange={(e) => setTemplateId(e.target.value)}
                                 className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
-                                {templates.length === 0 && (
-                                    <option value="">-- Chưa có mẫu nào --</option>
-                                )}
+                                {templates.length === 0 && <option value="">-- Chưa có mẫu nào --</option>}
                                 {templates.map((t) => (
                                     <option key={t.id} value={t.id}>{t.name}</option>
                                 ))}
@@ -111,7 +226,7 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
                         </div>
                     </div>
 
-                    {/* Title */}
+                    {/* Tiêu đề */}
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1">Tiêu đề đợt cấp</label>
                         <input
@@ -123,9 +238,11 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
                         />
                     </div>
 
-                    {/* Custom note */}
+                    {/* Ghi chú */}
                     <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1">Ghi chú thêm <span className="font-normal text-slate-400">(tùy chọn)</span></label>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1">
+                            Ghi chú thêm <span className="font-normal text-slate-400">(tùy chọn)</span>
+                        </label>
                         <input
                             type="text"
                             value={customNote}
@@ -135,82 +252,151 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
                         />
                     </div>
 
-                    {/* Students */}
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="text-sm font-semibold text-slate-700">Danh sách học sinh ({students.length})</label>
-                            <button
-                                onClick={addStudent}
-                                disabled={students.length >= 100}
-                                className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-40"
-                            >
-                                <Plus size={13} /> Thêm HS
-                            </button>
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 px-1">
-                                <div className="col-span-3">Mã HS</div>
-                                <div className="col-span-4">Họ tên</div>
-                                <div className="col-span-2">Điểm</div>
-                                <div className="col-span-2">Bài thi</div>
-                                <div className="col-span-1"></div>
+                    {/* Lớp + Bài thi */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 mb-1">
+                                <Users size={13} className="text-slate-400" /> Lớp học
+                            </label>
+                            <div className="relative">
+                                <select
+                                    value={classId}
+                                    onChange={e => setClassId(e.target.value)}
+                                    disabled={loadingClasses}
+                                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+                                >
+                                    {classes.length === 0 && <option value="">-- Chưa có lớp --</option>}
+                                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                             </div>
-                            {students.map((s, idx) => (
-                                <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                                    <input
-                                        className="col-span-3 border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
-                                        placeholder="student_id"
-                                        value={s.student_id}
-                                        onChange={(e) => updateStudent(idx, 'student_id', e.target.value)}
-                                    />
-                                    <input
-                                        className="col-span-4 border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
-                                        placeholder="Họ và tên"
-                                        value={s.student_name}
-                                        onChange={(e) => updateStudent(idx, 'student_name', e.target.value)}
-                                    />
-                                    <input
-                                        type="number"
-                                        className="col-span-2 border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
-                                        placeholder="10"
-                                        value={s.student_score ?? ''}
-                                        onChange={(e) => updateStudent(idx, 'student_score', e.target.value)}
-                                    />
-                                    <input
-                                        className="col-span-2 border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
-                                        placeholder="Tên bài"
-                                        value={s.quiz_title ?? ''}
-                                        onChange={(e) => updateStudent(idx, 'quiz_title', e.target.value)}
-                                    />
-                                    <button
-                                        onClick={() => removeStudent(idx)}
-                                        disabled={students.length === 1}
-                                        className="col-span-1 flex justify-center text-red-400 hover:text-red-600 disabled:opacity-30"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            ))}
+                        </div>
+                        <div>
+                            <label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 mb-1">
+                                <BookOpen size={13} className="text-slate-400" /> Bài thi{' '}
+                                <span className="font-normal text-slate-400">(tùy chọn)</span>
+                            </label>
+                            <div className="relative">
+                                <select
+                                    value={quizId}
+                                    onChange={e => setQuizId(e.target.value)}
+                                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">-- Không chọn --</option>
+                                    {quizzes.map(q => <option key={q.id} value={q.id}>{q.title}</option>)}
+                                </select>
+                                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            </div>
                         </div>
                     </div>
+
+                    {/* Danh sách học sinh */}
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-sm font-semibold text-slate-700">
+                                Học sinh
+                                {!loadingStudents && classStudents.length > 0 && (
+                                    <span className="ml-1.5 font-normal text-slate-400">
+                                        ({selectedIds.size}/{classStudents.length} đã chọn)
+                                    </span>
+                                )}
+                            </label>
+                            {loadingResults && (
+                                <span className="flex items-center gap-1 text-xs text-blue-500">
+                                    <Loader2 size={11} className="animate-spin" /> Đang tải điểm...
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Search */}
+                        <div className="relative mb-2">
+                            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="Tìm theo tên hoặc tài khoản..."
+                                className="w-full border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        {loadingStudents ? (
+                            <div className="space-y-2">
+                                {[...Array(3)].map((_, i) => (
+                                    <div key={i} className="h-9 bg-slate-100 rounded-xl animate-pulse" />
+                                ))}
+                            </div>
+                        ) : classStudents.length === 0 ? (
+                            <div className="flex items-center gap-2 text-sm text-slate-400 py-6 justify-center">
+                                <AlertCircle size={15} /> Lớp này chưa có học sinh
+                            </div>
+                        ) : (
+                            <div className="border border-slate-100 rounded-xl overflow-hidden">
+                                {/* Chọn tất cả */}
+                                <div
+                                    className="flex items-center gap-2 px-3 py-2 bg-slate-50 border-b border-slate-100 cursor-pointer hover:bg-slate-100 select-none"
+                                    onClick={toggleAll}
+                                >
+                                    {filtered.every(s => selectedIds.has(s.id))
+                                        ? <CheckSquare size={15} className="text-blue-500" />
+                                        : <Square size={15} className="text-slate-400" />
+                                    }
+                                    <span className="text-xs font-semibold text-slate-600">
+                                        Chọn tất cả ({filtered.length})
+                                    </span>
+                                </div>
+                                {/* Danh sách */}
+                                <div className="max-h-48 overflow-y-auto divide-y divide-slate-50">
+                                    {filtered.map(s => (
+                                        <div
+                                            key={s.id}
+                                            className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors select-none ${
+                                                selectedIds.has(s.id) ? 'bg-blue-50/40' : ''
+                                            }`}
+                                            onClick={() => toggleOne(s.id)}
+                                        >
+                                            {selectedIds.has(s.id)
+                                                ? <CheckSquare size={15} className="shrink-0 text-blue-500" />
+                                                : <Square size={15} className="shrink-0 text-slate-300" />
+                                            }
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-slate-800 truncate">{s.fullName}</p>
+                                                <p className="text-xs text-slate-400">{s.username}</p>
+                                            </div>
+                                            {quizId && (
+                                                <div className="shrink-0 text-right min-w-[40px]">
+                                                    {s.score !== null
+                                                        ? <span className="text-sm font-semibold text-emerald-600">{s.score}</span>
+                                                        : <span className="text-xs text-slate-300">—</span>
+                                                    }
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+                <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3">
                     <button
                         onClick={onClose}
                         className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
                     >
-                        Huỷ
+                        Hủy
                     </button>
                     <button
                         onClick={handleSubmit}
-                        disabled={isSubmitting}
-                        className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
+                        disabled={isSubmitting || templates.length === 0 || selectedIds.size === 0}
+                        className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
                     >
-                        {isSubmitting ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                        Gửi chứng nhận
+                        {isSubmitting
+                            ? <><Loader2 size={15} className="animate-spin" /> Đang tạo...</>
+                            : <><Send size={15} /> Cấp cho {selectedIds.size} học sinh</>
+                        }
                     </button>
                 </div>
             </div>
