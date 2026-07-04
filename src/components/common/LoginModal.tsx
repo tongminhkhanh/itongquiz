@@ -61,7 +61,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                 const tFullName = tFullNameRaw || tUsername;
                 const isTeacherAdmin = String(teacher.role || '').trim().toLowerCase() === 'admin';
                 const tClass = teacher.class ? String(teacher.class).trim() : undefined;
-                authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass);
+                const tToken = (teacher.token as string | undefined) ?? null;
+                if (tToken) localStorage.setItem('itongquiz_teacher_jwt_token', tToken);
+                authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass, tToken);
                 onClose();
                 return;
             }
