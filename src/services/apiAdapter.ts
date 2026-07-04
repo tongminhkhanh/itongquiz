@@ -7,6 +7,8 @@ const REMOTE_WORKERS_API_URL = 'https://phieu.thitong.site';
 
 function getStoredJWTToken(): string {
     try {
+        const teacherToken = localStorage.getItem('itongquiz_teacher_jwt_token');
+        if (teacherToken) return teacherToken;
         const directToken = localStorage.getItem('itongquiz_jwt_token');
         if (directToken) return directToken;
 
