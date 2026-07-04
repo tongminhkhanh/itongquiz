@@ -42,7 +42,7 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
         }
 
         if (!teacher) {
-            return jsonResponse({ status: 'error', message: 'Sai tên đăng nhập hoặc mật khẩu.' });
+            return jsonResponse({ status: 'error', message: 'Sai tÃªn Ä‘Äƒng nháº­p hoáº·c máº­t kháº©u.' });
         }
 
         // SECURITY: Generate JWT token for teacher session
@@ -56,6 +56,7 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
                 username: teacher.username,
                 role: teacher.role === 'admin' ? 'admin' : 'teacher',
                 fullName: teacher.full_name,
+                school_id: teacher.username,
             },
             env.JWT_SECRET,
             '7d' // 7 days expiration
@@ -136,7 +137,7 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
         // Check if username already exists
         const existing = await db.prepare('SELECT username FROM teachers WHERE username = ?').bind(username).first();
         if (existing) {
-            return jsonResponse({ status: 'error', message: `Tài khoản "${username}" đã tồn tại.` });
+            return jsonResponse({ status: 'error', message: `TÃ i khoáº£n "${username}" Ä‘Ã£ tá»“n táº¡i.` });
         }
 
         const hashedPassword = await hashPassword(password);
@@ -146,7 +147,7 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
             username, hashedPassword, fullName, role || 'teacher', teacherClass || ''
         ).run();
 
-        return jsonResponse({ status: 'success', message: `Đã tạo tài khoản giáo viên "${fullName}".` });
+        return jsonResponse({ status: 'success', message: `ÄÃ£ táº¡o tÃ i khoáº£n giÃ¡o viÃªn "${fullName}".` });
     }
 
     // PUT /api/teachers/:username - Update teacher
@@ -180,7 +181,7 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
         values.push(targetUsername);
         await db.prepare(`UPDATE teachers SET ${updates.join(', ')} WHERE username = ?`).bind(...values).run();
 
-        return jsonResponse({ status: 'success', message: `Đã cập nhật tài khoản "${targetUsername}".` });
+        return jsonResponse({ status: 'success', message: `ÄÃ£ cáº­p nháº­t tÃ i khoáº£n "${targetUsername}".` });
     }
 
     // DELETE /api/teachers/:username - Delete teacher
@@ -192,7 +193,7 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
         if (adminError) return adminError;
 
         await db.prepare('DELETE FROM teachers WHERE username = ?').bind(targetUsername).run();
-        return jsonResponse({ status: 'success', message: `Đã xóa tài khoản "${targetUsername}".` });
+        return jsonResponse({ status: 'success', message: `ÄÃ£ xÃ³a tÃ i khoáº£n "${targetUsername}".` });
     }
 
     return errorResponse('Not found: ' + path, 404);
