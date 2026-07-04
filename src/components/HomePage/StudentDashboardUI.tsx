@@ -354,6 +354,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     }>>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
     const [isWeeklyQuestsLoading, setIsWeeklyQuestsLoading] = useState(false);
     const [weeklyQuestsError, setWeeklyQuestsError] = useState<string | null>(null);
+    const [isClaimingWeeklyQuest, setIsClaimingWeeklyQuest] = useState<string | null>(null);
 
     // --- Fetch Data ---
     useEffect(() => {
@@ -512,6 +513,14 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 .filter(Boolean) as AttendanceQuestion[];
         });
     }, [quizStore.quizzes, ioeQuizzes]);
+
+    const journeyMissionSummary = useMemo(() => {
+        const missions = dashboard?.missions || [];
+        return {
+            total: missions.length,
+            completed: missions.filter((mission) => mission.completed).length,
+        };
+    }, [dashboard]);
 
     const totalAssignmentPages = Math.max(1, Math.ceil(myAssignmentQuizzes.length / ASSIGNMENTS_PER_PAGE));
 
@@ -829,6 +838,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         if (!studentSession?.username) return;
 
         try {
+            setIsClaimingWeeklyQuest(questId);
             const data = await callApi('claim_weekly_quest', { questId });
 
             if (data.status === 'success') {
@@ -849,6 +859,8 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         } catch (error: any) {
             console.error('Error claiming weekly quest:', error);
             toast.error(error.message || 'Không thể nhận thưởng');
+        } finally {
+            setIsClaimingWeeklyQuest(null);
         }
     };
 
@@ -979,24 +991,31 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     </div>
                 </motion.div>
 
-                <section className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-6 items-start">
+                <section className="space-y-6">
                     <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6 self-start">
                         <button
                             type="button"
                             onClick={() => setIsJourneyExpanded((prev) => !prev)}
-                            className="w-full flex items-center justify-between gap-4 text-left"
+                            className="w-full flex flex-col gap-4 text-left md:flex-row md:items-center md:justify-between"
+                            aria-expanded={isJourneyExpanded}
                         >
-                            <div className="flex items-center gap-3">
-                                <div className="bg-violet-100 p-2 rounded-2xl text-violet-600"><Sparkles className="w-5 h-5" /></div>
-                                <div>
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="bg-violet-100 p-2 rounded-2xl text-violet-600 shrink-0"><Sparkles className="w-5 h-5" /></div>
+                                <div className="min-w-0">
                                     <h2 className="text-xl md:text-2xl font-black text-slate-800">Hành trình hôm nay</h2>
-                                    <p className="text-sm text-slate-500 font-medium">Giữ nhịp học mỗi ngày với nhiệm vụ, rương và huy hiệu.</p>
+                                    <p className="text-sm text-slate-500 font-medium">Theo dõi tiến độ hôm nay rồi mở chi tiết khi cần.</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-4 shrink-0">
+                            <div className="flex items-center justify-between gap-3 md:justify-end shrink-0">
                                 <div className="text-right">
-                                    <p className="text-xs uppercase font-black text-slate-400 tracking-wider">Chuỗi ngày</p>
-                                    <p className="text-lg font-black text-orange-500 flex items-center justify-end gap-1"><Flame className="w-4 h-4" /> {dashboard?.profile.dailyStreak || 0}</p>
+                                    <p className="text-sm font-black text-slate-700">
+                                        {dashboard
+                                            ? `${journeyMissionSummary.completed}/${journeyMissionSummary.total} nhiệm vụ`
+                                            : 'Đang tải tiến độ'}
+                                    </p>
+                                    <p className="text-xs font-bold text-slate-400">
+                                        Chuỗi {dashboard?.profile.dailyStreak || 0} ngày • {isJourneyExpanded ? 'Thu gọn' : 'Xem chi tiết'}
+                                    </p>
                                 </div>
                                 <div className="w-10 h-10 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-500">
                                     {isJourneyExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -1004,315 +1023,347 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                             </div>
                         </button>
 
+                        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm font-bold">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 text-violet-700">
+                                <Sparkles className="w-4 h-4" />
+                                {dashboard
+                                    ? `${journeyMissionSummary.completed}/${journeyMissionSummary.total} nhiệm vụ hôm nay`
+                                    : 'Đang tải nhiệm vụ hôm nay'}
+                            </span>
+                            <span className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1.5 text-orange-600">
+                                <Flame className="w-4 h-4" /> Chuỗi {dashboard?.profile.dailyStreak || 0} ngày
+                            </span>
+                        </div>
+
                         {gameLoopError && (
                             <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                                 {gameLoopError}
                             </div>
                         )}
 
-                        {isJourneyExpanded && (isGameLoopLoading && !dashboard ? (
-                            <div className="flex justify-center py-10 mt-5">
-                                <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
-                            </div>
-                        ) : dashboard ? (
-                            <div className="space-y-4 mt-5">
-                                {dashboard.missions.map((mission) => {
-                                    const progressPercent = getMissionProgressPercent(mission);
-                                    return (
-                                        <div key={mission.id} className="rounded-3xl border border-slate-100 bg-slate-50/80 p-4">
-                                            <div className="flex flex-col md:flex-row md:items-center gap-4">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1.5">
-                                                        <h3 className="text-base font-black text-slate-800">{mission.title}</h3>
-                                                        {mission.claimed ? (
-                                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black px-2 py-1">
-                                                                <CheckCircle2 className="w-3.5 h-3.5" /> Đã nhận
-                                                            </span>
-                                                        ) : mission.completed ? (
-                                                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 text-[11px] font-black px-2 py-1">
-                                                                <Sparkles className="w-3.5 h-3.5" /> Sẵn sàng
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-500 text-[11px] font-black px-2 py-1">
-                                                                <Lock className="w-3.5 h-3.5" /> Đang tiến hành
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm text-slate-500 font-medium mb-3">{mission.description}</p>
-                                                    <div className="h-2.5 rounded-full bg-slate-200 overflow-hidden">
-                                                        <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400" style={{ width: `${progressPercent}%` }} />
-                                                    </div>
-                                                    <div className="flex items-center justify-between text-xs font-bold text-slate-500 mt-2">
-                                                        <span>{mission.progress}/{mission.target} {mission.unit}</span>
-                                                        <span>+{mission.rewardCoins} Xu</span>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleClaimMission(mission.id)}
-                                                    disabled={!mission.completed || mission.claimed || isGameLoopLoading}
-                                                    className={`shrink-0 px-4 py-2.5 rounded-2xl text-sm font-black transition-colors ${mission.claimed
-                                                        ? 'bg-emerald-50 text-emerald-600 cursor-default'
-                                                        : mission.completed
-                                                            ? 'bg-violet-600 hover:bg-violet-700 text-white'
-                                                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                                        }`}
-                                                >
-                                                    {mission.claimed ? 'Đã nhận' : mission.completed ? 'Nhận thưởng' : 'Chưa đủ'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : null)}
-
-                    </div>
-
-                    {/* Weekly Quests Panel — card rieng ngoai Hanh trinh hom nay */}
-                    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
-                        <div className="flex items-center gap-3 mb-5">
-                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xl">
-                                📅
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-black text-slate-800">Nhiệm vụ tuần</h3>
-                                <p className="text-xs text-slate-500">Reset mỗi thứ 2</p>
-                            </div>
-                        </div>
-
-                        {isWeeklyQuestsLoading ? (
-                            <div className="flex justify-center py-10">
-                                <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
-                            </div>
-                        ) : weeklyQuestsError ? (
-                            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                                {weeklyQuestsError}
-                            </div>
-                        ) : weeklyQuests.length === 0 ? (
-                            <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center">
-                                <p className="text-sm font-semibold text-slate-400">Chưa có nhiệm vụ tuần nào. Hãy quay lại sau nhé! 🌟</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {weeklyQuests.map((quest) => {
-                                    const progressPercent = Math.min(100, (quest.progress / quest.target) * 100);
-
-                                    return (
-                                        <div
-                                            key={quest.id}
-                                            className={`rounded-2xl border p-4 transition-colors ${
-                                                quest.claimed
-                                                    ? 'border-emerald-100 bg-emerald-50/60'
-                                                    : quest.completed
-                                                    ? 'border-purple-200 bg-purple-50/60'
-                                                    : 'border-slate-200 bg-slate-50'
-                                            }`}
-                                        >
-                                            <div className="flex items-start gap-3 mb-2">
-                                                <div className="text-2xl flex-shrink-0">{quest.icon}</div>
-                                                <div className="flex-1 min-w-0">
-                                                    <h4 className="text-sm font-black text-slate-800 flex flex-wrap items-center gap-2">
-                                                        {quest.title}
-                                                        {quest.claimed && (
-                                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5">
-                                                                ✓ Đã nhận
-                                                            </span>
-                                                        )}
-                                                    </h4>
-                                                    <p className="text-xs text-slate-500 mt-0.5">{quest.description}</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Progress bar */}
-                                            <div className="mb-3">
-                                                <div className="flex justify-between text-xs font-bold mb-1">
-                                                    <span className="text-slate-600">{quest.progress}/{quest.target}</span>
-                                                    <span className="text-purple-600">{Math.round(progressPercent)}%</span>
-                                                </div>
-                                                <div
-                                                    className="h-2 bg-slate-200 rounded-full overflow-hidden"
-                                                    role="progressbar"
-                                                    aria-valuenow={quest.progress}
-                                                    aria-valuemin={0}
-                                                    aria-valuemax={quest.target}
-                                                >
-                                                    <div
-                                                        className={`h-full rounded-full transition-all duration-500 ${
-                                                            quest.claimed
-                                                                ? 'bg-emerald-400'
-                                                                : 'bg-gradient-to-r from-purple-500 to-indigo-500'
-                                                        }`}
-                                                        style={{ width: `${progressPercent}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Reward & Claim button */}
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div className="text-xs font-bold text-amber-600 flex flex-wrap items-center gap-1">
-                                                    <span>🪩 +{quest.reward.coins} Xu</span>
-                                                    {quest.reward.exp > 0 && (
-                                                        <span className="text-violet-600">· +{quest.reward.exp} EXP</span>
-                                                    )}
-                                                    {quest.reward.items.length > 0 && (
-                                                        <span className="text-slate-500">· +{quest.reward.itemCount} vật phẩm</span>
-                                                    )}
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleClaimWeeklyQuest(quest.id)}
-                                                    disabled={!quest.completed || quest.claimed}
-                                                    aria-label={
-                                                        quest.claimed
-                                                            ? 'Đã nhận thưởng'
-                                                            : quest.completed
-                                                            ? 'Nhận thưởng nhiệm vụ tuần'
-                                                            : 'Chưa hoàn thành nhiệm vụ'
-                                                    }
-                                                    className={`shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-all ${
-                                                        quest.claimed
-                                                            ? 'bg-emerald-100 text-emerald-600 cursor-default'
-                                                            : quest.completed
-                                                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-md hover:scale-[1.03]'
-                                                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                                    }`}
-                                                >
-                                                    {quest.claimed ? '✓ Đã nhận' : quest.completed ? 'Nhận thưởng' : 'Chưa xong'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="space-y-6">
-                        <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="bg-amber-100 p-2 rounded-2xl text-amber-600"><Gift className="w-5 h-5" /></div>
-                                <div>
-                                    <h3 className="text-lg font-black text-slate-800">Rương thưởng ngày</h3>
-                                    <p className="text-sm text-slate-500 font-medium">Mở khi hoàn thành đủ 3 nhiệm vụ.</p>
-                                </div>
-                            </div>
-                            <div className="rounded-3xl bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 border border-amber-100 p-4">
-                                <p className="text-sm font-semibold text-slate-600 mb-3">
-                                    {dashboard?.bonusChest.claimed
-                                        ? 'Em đã mở rương hôm nay rồi. Mai quay lại nhé!'
-                                        : dashboard?.bonusChest.available
-                                            ? 'Rương đã sẵn sàng với phần thưởng sưu tầm hoặc booster nhẹ.'
-                                            : 'Hoàn thành đủ nhiệm vụ ngày để mở rương thưởng.'}
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={handleClaimChest}
-                                    disabled={!dashboard?.bonusChest.available || isGameLoopLoading}
-                                    className={`w-full py-3 rounded-2xl text-sm font-black transition-colors ${dashboard?.bonusChest.available
-                                        ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                        }`}
+                        <AnimatePresence initial={false}>
+                            {isJourneyExpanded && (isGameLoopLoading && !dashboard ? (
+                                <motion.div
+                                    key="journey-loading"
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                                    className="overflow-hidden"
                                 >
-                                    {dashboard?.bonusChest.claimed ? 'Đã mở rương' : 'Mở rương thưởng'}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
-                            <div className="flex items-center justify-between gap-3 mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-blue-100 p-2 rounded-2xl text-blue-600"><CalendarDays className="w-5 h-5" /></div>
-                                    <div>
-                                        <h3 className="text-lg font-black text-slate-800">Nhịp học tuần này</h3>
-                                        <p className="text-sm text-slate-500 font-medium">Tích lũy đều để tiến gần quà thật hơn.</p>
+                                    <div className="flex justify-center py-10 mt-5">
+                                        <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
                                     </div>
+                                </motion.div>
+                            ) : dashboard ? (
+                                <motion.div
+                                    key="journey-content"
+                                    initial={{ opacity: 0, height: 0, y: -6 }}
+                                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                                    exit={{ opacity: 0, height: 0, y: -6 }}
+                                    transition={{ duration: 0.22, ease: 'easeOut' }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="space-y-4 mt-5">
+                                        {dashboard.missions.map((mission) => {
+                                            const progressPercent = getMissionProgressPercent(mission);
+                                            return (
+                                                <div key={mission.id} className="rounded-3xl border border-slate-100 bg-slate-50/80 p-4">
+                                                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1.5">
+                                                                <h3 className="text-base font-black text-slate-800">{mission.title}</h3>
+                                                                {mission.claimed ? (
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black px-2 py-1">
+                                                                        <CheckCircle2 className="w-3.5 h-3.5" /> Đã nhận
+                                                                    </span>
+                                                                ) : mission.completed ? (
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 text-[11px] font-black px-2 py-1">
+                                                                        <Sparkles className="w-3.5 h-3.5" /> Sẵn sàng
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-500 text-[11px] font-black px-2 py-1">
+                                                                        <Lock className="w-3.5 h-3.5" /> Đang tiến hành
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-sm text-slate-500 font-medium mb-3">{mission.description}</p>
+                                                            <div className="h-2.5 rounded-full bg-slate-200 overflow-hidden">
+                                                                <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400" style={{ width: `${progressPercent}%` }} />
+                                                            </div>
+                                                            <div className="flex items-center justify-between text-xs font-bold text-slate-500 mt-2">
+                                                                <span>{mission.progress}/{mission.target} {mission.unit}</span>
+                                                                <span>+{mission.rewardCoins} Xu</span>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleClaimMission(mission.id)}
+                                                            disabled={!mission.completed || mission.claimed || isGameLoopLoading}
+                                                            className={`shrink-0 px-4 py-2.5 rounded-2xl text-sm font-black transition-colors ${mission.claimed
+                                                                ? 'bg-emerald-50 text-emerald-600 cursor-default'
+                                                                : mission.completed
+                                                                    ? 'bg-violet-600 hover:bg-violet-700 text-white'
+                                                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                                                }`}
+                                                        >
+                                                            {mission.claimed ? 'Đã nhận' : mission.completed ? 'Nhận thưởng' : 'Chưa đủ'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </motion.div>
+                            ) : null)}
+                        </AnimatePresence>
+                    </div>
+
+                    <section className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-6 items-start">
+                        {/* Weekly Quests Panel — card rieng ngoai Hanh trinh hom nay */}
+                        <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xl">
+                                    📅
                                 </div>
-                                <span className="text-sm font-black text-blue-600">{dashboard?.weekly.completedDays || 0}/{dashboard?.weekly.targetDays || 5}</span>
+                                <div>
+                                    <h3 className="text-lg font-black text-slate-800">Nhiệm vụ tuần</h3>
+                                    <p className="text-xs text-slate-500">Reset mỗi thứ 2</p>
+                                </div>
                             </div>
-                            <div className="h-3 rounded-full bg-slate-200 overflow-hidden mb-3">
-                                <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" style={{ width: `${Math.min(100, Math.round(((dashboard?.weekly.completedDays || 0) / Math.max(dashboard?.weekly.targetDays || 1, 1)) * 100))}%` }} />
-                            </div>
-                            <p className="text-sm text-slate-500 font-medium mb-4">
-                                Hoàn thành đủ nhiệm vụ trong 5 ngày để giữ nhịp tích lũy đẹp cho Gift Shop.
-                            </p>
-                            {giftShopEnabled && (
-                                <button type="button" onClick={handleOpenGiftShop} className="w-full py-2.5 rounded-2xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm font-black hover:bg-indigo-100 transition-colors">
-                                    Xem mục tiêu quà thật
-                                </button>
+
+                            {isWeeklyQuestsLoading ? (
+                                <div className="flex justify-center py-10">
+                                    <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                                </div>
+                            ) : weeklyQuestsError ? (
+                                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                                    {weeklyQuestsError}
+                                </div>
+                            ) : weeklyQuests.length === 0 ? (
+                                <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center">
+                                    <p className="text-sm font-semibold text-slate-400">Chưa có nhiệm vụ tuần nào. Hãy quay lại sau nhé! 🌟</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {weeklyQuests.map((quest) => {
+                                        const progressPercent = Math.min(100, (quest.progress / quest.target) * 100);
+
+                                        return (
+                                            <div
+                                                key={quest.id}
+                                                className={`rounded-2xl border p-4 transition-colors ${
+                                                    quest.claimed
+                                                        ? 'border-emerald-100 bg-emerald-50/60'
+                                                        : quest.completed
+                                                        ? 'border-purple-200 bg-purple-50/60'
+                                                        : 'border-slate-200 bg-slate-50'
+                                                }`}
+                                            >
+                                                <div className="flex items-start gap-3 mb-2">
+                                                    <div className="text-2xl flex-shrink-0">{quest.icon}</div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="text-sm font-black text-slate-800 flex flex-wrap items-center gap-2">
+                                                            {quest.title}
+                                                            {quest.claimed && (
+                                                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5">
+                                                                    ✓ Đã nhận
+                                                                </span>
+                                                            )}
+                                                        </h4>
+                                                        <p className="text-xs text-slate-500 mt-0.5">{quest.description}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mb-3">
+                                                    <div className="flex justify-between text-xs font-bold mb-1">
+                                                        <span className="text-slate-600">{quest.progress}/{quest.target}</span>
+                                                        <span className="text-purple-600">{Math.round(progressPercent)}%</span>
+                                                    </div>
+                                                    <div
+                                                        className="h-2 bg-slate-200 rounded-full overflow-hidden"
+                                                        role="progressbar"
+                                                        aria-valuenow={quest.progress}
+                                                        aria-valuemin={0}
+                                                        aria-valuemax={quest.target}
+                                                    >
+                                                        <div
+                                                            className={`h-full rounded-full transition-all duration-500 ${
+                                                                quest.claimed
+                                                                    ? 'bg-emerald-400'
+                                                                    : 'bg-gradient-to-r from-purple-500 to-indigo-500'
+                                                            }`}
+                                                            style={{ width: `${progressPercent}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="text-xs font-bold text-amber-600 flex flex-wrap items-center gap-1">
+                                                        <span>🪙 +{quest.reward.coins} Xu</span>
+                                                        {quest.reward.exp > 0 && (
+                                                            <span className="text-violet-600">· +{quest.reward.exp} EXP</span>
+                                                        )}
+                                                        {quest.reward.items.length > 0 && (
+                                                            <span className="text-slate-500">· +{quest.reward.itemCount} vật phẩm</span>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleClaimWeeklyQuest(quest.id)}
+                                                        disabled={!quest.completed || quest.claimed || isClaimingWeeklyQuest === quest.id}
+                                                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-colors ${
+                                                            quest.claimed
+                                                                ? 'bg-emerald-100 text-emerald-700 cursor-default'
+                                                                : quest.completed
+                                                                ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                                        }`}
+                                                    >
+                                                        {isClaimingWeeklyQuest === quest.id ? (
+                                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                                        ) : quest.claimed ? (
+                                                            'Đã nhận'
+                                                        ) : quest.completed ? (
+                                                            'Nhận ngay'
+                                                        ) : (
+                                                            'Chưa xong'
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             )}
                         </div>
 
-                        <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
-                            <div className="flex items-center justify-between gap-3 mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-emerald-100 p-2 rounded-2xl text-emerald-600"><Medal className="w-5 h-5" /></div>
+                        <div className="space-y-6">
+                            <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="bg-amber-100 p-2 rounded-2xl text-amber-600"><Gift className="w-5 h-5" /></div>
                                     <div>
-                                        <h3 className="text-lg font-black text-slate-800">Sổ huy hiệu</h3>
-                                        <p className="text-sm text-slate-500 font-medium">Nhìn lại những cột mốc nhỏ em đã đạt được.</p>
+                                        <h3 className="text-lg font-black text-slate-800">Rương thưởng ngày</h3>
+                                        <p className="text-sm text-slate-500 font-medium">Mở khi hoàn thành đủ 3 nhiệm vụ.</p>
                                     </div>
                                 </div>
-                                {(dashboard?.achievements.length || 0) > 0 && (
+                                <div className="rounded-3xl bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 border border-amber-100 p-4">
+                                    <p className="text-sm font-semibold text-slate-600 mb-3">
+                                        {dashboard?.bonusChest.claimed
+                                            ? 'Em đã mở rương hôm nay rồi. Mai quay lại nhé!'
+                                            : dashboard?.bonusChest.available
+                                                ? 'Rương đã sẵn sàng với phần thưởng sưu tầm hoặc booster nhẹ.'
+                                                : 'Hoàn thành đủ nhiệm vụ ngày để mở rương thưởng.'}
+                                    </p>
                                     <button
                                         type="button"
-                                        onClick={() => setIsBadgeGalleryOpen(true)}
-                                        className="text-xs font-black text-purple-600 hover:text-purple-700 transition-colors flex items-center gap-1"
+                                        onClick={handleClaimChest}
+                                        disabled={!dashboard?.bonusChest.available || isGameLoopLoading}
+                                        className={`w-full py-3 rounded-2xl text-sm font-black transition-colors ${dashboard?.bonusChest.available
+                                            ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                            }`}
                                     >
-                                        Xem tất cả
-                                        <Trophy className="w-3.5 h-3.5" />
+                                        {dashboard?.bonusChest.claimed ? 'Đã mở rương' : 'Mở rương thưởng'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
+                                <div className="flex items-center justify-between gap-3 mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-blue-100 p-2 rounded-2xl text-blue-600"><CalendarDays className="w-5 h-5" /></div>
+                                        <div>
+                                            <h3 className="text-lg font-black text-slate-800">Nhịp học tuần này</h3>
+                                            <p className="text-sm text-slate-500 font-medium">Tích lũy đều để tiến gần quà thật hơn.</p>
+                                        </div>
+                                    </div>
+                                    <span className="text-sm font-black text-blue-600">{dashboard?.weekly.completedDays || 0}/{dashboard?.weekly.targetDays || 5}</span>
+                                </div>
+                                <div className="h-3 rounded-full bg-slate-200 overflow-hidden mb-3">
+                                    <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" style={{ width: `${Math.min(100, Math.round(((dashboard?.weekly.completedDays || 0) / Math.max(dashboard?.weekly.targetDays || 1, 1)) * 100))}%` }} />
+                                </div>
+                                <p className="text-sm text-slate-500 font-medium mb-4">
+                                    Hoàn thành đủ nhiệm vụ trong 5 ngày để giữ nhịp tích lũy đẹp cho Gift Shop.
+                                </p>
+                                {giftShopEnabled && (
+                                    <button type="button" onClick={handleOpenGiftShop} className="w-full py-2.5 rounded-2xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm font-black hover:bg-indigo-100 transition-colors">
+                                        Xem mục tiêu quà thật
                                     </button>
                                 )}
                             </div>
-                            <div className="grid grid-cols-1 gap-3 mb-4">
-                                {(dashboard?.achievements.slice(0, 3) || []).map((achievement) => {
-                                    const badgeImage = getAchievementBadgeImage(achievement.code);
 
-                                    return (
-                                    <div key={achievement.code} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 flex items-center gap-3">
-                                        <div className="w-11 h-11 rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden">
-                                            {badgeImage ? (
-                                                <img
-                                                    src={badgeImage}
-                                                    alt={getAchievementBadgeAlt(achievement)}
-                                                    className="h-9 w-9 object-contain"
-                                                />
-                                            ) : (
-                                                <span className="text-xl">{achievement.icon}</span>
-                                            )}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-black text-slate-800">{achievement.title}</p>
-                                            <p className="text-xs text-slate-500 font-medium">{achievement.description}</p>
+                            <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
+                                <div className="flex items-center justify-between gap-3 mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-emerald-100 p-2 rounded-2xl text-emerald-600"><Medal className="w-5 h-5" /></div>
+                                        <div>
+                                            <h3 className="text-lg font-black text-slate-800">Sổ huy hiệu</h3>
+                                            <p className="text-sm text-slate-500 font-medium">Nhìn lại những cột mốc nhỏ em đã đạt được.</p>
                                         </div>
                                     </div>
-                                    );
-                                })}
-                                {(dashboard?.achievements.length || 0) === 0 && (
-                                    <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-5 text-center text-sm font-semibold text-slate-500">
-                                        Hoàn thành bài đầu tiên để mở huy hiệu đầu tiên nhé.
-                                    </div>
-                                )}
-                            </div>
-                            <div className="rounded-2xl bg-slate-50 border border-slate-100 px-4 py-4">
-                                <p className="text-xs uppercase font-black tracking-wider text-slate-400 mb-2">Bộ sưu tập mini</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {(dashboard?.profile.collection || []).length > 0 ? (
-                                        dashboard?.profile.collection.map((item) => (
-                                            <div key={item.id} className="w-11 h-11 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-xl" title={item.title}>
-                                                {item.icon}
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-sm text-slate-500 font-medium">Mở rương để bắt đầu bộ sưu tập Toán và Tiếng Việt.</p>
+                                    {(dashboard?.achievements.length || 0) > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsBadgeGalleryOpen(true)}
+                                            className="text-xs font-black text-purple-600 hover:text-purple-700 transition-colors flex items-center gap-1"
+                                        >
+                                            Xem tất cả
+                                            <Trophy className="w-3.5 h-3.5" />
+                                        </button>
                                     )}
                                 </div>
-                                <div className="mt-4 flex items-center gap-3 text-sm font-bold text-slate-600">
-                                    <span>💡 Vé gợi ý: {dashboard?.profile.hintTokens || 0}</span>
-                                    <span>🛡️ Khiên chuỗi: {dashboard?.profile.streakShields || 0}</span>
+                                <div className="grid grid-cols-1 gap-3 mb-4">
+                                    {(dashboard?.achievements.slice(0, 3) || []).map((achievement) => {
+                                        const badgeImage = getAchievementBadgeImage(achievement.code);
+
+                                        return (
+                                        <div key={achievement.code} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 flex items-center gap-3">
+                                            <div className="w-11 h-11 rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden">
+                                                {badgeImage ? (
+                                                    <img
+                                                        src={badgeImage}
+                                                        alt={getAchievementBadgeAlt(achievement)}
+                                                        className="h-9 w-9 object-contain"
+                                                    />
+                                                ) : (
+                                                    <span className="text-xl">{achievement.icon}</span>
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-black text-slate-800">{achievement.title}</p>
+                                                <p className="text-xs text-slate-500 font-medium">{achievement.description}</p>
+                                            </div>
+                                        </div>
+                                        );
+                                    })}
+                                    {(dashboard?.achievements.length || 0) === 0 && (
+                                        <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-5 text-center text-sm font-semibold text-slate-500">
+                                            Hoàn thành bài đầu tiên để mở huy hiệu đầu tiên nhé.
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="rounded-2xl bg-slate-50 border border-slate-100 px-4 py-4">
+                                    <p className="text-xs uppercase font-black tracking-wider text-slate-400 mb-2">Bộ sưu tập mini</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(dashboard?.profile.collection || []).length > 0 ? (
+                                            dashboard?.profile.collection.map((item) => (
+                                                <div key={item.id} className="w-11 h-11 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-xl" title={item.title}>
+                                                    {item.icon}
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-slate-500 font-medium">Mở rương để bắt đầu bộ sưu tập Toán và Tiếng Việt.</p>
+                                        )}
+                                    </div>
+                                    <div className="mt-4 flex items-center gap-3 text-sm font-bold text-slate-600">
+                                        <span>💡 Vé gợi ý: {dashboard?.profile.hintTokens || 0}</span>
+                                        <span>🛡️ Khiên chuỗi: {dashboard?.profile.streakShields || 0}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </section>
                 </section>
 
                 <section>

@@ -78,10 +78,11 @@ export async function handleGetBatches(request: Request, env: Env): Promise<Resp
     return Response.json({ error: 'Forbidden: teacher role required' }, { status: 403 });
   }
 
-  const batches = await env.DB.prepare(
+  const batchesResult = await env.DB.prepare(
     `SELECT b.*, t.name as template_name,
             COUNT(c.id) as total_certs,
-            SUM(CASE WHEN c.render_status = 'done' THEN 1 ELSE 0 END) as done_certs
+            SUM(CASE WHEN c.render_status = 'done' THEN 1 ELSE 0 END) as done_certs,
+            SUM(CASE WHEN c.render_status = 'error' THEN 1 ELSE 0 END) as error_certs
      FROM certificate_batches b
      LEFT JOIN certificate_templates t ON b.template_id = t.id
      LEFT JOIN certificates c ON b.id = c.batch_id
@@ -91,7 +92,17 @@ export async function handleGetBatches(request: Request, env: Env): Promise<Resp
      LIMIT 50`
   ).bind(user.id).all();
 
-  return Response.json({ data: batches.results });
+  const batches = batchesResult.results.map((batch: any) => {
+    const total = Number(batch.total_certs || 0);
+    const done = Number(batch.done_certs || 0);
+    const errors = Number(batch.error_certs || 0);
+    const effectiveStatus = batch.status === 'sent' && total > 0 && done === 0 && errors > 0
+      ? 'error'
+      : batch.status;
+    return { ...batch, status: effectiveStatus };
+  });
+
+  return Response.json({ data: batches });
 }
 
 // GET /api/certificates/my  (Học sinh xem chứng nhận)
@@ -101,14 +112,15 @@ export async function handleGetMyCertificates(request: Request, env: Env): Promi
   const user = authResult.user;
 
   const certs = await env.DB.prepare(
-    `SELECT c.id, c.student_name, c.student_score, c.quiz_title, c.png_r2_key,
-            c.render_status, c.issued_at,
+    `SELECT c.id, c.student_id, c.student_name, c.student_score, c.quiz_title, c.png_r2_key,
+            c.render_status, c.error_message, c.issued_at,
             b.title as batch_title,
+            b.teacher_id as teacher_name,
             t.name as template_name
      FROM certificates c
      JOIN certificate_batches b ON c.batch_id = b.id
      JOIN certificate_templates t ON b.template_id = t.id
-     WHERE c.student_id = ? AND c.is_revoked = 0 AND c.render_status = 'done'
+     WHERE c.student_id = ? AND c.is_revoked = 0
      ORDER BY c.issued_at DESC`
   ).bind(user.id).all<Certificate & { batch_title: string; template_name: string }>();
 

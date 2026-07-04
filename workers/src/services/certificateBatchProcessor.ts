@@ -20,19 +20,30 @@ export async function processBatch(
   customNote: string,
   _R2_PUBLIC_URL: string
 ): Promise<void> {
-  // 1. Lấy template
-  const template = await env.DB.prepare(
-    'SELECT * FROM certificate_templates WHERE id = ?'
-  ).bind(templateId).first<{ bg_image_r2_key: string; fields_config: string }>();
+  let hasRenderError = false;
+  let fieldsConfig: FieldConfig[] = [];
+  let bgBuffer: ArrayBuffer | null = null;
 
-  if (!template) throw new Error(`Template ${templateId} not found`);
+  try {
+    // 1. Lấy template
+    const template = await env.DB.prepare(
+      'SELECT * FROM certificate_templates WHERE id = ?'
+    ).bind(templateId).first<{ bg_image_r2_key: string; fields_config: string }>();
 
-  const fieldsConfig: FieldConfig[] = JSON.parse(template.fields_config);
+    if (!template) throw new Error(`Template ${templateId} not found`);
 
-  // 2. Fetch ảnh nền từ R2 (một lần, dùng lại cho tất cả HS)
-  const bgObj = await (env as any).OG_IMAGES.get(template.bg_image_r2_key);
-  if (!bgObj) throw new Error(`Background image not found: ${template.bg_image_r2_key}`);
-  const bgBuffer = await bgObj.arrayBuffer();
+    fieldsConfig = JSON.parse(template.fields_config);
+
+    // 2. Fetch ảnh nền từ R2 (một lần, dùng lại cho tất cả HS)
+    const bgObj = await (env as any).OG_IMAGES.get(template.bg_image_r2_key);
+    if (!bgObj) throw new Error(`Background image not found: ${template.bg_image_r2_key}`);
+    bgBuffer = await bgObj.arrayBuffer();
+  } catch (err) {
+    hasRenderError = true;
+    await env.DB.prepare(
+      `UPDATE certificates SET render_status = 'error', error_message = ? WHERE batch_id = ?`
+    ).bind(String(err), batchId).run();
+  }
 
   // 3. Render từng cert
   for (const student of students) {
@@ -41,6 +52,8 @@ export async function processBatch(
     ).bind(batchId, student.student_id).first<{ id: string }>();
 
     if (!certRow) continue;
+
+    if (!bgBuffer) continue;
 
     try {
       const now = new Date();
@@ -72,14 +85,26 @@ export async function processBatch(
       ).bind(r2Key, certRow.id).run();
 
     } catch (err) {
+      hasRenderError = true;
       await env.DB.prepare(
         `UPDATE certificates SET render_status = 'error', error_message = ? WHERE id = ?`
       ).bind(String(err), certRow.id).run();
     }
   }
 
-  // 4. Cập nhật batch status = 'sent'
+  // 4. Cập nhật batch status theo kết quả render thật, không báo sent khi toàn bộ render lỗi
+  const summary = await env.DB.prepare(
+    `SELECT
+       SUM(CASE WHEN render_status = 'done' THEN 1 ELSE 0 END) as done_count,
+       SUM(CASE WHEN render_status = 'error' THEN 1 ELSE 0 END) as error_count
+     FROM certificates
+     WHERE batch_id = ?`
+  ).bind(batchId).first<{ done_count: number | null; error_count: number | null }>();
+
+  const doneCount = Number(summary?.done_count || 0);
+  const status = hasRenderError && doneCount === 0 ? 'error' : 'sent';
+
   await env.DB.prepare(
-    `UPDATE certificate_batches SET status = 'sent', sent_at = datetime('now') WHERE id = ?`
-  ).bind(batchId).run();
+    `UPDATE certificate_batches SET status = ?, sent_at = datetime('now') WHERE id = ?`
+  ).bind(status, batchId).run();
 }

@@ -5,8 +5,10 @@ export interface Certificate {
   teacherName: string;
   studentScore: number | null;
   quizTitle: string | null;
-  pngUrl: string;       // R2 public URL
+  pngUrl: string | null; // R2 public URL, null while render is pending/error
   issuedAt: string;     // ISO date string
+  renderStatus?: 'pending' | 'done' | 'error';
+  errorMessage?: string | null;
   isRevoked?: boolean;
 }
 

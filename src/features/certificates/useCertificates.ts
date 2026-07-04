@@ -2,6 +2,38 @@ import { useState, useEffect, useCallback } from 'react';
 import { Certificate } from './certificates.types';
 import { WORKERS_API_URL } from '../../config/constants';
 
+interface ApiCertificate {
+    id: string;
+    batch_id?: string;
+    batch_title?: string;
+    title?: string;
+    teacher_name?: string;
+    student_score?: number | null;
+    quiz_title?: string | null;
+    png_url?: string | null;
+    issued_at?: string;
+    render_status?: 'pending' | 'done' | 'error';
+    error_message?: string | null;
+}
+
+function mapCertificate(cert: ApiCertificate | Certificate): Certificate {
+    const maybe = cert as ApiCertificate;
+    if ('pngUrl' in cert && 'issuedAt' in cert) return cert as Certificate;
+
+    return {
+        id: maybe.id,
+        batchId: maybe.batch_id ?? '',
+        title: maybe.batch_title ?? maybe.title ?? 'Chứng nhận thành tích',
+        teacherName: maybe.teacher_name ?? '',
+        studentScore: maybe.student_score ?? null,
+        quizTitle: maybe.quiz_title ?? null,
+        pngUrl: maybe.png_url ?? null,
+        issuedAt: maybe.issued_at ?? new Date().toISOString(),
+        renderStatus: maybe.render_status,
+        errorMessage: maybe.error_message ?? null,
+    };
+}
+
 function getStudentJwt(): string {
     try {
         const direct = localStorage.getItem('itongquiz_jwt_token');
@@ -54,13 +86,13 @@ export function useCertificates() {
                 throw new Error(`Lỗi tải chứng nhận: ${res.status}`);
             }
 
-            const payload = await res.json() as { data?: Certificate[] } | Certificate[];
+            const payload = await res.json() as { data?: ApiCertificate[] } | ApiCertificate[];
             const list = Array.isArray(payload)
                 ? payload
                 : Array.isArray(payload?.data)
                     ? payload.data
                     : [];
-            setCertificates(list);
+            setCertificates(list.map(mapCertificate));
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : 'Lỗi không xác định';
             // Nếu endpoint chưa deploy → không hiện lỗi đỏ, chỉ để trống
