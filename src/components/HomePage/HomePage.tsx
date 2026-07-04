@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { Quiz } from '../../types';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
@@ -203,19 +204,19 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                     const usedAttempts = freshAssignment.attemptCount || 0;
 
                     if (isAssignmentClosed(freshAssignment)) {
-                        alert('Bài tập này đã đóng nên không thể làm nữa.');
+                        toast.error('Bài tập này đã đóng nên không thể làm nữa.');
                         return;
                     }
 
                     if (usedAttempts >= maxAttempts) {
-                        alert(`Bạn đã hết lượt làm bài này! (${usedAttempts}/${maxAttempts} lượt)`);
+                        toast.error(`Bạn đã hết lượt làm bài này! (${usedAttempts}/${maxAttempts} lượt)`);
                         return;
                     }
                 }
 
                 const success = await assignmentStore.startAssignmentAttempt(assignmentId, studentId);
                 if (!success) {
-                    alert('Lỗi khi bắt đầu làm bài. Vui lòng thử lại.');
+                    toast.error('Lỗi khi bắt đầu làm bài. Vui lòng thử lại.');
                     return;
                 }
                 await assignmentStore.fetchStudentAssignments(studentId);
@@ -228,18 +229,18 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                     const maxAttempts = linkedAssignment._assignmentData.maxAttempts || 1;
 
                     if (isAssignmentClosed(linkedAssignment._assignmentData)) {
-                        alert('Bài tập này đã đóng nên không thể làm nữa.');
+                        toast.error('Bài tập này đã đóng nên không thể làm nữa.');
                         return;
                     }
 
                     if (attemptCount >= maxAttempts) {
-                        alert(`Bạn đã hết lượt làm bài tập này (${attemptCount}/${maxAttempts}).`);
+                        toast.error(`Bạn đã hết lượt làm bài tập này (${attemptCount}/${maxAttempts}).`);
                         return;
                     }
 
                     const success = await assignmentStore.startAssignmentAttempt(assignmentId, studentId);
                     if (!success) {
-                        alert('Lỗi khi bắt đầu làm bài. Vui lòng thử lại.');
+                        toast.error('Lỗi khi bắt đầu làm bài. Vui lòng thử lại.');
                         return;
                     }
                     await assignmentStore.fetchStudentAssignments(studentId);

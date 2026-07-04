@@ -29,6 +29,8 @@ const TeacherManagementTab = React.lazy(() => import('./TeacherManagementTab'));
 const GiftShopTab = React.lazy(() => import('./GiftShopTab'));
 const HomeworkTab = React.lazy(() => import('../../features/homework/components/HomeworkTab').then(m => ({ default: m.HomeworkTab })));
 const LiveExamTab = React.lazy(() => import('../LiveExam/TeacherLiveExamDashboardContainer'));
+const TeacherCertificatesPage = React.lazy(() => import('../../features/certificates/TeacherCertificatesPage'));
+const AdminTemplatesPage = React.lazy(() => import('../../features/certificates/AdminTemplatesPage'));
 
 const TeacherDashboard: React.FC = () => {
     // --- STORES ---
@@ -320,6 +322,14 @@ const TeacherDashboard: React.FC = () => {
 
                             {activeTab === 'live-exam' && (
                                 <LiveExamTab />
+                            )}
+
+                            {activeTab === 'certificates' && (
+                                <TeacherCertificatesPage />
+                            )}
+
+                            {activeTab === 'admin-templates' && authStore.isAdmin && (
+                                <AdminTemplatesPage />
                             )}
 
                         </Suspense>

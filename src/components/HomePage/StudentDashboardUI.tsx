@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import toast from 'react-hot-toast';
+import StudentAchievementsPage from '../../features/certificates/StudentAchievementsPage';
 import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useAssignmentStore } from '../../stores/useAssignmentStore';
@@ -337,7 +339,17 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
     
     // Weekly quests state
-    const [weeklyQuests, setWeeklyQuests] = useState<any[]>([]);
+    const [weeklyQuests, setWeeklyQuests] = useState<Array<{
+        id: string;
+        title: string;
+        description: string;
+        icon: string;
+        progress: number;
+        target: number;
+        completed: boolean;
+        claimed: boolean;
+        reward: { coins: number; exp: number; items: string[]; itemCount: number };
+    }>>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
     const [isWeeklyQuestsLoading, setIsWeeklyQuestsLoading] = useState(false);
     const [weeklyQuestsError, setWeeklyQuestsError] = useState<string | null>(null);
 
@@ -707,7 +719,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 setChangePasswordError(classroomStore.error || 'Không thể đổi mật khẩu.');
                 return;
             }
-            alert('Đổi mật khẩu thành công.');
+            toast.success('Đổi mật khẩu thành công.');
             setIsChangePasswordModalOpen(false);
             setCurrentPassword('');
             setNewPassword('');
@@ -735,12 +747,12 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
     const openAttendanceModal = () => {
         if (attendanceClaimed) {
-            alert('Hôm nay em đã điểm danh nhận thưởng rồi. Mai quay lại nhé!');
+            toast('Hôm nay em đã điểm danh nhận thưởng rồi. Mai quay lại nhé!', { icon: '📅' });
             return;
         }
         const randomQuestion = pickRandomAttendanceQuestion();
         if (!randomQuestion) {
-            alert('Hiện chưa có câu hỏi trắc nghiệm phù hợp trong ngân hàng đề.');
+            toast.error('Hiện chưa có câu hỏi trắc nghiệm phù hợp trong ngân hàng đề.');
             return;
         }
         setAttendanceQuestion(randomQuestion);
@@ -819,7 +831,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
             if (data.status === 'success') {
                 // Show success toast (you'll need to import toast from react-hot-toast)
-                alert(`🎉 Nhận thưởng thành công! +${data.reward.coins} xu`);
+                toast.success(`🎉 Nhận thưởng thành công! +${data.reward.coins} xu`);
 
                 // Refresh weekly quests
                 const refreshData = await callApi('get_weekly_quests', {});
@@ -834,7 +846,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             }
         } catch (error: any) {
             console.error('Error claiming weekly quest:', error);
-            alert(error.message || 'Không thể nhận thưởng');
+            toast.error(error.message || 'Không thể nhận thưởng');
         }
     };
 
@@ -1012,82 +1024,125 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                             </div>
                         ) : null}
 
-                        {/* Weekly Quests Panel */}
-                        <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6 mt-6">
-                            <div className="flex items-center gap-3 mb-5">
-                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xl">
-                                    📅
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-black text-slate-800">Nhiệm vụ tuần</h3>
-                                    <p className="text-xs text-slate-500">Reset mỗi thứ 2</p>
-                                </div>
+                    </div>
+
+                    {/* Weekly Quests Panel — card rieng ngoai Hanh trinh hom nay */}
+                    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xl">
+                                📅
                             </div>
-                            
-                            {isWeeklyQuestsLoading ? (
-                                <div className="flex justify-center py-10">
-                                    <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
-                                </div>
-                            ) : weeklyQuestsError ? (
-                                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                                    {weeklyQuestsError}
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {weeklyQuests.map((quest) => {
-                                        const progressPercent = Math.min(100, (quest.progress / quest.target) * 100);
-                                        
-                                        return (
-                                            <div key={quest.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                                <div className="flex items-start gap-3 mb-2">
-                                                    <div className="text-2xl">{quest.icon}</div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="text-sm font-black text-slate-800">{quest.title}</h4>
-                                                        <p className="text-xs text-slate-500">{quest.description}</p>
-                                                    </div>
-                                                </div>
-                                                
-                                                {/* Progress bar */}
-                                                <div className="mb-2">
-                                                    <div className="flex justify-between text-xs font-bold mb-1">
-                                                        <span className="text-slate-600">{quest.progress}/{quest.target}</span>
-                                                        <span className="text-purple-600">{Math.round(progressPercent)}%</span>
-                                                    </div>
-                                                    <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                                                        <div 
-                                                            className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-500"
-                                                            style={{ width: `${progressPercent}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                
-                                                {/* Reward & Claim button */}
-                                                <div className="flex items-center justify-between">
-                                                    <div className="text-xs font-bold text-amber-600">
-                                                        🪙 +{quest.reward.coins} Xu
-                                                        {quest.reward.items.length > 0 && ` + ${quest.reward.itemCount} vật phẩm`}
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleClaimWeeklyQuest(quest.id)}
-                                                        disabled={!quest.completed || quest.claimed}
-                                                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${
-                                                            quest.claimed
-                                                                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                                                : quest.completed
-                                                                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-lg'
-                                                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                                        }`}
-                                                    >
-                                                        {quest.claimed ? '✓ Đã nhận' : quest.completed ? 'Nhận thưởng' : 'Chưa xong'}
-                                                    </button>
+                            <div>
+                                <h3 className="text-lg font-black text-slate-800">Nhiệm vụ tuần</h3>
+                                <p className="text-xs text-slate-500">Reset mỗi thứ 2</p>
+                            </div>
+                        </div>
+
+                        {isWeeklyQuestsLoading ? (
+                            <div className="flex justify-center py-10">
+                                <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                            </div>
+                        ) : weeklyQuestsError ? (
+                            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                                {weeklyQuestsError}
+                            </div>
+                        ) : weeklyQuests.length === 0 ? (
+                            <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center">
+                                <p className="text-sm font-semibold text-slate-400">Chưa có nhiệm vụ tuần nào. Hãy quay lại sau nhé! 🌟</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {weeklyQuests.map((quest) => {
+                                    const progressPercent = Math.min(100, (quest.progress / quest.target) * 100);
+
+                                    return (
+                                        <div
+                                            key={quest.id}
+                                            className={`rounded-2xl border p-4 transition-colors ${
+                                                quest.claimed
+                                                    ? 'border-emerald-100 bg-emerald-50/60'
+                                                    : quest.completed
+                                                    ? 'border-purple-200 bg-purple-50/60'
+                                                    : 'border-slate-200 bg-slate-50'
+                                            }`}
+                                        >
+                                            <div className="flex items-start gap-3 mb-2">
+                                                <div className="text-2xl flex-shrink-0">{quest.icon}</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="text-sm font-black text-slate-800 flex flex-wrap items-center gap-2">
+                                                        {quest.title}
+                                                        {quest.claimed && (
+                                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5">
+                                                                ✓ Đã nhận
+                                                            </span>
+                                                        )}
+                                                    </h4>
+                                                    <p className="text-xs text-slate-500 mt-0.5">{quest.description}</p>
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
+
+                                            {/* Progress bar */}
+                                            <div className="mb-3">
+                                                <div className="flex justify-between text-xs font-bold mb-1">
+                                                    <span className="text-slate-600">{quest.progress}/{quest.target}</span>
+                                                    <span className="text-purple-600">{Math.round(progressPercent)}%</span>
+                                                </div>
+                                                <div
+                                                    className="h-2 bg-slate-200 rounded-full overflow-hidden"
+                                                    role="progressbar"
+                                                    aria-valuenow={quest.progress}
+                                                    aria-valuemin={0}
+                                                    aria-valuemax={quest.target}
+                                                >
+                                                    <div
+                                                        className={`h-full rounded-full transition-all duration-500 ${
+                                                            quest.claimed
+                                                                ? 'bg-emerald-400'
+                                                                : 'bg-gradient-to-r from-purple-500 to-indigo-500'
+                                                        }`}
+                                                        style={{ width: `${progressPercent}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Reward & Claim button */}
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="text-xs font-bold text-amber-600 flex flex-wrap items-center gap-1">
+                                                    <span>🪩 +{quest.reward.coins} Xu</span>
+                                                    {quest.reward.exp > 0 && (
+                                                        <span className="text-violet-600">· +{quest.reward.exp} EXP</span>
+                                                    )}
+                                                    {quest.reward.items.length > 0 && (
+                                                        <span className="text-slate-500">· +{quest.reward.itemCount} vật phẩm</span>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleClaimWeeklyQuest(quest.id)}
+                                                    disabled={!quest.completed || quest.claimed}
+                                                    aria-label={
+                                                        quest.claimed
+                                                            ? 'Đã nhận thưởng'
+                                                            : quest.completed
+                                                            ? 'Nhận thưởng nhiệm vụ tuần'
+                                                            : 'Chưa hoàn thành nhiệm vụ'
+                                                    }
+                                                    className={`shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                                                        quest.claimed
+                                                            ? 'bg-emerald-100 text-emerald-600 cursor-default'
+                                                            : quest.completed
+                                                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-md hover:scale-[1.03]'
+                                                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                                    }`}
+                                                >
+                                                    {quest.claimed ? '✓ Đã nhận' : quest.completed ? 'Nhận thưởng' : 'Chưa xong'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-6">
@@ -1247,6 +1302,22 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     classId={studentSession.classId} 
                     onSelectAssignment={setSelectedHw}
                 />
+
+                {/* --- THÀNH TÍCH & CHỨNG NHẬN --- */}
+                <section>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="bg-amber-100 p-2 rounded-xl text-amber-600">
+                            <Trophy className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-800">Thành tích của tôi</h2>
+                            <p className="text-sm text-slate-500 font-medium">Chứng nhận bạn đã đạt được từ giáo viên.</p>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
+                        <StudentAchievementsPage />
+                    </div>
+                </section>
 
                 <section>
                     <div className="flex items-center gap-3 mb-6"><div className="bg-teal-100 p-2 rounded-xl text-teal-600"><Rocket className="w-6 h-6" /></div><h2 className="text-2xl font-black text-slate-800">Thư viện luyện tập</h2></div>

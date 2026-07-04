@@ -13,6 +13,8 @@ import {
     Gift,
     BookText,
     Radio,
+    Award,
+    LayoutTemplate,
 } from 'lucide-react';
 import { SCHOOL_NAME } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
@@ -27,7 +29,7 @@ export interface SidebarProps {
     setIsMobileOpen?: (open: boolean) => void;
 }
 
-type GroupKey = 'main' | 'ioe' | 'system';
+type GroupKey = 'main' | 'ioe' | 'certificates' | 'system';
 
 const Sidebar: React.FC<SidebarProps> = ({
     activeTab,
@@ -71,6 +73,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     const settingItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
         { id: 'announcements', label: 'Thông báo', icon: <Megaphone className="w-5 h-5" /> },
         { id: 'teachers', label: 'Giáo viên', icon: <Users className="w-5 h-5" /> },
+    ];
+
+    const certificateItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
+        { id: 'certificates', label: 'Cấp Chứng nhận', icon: <Award className="w-5 h-5" /> },
+        ...(authStore.isAdmin
+            ? [{ id: 'admin-templates' as TeacherDashboardTab, label: 'Mẫu chứng nhận', icon: <LayoutTemplate className="w-5 h-5" /> }]
+            : []
+        ),
     ];
 
     const NavGroup = ({
@@ -157,6 +167,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div className="flex-1 py-5 px-2 custom-scrollbar">
                     <NavGroup title="Chính" items={navItems} groupKey="main" />
                     <NavGroup title="Tiếng Anh IOE" items={ioeItems} groupKey="ioe" adminOnly={true} />
+                    <NavGroup title="Chứng nhận" items={certificateItems} groupKey="certificates" />
                     <NavGroup title="Hệ thống" items={settingItems} groupKey="system" adminOnly={true} />
                 </div>
             </aside>
