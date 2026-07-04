@@ -979,8 +979,8 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     </div>
                 </motion.div>
 
-                <section className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-6">
-                    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
+                <section className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-6 items-start">
+                    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6 self-start">
                         <button
                             type="button"
                             onClick={() => setIsJourneyExpanded((prev) => !prev)}
