@@ -36,7 +36,7 @@ import { handleAdminCertificateRoutes } from './routes/adminCertificates';
 import { handleCertificateRoutes } from './routes/certificates';
 import { handlePhieuSubdomain, handlePublicPhieuApi } from './routes/phieu';
 import { Env } from './types';
-import { ensureRateLimitTable, rateLimit } from './middleware/rateLimit';
+import { rateLimit } from './middleware/rateLimit';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
 import { checkAndAutoCloseExpiredExams } from './services/liveExamService';
 
@@ -46,9 +46,6 @@ export default {
         if (url.pathname === '/api/health') {
             return addCors(jsonResponse({ status: 'ok', timestamp: new Date().toISOString() }), request);
         }
-
-        // Ensure rate limit table exists (run once)
-        await ensureRateLimitTable(env.DB);
 
         // Handle CORS preflight
         const corsResponse = handleCors(request);
