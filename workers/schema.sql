@@ -485,3 +485,81 @@ CREATE INDEX IF NOT EXISTS idx_public_links_batch ON phieu_public_links(batch_id
 CREATE INDEX IF NOT EXISTS idx_phieu_public_links_token ON phieu_public_links(public_token);
 CREATE INDEX IF NOT EXISTS idx_phieu_nhanxet_submission_id ON phieu_nhanxet(submission_id);
 CREATE INDEX IF NOT EXISTS idx_phieu_batch_items_batch_id ON phieu_batch_items(batch_id);
+
+-- Certificate system (canonical schema, 2026-07-14)
+CREATE TABLE IF NOT EXISTS certificate_templates (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
+  school_id TEXT,
+  name TEXT NOT NULL,
+  description TEXT,
+  bg_image_r2_key TEXT NOT NULL,
+  thumbnail_r2_key TEXT,
+  fields_config TEXT NOT NULL DEFAULT '[]',
+  is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
+  created_by TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS certificate_batches (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
+  teacher_id TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  class_id TEXT,
+  quiz_id TEXT,
+  template_id TEXT NOT NULL REFERENCES certificate_templates(id),
+  title TEXT NOT NULL,
+  message TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK(status IN ('pending', 'processing', 'sent', 'partial', 'failed')),
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  processing_started_at TEXT,
+  error_message TEXT,
+  sent_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(teacher_id, request_id)
+);
+
+CREATE TABLE IF NOT EXISTS certificates (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
+  batch_id TEXT NOT NULL REFERENCES certificate_batches(id),
+  student_id TEXT NOT NULL,
+  student_name TEXT NOT NULL DEFAULT '',
+  student_score REAL,
+  quiz_title TEXT,
+  image_url TEXT,
+  png_r2_key TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK(status IN ('pending', 'processing', 'sent', 'failed', 'revoked')),
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  error_message TEXT,
+  issued_at TEXT NOT NULL DEFAULT (datetime('now')),
+  sent_at TEXT,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(batch_id, student_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_templates_school ON certificate_templates(school_id);
+CREATE INDEX IF NOT EXISTS idx_templates_active ON certificate_templates(is_active);
+CREATE INDEX IF NOT EXISTS idx_templates_created_by ON certificate_templates(created_by);
+CREATE INDEX IF NOT EXISTS idx_batches_teacher ON certificate_batches(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_batches_status ON certificate_batches(status);
+CREATE INDEX IF NOT EXISTS idx_certs_student ON certificates(student_id);
+CREATE INDEX IF NOT EXISTS idx_certs_batch ON certificates(batch_id);
+CREATE INDEX IF NOT EXISTS idx_certs_status ON certificates(status);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
+  user_id TEXT NOT NULL,
+  user_role TEXT NOT NULL CHECK(user_role IN ('student', 'teacher', 'admin')),
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  data TEXT NOT NULL DEFAULT '{}',
+  is_read INTEGER NOT NULL DEFAULT 0 CHECK(is_read IN (0, 1)),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, user_role, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at);

@@ -1,3 +1,5 @@
+import type { CertificateStatus } from '../../../shared/certificates.contract';
+
 export interface Certificate {
   id: string;
   batchId: string;
@@ -7,7 +9,7 @@ export interface Certificate {
   quizTitle: string | null;
   pngUrl: string | null; // R2 public URL, null while render is pending/error
   issuedAt: string;     // ISO date string
-  renderStatus?: 'pending' | 'done' | 'error';
+  renderStatus?: CertificateStatus;
   errorMessage?: string | null;
   isRevoked?: boolean;
 }

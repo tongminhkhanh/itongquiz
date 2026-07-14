@@ -30,6 +30,7 @@ import { useHomeworkStore } from '../../features/homework/stores/useHomeworkStor
 import type { GameLoopMission, GameLoopRewardResult } from '../../types/gameLoop.types';
 import type { LiveExamSubmissionResponse } from '../../types/liveExam.types';
 import { getAchievementBadgeAlt, getAchievementBadgeImage } from '../../config/achievementBadges';
+import NotificationBell from '../common/NotificationBell';
 
 // --- Subject Config (Reused from HomePage) ---
 export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color: string; desc: string; showOnHome?: boolean }> = {
@@ -933,6 +934,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                         </button>
 
                         <div className="flex items-center gap-3 border-l pl-3 md:pl-4 border-slate-200">
+                            <NotificationBell userId={studentSession.studentId} onOpenCertificate={() => setActiveSection('achievements')} />
                             <button onClick={handleLogout} className="sm:hidden h-9 px-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 bg-white">Đăng xuất</button>
                             <div className="flex flex-col items-end hidden sm:flex">
                                 <span className="font-bold text-sm leading-tight text-slate-700">{studentSession.fullName}</span>

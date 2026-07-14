@@ -6,7 +6,7 @@ name = "itongquiz-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
-account_id = "ed9d66ab88b8acb297031b4d22520c92"
+account_id = "9306cc101c6560aee603252ca21f0456"
 
 [[d1_databases]]
 binding = "DB"
@@ -16,6 +16,10 @@ database_id = "340c3a89-3941-43b1-bc81-fb37b8b6ac00"
 [[r2_buckets]]
 binding = "OG_IMAGES"
 bucket_name = "phieu-og-images"
+
+[[r2_buckets]]
+binding = "CERT_IMAGES"
+bucket_name = "itongquiz-certificates"
 
 # Cho phép import .wasm (dùng bởi @resvg/resvg-wasm để render certificate PNG)
 [[rules]]
@@ -52,3 +56,6 @@ queue = "certificate-generation"
 queue = "certificate-generation"
 max_batch_size = 5
 max_batch_timeout = 30
+max_retries = 3
+retry_delay = 30
+dead_letter_queue = "certificate-generation-dlq"

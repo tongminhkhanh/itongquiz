@@ -1,20 +1,19 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { X, Send, Loader2, ChevronDown, Users, BookOpen, Search, CheckSquare, Square, AlertCircle } from 'lucide-react';
 import { showSuccess, showError } from '../../utils/toast';
 import type { BatchStudent } from './useBatches';
 import { fetchTemplateOptions } from './useBatches';
 import type { TemplateOption } from './useBatches';
 import { WORKERS_API_URL } from '../../config/constants';
+import type {
+    CreateCertificateBatchRequest,
+    CreateCertificateBatchResult,
+} from '../../../shared/certificates.contract';
 
 interface Props {
     onClose: () => void;
     onCreated: () => void;
-    createBatch: (payload: {
-        template_id: string;
-        title: string;
-        custom_note?: string;
-        students: BatchStudent[];
-    }) => Promise<{ batch_id: string }>;
+    createBatch: (payload: CreateCertificateBatchRequest) => Promise<CreateCertificateBatchResult>;
 }
 
 interface ClassOption { id: string; name: string; }
@@ -44,6 +43,7 @@ function authH(): HeadersInit {
 const apiBase = () => (WORKERS_API_URL || '').replace(/\/$/, '');
 
 const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) => {
+    const requestIdRef = useRef(crypto.randomUUID());
     const [templates, setTemplates] = useState<TemplateOption[]>([]);
     const [templateId, setTemplateId] = useState('');
     const [title, setTitle] = useState('');
@@ -69,10 +69,14 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
 
     // On mount: load templates, classes, quizzes
     useEffect(() => {
-        fetchTemplateOptions().then((opts) => {
-            setTemplates(opts);
-            if (opts.length > 0) setTemplateId(opts[0].id);
-        });
+        fetchTemplateOptions()
+            .then((opts) => {
+                setTemplates(opts);
+                if (opts.length > 0) setTemplateId(opts[0].id);
+            })
+            .catch((error: unknown) => {
+                showError(error instanceof Error ? error.message : 'Không thể tải mẫu chứng nhận');
+            });
 
         setLoadingClasses(true);
         fetch(`${apiBase()}/api/classes`, { headers: authH() })
@@ -181,19 +185,22 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
         setIsSubmitting(true);
         try {
             await createBatch({
+                request_id: requestIdRef.current,
                 template_id: templateId,
                 title: title.trim(),
-                custom_note: customNote.trim() || undefined,
-                students: selectedStudents,
+                message: customNote.trim() || undefined,
+                class_id: classId,
+                quiz_id: quizId || undefined,
+                student_ids: selectedStudents.map((student) => student.student_id),
             });
-            showSuccess(`Đã tạo chứng nhận cho ${selectedStudents.length} học sinh!`);
+            showSuccess(`Đã tiếp nhận ${selectedStudents.length} chứng nhận và đang xử lý.`);
             onCreated();
         } catch (e: unknown) {
             showError(e instanceof Error ? e.message : 'Gửi thất bại');
         } finally {
             setIsSubmitting(false);
         }
-    }, [templateId, title, customNote, studentRows, selectedIds, createBatch, onCreated]);
+    }, [templateId, title, customNote, classId, quizId, studentRows, selectedIds, createBatch, onCreated]);
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">

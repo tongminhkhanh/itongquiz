@@ -1,22 +1,48 @@
 import React, { useState, Suspense } from 'react';
-import { Award, Plus, RefreshCw, AlertCircle, Inbox, CheckCircle2, Clock, Send, XCircle } from 'lucide-react';
+import { Award, Plus, RefreshCw, AlertCircle, Inbox, CheckCircle2, Clock, Send, XCircle, Eye, RotateCcw } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useBatches } from './useBatches';
 import type { BatchRecord } from './useBatches';
+import type { CertificateBatchDetail } from '../../../shared/certificates.contract';
 
 const BatchCreateModal = React.lazy(() => import('./BatchCreateModal'));
 
 function statusBadge(status: BatchRecord['status']) {
     switch (status) {
         case 'sent': return <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full"><CheckCircle2 size={11} />Đã gửi</span>;
-        case 'sending': return <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full"><Send size={11} />Đang gửi</span>;
-        case 'error': return <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full"><XCircle size={11} />Lỗi</span>;
-        default: return <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full"><Clock size={11} />Nháp</span>;
+        case 'processing': return <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full"><Send size={11} />Đang xử lý</span>;
+        case 'partial': return <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full"><AlertCircle size={11} />Một phần</span>;
+        case 'failed': return <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full"><XCircle size={11} />Lỗi</span>;
+        default: return <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full"><Clock size={11} />Chờ xử lý</span>;
     }
 }
 
 const TeacherCertificatesPage: React.FC = () => {
-    const { batches, isLoading, error, refetch, createBatch } = useBatches();
+    const { batches, isLoading, error, refetch, createBatch, fetchBatchDetail, retryBatch } = useBatches();
     const [showModal, setShowModal] = useState(false);
+    const [detail, setDetail] = useState<CertificateBatchDetail | null>(null);
+    const [detailLoading, setDetailLoading] = useState(false);
+
+    const openDetail = async (batchId: string) => {
+        setDetailLoading(true);
+        try {
+            setDetail(await fetchBatchDetail(batchId));
+        } catch (loadError) {
+            toast.error(loadError instanceof Error ? loadError.message : 'Không thể tải chi tiết');
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
+    const retryFailed = async (batchId: string) => {
+        try {
+            await retryBatch(batchId);
+            toast.success('Đã đưa các chứng nhận lỗi vào hàng đợi xử lý lại');
+            setDetail(null);
+        } catch (retryError) {
+            toast.error(retryError instanceof Error ? retryError.message : 'Không thể thử lại');
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -109,29 +135,53 @@ const TeacherCertificatesPage: React.FC = () => {
                                     <p className="text-xs text-slate-500">
                                         Mẫu: <span className="font-medium">{b.template_name ?? '—'}</span>
                                         {' · '}
-                                        {b.done_certs}/{b.total_certs} chứng nhận xong
+                                        {b.sent_certificates}/{b.total_certificates} chứng nhận xong
                                     </p>
                                     <p className="text-xs text-slate-400 mt-0.5">
                                         {new Date(b.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                     </p>
                                 </div>
                                 {/* Progress bar */}
-                                {b.total_certs > 0 && (
+                                {b.total_certificates > 0 && (
                                     <div className="shrink-0 w-20">
                                         <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                             <div
                                                 className="h-full bg-emerald-400 rounded-full transition-all"
-                                                style={{ width: `${Math.round((b.done_certs / b.total_certs) * 100)}%` }}
+                                                style={{ width: `${Math.round((b.sent_certificates / b.total_certificates) * 100)}%` }}
                                             />
                                         </div>
                                         <p className="text-[10px] text-slate-400 text-right mt-0.5">
-                                            {Math.round((b.done_certs / b.total_certs) * 100)}%
+                                            {Math.round((b.sent_certificates / b.total_certificates) * 100)}%
                                         </p>
                                     </div>
+                                )}
+                                <button type="button" onClick={() => openDetail(b.id)} disabled={detailLoading} className="shrink-0 p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Xem chi tiết" aria-label={`Xem chi tiết ${b.title}`}><Eye size={16} /></button>
+                                {(b.status === 'failed' || b.status === 'partial') && b.failed_certificates > 0 && (
+                                    <button type="button" onClick={() => retryFailed(b.id)} className="shrink-0 p-2 text-amber-600 hover:bg-amber-50 rounded-lg" title="Thử lại phần lỗi" aria-label={`Thử lại ${b.title}`}><RotateCcw size={16} /></button>
                                 )}
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {detail && (
+                <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Chi tiết đợt cấp chứng nhận">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+                        <div className="p-5 border-b flex items-center justify-between">
+                            <div><h3 className="font-bold text-slate-800">{detail.batch.title}</h3><p className="text-xs text-slate-500">{detail.certificates.length} học sinh</p></div>
+                            <button type="button" onClick={() => setDetail(null)} className="p-2 rounded-lg hover:bg-slate-100" aria-label="Đóng"><XCircle size={18} /></button>
+                        </div>
+                        <div className="overflow-auto max-h-[60vh] divide-y">
+                            {detail.certificates.map((certificate) => (
+                                <div key={certificate.id} className="p-4 flex items-start justify-between gap-4">
+                                    <div><p className="font-medium text-sm text-slate-800">{certificate.student_name}</p><p className="text-xs text-slate-500">{certificate.quiz_title || 'Không gắn bài kiểm tra'}{certificate.student_score !== null ? ` · ${certificate.student_score} điểm` : ''}</p>{certificate.error_message && <p className="text-xs text-red-600 mt-1">{certificate.error_message}</p>}</div>
+                                    {statusBadge(certificate.status === 'revoked' ? 'failed' : certificate.status)}
+                                </div>
+                            ))}
+                        </div>
+                        {detail.certificates.some((certificate) => certificate.status === 'failed') && <div className="p-4 border-t flex justify-end"><button type="button" onClick={() => retryFailed(detail.batch.id)} className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold"><RotateCcw size={15} /> Thử lại phần lỗi</button></div>}
+                    </div>
                 </div>
             )}
 

@@ -1,15 +1,33 @@
-// Certificate Batch Processor
-// Renders PNG for each student in a batch and saves to R2
 import type { Env } from '../types';
 import type { FieldConfig } from '../types/certificates';
 import { renderCertificate } from './certificateRenderer';
-import { loadFont } from './fontLoader';
+
+const CERTIFICATE_RENDER_CONCURRENCY = 4;
 
 export interface BatchStudent {
+  certificate_id: string;
   student_id: string;
   student_name: string;
   student_score: number | null;
   quiz_title: string | null;
+}
+
+async function runWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  const runners = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (cursor < items.length) {
+        const index = cursor++;
+        await worker(items[index]);
+      }
+    },
+  );
+  await Promise.all(runners);
 }
 
 export async function processBatch(
@@ -18,109 +36,121 @@ export async function processBatch(
   templateId: string,
   students: BatchStudent[],
   teacherName: string,
-  customNote: string,
-  r2PublicUrl: string
+  batchTitle: string,
+  message: string,
 ): Promise<void> {
-  let hasRenderError = false;
+  const successfulCertificateIds = new Set<string>();
 
   try {
-    // 1. Lấy template
     const template = await env.DB.prepare(
-      'SELECT * FROM certificate_templates WHERE id = ?'
-    ).bind(templateId).first();
+      'SELECT bg_image_r2_key, fields_config FROM certificate_templates WHERE id = ? AND is_active = 1',
+    ).bind(templateId).first<{ bg_image_r2_key: string; fields_config: string }>();
+    if (!template) throw new Error(`Active template ${templateId} not found`);
 
-    if (!template) {
-      console.error(`Template ${templateId} không tồn tại`);
-      return;
-    }
+    const bgObject = await env.CERT_IMAGES.get(template.bg_image_r2_key);
+    if (!bgObject) throw new Error(`Certificate background not found: ${template.bg_image_r2_key}`);
 
-    // 2. Lấy ảnh nền từ R2
-    const bgObject = await env.R2.get(template.background_image_key);
-    if (!bgObject) {
-      console.error('Không tìm thấy ảnh nền');
-      return;
-    }
     const bgBuffer = await bgObject.arrayBuffer();
-
-    // 3. Load fonts (có thể cache sau này)
-    const fonts: Record<string, ArrayBuffer> = {};
+    let fieldsConfig: FieldConfig[];
     try {
-      fonts['Roboto'] = await loadFont(env, 'Roboto-Regular');
-      fonts['Roboto-Bold'] = await loadFont(env, 'Roboto-Bold');
-    } catch (fontError) {
-      console.warn('Không thể load font tùy chỉnh, sử dụng font mặc định', fontError);
+      fieldsConfig = JSON.parse(template.fields_config || '[]') as FieldConfig[];
+    } catch {
+      throw new Error(`Invalid fields_config for template ${templateId}`);
     }
 
-    // 4. Parse fields_config
-    const fieldsConfig: FieldConfig[] = JSON.parse(template.fields_config || '[]');
-
-    // 5. Render song song cho từng học sinh
-    const renderPromises = students.map(async (student) => {
+    await runWithConcurrency(students, CERTIFICATE_RENDER_CONCURRENCY, async (student) => {
       try {
         const pngBuffer = await renderCertificate({
           bgImageArrayBuffer: bgBuffer,
           fieldsConfig,
           data: {
             student_name: student.student_name,
-            score: student.student_score ? `${student.student_score}/10` : '',
+            score: student.student_score !== null ? `${student.student_score}/10` : '',
             quiz_title: student.quiz_title || '',
-            date: new Date().toISOString().split('T')[0],
+            date: new Date().toLocaleDateString('vi-VN'),
             teacher_name: teacherName,
-            custom_note: customNote,
+            custom_note: message,
           },
-          fonts,
         });
 
-        // Upload lên R2
-        const key = `certs/${batchId}/${student.student_id}.png`;
-        await env.R2.put(key, pngBuffer, {
+        const r2Key = `certs/${student.certificate_id}.png`;
+        await env.CERT_IMAGES.put(r2Key, pngBuffer, {
           httpMetadata: { contentType: 'image/png' },
+          customMetadata: { certificateId: student.certificate_id, batchId },
         });
 
-        const imageUrl = `${r2PublicUrl}/${key}`;
-
-        // Cập nhật DB
+        const now = new Date().toISOString();
+        const authenticatedImagePath = `/api/certificates/${student.certificate_id}/image`;
         await env.DB.prepare(`
-          UPDATE certificates 
-          SET image_url = ?, sent_at = ?
-          WHERE batch_id = ? AND student_id = ?
-        `).bind(imageUrl, new Date().toISOString(), batchId, student.student_id).run();
-
+          UPDATE certificates
+          SET image_url = ?, png_r2_key = ?, status = 'sent', sent_at = ?,
+              error_message = NULL, updated_at = ?
+          WHERE id = ? AND batch_id = ? AND status = 'processing'
+        `).bind(
+          authenticatedImagePath,
+          r2Key,
+          now,
+          now,
+          student.certificate_id,
+          batchId,
+        ).run();
+        successfulCertificateIds.add(student.certificate_id);
       } catch (error) {
-        console.error(`Lỗi render cho học sinh ${student.student_name}:`, error);
-        hasRenderError = true;
+        console.error(`[CertificateProcessor] render failed certificate=${student.certificate_id}`, error);
+        await env.DB.prepare(`
+          UPDATE certificates
+          SET status = 'failed', error_message = ?, updated_at = ?
+          WHERE id = ? AND batch_id = ?
+        `).bind(
+          error instanceof Error ? error.message : String(error),
+          new Date().toISOString(),
+          student.certificate_id,
+          batchId,
+        ).run();
       }
     });
 
-    await Promise.allSettled(renderPromises);
-
-    // Cập nhật trạng thái batch
-    const finalStatus = hasRenderError ? 'partial' : 'sent';
+    const successCount = successfulCertificateIds.size;
+    const finalStatus = successCount === students.length
+      ? 'sent'
+      : successCount === 0
+        ? 'failed'
+        : 'partial';
+    const now = new Date().toISOString();
     await env.DB.prepare(`
-      UPDATE certificate_batches SET status = ? WHERE id = ?
-    `).bind(finalStatus, batchId).run();
+      UPDATE certificate_batches
+      SET status = ?, sent_at = ?, processing_started_at = NULL,
+          error_message = NULL, updated_at = ?
+      WHERE id = ?
+    `).bind(finalStatus, successCount > 0 ? now : null, now, batchId).run();
 
-    // Gửi thông báo cho học sinh
     for (const student of students) {
+      if (!successfulCertificateIds.has(student.certificate_id)) continue;
       try {
         await env.DB.prepare(`
-          INSERT INTO notifications (id, user_id, type, title, message, data)
-          VALUES (lower(hex(randomblob(8))), ?, 'certificate_received', ?, ?, ?)
+          INSERT INTO notifications (id, user_id, user_role, type, title, body, data)
+          VALUES (lower(hex(randomblob(8))), ?, 'student', 'certificate_issued', ?, ?, ?)
         `).bind(
           student.student_id,
-          'Bạn có chứng nhận mới!',
-          `Bạn vừa nhận được chứng nhận: ${batchTitle || 'Chứng nhận mới' }`,
-          JSON.stringify({ batch_id: batchId, certificate_id: student.student_id })
+          'Bạn có chứng nhận mới! 🎓',
+          `Bạn vừa nhận được chứng nhận: ${batchTitle}`,
+          JSON.stringify({
+            batch_id: batchId,
+            certificate_id: student.certificate_id,
+          }),
         ).run();
-      } catch (err) {
-        console.error('Lỗi gửi notification:', err);
+      } catch (error) {
+        console.error(`[CertificateProcessor] notification failed certificate=${student.certificate_id}`, error);
       }
     }
-
   } catch (error) {
-    console.error('Lỗi xử lý batch:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     await env.DB.prepare(`
-      UPDATE certificate_batches SET status = 'failed' WHERE id = ?
-    `).bind(batchId).run();
+      UPDATE certificate_batches
+      SET status = 'failed', processing_started_at = NULL,
+          error_message = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(errorMessage, new Date().toISOString(), batchId).run();
+    throw error;
   }
 }

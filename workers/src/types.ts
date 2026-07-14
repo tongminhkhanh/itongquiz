@@ -4,8 +4,11 @@ export interface Env {
     CLIPROXY_API: string;
     CLIPROXY_TOKEN: string;
     JWT_SECRET: string;
-    OG_IMAGES: R2Bucket;        // R2 bucket binding (phieu-og-images)
-    R2_PUBLIC_URL: string;      // https://r2.thitong.site
+    OG_IMAGES: R2Bucket;             // R2 bucket binding (phieu-og-images)
+    R2_PUBLIC_URL: string;           // https://r2.thitong.site
+    // Task 1.4: Cloudflare Queues binding
+    CERTIFICATE_QUEUE: Queue<{ batchId: string }>;
+    CERT_IMAGES: R2Bucket;           // R2 bucket for rendered certificate PNGs
 }
 
 export interface Quiz {

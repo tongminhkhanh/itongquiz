@@ -1,40 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Certificate } from './certificates.types';
+import type { Certificate } from './certificates.types';
 import { WORKERS_API_URL } from '../../config/constants';
+import type {
+    CertificateApiError,
+    CertificateApiSuccess,
+    StudentCertificateItem,
+} from '../../../shared/certificates.contract';
 
-interface ApiCertificate {
-    id: string;
-    batch_id?: string;
-    batch_title?: string;
-    title?: string;
-    teacher_name?: string;
-    student_score?: number | null;
-    quiz_title?: string | null;
-    png_url?: string | null;
-    issued_at?: string;
-    render_status?: 'pending' | 'done' | 'error';
-    error_message?: string | null;
-}
-
-function mapCertificate(cert: ApiCertificate | Certificate): Certificate {
-    const maybe = cert as ApiCertificate;
-    if ('pngUrl' in cert && 'issuedAt' in cert) return cert as Certificate;
-
+function mapCertificate(certificate: StudentCertificateItem): Certificate {
     return {
-        id: maybe.id,
-        batchId: maybe.batch_id ?? '',
-        title: maybe.batch_title ?? maybe.title ?? 'Chứng nhận thành tích',
-        teacherName: maybe.teacher_name ?? '',
-        studentScore: maybe.student_score ?? null,
-        quizTitle: maybe.quiz_title ?? null,
-        pngUrl: maybe.png_url ?? null,
-        issuedAt: maybe.issued_at ?? new Date().toISOString(),
-        renderStatus: maybe.render_status,
-        errorMessage: maybe.error_message ?? null,
+        id: certificate.id,
+        batchId: certificate.batch_id,
+        title: certificate.title,
+        teacherName: certificate.teacher_name,
+        studentScore: certificate.student_score,
+        quizTitle: certificate.quiz_title,
+        pngUrl: certificate.image_url,
+        issuedAt: certificate.issued_at,
+        renderStatus: certificate.status,
+        errorMessage: null,
+        isRevoked: certificate.status === 'revoked',
     };
 }
 
-function getStudentJwt(): string {
+export function getStudentJwt(): string {
     try {
         const direct = localStorage.getItem('itongquiz_jwt_token');
         if (direct) return direct;
@@ -54,6 +43,16 @@ function getStudentJwt(): string {
     }
 }
 
+export async function fetchCertificateImageBlob(imagePath: string): Promise<Blob> {
+    const token = getStudentJwt();
+    if (!token) throw new Error('Phiên đăng nhập học sinh đã hết hạn');
+    const base = (WORKERS_API_URL || '').replace(/\/$/, '');
+    const url = imagePath.startsWith('http') ? imagePath : `${base}${imagePath}`;
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) throw new Error(`Không thể tải ảnh chứng nhận (${response.status})`);
+    return response.blob();
+}
+
 export function useCertificates() {
     const [certificates, setCertificates] = useState<Certificate[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +60,10 @@ export function useCertificates() {
 
     const fetchCertificates = useCallback(async () => {
         const token = getStudentJwt();
-        if (!token) return;
+        if (!token) {
+            setCertificates([]);
+            return;
+        }
 
         setIsLoading(true);
         setError(null);
@@ -70,37 +72,22 @@ export function useCertificates() {
             const base = (WORKERS_API_URL || '').replace(/\/$/, '');
             const res = await fetch(`${base}/api/certificates/my`, {
                 method: 'GET',
-                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    Authorization: `Bearer ${token}`,
                 },
             });
 
             if (!res.ok) {
-                if (res.status === 404) {
-                    // Endpoint chưa có → trả về mảng rỗng, không báo lỗi
-                    setCertificates([]);
-                    return;
-                }
-                throw new Error(`Lỗi tải chứng nhận: ${res.status}`);
+                const payload = await res.json().catch(() => null) as CertificateApiError | null;
+                throw new Error(payload?.error?.message ?? `Lỗi tải chứng nhận: ${res.status}`);
             }
 
-            const payload = await res.json() as { data?: ApiCertificate[] } | ApiCertificate[];
-            const list = Array.isArray(payload)
-                ? payload
-                : Array.isArray(payload?.data)
-                    ? payload.data
-                    : [];
-            setCertificates(list.map(mapCertificate));
+            const payload = await res.json() as CertificateApiSuccess<StudentCertificateItem[]>;
+            setCertificates((payload.data ?? []).map(mapCertificate));
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Lỗi không xác định';
-            // Nếu endpoint chưa deploy → không hiện lỗi đỏ, chỉ để trống
-            if (msg.includes('404') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-                setCertificates([]);
-            } else {
-                setError(msg);
-            }
+            setCertificates([]);
+            setError(e instanceof Error ? e.message : 'Lỗi không xác định');
         } finally {
             setIsLoading(false);
         }

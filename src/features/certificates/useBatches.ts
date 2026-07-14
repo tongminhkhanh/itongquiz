@@ -1,5 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { WORKERS_API_URL } from '../../config/constants';
+import type {
+    CertificateApiError,
+    CertificateApiSuccess,
+    CertificateBatchSummary,
+    CreateCertificateBatchRequest,
+    CreateCertificateBatchResult,
+    CertificateBatchDetail,
+} from '../../../shared/certificates.contract';
 
 function getTeacherJwt(): string {
     try {
@@ -20,16 +28,7 @@ export interface BatchStudent {
     quiz_title?: string | null;
 }
 
-export interface BatchRecord {
-    id: string;
-    title: string;
-    custom_note: string | null;
-    status: 'draft' | 'sending' | 'sent' | 'error';
-    template_name: string | null;
-    total_certs: number;
-    done_certs: number;
-    created_at: string;
-}
+export type BatchRecord = CertificateBatchSummary;
 
 export interface TemplateOption {
     id: string;
@@ -46,10 +45,25 @@ function authHeaders(): HeadersInit {
     };
 }
 
+async function readCertificateError(res: Response): Promise<string> {
+    try {
+        const payload = await res.json() as Partial<CertificateApiError> & { message?: string; error?: unknown };
+        if (payload.error && typeof payload.error === 'object' && 'message' in payload.error) {
+            return String(payload.error.message);
+        }
+        if (typeof payload.error === 'string') return payload.error;
+        if (payload.message) return payload.message;
+    } catch {
+        // Fall through to status-based message.
+    }
+    return `Lỗi ${res.status}`;
+}
+
 export function useBatches() {
     const [batches, setBatches] = useState<BatchRecord[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const pollAttempt = useRef(0);
 
     const fetchBatches = useCallback(async () => {
         setIsLoading(true);
@@ -58,8 +72,8 @@ export function useBatches() {
             const res = await fetch(`${base()}/api/certificate-batches`, {
                 headers: authHeaders(),
             });
-            if (!res.ok) throw new Error(`Lỗi ${res.status}`);
-            const json = await res.json() as { data: BatchRecord[] };
+            if (!res.ok) throw new Error(await readCertificateError(res));
+            const json = await res.json() as CertificateApiSuccess<BatchRecord[]>;
             setBatches(json.data ?? []);
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : 'Lỗi không xác định');
@@ -70,36 +84,58 @@ export function useBatches() {
 
     useEffect(() => { fetchBatches(); }, [fetchBatches]);
 
-    const createBatch = useCallback(async (payload: {
-        template_id: string;
-        title: string;
-        custom_note?: string;
-        quiz_id?: string;
-        class_id?: string;
-        students: BatchStudent[];
-    }): Promise<{ batch_id: string }> => {
+    useEffect(() => {
+        const hasActiveBatch = batches.some((batch) => batch.status === 'pending' || batch.status === 'processing');
+        if (!hasActiveBatch) {
+            pollAttempt.current = 0;
+            return;
+        }
+        const delay = Math.min(15000, 3000 * (2 ** pollAttempt.current));
+        const timer = window.setTimeout(() => {
+            pollAttempt.current += 1;
+            fetchBatches();
+        }, delay);
+        return () => window.clearTimeout(timer);
+    }, [batches, fetchBatches]);
+
+    const createBatch = useCallback(async (
+        payload: CreateCertificateBatchRequest,
+    ): Promise<CreateCertificateBatchResult> => {
         const res = await fetch(`${base()}/api/certificate-batches`, {
             method: 'POST',
             headers: authHeaders(),
             body: JSON.stringify(payload),
         });
-        const json = await res.json() as { data?: { batch_id: string }; error?: string };
-        if (!res.ok) throw new Error(json.error ?? `Lỗi ${res.status}`);
-        return json.data!;
+        if (!res.ok) throw new Error(await readCertificateError(res));
+        const json = await res.json() as CertificateApiSuccess<CreateCertificateBatchResult>;
+        return json.data;
     }, []);
 
-    return { batches, isLoading, error, refetch: fetchBatches, createBatch };
+    const fetchBatchDetail = useCallback(async (batchId: string): Promise<CertificateBatchDetail> => {
+        const res = await fetch(`${base()}/api/certificate-batches/${batchId}`, { headers: authHeaders() });
+        if (!res.ok) throw new Error(await readCertificateError(res));
+        const json = await res.json() as CertificateApiSuccess<CertificateBatchDetail>;
+        return json.data;
+    }, []);
+
+    const retryBatch = useCallback(async (batchId: string): Promise<void> => {
+        const res = await fetch(`${base()}/api/certificate-batches/${batchId}/retry`, {
+            method: 'POST',
+            headers: authHeaders(),
+        });
+        if (!res.ok) throw new Error(await readCertificateError(res));
+        pollAttempt.current = 0;
+        await fetchBatches();
+    }, [fetchBatches]);
+
+    return { batches, isLoading, error, refetch: fetchBatches, createBatch, fetchBatchDetail, retryBatch };
 }
 
 export async function fetchTemplateOptions(): Promise<TemplateOption[]> {
-    try {
-        const res = await fetch(`${base()}/api/admin/certificate-templates`, {
-            headers: authHeaders(),
-        });
-        if (!res.ok) return [];
-        const json = await res.json() as { data: TemplateOption[] };
-        return (json.data ?? []).filter((t) => t.is_active);
-    } catch {
-        return [];
-    }
+    const res = await fetch(`${base()}/api/certificates/templates`, {
+        headers: authHeaders(),
+    });
+    if (!res.ok) throw new Error(await readCertificateError(res));
+    const json = await res.json() as CertificateApiSuccess<TemplateOption[]>;
+    return (json.data ?? []).filter((template) => template.is_active);
 }
