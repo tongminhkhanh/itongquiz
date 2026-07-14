@@ -61,6 +61,7 @@ export async function processBatch(
     await runWithConcurrency(students, CERTIFICATE_RENDER_CONCURRENCY, async (student) => {
       try {
         const pngBuffer = await renderCertificate({
+          env,
           bgImageArrayBuffer: bgBuffer,
           fieldsConfig,
           data: {

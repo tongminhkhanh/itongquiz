@@ -1,55 +1,45 @@
 // workers/src/services/fontLoader.ts
-// Loads Roboto fonts — tries R2 first, falls back to Google Fonts CDN
+// Loads the bundled Roboto fonts from the certificate R2 bucket.
 
 const fontCache = new Map<string, ArrayBuffer>();
 
-// CDN fallback URLs for Roboto
-const ROBOTO_CDN: Record<string, string> = {
-  'Roboto-Regular': 'https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1Mu4WxKOzezNVE.ttf',
-  'Roboto-Bold':    'https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1Mu7GxKOzezNVE.ttf',
-};
+function isSupportedFont(buffer: ArrayBuffer): boolean {
+  const bytes = new Uint8Array(buffer);
+  if (bytes.length < 12) return false;
+  const isTrueType = bytes[0] === 0x00 && bytes[1] === 0x01 && bytes[2] === 0x00 && bytes[3] === 0x00;
+  const isOpenType = bytes[0] === 0x4f && bytes[1] === 0x54 && bytes[2] === 0x54 && bytes[3] === 0x4f;
+  return isTrueType || isOpenType;
+}
 
 /**
- * Load font: tries CERT_IMAGES R2 bucket first, then CDN fallback
+ * Load a required certificate font from CERT_IMAGES.
+ * Missing or invalid fonts must stop rendering to avoid blank-text PNGs.
  */
 export async function loadFont(env: any, fontName: string): Promise<ArrayBuffer> {
-  if (fontCache.has(fontName)) return fontCache.get(fontName)!;
+  const cached = fontCache.get(fontName);
+  if (cached) return cached.slice(0);
 
-  // Try R2 (CERT_IMAGES bucket)
-  try {
-    const key = `fonts/${fontName}.ttf`;
-    const bucket: R2Bucket | undefined = env.CERT_IMAGES;
-    if (bucket) {
-      const obj = await bucket.get(key);
-      if (obj) {
-        const buf = await obj.arrayBuffer();
-        fontCache.set(fontName, buf);
-        return buf;
-      }
-    }
-  } catch (_) { /* fall through to CDN */ }
+  const bucket: R2Bucket | undefined = env?.CERT_IMAGES;
+  if (!bucket) throw new Error('CERT_IMAGES binding is required to load certificate fonts');
 
-  // CDN fallback
-  const url = ROBOTO_CDN[fontName];
-  if (url) {
-    const res = await fetch(url);
-    if (res.ok) {
-      const buf = await res.arrayBuffer();
-      fontCache.set(fontName, buf);
-      return buf;
-    }
-  }
+  const key = `fonts/${fontName}.ttf`;
+  const obj = await bucket.get(key);
+  if (!obj) throw new Error(`Certificate font not found in R2: ${key}`);
 
-  throw new Error(`Font not found: ${fontName}`);
+  const buffer = await obj.arrayBuffer();
+  if (!isSupportedFont(buffer)) throw new Error(`Invalid certificate font in R2: ${key}`);
+
+  fontCache.set(fontName, buffer.slice(0));
+  return buffer.slice(0);
 }
 
 /**
  * Load Roboto Regular + Bold — used by certificateRenderer
  */
-export async function loadRobotoFonts(env?: any): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> {
+export async function loadRobotoFonts(env: any): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> {
   const [regular, bold] = await Promise.all([
-    loadFont(env ?? {}, 'Roboto-Regular'),
-    loadFont(env ?? {}, 'Roboto-Bold'),
+    loadFont(env, 'Roboto-Regular'),
+    loadFont(env, 'Roboto-Bold'),
   ]);
   return { regular, bold };
 }

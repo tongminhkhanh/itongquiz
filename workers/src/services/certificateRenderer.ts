@@ -1,11 +1,13 @@
 import { Resvg, initWasm } from '@resvg/resvg-wasm';
 // @ts-ignore Wrangler compiles .wasm imports to WebAssembly.Module.
 import resvgWasmModule from '@resvg/resvg-wasm/index_bg.wasm';
+import type { Env } from '../types';
 import type { FieldConfig } from '../types/certificates';
 import { loadRobotoFonts } from './fontLoader';
 import { buildCertificateSvg } from './certificateSvg';
 
 export interface RenderParams {
+  env: Pick<Env, 'CERT_IMAGES'>;
   bgImageArrayBuffer: ArrayBuffer;
   fieldsConfig: FieldConfig[];
   data: {
@@ -54,17 +56,12 @@ function detectImageMime(buffer: ArrayBuffer): string {
 
 export async function renderCertificate(params: RenderParams): Promise<Uint8Array> {
   await ensureWasmReady();
-  const { bgImageArrayBuffer, fieldsConfig, data, width = 1200, height = 848 } = params;
+  const { env, bgImageArrayBuffer, fieldsConfig, data, width = 1200, height = 848 } = params;
   const bgHref = `data:${detectImageMime(bgImageArrayBuffer)};base64,${arrayBufferToBase64(bgImageArrayBuffer)}`;
   const svg = buildCertificateSvg(bgHref, fieldsConfig, data, width, height);
 
-  let fontBuffers: ArrayBuffer[] = [];
-  try {
-    const fonts = await loadRobotoFonts();
-    fontBuffers = [fonts.regular, fonts.bold];
-  } catch (error) {
-    console.warn('[certificateRenderer] Roboto font load failed, using default font:', error);
-  }
+  const fonts = await loadRobotoFonts(env);
+  const fontBuffers = [new Uint8Array(fonts.regular), new Uint8Array(fonts.bold)];
 
   const resvg = new Resvg(svg, {
     background: 'rgba(255,255,255,1)',
@@ -72,7 +69,7 @@ export async function renderCertificate(params: RenderParams): Promise<Uint8Arra
     font: {
       loadSystemFonts: false,
       defaultFontFamily: 'Roboto',
-      fontBuffers: fontBuffers.length ? (fontBuffers as any) : undefined,
+      fontBuffers,
     },
   });
   const rendered = resvg.render();

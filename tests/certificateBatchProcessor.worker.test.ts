@@ -57,6 +57,7 @@ describe('certificate batch processor', () => {
       student_name: 'Nguyễn Việt Anh', score: '0/10', teacher_name: 'Cô Nguyễn',
     });
     expect(put).toHaveBeenCalledWith('certs/cert-ok.png', expect.any(Uint8Array), expect.any(Object));
+    expect(renderInputs[0].env).toBe(env);
     const finalBatchUpdate = db.runs.find((statement) => statement.sql.includes('SET status = ?, sent_at'));
     expect(finalBatchUpdate?.bindings[0]).toBe('partial');
     const notifications = db.runs.filter((statement) => statement.sql.includes('INSERT INTO notifications'));
