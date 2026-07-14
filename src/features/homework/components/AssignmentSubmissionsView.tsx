@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { HomeworkAssignment, HomeworkSubmission } from '../types';
 import { useHomeworkStore } from '../stores/useHomeworkStore';
 import { useRosterStore } from '../../../stores/useRosterStore';
@@ -81,10 +82,10 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
       // Update local state
       setLocalSubmissions(prev => prev.map(s => s.id === updatedSubmission.id ? updatedSubmission : s));
       setSelectedSubmission(updatedSubmission);
-      alert('Đã chấm điểm thành công! Học sinh hiện đã có thể xem kết quả.');
+      toast.success('Đã chấm điểm thành công! Học sinh hiện đã có thể xem kết quả.');
     } catch (err) {
       console.error(err);
-      alert('Có lỗi xảy ra khi chấm điểm.');
+      toast.error('Có lỗi xảy ra khi chấm điểm.');
     } finally {
       setIsGrading(false);
     }
@@ -112,7 +113,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
       });
     } catch (err) {
       console.error(err);
-      alert('AI không thể phân tích ảnh lúc này. Vui lòng thử lại sau.');
+      toast.error('AI không thể phân tích ảnh lúc này. Vui lòng thử lại sau.');
     } finally {
       setIsAILoading(false);
     }

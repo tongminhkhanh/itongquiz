@@ -27,6 +27,7 @@
     "browser-image-compression": "^2.0.2",
     "canvas-confetti": "^1.9.4",
     "docx": "^9.5.1",
+    "dom-to-image-more": "^3.10.0",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.23.26",

@@ -4,7 +4,8 @@
     "private": true,
     "scripts": {
         "dev": "wrangler dev",
-        "deploy": "wrangler deploy",
+        "deploy": "wrangler deploy --config ./wrangler.toml",
+    "deploy:api": "wrangler deploy --config ./wrangler.toml",
         "db:migrate": "wrangler d1 execute itongquiz-db --file=schema.sql --remote",
         "db:migrate:local": "wrangler d1 execute itongquiz-db --file=schema.sql --local",
         "db:migrate:0013:local": "wrangler d1 execute itongquiz-db --file=migrations/0013_add_question_skill_metadata.sql --local",

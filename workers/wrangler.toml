@@ -17,6 +17,12 @@ database_id = "340c3a89-3941-43b1-bc81-fb37b8b6ac00"
 binding = "OG_IMAGES"
 bucket_name = "phieu-og-images"
 
+# Cho phép import .wasm (dùng bởi @resvg/resvg-wasm để render certificate PNG)
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = true
+
 [[routes]]
 pattern = "phieu.thitong.site/*"
 zone_name = "thitong.site"

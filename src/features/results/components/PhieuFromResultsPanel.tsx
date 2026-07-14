@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { FileText, Sparkles, Send, Copy, CheckCircle2, Loader2, X, ClipboardList, Printer } from 'lucide-react';
 import { PhieuNhanXet, PhieuNhanXetInput, PhieuNhanXetStyle, PhieuPublicLink } from '../../homework/types/phieu.types';
 import { phieuService, getXepLoai, phieuStyleLabels } from '../../homework/services/phieuService';
@@ -119,7 +120,7 @@ export const PhieuFromResultsPanel: React.FC<Props> = ({ results, onClose }) => 
       setDrafts(next);
       if (!activeId || !next[activeId]) setActiveId(selectedResults[0]?.id || '');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Không thể tạo phiếu');
+      toast.error(err instanceof Error ? err.message : 'Không thể tạo phiếu');
     } finally {
       setIsGenerating(false);
     }
@@ -131,12 +132,12 @@ export const PhieuFromResultsPanel: React.FC<Props> = ({ results, onClose }) => 
       const saved = await phieuService.upsertPhieu(activePhieu as PhieuNhanXetInput);
       setDrafts((prev) => ({ ...prev, [activeId]: saved }));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Không thể lưu phiếu');
+      toast.error(err instanceof Error ? err.message : 'Không thể lưu phiếu');
     }
   };
 
   const handlePublish = async () => {
-    if (Object.keys(drafts).length === 0) return alert('Chưa có phiếu nào để xuất link.');
+    if (Object.keys(drafts).length === 0) { toast.error('Chưa có phiếu nào để xuất link.'); return; }
     setIsPublishing(true);
     try {
       // Auto-save: sync mọi draft (kể cả đã có id lẫn chưa có) lên server
@@ -165,7 +166,7 @@ export const PhieuFromResultsPanel: React.FC<Props> = ({ results, onClose }) => 
       });
       setLinks(result.links);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Không thể tạo link.');
+      toast.error(err instanceof Error ? err.message : 'Không thể tạo link.');
     } finally {
       setIsPublishing(false);
     }

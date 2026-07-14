@@ -133,6 +133,64 @@ export async function handleGetMyCertificates(request: Request, env: Env): Promi
   return Response.json({ data });
 }
 
+// POST /api/certificate-batches/:id/retry  (Render lại các cert đang pending/error)
+export async function handleRetryBatch(
+  request: Request,
+  env: Env,
+  batchId: string
+): Promise<Response> {
+  const authResult = await verifyJWTMiddleware(request, env);
+  if (authResult instanceof Response) return authResult;
+  const user = authResult.user;
+  if (!requireTeacher(user)) {
+    return Response.json({ error: 'Forbidden: teacher role required' }, { status: 403 });
+  }
+
+  const batch = await env.DB.prepare(
+    `SELECT id, teacher_id, template_id, custom_note FROM certificate_batches WHERE id = ?`
+  ).bind(batchId).first<{ id: string; teacher_id: string; template_id: string; custom_note: string | null }>();
+
+  if (!batch) return Response.json({ error: 'Batch not found' }, { status: 404 });
+  if (batch.teacher_id !== user.id && user.role !== 'admin') {
+    return Response.json({ error: 'Forbidden: not your batch' }, { status: 403 });
+  }
+
+  const pending = await env.DB.prepare(
+    `SELECT student_id, student_name, student_score, quiz_title
+     FROM certificates
+     WHERE batch_id = ? AND (render_status = 'pending' OR render_status = 'error')`
+  ).bind(batchId).all<BatchStudent>();
+
+  if (!pending.results.length) {
+    return Response.json({ data: { batch_id: batchId, retried: 0, status: 'nothing_to_retry' } });
+  }
+
+  // Reset error trước khi render lại
+  await env.DB.prepare(
+    `UPDATE certificates SET render_status = 'pending', error_message = NULL
+     WHERE batch_id = ? AND render_status = 'error'`
+  ).bind(batchId).run();
+
+  await env.DB.prepare(
+    `UPDATE certificate_batches SET status = 'sending' WHERE id = ?`
+  ).bind(batchId).run();
+
+  const teacherName: string = (user as any).name ?? (user as any).fullName ?? (user as any).username ?? '';
+  const r2PublicUrl: string = (env as any).R2_PUBLIC_URL ?? '';
+  const renderPromise = processBatch(
+    env, batchId, batch.template_id, pending.results as BatchStudent[],
+    teacherName, batch.custom_note ?? '', r2PublicUrl
+  );
+
+  const ctx = (request as any).__executionContext as ExecutionContext | undefined;
+  if (ctx?.waitUntil) {
+    ctx.waitUntil(renderPromise);
+    return Response.json({ data: { batch_id: batchId, retried: pending.results.length, status: 'sending' } }, { status: 202 });
+  }
+  await renderPromise;
+  return Response.json({ data: { batch_id: batchId, retried: pending.results.length, status: 'sent' } });
+}
+
 export async function handleCertificateRoutes(
   request: Request,
   env: Env,
@@ -142,6 +200,10 @@ export async function handleCertificateRoutes(
   if (path === '/api/certificate-batches') {
     if (method === 'POST') return handleCreateBatch(request, env);
     if (method === 'GET')  return handleGetBatches(request, env);
+  }
+  const retryMatch = path.match(/^\/api\/certificate-batches\/([a-zA-Z0-9]+)\/retry$/);
+  if (retryMatch && method === 'POST') {
+    return handleRetryBatch(request, env, retryMatch[1]);
   }
   if (path === '/api/certificates/my' && method === 'GET') {
     return handleGetMyCertificates(request, env);

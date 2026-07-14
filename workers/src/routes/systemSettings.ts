@@ -2,6 +2,7 @@ import { Env } from '../types';
 import { errorResponse, jsonResponse } from '../utils/response';
 import { parseBody } from '../utils/helpers';
 import { isTransientD1Error, withD1Retry } from '../utils/d1';
+import { requireAdmin, verifyJWTMiddleware } from '../middleware/jwtAuth';
 
 type SystemSettingRow = {
     setting_key: string;
@@ -35,13 +36,6 @@ const ensureSystemSettingsTable = async (db: D1Database): Promise<void> => {
         INSERT OR IGNORE INTO system_settings (setting_key, setting_value, updated_at)
         VALUES (?, ?, ?)
     `).bind(AI_ASSISTANT_KEY, 'true', new Date().toISOString()).run();
-};
-
-const isAdminActor = async (db: D1Database, actorUsername: string): Promise<boolean> => {
-    const username = String(actorUsername || '').trim();
-    if (!username) return false;
-    const actor = await db.prepare('SELECT role FROM teachers WHERE username = ?').bind(username).first<any>();
-    return String(actor?.role || '').trim().toLowerCase() === 'admin';
 };
 
 export async function handleSystemSettingsRoutes(request: Request, env: Env, path: string, method: string): Promise<Response | null> {
@@ -79,14 +73,14 @@ export async function handleSystemSettingsRoutes(request: Request, env: Env, pat
     }
 
     if (method === 'POST') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        if (!requireAdmin(authResult.user)) return errorResponse('Forbidden', 403);
+
         await ensureSystemSettingsTable(db);
 
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
-
-        const actorUsername = String(body.actorUsername || '').trim();
-        if (!actorUsername) return errorResponse('Missing actorUsername');
-        if (!(await isAdminActor(db, actorUsername))) return errorResponse('Forbidden', 403);
 
         const aiAssistantEnabled = parseBool(body.aiAssistantEnabled, true);
         const now = new Date().toISOString();

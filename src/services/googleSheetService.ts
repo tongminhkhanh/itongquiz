@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import { Quiz, Question, QuestionType, MCQQuestion, TrueFalseQuestion, ShortAnswerQuestion, Teacher, StudentResult } from '../types';
 import { cacheService, CacheKeys, CacheTTL } from './CacheService';
 // GOOGLE_SCRIPT_URL no longer needed - callGasApi routes through apiAdapter
@@ -618,7 +619,7 @@ export const updateQuizInSheet = async (quiz: Quiz, scriptUrl: string): Promise<
         // Verify question count if server returns it
         if (result.questionCount !== undefined && result.questionCount !== expectedCount) {
             console.error(`[updateQuizInSheet] Question count mismatch: expected ${expectedCount}, got ${result.questionCount}`);
-            alert(`Cảnh báo: Số câu hỏi lưu (${result.questionCount}) không khớp với số câu trong đề (${expectedCount}). Vui lòng kiểm tra lại.`);
+            toast(`Cảnh báo: Số câu hỏi lưu (${result.questionCount}) không khớp với số câu trong đề (${expectedCount}). Vui lòng kiểm tra lại.`, { icon: '⚠️' });
             return false;
         }
         cacheService.invalidatePrefix('quizzes:');
@@ -628,6 +629,6 @@ export const updateQuizInSheet = async (quiz: Quiz, scriptUrl: string): Promise<
     // Log and show error
     const errorMsg = result?.message || 'Unknown error';
     console.error('[updateQuizInSheet] Update failed:', errorMsg);
-    alert(`Lỗi khi cập nhật đề: ${errorMsg}`);
+    toast.error(`Lỗi khi cập nhật đề: ${errorMsg}`);
     return false;
 };

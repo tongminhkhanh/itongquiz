@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { Quiz } from '../types';
 
 export interface UseQuizManagerProps {
@@ -105,7 +106,7 @@ export const useQuizManager = ({ quizzes, onDelete }: UseQuizManagerProps): UseQ
     // Handle delete
     const handleDelete = useCallback(async (quizId: string) => {
         if (!onDelete) {
-            alert('Chức năng xóa chưa được cấu hình.');
+            toast.error('Chức năng xóa chưa được cấu hình.');
             return;
         }
 
@@ -113,11 +114,11 @@ export const useQuizManager = ({ quizzes, onDelete }: UseQuizManagerProps): UseQ
             setDeletingId(quizId);
             try {
                 await onDelete(quizId);
-                alert('Đã xóa bài kiểm tra thành công!');
+                toast.success('Đã xóa bài kiểm tra thành công!');
             } catch (error: unknown) {
                 const normalizedError = error instanceof Error ? error : new Error(String(error));
                 console.error('Delete quiz error:', error);
-                alert('Lỗi khi xóa: ' + (normalizedError.message || 'Không thể xóa bài kiểm tra. Vui lòng thử lại.'));
+                toast.error('Lỗi khi xóa: ' + (normalizedError.message || 'Không thể xóa bài kiểm tra. Vui lòng thử lại.'));
             } finally {
                 setDeletingId(null);
             }

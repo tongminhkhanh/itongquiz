@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import toast from 'react-hot-toast';
 import { ImageLibraryItem } from '../../../types';
 import { Image, Upload, X, Loader2 } from 'lucide-react';
 import { uploadToCloudinary } from '../../../services/cloudinaryService';
@@ -30,7 +31,7 @@ export const ImageLibrary: React.FC<ImageLibraryProps> = ({
         if (!files) return;
 
         if (images.length >= MAX_IMAGE_COUNT) {
-            alert(`Tối đa ${MAX_IMAGE_COUNT} hình. Vui lòng xóa bớt để upload thêm.`);
+            toast.error(`Tối đa ${MAX_IMAGE_COUNT} hình. Vui lòng xóa bớt để upload thêm.`);
             return;
         }
 
@@ -41,12 +42,12 @@ export const ImageLibrary: React.FC<ImageLibraryProps> = ({
             const file = files[i];
 
             if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
-                alert(`${file.name} quá lớn (>${MAX_IMAGE_SIZE_MB}MB). Bỏ qua.`);
+                toast.error(`${file.name} quá lớn (>${MAX_IMAGE_SIZE_MB}MB). Bỏ qua.`);
                 continue;
             }
 
             if (images.length + newImages.length >= MAX_IMAGE_COUNT) {
-                alert(`Chỉ có thể upload thêm ${MAX_IMAGE_COUNT - images.length} hình.`);
+                toast(`Chỉ có thể upload thêm ${MAX_IMAGE_COUNT - images.length} hình.`, { icon: '⚠️' });
                 break;
             }
 
@@ -61,7 +62,7 @@ export const ImageLibrary: React.FC<ImageLibraryProps> = ({
                 });
             } catch (err) {
                 console.error('Error uploading:', err);
-                alert(`Lỗi upload ${file.name}`);
+                toast.error(`Lỗi upload ${file.name}`);
             }
         }
 

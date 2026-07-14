@@ -1,0 +1,27 @@
+{
+  "goal": "Fix 401 Unauthorized trên certificate routes bằng cách giải quyết 3 nguyên nhân gốc: JWT_SECRET sai worker, login không lưu token, hai authStore song song",
+  "steps": [
+    {
+      "text": "Set JWT_SECRET đúng worker itongquiz-api",
+      "done": false
+    },
+    {
+      "text": "Xác nhận WORKERS_API_URL trong .env/.env.production",
+      "done": false
+    },
+    {
+      "text": "Fix useAuthStore.ts cũ không lưu token",
+      "done": false
+    },
+    {
+      "text": "Xóa/merge store trùng lặp",
+      "done": false
+    },
+    {
+      "text": "Build + deploy + test",
+      "done": false
+    }
+  ],
+  "created": "2026-07-04T06:04:54.408Z",
+  "updated": "2026-07-04T06:04:54.408Z"
+}

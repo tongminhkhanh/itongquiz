@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { ArrowLeft, Loader2, Search, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { practiceService } from '../../../services/practiceService';
@@ -62,7 +63,7 @@ const SubjectLibrary: React.FC<SubjectLibraryProps> = ({ subjectId, onBack }) =>
             quizStore.selectQuiz(virtualQuiz);
             quizStore.setView('student');
         } else {
-            alert('Không thể tải bài luyện tập. Vui lòng thử lại.');
+            toast.error('Không thể tải bài luyện tập. Vui lòng thử lại.');
         }
     };
 

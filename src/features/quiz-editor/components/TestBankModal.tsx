@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { X, Search, Plus, Trash2, Library, CheckCircle2 } from 'lucide-react';
 import { testBankService, TestBankItem } from '../../../services/testBankService';
 import type { Question } from '../../../types';
@@ -41,7 +42,7 @@ export const TestBankModal: React.FC<TestBankModalProps> = ({ isOpen, onClose, o
             await testBankService.deleteQuestion(id);
             setItems(items.filter(item => item.id !== id));
         } catch (e) {
-            alert('Không thể xóa câu hỏi');
+            toast.error('Không thể xóa câu hỏi');
         }
     };
 

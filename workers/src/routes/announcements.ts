@@ -6,6 +6,7 @@ import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
 import { parseBody } from '../utils/helpers';
 import { withD1Retry } from '../utils/d1';
+import { requireAdmin, verifyJWTMiddleware } from '../middleware/jwtAuth';
 
 export async function handleAnnouncementRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
@@ -49,6 +50,10 @@ export async function handleAnnouncementRoutes(request: Request, env: Env, path:
 
     // POST /api/announcements
     if (path === '/api/announcements' && method === 'POST') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        if (!requireAdmin(authResult.user)) return errorResponse('Forbidden', 403);
+
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
