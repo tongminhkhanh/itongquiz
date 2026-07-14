@@ -2,7 +2,18 @@ export const SCHOOL_NAME = "Trường Tiểu học Ít Ong";
 
 // --- BACKEND ENDPOINTS ---
 // All data now goes through Cloudflare Workers + D1
-export const WORKERS_API_URL = (import.meta.env.VITE_WORKERS_API_URL || 'https://phieu.thitong.site').trim().replace(/\r/g, '');
+export function normalizeWorkersApiUrl(value: string): string {
+  return value
+    // Vercel values can accidentally contain literal "\\r"/"\\n" suffixes.
+    .replace(/\\[rn]/g, '')
+    .replace(/[\r\n]/g, '')
+    .trim()
+    .replace(/\/+$/, '');
+}
+
+export const WORKERS_API_URL = normalizeWorkersApiUrl(
+  import.meta.env.VITE_WORKERS_API_URL || 'https://phieu.thitong.site',
+);
 export const USE_D1 = true; // Always use D1 - Google Sheets removed
 
 // Danh mục quiz theo môn học (đồng bộ với SUBJECT_CONFIG)

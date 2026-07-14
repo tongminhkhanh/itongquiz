@@ -5,13 +5,6 @@ import { cacheService, CacheKeys, CacheTTL } from './CacheService';
 import { USE_D1 } from '../config/constants';
 import { callApi } from './apiAdapter';
 
-// Security: API token for GAS authentication
-const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
-
-if (!API_SECRET_TOKEN) {
-    console.warn("Security Warning: VITE_API_SECRET_TOKEN is missing. API calls may fail.");
-}
-
 // Helper to call API (routes through apiAdapter for both GAS and D1 backends)
 const callGasApi = async (action: string, payload: any = {}): Promise<any> => {
     try {
