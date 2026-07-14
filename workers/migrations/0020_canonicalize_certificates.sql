@@ -8,6 +8,17 @@ ALTER TABLE certificates RENAME TO certificates_legacy_0020;
 ALTER TABLE certificate_batches RENAME TO certificate_batches_legacy_0020;
 ALTER TABLE certificate_templates RENAME TO certificate_templates_legacy_0020;
 
+-- SQLite keeps index names when their tables are renamed. Drop the legacy
+-- indexes before recreating the canonical tables with the same index names.
+DROP INDEX IF EXISTS idx_templates_school;
+DROP INDEX IF EXISTS idx_templates_active;
+DROP INDEX IF EXISTS idx_templates_created_by;
+DROP INDEX IF EXISTS idx_batches_teacher;
+DROP INDEX IF EXISTS idx_batches_status;
+DROP INDEX IF EXISTS idx_certs_student;
+DROP INDEX IF EXISTS idx_certs_batch;
+DROP INDEX IF EXISTS idx_certs_status;
+
 CREATE TABLE certificate_templates (
   id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
   school_id TEXT,
