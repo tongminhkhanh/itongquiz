@@ -22,11 +22,6 @@ binding = "CERT_IMAGES"
 bucket_name = "itongquiz-certificates"
 
 # Cho phép import .wasm (dùng bởi @resvg/resvg-wasm để render certificate PNG)
-[[rules]]
-type = "CompiledWasm"
-globs = ["**/*.wasm"]
-fallthrough = true
-
 [[routes]]
 pattern = "phieu.thitong.site/*"
 zone_name = "thitong.site"
