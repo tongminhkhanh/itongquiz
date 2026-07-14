@@ -1,0 +1,22 @@
+name = "itongquiz-certificate-consumer"
+main = "src/queues/certificateQueue.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+account_id = "9306cc101c6560aee603252ca21f0456"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "itongquiz-db"
+database_id = "340c3a89-3941-43b1-bc81-fb37b8b6ac00"
+
+[[r2_buckets]]
+binding = "CERT_IMAGES"
+bucket_name = "itongquiz-certificates"
+
+[[queues.consumers]]
+queue = "certificate-generation"
+max_batch_size = 5
+max_batch_timeout = 30
+max_retries = 3
+retry_delay = 30
+dead_letter_queue = "certificate-generation-dlq"

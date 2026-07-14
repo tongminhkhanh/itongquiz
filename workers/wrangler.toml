@@ -47,10 +47,3 @@ crons = [
 binding = "CERTIFICATE_QUEUE"
 queue = "certificate-generation"
 
-[[queues.consumers]]
-queue = "certificate-generation"
-max_batch_size = 5
-max_batch_timeout = 30
-max_retries = 3
-retry_delay = 30
-dead_letter_queue = "certificate-generation-dlq"

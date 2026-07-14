@@ -18,7 +18,6 @@ import { handleGameLoopRoutes } from './routes/gameLoop';
 import { handleHelpRagRoutes } from './routes/helpRag';
 import { handleSystemSettingsRoutes } from './routes/systemSettings';
 import { handleAnalyticsRoutes } from './routes/analytics';
-import type { CertificateQueueMessage } from './queues/certificateQueue';
 import {
   createBatch,
   getBatches,
@@ -226,13 +225,6 @@ export default {
         } catch (error) {
             console.error('[Cron] Error awarding weekly rewards:', error);
         }
-    },
-
-    // Queue handler must be part of the default module export so Cloudflare can
-    // attach the certificate-generation consumer trigger.
-    async queue(batch: MessageBatch<CertificateQueueMessage>, env: Env, ctx: ExecutionContext): Promise<void> {
-        const { default: certificateQueue } = await import('./queues/certificateQueue');
-        await certificateQueue.queue(batch, env, ctx);
     }
 };
 
