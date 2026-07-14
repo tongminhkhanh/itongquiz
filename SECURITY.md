@@ -1,12 +1,30 @@
 # Security Report - iTongQuiz
 
 **Date:** 2026-05-05  
-**Last Updated:** 2026-05-05 12:33 UTC  
-**Status:** PARTIAL FIXES APPLIED - CRITICAL ISSUES REQUIRE ARCHITECTURAL CHANGES
+**Last Updated:** 2026-07-14  
+**Status:** SHARED SECRET FIXED - Rate Limiting & Legacy Auth Cleanup In Progress
+
+> **Update (July 2026):** Shared secret (`VITE_API_SECRET_TOKEN`) has been removed from frontend authentication layer. Legacy dispatcher has been restricted. Sensitive mutations now require JWT + Admin role.
 
 ## Executive Summary
 
 A comprehensive security audit has identified **multiple critical vulnerabilities** in the iTongQuiz application. **Four high-priority issues have been fixed** with code changes that do not impact system operations. However, **three architectural security flaws remain** that require careful planning and coordinated deployment.
+
+## ✅ Recently Fixed (July 2026)
+
+### Shared Secret Removal from Frontend
+- **Severity:** CRITICAL
+- **Status:** ✅ FIXED
+- **Location:** `src/services/api/auth.ts`
+- **Fix:** Removed sending of `X-API-Token` using `VITE_API_SECRET_TOKEN`. Frontend now only sends JWT for `session` policy.
+- **Impact:** Closes major authentication bypass vector.
+
+### Legacy Gas Dispatcher Hardening
+- **Status:** ✅ FIXED
+- **Location:** `workers/src/index.ts` (`handleLegacyGasRequest`)
+- **Fix:** Added strict allowlist + JWT + `requireTeacher` check.
+
+---
 
 ## ✅ Fixed Issues (2026-05-05)
 

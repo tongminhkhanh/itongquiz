@@ -21,17 +21,21 @@ import { handleAnalyticsRoutes } from './routes/analytics';
 import { handleTestBankRoutes } from './routes/testBank';
 import { handleTeacherAiQuotaRoutes } from './routes/teacherAiQuota';
 import { handleLogoutRoute } from './routes/logout';
-import { verifyJWTMiddleware } from './middleware/jwtAuth';
+import { verifyJWTMiddleware, requireTeacher } from './middleware/jwtAuth';
 import { handleLiveExamRoutes } from './routes/liveExam';
 import { handleAdminCertificateRoutes } from './routes/adminCertificates';
 import { handleCertificateRoutes } from './routes/certificates';
 import { handlePhieuSubdomain, handlePublicPhieuApi } from './routes/phieu';
 import { Env } from './types';
+import { ensureRateLimitTable, rateLimit } from './middleware/rateLimit';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
 import { checkAndAutoCloseExpiredExams } from './services/liveExamService';
 
 export default {
     async fetch(request: Request, env: Env): Promise<Response> {
+        // Ensure rate limit table exists (run once)
+        await ensureRateLimitTable(env.DB);
+
         // Handle CORS preflight
         const corsResponse = handleCors(request);
         if (corsResponse) return corsResponse;
@@ -42,6 +46,12 @@ export default {
 
         const phieuSubdomainResponse = await handlePhieuSubdomain(request, env);
         if (phieuSubdomainResponse) return addCors(phieuSubdomainResponse, request);
+
+        // Rate limit for public phieu
+        if (path.startsWith('/api/phieu/public')) {
+            const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 30 });
+            if (rateLimitRes) return addCors(rateLimitRes, request);
+        }
 
         const publicPhieuResponse = await handlePublicPhieuApi(env.DB, path, method);
         if (publicPhieuResponse) return addCors(publicPhieuResponse, request);
@@ -62,6 +72,14 @@ export default {
             let response: Response | null = null;
 
             if (path.startsWith('/api/teachers') || path === '/api/login') {
+                // Rate limit for login
+                if (path === '/api/login' && method === 'POST') {
+                    const rateLimitRes = await rateLimit(request, env, {
+                        windowMs: 5 * 60 * 1000, // 5 minutes
+                        maxRequests: 5,
+                    });
+                    if (rateLimitRes) return addCors(rateLimitRes, request);
+                }
                 response = await handleTeacherRoutes(request, env, path, method);
             } else if (path === '/api/logout' && method === 'POST') {
                 response = await handleLogoutRoute(request, env);
@@ -76,8 +94,12 @@ export default {
             } else if (path.startsWith('/api/announcements')) {
                 response = await handleAnnouncementRoutes(request, env, path, method);
             } else if (path.startsWith('/api/ai-tutor')) {
+                const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 10 });
+                if (rateLimitRes) return addCors(rateLimitRes, request);
                 response = await handleAiTutorRoutes(request, env, path, method);
             } else if (path.startsWith('/api/ai/')) {
+                const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 10 });
+                if (rateLimitRes) return addCors(rateLimitRes, request);
                 response = await handleAiProxy(request, env, path, method);
             } else if (path.startsWith('/api/practice')) {
                 response = await handlePracticeRoutes(request, env, path, method);
@@ -241,15 +263,29 @@ async function handleLegacyGasRequest(request: Request, env: Env): Promise<Respo
         return errorResponse('Invalid JSON body');
     }
 
-    // Verify token from body (GAS style) or a valid JWT session.
-    // This keeps legacy actions working after frontend auth migrated away from exposing API_SECRET_TOKEN.
-    if (body.token !== env.API_SECRET_TOKEN) {
-        const authResult = await verifyJWTMiddleware(request, env);
-        if (authResult instanceof Response) return authResult;
+    const action = body.action;
+    const allowedActions = new Set([
+        'get_hw_assignments',
+        'save_hw_assignment',
+        'delete_hw_assignment',
+        'submit_hw',
+        'get_hw_submissions',
+        'upsert_phieu',
+        'get_phieu_by_submission',
+        'publish_phieu_batch',
+        'deactivate_public_phieu_link',
+    ]);
+
+    // A browser-supplied legacy token cannot establish user identity or access.
+    if (!allowedActions.has(action)) {
+        return errorResponse('Legacy action is not available', 410);
     }
 
-    const action = body.action;
-    const db = env.DB;
+    const authResult = await verifyJWTMiddleware(request, env);
+    if (authResult instanceof Response) return authResult;
+    if (!requireTeacher(authResult.user)) {
+        return errorResponse('Forbidden: Teacher access required', 403);
+    }
 
-    return await handleLegacyAction(db, action, body, env.OG_IMAGES);
+    return await handleLegacyAction(env.DB, action, body, env.OG_IMAGES);
 }
