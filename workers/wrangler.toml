@@ -6,6 +6,7 @@ name = "itongquiz-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
+minify = true
 account_id = "9306cc101c6560aee603252ca21f0456"
 
 [[d1_databases]]
