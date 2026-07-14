@@ -42,6 +42,11 @@ import { checkAndAutoCloseExpiredExams } from './services/liveExamService';
 
 export default {
     async fetch(request: Request, env: Env): Promise<Response> {
+        const url = new URL(request.url);
+        if (url.pathname === '/api/health') {
+            return addCors(jsonResponse({ status: 'ok', timestamp: new Date().toISOString() }), request);
+        }
+
         // Ensure rate limit table exists (run once)
         await ensureRateLimitTable(env.DB);
 
@@ -49,7 +54,6 @@ export default {
         const corsResponse = handleCors(request);
         if (corsResponse) return corsResponse;
 
-        const url = new URL(request.url);
         const path = url.pathname;
         const method = request.method;
 
@@ -132,8 +136,6 @@ export default {
                 response = await handleCertificateRoutes(request, env, path, method);
             } else if (path.startsWith('/api/admin/certificate-templates')) {
                 response = await handleAdminCertificateRoutes(request, env, path, method);
-            } else if (path === '/api/health') {
-                response = jsonResponse({ status: 'ok', timestamp: new Date().toISOString() });
             }
 
             if (response) return addCors(response, request);
