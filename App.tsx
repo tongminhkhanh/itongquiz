@@ -68,7 +68,6 @@ const App: React.FC = () => {
 
     useEffect(() => {
         quizStore.loadQuizzes();
-        quizStore.loadResults();
 
         const params = new URLSearchParams(window.location.search);
         const quizId = params.get('quizId') || params.get('quiz');
