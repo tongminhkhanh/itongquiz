@@ -40,12 +40,10 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = memo(({ isAdmin, u
         if (username) fetchClasses(isAdmin ? undefined : username);
     }, [username, isAdmin, fetchClasses]);
 
-    // Prefetch students when a class is selected
+    // Refresh the roster whenever a class is opened so cached data cannot masquerade as current data.
     useEffect(() => {
-        if (selectedClass && !store.students[selectedClass.id]) {
-            fetchStudents(selectedClass.id);
-        }
-    }, [selectedClass, store.students, fetchStudents]);
+        if (selectedClass) void fetchStudents(selectedClass.id);
+    }, [selectedClass?.id, fetchStudents]);
 
     return (
         <div className="animate-fade-in relative min-h-[500px]">
@@ -57,12 +55,17 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = memo(({ isAdmin, u
                     onCreateClick={() => setShowCreateModal(true)}
                     onTransferClick={openTransferModal}
                     onDeleteClick={handleDeleteClass}
+                    isLoading={store.isLoading}
+                    error={store.error}
+                    onRetry={() => username && fetchClasses(isAdmin ? undefined : username)}
                 />
             ) : (
                 <ClassDetailView
                     classroom={selectedClass}
-                    isAdmin={isAdmin}
-                    onBack={() => setSelectedClass(null)}
+                    onBack={() => {
+                        setSelectedClass(null);
+                        if (username) void fetchClasses(isAdmin ? undefined : username);
+                    }}
                 />
             )}
 

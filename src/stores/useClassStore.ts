@@ -10,6 +10,7 @@ interface ClassStore {
     fetchClasses: (teacherUsername?: string) => Promise<void>;
     addClass: (payload: CreateClassPayload) => Promise<Classroom | null>;
     removeClass: (classId: string) => Promise<boolean>;
+    restoreClass: (classId: string) => Promise<boolean>;
     clearError: () => void;
 }
 
@@ -23,8 +24,9 @@ export const useClassStore = create<ClassStore>((set) => ({
         try {
             const classes = await classroomService.getClasses(teacherUsername);
             set({ classes, isLoading: false });
-        } catch {
-            set({ error: 'Khong the tai danh sach lop.', isLoading: false });
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Không thể tải danh sách lớp.';
+            set({ error: message, isLoading: false });
         }
     },
 
@@ -59,6 +61,19 @@ export const useClassStore = create<ClassStore>((set) => ({
             return ok;
         } catch {
             set({ error: 'Loi khi xoa lop.', isLoading: false });
+            return false;
+        }
+    },
+
+    restoreClass: async (classId) => {
+        set({ isLoading: true, error: null });
+        try {
+            const ok = await classroomService.restoreClass(classId);
+            set({ isLoading: false });
+            return ok;
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Không thể khôi phục lớp.';
+            set({ error: message, isLoading: false });
             return false;
         }
     },

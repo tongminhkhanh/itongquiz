@@ -6,6 +6,11 @@ export const classroomRoutes: RouteRegistry = {
         method: 'GET',
         auth: 'session',
         path: () => '/api/classes',
+        query: ({ includeArchived }) => {
+            const q = new URLSearchParams();
+            if (includeArchived) q.set('includeArchived', 'true');
+            return q;
+        },
     },
     create_class: {
         method: 'POST',
@@ -18,9 +23,16 @@ export const classroomRoutes: RouteRegistry = {
         path: ({ classId }) => `/api/classes/${encodeURIComponent(classId)}/teacher`,
     },
     delete_class: {
-        method: 'DELETE',
+        method: 'PATCH',
         auth: 'session',
-        path: ({ classId }) => `/api/classes/${classId}`,
+        path: ({ classId }) => `/api/classes/${encodeURIComponent(classId)}/archive`,
+        body: (_action, payload) => ({ archived: true, ...payload }),
+    },
+    restore_class: {
+        method: 'PATCH',
+        auth: 'session',
+        path: ({ classId }) => `/api/classes/${encodeURIComponent(classId)}/archive`,
+        body: (_action, payload) => ({ archived: false, ...payload }),
     },
 
     // Students

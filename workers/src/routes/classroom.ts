@@ -17,13 +17,14 @@ const getStudentById = async (db: D1Database, studentId: string): Promise<any | 
 };
 
 const getClassroomById = async (db: D1Database, classId: string): Promise<any | null> => {
-    return await db.prepare('SELECT id, name, teacher_username, created_at FROM classes WHERE id = ?')
+    return await db.prepare('SELECT id, name, teacher_username, created_at, archived_at FROM classes WHERE id = ?')
         .bind(classId)
         .first<any>();
 };
 
 const canAccessClass = (user: JWTPayload, classroom: any): boolean => {
     if (requireAdmin(user)) return true;
+    if (String(classroom?.archived_at || '')) return false;
     if (user.role === 'teacher') return String(classroom?.teacher_username || '') === user.username;
     if (user.role === 'student') return String(classroom?.id || '') === String(user.classId || '');
     return false;
@@ -53,6 +54,23 @@ const requireTeacherForAssignment = async (db: D1Database, user: JWTPayload, ass
     return await requireTeacherForClass(db, user, assignment.class_id);
 };
 
+export const normalizeStudentInput = (raw: any) => ({
+    fullName: String(raw?.fullName || '').trim().replace(/\s+/g, ' '),
+    username: String(raw?.username || '').trim().toLowerCase(),
+    password: String(raw?.password || '').trim(),
+    classId: String(raw?.classId || '').trim(),
+    parentPhone: String(raw?.parentPhone || '').trim(),
+});
+
+export const validateStudentInput = (student: ReturnType<typeof normalizeStudentInput>): string | null => {
+    if (student.fullName.length < 2 || student.fullName.length > 100) return 'Họ tên phải từ 2 đến 100 ký tự';
+    if (!/^[a-z0-9._-]{3,40}$/.test(student.username)) return 'Tên đăng nhập chỉ gồm chữ thường, số, dấu chấm, gạch dưới hoặc gạch ngang (3-40 ký tự)';
+    if (student.password.length < 6 || student.password.length > 64) return 'Mật khẩu phải từ 6 đến 64 ký tự';
+    if (!student.classId) return 'Thiếu lớp học';
+    if (student.parentPhone && !/^[0-9+().\s-]{8,20}$/.test(student.parentPhone)) return 'Số điện thoại phụ huynh không hợp lệ';
+    return null;
+};
+
 export async function handleClassroomRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
     const url = new URL(request.url);
@@ -80,6 +98,8 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
             LEFT JOIN classes c ON c.id = s.class_id
             LEFT JOIN user_pets p ON p.username = s.username
             WHERE s.username = ? AND s.password_hash = ?
+              AND COALESCE(s.archived_at, '') = ''
+              AND COALESCE(c.archived_at, '') = ''
         `).bind(body.username, inputHash).first<any>();
 
         if (!studentData) return jsonResponse({ status: 'error', message: 'Sai tên đăng nhập hoặc mật khẩu.' });
@@ -163,18 +183,26 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
     if (path === '/api/classes' && method === 'GET') {
         if (!requireTeacher(user)) return errorResponse('Forbidden: Teacher access required', 403);
 
+        const includeArchived = requireAdmin(user) && url.searchParams.get('includeArchived') === 'true';
         let query = `
             SELECT
                 c.*,
-                t.full_name AS teacher_full_name
+                t.full_name AS teacher_full_name,
+                (SELECT COUNT(*) FROM students s WHERE s.class_id = c.id AND COALESCE(s.archived_at, '') = '') AS student_count,
+                (SELECT COUNT(*) FROM assignments a WHERE a.class_id = c.id) AS assignment_count,
+                (SELECT MAX(r.submitted_at) FROM results r WHERE LOWER(TRIM(r.class_name)) = LOWER(TRIM(c.name))) AS last_activity_at
             FROM classes c
             LEFT JOIN teachers t ON t.username = c.teacher_username
         `;
         const params: any[] = [];
+        const conditions: string[] = [];
         if (!requireAdmin(user)) {
-            query += ' WHERE c.teacher_username = ?';
+            conditions.push('c.teacher_username = ?');
             params.push(user.username);
         }
+        if (!includeArchived) conditions.push("COALESCE(c.archived_at, '') = ''");
+        if (conditions.length > 0) query += ` WHERE ${conditions.join(' AND ')}`;
+        query += ' ORDER BY c.name COLLATE NOCASE';
         const rows = await db.prepare(query).bind(...params).all();
         return jsonResponse({
             status: 'success',
@@ -184,6 +212,10 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
                 teacherUsername: r.teacher_username,
                 teacherFullName: r.teacher_full_name || '',
                 createdAt: r.created_at,
+                studentCount: Number(r.student_count) || 0,
+                assignmentCount: Number(r.assignment_count) || 0,
+                lastActivityAt: r.last_activity_at || '',
+                archivedAt: r.archived_at || '',
             })),
         });
     }
@@ -196,12 +228,20 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         if (!body) return errorResponse('Invalid JSON body');
 
         const teacherUsername = String(body.teacherUsername || '').trim();
+        const className = String(body.name || '').trim().replace(/\s+/g, ' ');
         if (!teacherUsername) return errorResponse('Missing teacherUsername');
+        if (className.length < 2 || className.length > 80) return errorResponse('Tên lớp phải từ 2 đến 80 ký tự');
+
+        const teacherExists = await db.prepare('SELECT username FROM teachers WHERE username = ?').bind(teacherUsername).first();
+        if (!teacherExists) return errorResponse('Teacher not found', 404);
+        const duplicate = await db.prepare("SELECT id FROM classes WHERE LOWER(TRIM(name)) = LOWER(?) AND COALESCE(archived_at, '') = ''")
+            .bind(className).first();
+        if (duplicate) return errorResponse('Tên lớp đang được sử dụng', 409);
 
         const id = generateId('c');
         const createdAt = new Date().toISOString();
         await db.prepare('INSERT INTO classes (id, name, teacher_username, created_at) VALUES (?, ?, ?, ?)')
-            .bind(id, body.name, teacherUsername, createdAt).run();
+            .bind(id, className, teacherUsername, createdAt).run();
 
         const teacher = await db.prepare('SELECT full_name FROM teachers WHERE username = ?')
             .bind(teacherUsername)
@@ -211,7 +251,7 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
             status: 'success',
             data: {
                 id,
-                name: body.name,
+                name: className,
                 teacherUsername,
                 teacherFullName: teacher?.full_name || '',
                 createdAt,
@@ -284,17 +324,34 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         });
     }
 
-    // DELETE /api/classes/:id
-    if (path.startsWith('/api/classes/') && method === 'DELETE') {
+    // PATCH /api/classes/:id/archive (soft delete/restore to preserve learning history)
+    if (path.match(/\/api\/classes\/[^/]+\/archive/) && method === 'PATCH') {
         if (!requireAdmin(user)) return errorResponse('Forbidden: Admin access required', 403);
+        const classId = path.split('/')[3];
+        const body = await parseBody(request);
+        if (!classId || !body) return errorResponse('Invalid archive request');
+        const classroom = await getClassroomById(db, classId);
+        if (!classroom) return errorResponse('Class not found', 404);
+        const shouldArchive = body.archived !== false;
+        const archivedAt = shouldArchive ? nowIso : null;
+        if (shouldArchive) {
+            await db.batch([
+                db.prepare('UPDATE classes SET archived_at = ? WHERE id = ?').bind(archivedAt, classId),
+                db.prepare("UPDATE students SET archived_at = ? WHERE class_id = ? AND COALESCE(archived_at, '') = ''").bind(archivedAt, classId),
+            ]);
+        } else {
+            const previousArchivedAt = String(classroom.archived_at || '');
+            await db.batch([
+                db.prepare('UPDATE classes SET archived_at = NULL WHERE id = ?').bind(classId),
+                db.prepare('UPDATE students SET archived_at = NULL WHERE class_id = ? AND archived_at = ?').bind(classId, previousArchivedAt),
+            ]);
+        }
+        return jsonResponse({ status: 'success', data: { id: classId, archivedAt: archivedAt || '' } });
+    }
 
-        const classId = extractIdFromPath(path, '/api/classes');
-        if (!classId) return errorResponse('Missing class ID');
-
-        await db.prepare('DELETE FROM students WHERE class_id = ?').bind(classId).run();
-        await db.prepare('DELETE FROM assignments WHERE class_id = ?').bind(classId).run();
-        await db.prepare('DELETE FROM classes WHERE id = ?').bind(classId).run();
-        return jsonResponse({ status: 'success' });
+    // Permanent deletion is intentionally disabled; historical data must remain traceable.
+    if (path.startsWith('/api/classes/') && method === 'DELETE') {
+        return errorResponse('Permanent class deletion is disabled. Archive the class instead.', 405);
     }
 
     // ===== STUDENTS =====
@@ -304,14 +361,14 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         const classId = url.searchParams.get('classId');
         if (!classId) return errorResponse('Missing classId parameter');
 
+        const classroom = await getClassroomById(db, classId);
+        if (!classroom) return errorResponse('Class not found', 404);
+        if (!canAccessClass(user, classroom)) return errorResponse('Forbidden: You cannot access this class', 403);
+
         if (isStudent(user) && user.classId !== classId) return errorResponse('Forbidden: You can only access your class', 403);
-        if (!isStudent(user)) {
-            const classError = await requireTeacherForClass(db, user, classId);
-            if (classError) return classError;
-        }
 
         const role = isStudent(user) ? 'student' : 'teacher';
-        const students = await db.prepare('SELECT * FROM students WHERE class_id = ?').bind(classId).all();
+        const students = await db.prepare("SELECT * FROM students WHERE class_id = ? AND COALESCE(archived_at, '') = '' ORDER BY full_name COLLATE NOCASE").bind(classId).all();
         const mapped = students.results.map((s: any) => {
             const base: any = { id: s.id, fullName: s.full_name, username: s.username, classId: s.class_id, avatar: s.avatar || '' };
             if (role !== 'student') {
@@ -327,25 +384,28 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
     if (path === '/api/students' && method === 'POST') {
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
+        const student = normalizeStudentInput(body);
+        const validationError = validateStudentInput(student);
+        if (validationError) return errorResponse(validationError, 400);
 
-        const classError = await requireTeacherForClass(db, user, body.classId);
+        const classError = await requireTeacherForClass(db, user, student.classId);
         if (classError) return classError;
 
         // Check duplicate username
-        const existing = await db.prepare('SELECT id FROM students WHERE username = ?').bind(body.username).first();
-        if (existing) return jsonResponse({ status: 'error', message: 'Tên đăng nhập đã tồn tại: ' + body.username });
+        const existing = await db.prepare('SELECT id FROM students WHERE username = ?').bind(student.username).first();
+        if (existing) return jsonResponse({ status: 'error', message: 'Tên đăng nhập đã tồn tại: ' + student.username });
 
-        const pwdHash = await hashPassword(body.password);
+        const pwdHash = await hashPassword(student.password);
         const sId = generateId('s');
         const createdAt = new Date().toISOString();
 
         await db.prepare(
             'INSERT INTO students (id, full_name, username, password_hash, class_id, parent_phone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        ).bind(sId, body.fullName, body.username, pwdHash, body.classId, body.parentPhone || '', createdAt).run();
+        ).bind(sId, student.fullName, student.username, pwdHash, student.classId, student.parentPhone, createdAt).run();
 
         return jsonResponse({
             status: 'success',
-            data: { id: sId, fullName: body.fullName, username: body.username, classId: body.classId, parentPhone: body.parentPhone || '', createdAt },
+            data: { id: sId, fullName: student.fullName, username: student.username, classId: student.classId, parentPhone: student.parentPhone, createdAt },
         });
     }
 
@@ -357,19 +417,22 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         if (body.students.length === 0) {
             return jsonResponse({ status: 'success', data: { successCount: 0, errorCount: 0, successes: [], errors: [] }});
         }
+        if (body.students.length > 200) return errorResponse('Mỗi lần chỉ được nhập tối đa 200 học sinh', 400);
 
-        const classIds = [...new Set(body.students.map((s: any) => String(s.classId || '').trim()))] as string[];
+        const normalizedStudents: Array<ReturnType<typeof normalizeStudentInput>> = body.students.map(normalizeStudentInput);
+
+        const classIds = [...new Set(normalizedStudents.map((s) => s.classId))] as string[];
         if (classIds.length !== 1 || !classIds[0]) return errorResponse('All students must target one valid classId');
         const classError = await requireTeacherForClass(db, user, classIds[0]);
         if (classError) return classError;
 
         // 1. Get existing usernames to avoid duplicates
-        const usernames = body.students.map((s: any) => s.username);
+        const usernames = normalizedStudents.map((s) => s.username).filter(Boolean);
         // SQLite has a limit on variables, but 50-100 is fine.
         const placeholders = usernames.map(() => '?').join(',');
-        const existingResults = await db.prepare(
-            `SELECT username FROM students WHERE username IN (${placeholders})`
-        ).bind(...usernames).all();
+        const existingResults = usernames.length > 0
+            ? await db.prepare(`SELECT username FROM students WHERE username IN (${placeholders})`).bind(...usernames).all()
+            : { results: [] as any[] };
         
         const existingUsernames = new Set(existingResults.results.map((r: any) => r.username));
 
@@ -377,7 +440,12 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         const successList = [];
         const errorList = [];
 
-        for (const student of body.students) {
+        for (const student of normalizedStudents) {
+            const validationError = validateStudentInput(student);
+            if (validationError) {
+                errorList.push({ username: student.username, fullName: student.fullName, reason: validationError });
+                continue;
+            }
             if (existingUsernames.has(student.username)) {
                 errorList.push({ username: student.username, fullName: student.fullName, reason: 'Tên đăng nhập đã tồn tại' });
                 continue;
@@ -426,7 +494,7 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         const studentError = await requireTeacherForStudent(db, user, studentId);
         if (studentError) return studentError;
 
-        await db.prepare('DELETE FROM students WHERE id = ?').bind(studentId).run();
+        await db.prepare('UPDATE students SET archived_at = ? WHERE id = ?').bind(nowIso, studentId).run();
         return jsonResponse({ status: 'success' });
     }
 
@@ -476,7 +544,8 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        if (!requireAdmin(user)) return errorResponse('Forbidden: Admin access required', 403);
+        const studentError = await requireTeacherForStudent(db, user, studentId);
+        if (studentError) return studentError;
 
         const newPassword = String(body.newPassword || '').trim();
         if (!newPassword) return errorResponse('Missing newPassword');

@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS classes (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   teacher_username TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  archived_at TEXT
 );
 
 -- Students
@@ -28,7 +29,8 @@ CREATE TABLE IF NOT EXISTS students (
   parent_phone TEXT DEFAULT '',
   avatar TEXT DEFAULT '',
   coins INTEGER DEFAULT 0,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  archived_at TEXT
 );
 
 -- Quizzes
@@ -319,6 +321,8 @@ CREATE INDEX IF NOT EXISTS idx_assignments_quiz_id ON assignments(quiz_id);
 CREATE INDEX IF NOT EXISTS idx_results_quiz_id ON results(quiz_id);
 CREATE INDEX IF NOT EXISTS idx_results_student ON results(student_name);
 CREATE INDEX IF NOT EXISTS idx_classes_teacher ON classes(teacher_username);
+CREATE INDEX IF NOT EXISTS idx_classes_active_teacher ON classes(teacher_username, archived_at);
+CREATE INDEX IF NOT EXISTS idx_students_active_class ON students(class_id, archived_at);
 CREATE INDEX IF NOT EXISTS idx_results_submitted_at ON results(submitted_at DESC);
 CREATE INDEX IF NOT EXISTS idx_results_analytics ON results(class_name, submitted_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_user_date ON attendance_claims(username, claim_date);

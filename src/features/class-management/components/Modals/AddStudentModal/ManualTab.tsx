@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { EyeOff, Eye, UserPlus, Loader2 } from 'lucide-react';
 import { Button } from '../../../../../components/common';
 import { CreateStudentPayload } from '../../../types';
@@ -16,17 +16,18 @@ export const ManualTab: React.FC<ManualTabProps> = ({ classId, onClose, onSubmit
     const [password, setPassword] = useState('');
     const [parentPhone, setParentPhone] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const usernameEditedRef = useRef(false);
+    const usernameSuffixRef = useRef(Math.floor(Math.random() * 900 + 100));
 
     // Auto-generate username from full name
     useEffect(() => {
-        if (fullName.trim()) {
+        if (fullName.trim() && !usernameEditedRef.current) {
             const parts = fullName.trim().toLowerCase().split(/\s+/);
             const firstName = parts[parts.length - 1] || '';
             const lastInitial = parts[0]?.[0] || '';
             const mid = parts.length > 2 ? parts.slice(1, -1).map(p => p[0]).join('') : '';
-            const suffix = Math.floor(Math.random() * 900 + 100);
             const clean = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
-            setUsername(clean(`${firstName}.${lastInitial}${mid}.${suffix}`));
+            setUsername(clean(`${firstName}.${lastInitial}${mid}.${usernameSuffixRef.current}`));
         }
     }, [fullName]);
 
@@ -73,7 +74,10 @@ export const ManualTab: React.FC<ManualTabProps> = ({ classId, onClose, onSubmit
                 <input
                     type="text"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => {
+                        usernameEditedRef.current = true;
+                        setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''));
+                    }}
                     placeholder="an.nv.123"
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-mono"
                 />
@@ -123,7 +127,7 @@ export const ManualTab: React.FC<ManualTabProps> = ({ classId, onClose, onSubmit
                     type="submit"
                     variant="primary"
                     className="flex-1"
-                    disabled={!fullName.trim() || !username.trim() || !password.trim() || isLoading}
+                    disabled={!fullName.trim() || username.trim().length < 3 || password.trim().length < 6 || isLoading}
                     icon={isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                 >
                     {isLoading ? 'Đang thêm...' : 'Thêm HS'}

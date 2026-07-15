@@ -6,7 +6,6 @@ import { showConfirm } from '../../../../utils/toast';
 
 interface StudentTableProps {
     students: Student[];
-    isAdmin: boolean;
     classId: string;
     onResetPassword: (studentId: string) => void;
     onRemoveStudent: (studentId: string, classId: string) => void;
@@ -14,7 +13,6 @@ interface StudentTableProps {
 
 export const StudentTable: React.FC<StudentTableProps> = memo(({
     students,
-    isAdmin,
     classId,
     onResetPassword,
     onRemoveStudent,
@@ -50,15 +48,14 @@ export const StudentTable: React.FC<StudentTableProps> = memo(({
                                     </td>
                                     <td className="py-3 px-4">
                                         <div className="flex items-center justify-end gap-1">
-                                            {isAdmin && (
-                                                <button
-                                                    onClick={() => onResetPassword(student.id)}
-                                                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                                                    title="Đặt lại mật khẩu"
-                                                >
-                                                    <KeyRound className="w-4 h-4" />
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => onResetPassword(student.id)}
+                                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                                                title="Đặt lại mật khẩu"
+                                                aria-label={`Đặt lại mật khẩu cho ${student.fullName}`}
+                                            >
+                                                <KeyRound className="w-4 h-4" />
+                                            </button>
                                             <button
                                                 onClick={() => {
                                                     showConfirm({
@@ -89,15 +86,14 @@ export const StudentTable: React.FC<StudentTableProps> = memo(({
                             <p className="text-sm font-bold text-slate-800">{student.fullName}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            {isAdmin && (
-                                <button
-                                    onClick={() => onResetPassword(student.id)}
-                                    className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 inline-flex items-center justify-center"
-                                    title="Đặt lại mật khẩu"
-                                >
-                                    <KeyRound className="w-4 h-4" />
-                                </button>
-                            )}
+                            <button
+                                onClick={() => onResetPassword(student.id)}
+                                className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 inline-flex items-center justify-center"
+                                title="Đặt lại mật khẩu"
+                                aria-label={`Đặt lại mật khẩu cho ${student.fullName}`}
+                            >
+                                <KeyRound className="w-4 h-4" />
+                            </button>
                             <button
                                 onClick={() => {
                                     showConfirm({

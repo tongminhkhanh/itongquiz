@@ -2,12 +2,13 @@ import React, { useRef, useState } from 'react';
 import { Download, FileSpreadsheet, Check, AlertCircle, Upload, Loader2 } from 'lucide-react';
 import { Button } from '../../../../../components/common';
 import { CreateStudentPayload } from '../../../types';
-import { downloadStudentTemplate, parseStudentExcel } from '../../../utils/excelParser';
+import { downloadStudentCredentials, downloadStudentTemplate, parseStudentExcel, StudentCredential } from '../../../utils/excelParser';
+import type { BatchStudentResult } from '../../../../../services/classroomService';
 
 interface ExcelTabProps {
     classId: string;
     onClose: () => void;
-    onSubmit: (payload: CreateStudentPayload[]) => Promise<void>;
+    onSubmit: (payload: CreateStudentPayload[]) => Promise<BatchStudentResult | null>;
     isLoading: boolean;
 }
 
@@ -15,6 +16,8 @@ export const ExcelTab: React.FC<ExcelTabProps> = ({ classId, onClose, onSubmit, 
     const [parsedData, setParsedData] = useState<CreateStudentPayload[] | null>(null);
     const [parseError, setParseError] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [importResult, setImportResult] = useState<BatchStudentResult | null>(null);
+    const [credentials, setCredentials] = useState<StudentCredential[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,6 +27,8 @@ export const ExcelTab: React.FC<ExcelTabProps> = ({ classId, onClose, onSubmit, 
         setIsUploading(true);
         setParseError(null);
         setParsedData(null);
+        setImportResult(null);
+        setCredentials([]);
 
         try {
             const students = await parseStudentExcel(file, classId);
@@ -39,7 +44,11 @@ export const ExcelTab: React.FC<ExcelTabProps> = ({ classId, onClose, onSubmit, 
 
     const handleFormSubmit = async () => {
         if (!parsedData || parsedData.length === 0) return;
-        await onSubmit(parsedData);
+        const result = await onSubmit(parsedData);
+        if (!result) return;
+        const successfulUsernames = new Set(result.successes.map((student) => student.username));
+        setCredentials(parsedData.filter((student) => successfulUsernames.has(student.username)).map(({ fullName, username, password }) => ({ fullName, username, password })));
+        setImportResult(result);
     };
 
     return (
@@ -81,6 +90,24 @@ export const ExcelTab: React.FC<ExcelTabProps> = ({ classId, onClose, onSubmit, 
                             </div>
                         )}
                     </div>
+                ) : importResult ? (
+                    <div className="border border-green-200 bg-green-50 rounded-xl p-5">
+                        <h3 className="font-bold text-green-800">Đã thêm {importResult.successCount} học sinh</h3>
+                        {importResult.errorCount > 0 && (
+                            <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                                <p className="font-semibold">{importResult.errorCount} dòng chưa được thêm:</p>
+                                <ul className="mt-1 list-disc pl-5 max-h-28 overflow-auto">
+                                    {importResult.errors.map((item, index) => <li key={`${item.username}-${index}`}>{item.fullName || item.username || `Dòng ${index + 1}`}: {item.reason}</li>)}
+                                </ul>
+                            </div>
+                        )}
+                        {credentials.length > 0 && (
+                            <Button className="mt-4 w-full" variant="primary" onClick={() => void downloadStudentCredentials(credentials)} icon={<Download className="w-4 h-4" />}>
+                                Tải tài khoản và mật khẩu ({credentials.length})
+                            </Button>
+                        )}
+                        <p className="text-xs text-green-700 mt-2">Hãy tải và lưu file trước khi đóng. Mật khẩu không thể xem lại sau đó.</p>
+                    </div>
                 ) : (
                     <div className="border border-green-200 bg-green-50 rounded-xl p-6 text-center">
                         <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -95,6 +122,14 @@ export const ExcelTab: React.FC<ExcelTabProps> = ({ classId, onClose, onSubmit, 
                         <Button variant="secondary" onClick={() => setParsedData(null)} className="text-sm bg-white">
                             Chọn file khác
                         </Button>
+                        <div className="mt-4 max-h-44 overflow-auto rounded-lg border border-green-200 bg-white text-left">
+                            {parsedData.slice(0, 10).map((student, index) => (
+                                <div key={`${student.username}-${index}`} className="px-3 py-2 border-b last:border-b-0 text-xs">
+                                    <span className="font-semibold">{student.fullName}</span> · <code>{student.username}</code>
+                                </div>
+                            ))}
+                            {parsedData.length > 10 && <div className="px-3 py-2 text-xs text-gray-500">Và {parsedData.length - 10} học sinh khác…</div>}
+                        </div>
                     </div>
                 )}
                 
@@ -114,10 +149,10 @@ export const ExcelTab: React.FC<ExcelTabProps> = ({ classId, onClose, onSubmit, 
                     onClick={handleFormSubmit}
                     variant="primary"
                     className="flex-1"
-                    disabled={!parsedData || isLoading}
+                    disabled={!parsedData || isLoading || Boolean(importResult)}
                     icon={isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                 >
-                    {isLoading ? 'Đang thêm...' : 'Tải lên & Thêm'}
+                    {importResult ? 'Đã hoàn tất' : isLoading ? 'Đang thêm...' : 'Xác nhận thêm'}
                 </Button>
             </div>
         </div>

@@ -31,8 +31,9 @@ export const useRosterStore = create<RosterStore>((set) => ({
                 students: { ...state.students, [classId]: students },
                 isLoading: false,
             }));
-        } catch {
-            set({ error: 'Khong the tai danh sach hoc sinh.', isLoading: false });
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Không thể tải danh sách học sinh.';
+            set({ error: message, isLoading: false });
         }
     },
 
@@ -55,8 +56,9 @@ export const useRosterStore = create<RosterStore>((set) => ({
             }
             set({ error: 'Khong the them hoc sinh.', isLoading: false });
             return null;
-        } catch {
-            set({ error: 'Loi khi them hoc sinh.', isLoading: false });
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Lỗi khi thêm học sinh.';
+            set({ error: message, isLoading: false });
             return null;
         }
     },
@@ -107,8 +109,9 @@ export const useRosterStore = create<RosterStore>((set) => ({
                 set({ isLoading: false });
             }
             return ok;
-        } catch {
-            set({ error: 'Loi khi xoa hoc sinh.', isLoading: false });
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Lỗi khi lưu trữ học sinh.';
+            set({ error: message, isLoading: false });
             return false;
         }
     },

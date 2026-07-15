@@ -12,6 +12,10 @@ export interface Classroom {
     teacherUsername: string;    // Username of the teacher who created the class
     teacherFullName?: string;
     createdAt: string;         // ISO timestamp
+    studentCount?: number;
+    assignmentCount?: number;
+    lastActivityAt?: string;
+    archivedAt?: string;
 }
 
 export interface CreateClassPayload {
@@ -29,6 +33,7 @@ export interface Student {
     parentPhone?: string;      // Only visible to teacher
     avatar?: string;           // Avatar sticker key (e.g., "cat", "dog", "robot")
     createdAt?: string;
+    archivedAt?: string;
 }
 
 export interface CreateStudentPayload {

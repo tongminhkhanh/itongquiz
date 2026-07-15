@@ -1,11 +1,17 @@
-import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
+import type { CellRichTextValue } from 'exceljs';
 import type { CreateStudentPayload } from '../types';
+
+export interface StudentCredential {
+    fullName: string;
+    username: string;
+    password: string;
+}
 
 // --- Template Download ---
 
 export const downloadStudentTemplate = async (): Promise<void> => {
-    const workbook = new ExcelJS.Workbook();
+    const [{ Workbook }, { saveAs }] = await Promise.all([import('exceljs'), import('file-saver')]);
+    const workbook = new Workbook();
     const sheet = workbook.addWorksheet('HocSinh');
 
     // Column widths
@@ -30,6 +36,22 @@ export const downloadStudentTemplate = async (): Promise<void> => {
     saveAs(blob, 'Mau_Them_Hoc_Sinh.xlsx');
 };
 
+export const downloadStudentCredentials = async (credentials: StudentCredential[], className = 'Lop_hoc'): Promise<void> => {
+    const [{ Workbook }, { saveAs }] = await Promise.all([import('exceljs'), import('file-saver')]);
+    const workbook = new Workbook();
+    const sheet = workbook.addWorksheet('TaiKhoanHocSinh');
+    sheet.columns = [
+        { header: 'Họ và tên', key: 'fullName', width: 28 },
+        { header: 'Tên đăng nhập', key: 'username', width: 28 },
+        { header: 'Mật khẩu ban đầu', key: 'password', width: 22 },
+    ];
+    credentials.forEach((credential) => sheet.addRow(credential));
+    sheet.getRow(1).font = { bold: true };
+    sheet.views = [{ state: 'frozen', ySplit: 1 }];
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Tai_khoan_${className.replace(/[^a-zA-Z0-9_-]+/g, '_')}.xlsx`);
+};
+
 // --- Excel Parser ---
 
 export const parseStudentExcel = (file: File, classId: string): Promise<CreateStudentPayload[]> => {
@@ -44,7 +66,8 @@ export const parseStudentExcel = (file: File, classId: string): Promise<CreateSt
                     return;
                 }
 
-                const workbook = new ExcelJS.Workbook();
+                const { Workbook } = await import('exceljs');
+                const workbook = new Workbook();
                 await workbook.xlsx.load(arrayBuffer);
 
                 const sheet = workbook.worksheets[0];
@@ -65,7 +88,7 @@ export const parseStudentExcel = (file: File, classId: string): Promise<CreateSt
                         if (val === null || val === undefined) return '';
                         // Handle rich-text objects
                         if (typeof val === 'object' && 'richText' in val) {
-                            return (val as ExcelJS.CellRichTextValue).richText.map(r => r.text).join('');
+                            return (val as CellRichTextValue).richText.map(r => r.text).join('');
                         }
                         return String(val).trim();
                     };
@@ -88,6 +111,7 @@ export const parseStudentExcel = (file: File, classId: string): Promise<CreateSt
                             str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
                         usernameRow = clean(`${firstName}.${lastInitial}${mid}.${suffix}${rowNumber}`);
                     }
+                    usernameRow = usernameRow.toLowerCase().replace(/[^a-z0-9._-]/g, '');
 
                     // Auto-generate password if empty
                     if (!passwordRow) {

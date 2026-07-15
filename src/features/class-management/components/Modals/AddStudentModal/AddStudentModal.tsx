@@ -3,12 +3,13 @@ import { X } from 'lucide-react';
 import { CreateStudentPayload } from '../../../types';
 import { ManualTab } from './ManualTab';
 import { ExcelTab } from './ExcelTab';
+import type { BatchStudentResult } from '../../../../../services/classroomService';
 
 interface AddStudentModalProps {
     classId: string;
     onClose: () => void;
     onAdd: (payload: CreateStudentPayload) => Promise<void>;
-    onAddBatch: (payloads: CreateStudentPayload[]) => Promise<any>;
+    onAddBatch: (payloads: CreateStudentPayload[]) => Promise<BatchStudentResult | null>;
     isLoading: boolean;
     error: string | null;
 }

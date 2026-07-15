@@ -35,8 +35,8 @@ export const useClassManagement = (isAdmin: boolean, username: string | null) =>
 
     const handleDeleteClass = (classroom: Classroom) => {
         showConfirm({
-            message: `Xóa lớp "${classroom.name}"? Tất cả học sinh và bài tập trong lớp sẽ bị xóa.`,
-            confirmLabel: 'Xóa',
+            message: `Lưu trữ lớp "${classroom.name}"? Lớp sẽ ẩn khỏi danh sách nhưng toàn bộ kết quả, học sinh và chứng nhận vẫn được bảo toàn.`,
+            confirmLabel: 'Lưu trữ',
             destructive: true,
             onConfirm: () => classStore.removeClass(classroom.id),
         });

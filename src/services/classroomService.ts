@@ -36,13 +36,13 @@ const callGasApi = async <T = any>(action: string, payload: Record<string, any> 
 /**
  * Get all classes for a teacher
  */
-export const getClasses = async (teacherUsername?: string): Promise<Classroom[]> => {
-    const payload = teacherUsername ? { teacherUsername } : {};
+export const getClasses = async (teacherUsername?: string, includeArchived = false): Promise<Classroom[]> => {
+    const payload = { ...(teacherUsername ? { teacherUsername } : {}), includeArchived };
     const res = await callGasApi<Classroom[]>('get_classes', payload);
     if (res.status === 'success' && Array.isArray(res.data)) {
         return res.data;
     }
-    return [];
+    throw new Error(res.message || 'Không thể tải danh sách lớp.');
 };
 
 /**
@@ -53,8 +53,7 @@ export const createClass = async (payload: CreateClassPayload): Promise<Classroo
     if (res.status === 'success' && res.data) {
         return res.data;
     }
-    console.error('[ClassroomService] createClass failed:', res.message);
-    return null;
+    throw new Error(res.message || 'Không thể tạo lớp.');
 };
 
 /**
@@ -62,7 +61,14 @@ export const createClass = async (payload: CreateClassPayload): Promise<Classroo
  */
 export const deleteClass = async (classId: string): Promise<boolean> => {
     const res = await callGasApi('delete_class', { classId });
-    return res.status === 'success';
+    if (res.status !== 'success') throw new Error(res.message || 'Không thể lưu trữ lớp.');
+    return true;
+};
+
+export const restoreClass = async (classId: string): Promise<boolean> => {
+    const res = await callGasApi('restore_class', { classId });
+    if (res.status !== 'success') throw new Error(res.message || 'Không thể khôi phục lớp.');
+    return true;
 };
 
 // ==========================================
@@ -79,7 +85,7 @@ export const getStudents = async (classId: string, role: 'teacher' | 'student' =
     if (res.status === 'success' && Array.isArray(res.data)) {
         return res.data;
     }
-    return [];
+    throw new Error(res.message || 'Không thể tải danh sách học sinh.');
 };
 
 /**
@@ -90,8 +96,7 @@ export const addStudent = async (payload: CreateStudentPayload): Promise<Student
     if (res.status === 'success' && res.data) {
         return res.data;
     }
-    console.error('[ClassroomService] addStudent failed:', res.message);
-    return null;
+    throw new Error(res.message || 'Không thể thêm học sinh.');
 };
 
 export interface BatchStudentResult {

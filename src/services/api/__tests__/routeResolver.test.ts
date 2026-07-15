@@ -36,6 +36,23 @@ describe('resolveApiRoute', () => {
         expect(r.auth).toBe('session');
     });
 
+    it('uses soft archive routes for classes', () => {
+        const archive = resolveApiRoute('delete_class');
+        expect(archive.method).toBe('PATCH');
+        expect(archive.path({ classId: 'lop 5A' })).toBe('/api/classes/lop%205A/archive');
+        expect(archive.body?.('delete_class', { classId: 'c1' })).toMatchObject({ archived: true });
+
+        const restore = resolveApiRoute('restore_class');
+        expect(restore.method).toBe('PATCH');
+        expect(restore.body?.('restore_class', { classId: 'c1' })).toMatchObject({ archived: false });
+    });
+
+    it('supports requesting archived classes only when explicitly enabled', () => {
+        const route = resolveApiRoute('get_classes');
+        expect(route.query?.({})?.toString()).toBe('');
+        expect(route.query?.({ includeArchived: true })?.toString()).toBe('includeArchived=true');
+    });
+
     it('resolves get_game_loop_dashboard as GET session', () => {
         const r = resolveApiRoute('get_game_loop_dashboard');
         expect(r.method).toBe('GET');
