@@ -1,19 +1,19 @@
 {
-  "goal": "Epic 1: Rate Limiting cho Workers",
+  "goal": "Hoàn thiện Certificate Feature: viết đủ 7 API handlers còn thiếu trong routes/certificates.ts, fix bug batchTitle, và thêm tests cơ bản",
   "steps": [
     {
-      "text": "SEC-001-02: Tạo middleware rateLimit.ts - DONE",
+      "text": "Đọc workers/src/routes/adminCertificates.ts để biết handler nào đã tồn tại ở đó",
       "done": false
     },
     {
-      "text": "SEC-001-03: Áp dụng cho Login route",
+      "text": "Viết plan document ra file docs/superpowers/plans/",
       "done": false
     },
     {
-      "text": "SEC-001-01 + 04-06: Thiết kế config + áp dụng cho AI/Public + Test",
+      "text": "Thực thi plan",
       "done": false
     }
   ],
-  "created": "2026-07-14T06:27:24.868Z",
-  "updated": "2026-07-14T06:27:24.868Z"
+  "created": "2026-07-14T10:02:31.980Z",
+  "updated": "2026-07-14T10:02:31.980Z"
 }

@@ -1,40 +1,44 @@
-// Font loader for Cloudflare Worker
-// Roboto is fetched from Google Fonts CDN and cached via Cache API
-// This avoids bundling binary .woff files which may cause issues with wrangler
+// workers/src/services/fontLoader.ts
 
-const ROBOTO_REGULAR_URL = 'https://fonts.gstatic.com/s/roboto/v47/KFOmCnqEu92Fr1Mu4mxK.woff2';
-const ROBOTO_BOLD_URL    = 'https://fonts.gstatic.com/s/roboto/v47/KFOlCnqEu92Fr1MmWUlfBBc4.woff2';
-const CACHE_KEY_REGULAR  = 'roboto-regular-v47';
-const CACHE_KEY_BOLD     = 'roboto-bold-v47';
+const fontCache = new Map<string, ArrayBuffer>();
 
-async function fetchAndCacheFont(url: string, cacheKey: string): Promise<ArrayBuffer> {
-  const cache = caches.default;
-  const cacheRequest = new Request(`https://font-cache.internal/${cacheKey}`);
+/**
+ * Load font from R2 with caching
+ * @param env - Cloudflare Worker environment
+ * @param fontName - Font name without extension (e.g., 'Roboto-Regular')
+ */
+export async function loadFont(env: any, fontName: string): Promise<ArrayBuffer> {
+  if (fontCache.has(fontName)) {
+    return fontCache.get(fontName)!;
+  }
 
-  const cached = await cache.match(cacheRequest);
-  if (cached) return cached.arrayBuffer();
+  const key = `fonts/${fontName}.ttf`; // Hoặc .otf
+  const obj = await env.R2.get(key);
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch font: ${url}`);
+  if (!obj) {
+    throw new Error(`Font không tồn tại trong R2: ${fontName}`);
+  }
 
-  // Cache for 7 days
-  const cloned = res.clone();
-  const headers = new Headers(cloned.headers);
-  headers.set('Cache-Control', 'public, max-age=604800');
-  await cache.put(cacheRequest, new Response(await cloned.arrayBuffer(), { headers }));
-
-  return res.arrayBuffer();
+  const buffer = await obj.arrayBuffer();
+  fontCache.set(fontName, buffer);
+  return buffer;
 }
 
-export interface LoadedFonts {
-  regular: ArrayBuffer;
-  bold: ArrayBuffer;
-}
+/**
+ * Preload multiple fonts at once
+ */
+export async function preloadFonts(env: any, fontNames: string[]): Promise<Record<string, ArrayBuffer>> {
+  const fonts: Record<string, ArrayBuffer> = {};
 
-export async function loadRobotoFonts(): Promise<LoadedFonts> {
-  const [regular, bold] = await Promise.all([
-    fetchAndCacheFont(ROBOTO_REGULAR_URL, CACHE_KEY_REGULAR),
-    fetchAndCacheFont(ROBOTO_BOLD_URL, CACHE_KEY_BOLD),
-  ]);
-  return { regular, bold };
+  await Promise.all(
+    fontNames.map(async (name) => {
+      try {
+        fonts[name] = await loadFont(env, name);
+      } catch (error) {
+        console.warn(`Không thể load font: ${name}`, error);
+      }
+    })
+  );
+
+  return fonts;
 }

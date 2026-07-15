@@ -18,6 +18,16 @@ import { handleGameLoopRoutes } from './routes/gameLoop';
 import { handleHelpRagRoutes } from './routes/helpRag';
 import { handleSystemSettingsRoutes } from './routes/systemSettings';
 import { handleAnalyticsRoutes } from './routes/analytics';
+import certificateQueue from './queues/certificateQueue';
+import {
+  createBatch,
+  getBatches,
+  getBatchDetail,
+  preview,
+  uploadTemplate,
+  getTemplates,
+  getMyCertificates
+} from './routes/certificates';
 import { handleTestBankRoutes } from './routes/testBank';
 import { handleTeacherAiQuotaRoutes } from './routes/teacherAiQuota';
 import { handleLogoutRoute } from './routes/logout';
@@ -289,3 +299,6 @@ async function handleLegacyGasRequest(request: Request, env: Env): Promise<Respo
 
     return await handleLegacyAction(env.DB, action, body, env.OG_IMAGES);
 }
+
+// Queue handler for certificate generation
+export { default as queue } from './queues/certificateQueue';

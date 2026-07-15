@@ -6,7 +6,7 @@ name = "itongquiz-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
-account_id = "9306cc101c6560aee603252ca21f0456"
+account_id = "ed9d66ab88b8acb297031b4d22520c92"
 
 [[d1_databases]]
 binding = "DB"
@@ -41,3 +41,14 @@ crons = [
     "0 0 * * 1",  # Every Monday at 00:00 UTC (7:00 AM ICT) - Weekly leaderboard rewards
     "* * * * *"   # Every minute - Auto-close expired live exams
 ]
+# ========================
+# Cloudflare Queues - Certificate
+# ========================
+[[queues.producers]]
+binding = "CERTIFICATE_QUEUE"
+queue = "certificate-generation"
+
+[[queues.consumers]]
+queue = "certificate-generation"
+max_batch_size = 5
+max_batch_timeout = 30

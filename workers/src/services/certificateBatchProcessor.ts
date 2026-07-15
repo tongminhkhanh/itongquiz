@@ -3,6 +3,7 @@
 import type { Env } from '../types';
 import type { FieldConfig } from '../types/certificates';
 import { renderCertificate } from './certificateRenderer';
+import { loadFont } from './fontLoader';
 
 export interface BatchStudent {
   student_id: string;
@@ -18,93 +19,108 @@ export async function processBatch(
   students: BatchStudent[],
   teacherName: string,
   customNote: string,
-  _R2_PUBLIC_URL: string
+  r2PublicUrl: string
 ): Promise<void> {
   let hasRenderError = false;
-  let fieldsConfig: FieldConfig[] = [];
-  let bgBuffer: ArrayBuffer | null = null;
 
   try {
     // 1. Lấy template
     const template = await env.DB.prepare(
       'SELECT * FROM certificate_templates WHERE id = ?'
-    ).bind(templateId).first<{ bg_image_r2_key: string; fields_config: string }>();
+    ).bind(templateId).first();
 
-    if (!template) throw new Error(`Template ${templateId} not found`);
-
-    fieldsConfig = JSON.parse(template.fields_config);
-
-    // 2. Fetch ảnh nền từ R2 (một lần, dùng lại cho tất cả HS)
-    const bgObj = await (env as any).OG_IMAGES.get(template.bg_image_r2_key);
-    if (!bgObj) throw new Error(`Background image not found: ${template.bg_image_r2_key}`);
-    bgBuffer = await bgObj.arrayBuffer();
-  } catch (err) {
-    hasRenderError = true;
-    await env.DB.prepare(
-      `UPDATE certificates SET render_status = 'error', error_message = ? WHERE batch_id = ?`
-    ).bind(String(err), batchId).run();
-  }
-
-  // 3. Render từng cert
-  for (const student of students) {
-    const certRow = await env.DB.prepare(
-      `SELECT id FROM certificates WHERE batch_id = ? AND student_id = ?`
-    ).bind(batchId, student.student_id).first<{ id: string }>();
-
-    if (!certRow) continue;
-
-    if (!bgBuffer) continue;
-
-    try {
-      const now = new Date();
-      const d = now.getDate().toString().padStart(2, '0');
-      const m = (now.getMonth() + 1).toString().padStart(2, '0');
-      const y = now.getFullYear();
-      const dateStr = `${d}/${m}/${y}`;
-
-      const pngBytes = await renderCertificate({
-        bgImageArrayBuffer: bgBuffer,
-        fieldsConfig,
-        data: {
-          student_name: student.student_name,
-          score: student.student_score != null ? `${student.student_score}` : '',
-          quiz_title: student.quiz_title ?? '',
-          date: dateStr,
-          teacher_name: teacherName,
-          custom_note: customNote,
-        },
-      });
-
-      const r2Key = `certs/${certRow.id}.png`;
-      await (env as any).OG_IMAGES.put(r2Key, pngBytes, {
-        httpMetadata: { contentType: 'image/png' },
-      });
-
-      await env.DB.prepare(
-        `UPDATE certificates SET png_r2_key = ?, render_status = 'done' WHERE id = ?`
-      ).bind(r2Key, certRow.id).run();
-
-    } catch (err) {
-      hasRenderError = true;
-      await env.DB.prepare(
-        `UPDATE certificates SET render_status = 'error', error_message = ? WHERE id = ?`
-      ).bind(String(err), certRow.id).run();
+    if (!template) {
+      console.error(`Template ${templateId} không tồn tại`);
+      return;
     }
+
+    // 2. Lấy ảnh nền từ R2
+    const bgObject = await env.R2.get(template.background_image_key);
+    if (!bgObject) {
+      console.error('Không tìm thấy ảnh nền');
+      return;
+    }
+    const bgBuffer = await bgObject.arrayBuffer();
+
+    // 3. Load fonts (có thể cache sau này)
+    const fonts: Record<string, ArrayBuffer> = {};
+    try {
+      fonts['Roboto'] = await loadFont(env, 'Roboto-Regular');
+      fonts['Roboto-Bold'] = await loadFont(env, 'Roboto-Bold');
+    } catch (fontError) {
+      console.warn('Không thể load font tùy chỉnh, sử dụng font mặc định', fontError);
+    }
+
+    // 4. Parse fields_config
+    const fieldsConfig: FieldConfig[] = JSON.parse(template.fields_config || '[]');
+
+    // 5. Render song song cho từng học sinh
+    const renderPromises = students.map(async (student) => {
+      try {
+        const pngBuffer = await renderCertificate({
+          bgImageArrayBuffer: bgBuffer,
+          fieldsConfig,
+          data: {
+            student_name: student.student_name,
+            score: student.student_score ? `${student.student_score}/10` : '',
+            quiz_title: student.quiz_title || '',
+            date: new Date().toISOString().split('T')[0],
+            teacher_name: teacherName,
+            custom_note: customNote,
+          },
+          fonts,
+        });
+
+        // Upload lên R2
+        const key = `certs/${batchId}/${student.student_id}.png`;
+        await env.R2.put(key, pngBuffer, {
+          httpMetadata: { contentType: 'image/png' },
+        });
+
+        const imageUrl = `${r2PublicUrl}/${key}`;
+
+        // Cập nhật DB
+        await env.DB.prepare(`
+          UPDATE certificates 
+          SET image_url = ?, sent_at = ?
+          WHERE batch_id = ? AND student_id = ?
+        `).bind(imageUrl, new Date().toISOString(), batchId, student.student_id).run();
+
+      } catch (error) {
+        console.error(`Lỗi render cho học sinh ${student.student_name}:`, error);
+        hasRenderError = true;
+      }
+    });
+
+    await Promise.allSettled(renderPromises);
+
+    // Cập nhật trạng thái batch
+    const finalStatus = hasRenderError ? 'partial' : 'sent';
+    await env.DB.prepare(`
+      UPDATE certificate_batches SET status = ? WHERE id = ?
+    `).bind(finalStatus, batchId).run();
+
+    // Gửi thông báo cho học sinh
+    for (const student of students) {
+      try {
+        await env.DB.prepare(`
+          INSERT INTO notifications (id, user_id, type, title, message, data)
+          VALUES (lower(hex(randomblob(8))), ?, 'certificate_received', ?, ?, ?)
+        `).bind(
+          student.student_id,
+          'Bạn có chứng nhận mới!',
+          `Bạn vừa nhận được chứng nhận: ${batchTitle || 'Chứng nhận mới' }`,
+          JSON.stringify({ batch_id: batchId, certificate_id: student.student_id })
+        ).run();
+      } catch (err) {
+        console.error('Lỗi gửi notification:', err);
+      }
+    }
+
+  } catch (error) {
+    console.error('Lỗi xử lý batch:', error);
+    await env.DB.prepare(`
+      UPDATE certificate_batches SET status = 'failed' WHERE id = ?
+    `).bind(batchId).run();
   }
-
-  // 4. Cập nhật batch status theo kết quả render thật, không báo sent khi toàn bộ render lỗi
-  const summary = await env.DB.prepare(
-    `SELECT
-       SUM(CASE WHEN render_status = 'done' THEN 1 ELSE 0 END) as done_count,
-       SUM(CASE WHEN render_status = 'error' THEN 1 ELSE 0 END) as error_count
-     FROM certificates
-     WHERE batch_id = ?`
-  ).bind(batchId).first<{ done_count: number | null; error_count: number | null }>();
-
-  const doneCount = Number(summary?.done_count || 0);
-  const status = hasRenderError && doneCount === 0 ? 'error' : 'sent';
-
-  await env.DB.prepare(
-    `UPDATE certificate_batches SET status = ?, sent_at = datetime('now') WHERE id = ?`
-  ).bind(status, batchId).run();
 }
