@@ -147,18 +147,30 @@ const AnalyticsHeader: React.FC<AnalyticsHeaderProps> = ({ session, onRefresh, o
   );
 };
 
+interface LiveExamAnalyticsDashboardProps {
+  sessionId?: string;
+  onBack?: () => void;
+}
+
 // Main Dashboard Component
-export const LiveExamAnalyticsDashboard: React.FC = () => {
-  const { sessionId } = useParams<{ sessionId: string }>();
+export const LiveExamAnalyticsDashboard: React.FC<LiveExamAnalyticsDashboardProps> = ({
+  sessionId: sessionIdProp,
+  onBack,
+}) => {
+  const routeParams = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
+  const sessionId = sessionIdProp || routeParams.sessionId || '';
   
   const { analytics, isLoading, error, refetch } = useLiveExamAnalytics({
-    sessionId: sessionId || '',
-    pollingInterval: 10000, // Poll every 10 seconds
+    sessionId,
+    pollingInterval: 10000,
   });
 
-  // Handle back navigation
   const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
     navigate(-1);
   };
 
@@ -197,7 +209,7 @@ export const LiveExamAnalyticsDashboard: React.FC = () => {
         {/* Middle Row: Difficult Questions */}
         <DifficultQuestionsCard 
           questions={analytics.topDifficultQuestions}
-          sessionId={sessionId || ''}
+          sessionId={sessionId}
         />
 
         {/* Bottom Row: Time Analysis */}

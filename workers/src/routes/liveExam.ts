@@ -43,6 +43,8 @@ async function requireTeacherForSession(
         return errorResponse('Session not found', 404);
     }
 
+    if (user.role === 'admin') return null;
+
     // Check if user owns this session
     // Support both user.id and user.username for flexibility
     const teacherIdentifier = user.id || user.username;
@@ -55,6 +57,14 @@ async function requireTeacherForSession(
     }
 
     return null;
+}
+
+function liveExamErrorResponse(error: unknown, fallback: string, defaultStatus = 500): Response {
+    if (error instanceof LiveExamService.LiveExamServiceError) {
+        return errorResponse(error.message, error.status);
+    }
+    const message = error instanceof Error && error.message ? error.message : fallback;
+    return errorResponse(message, defaultStatus);
 }
 
 /**
@@ -134,14 +144,15 @@ export async function handleLiveExamRoutes(
             const session = await LiveExamService.createLiveExam(db, {
                 ...validation.data,
                 teacherId: user.username,
+                actorRole: user.role === 'admin' ? 'admin' : 'teacher',
             });
 
             return jsonResponse({
                 success: true,
                 session,
             });
-        } catch (error: any) {
-            return errorResponse(error.message || 'Failed to create session', 500);
+        } catch (error: unknown) {
+            return liveExamErrorResponse(error, 'Failed to create session');
         }
     }
 
@@ -204,13 +215,13 @@ export async function handleLiveExamRoutes(
 
             switch (action) {
                 case 'open_session':
-                    await LiveExamService.openSession(db, sessionId, user.username);
+                    await LiveExamService.openSession(db, sessionId, user.username, user.role === 'admin');
                     break;
                 case 'start_exam':
-                    await LiveExamService.startExam(db, sessionId, user.username);
+                    await LiveExamService.startExam(db, sessionId, user.username, user.role === 'admin');
                     break;
                 case 'end_early':
-                    await LiveExamService.endExamEarly(db, sessionId, user.username);
+                    await LiveExamService.endExamEarly(db, sessionId, user.username, user.role === 'admin');
                     break;
                 default:
                     return errorResponse('Invalid action', 400);
@@ -222,8 +233,8 @@ export async function handleLiveExamRoutes(
                 message: `Action ${action} completed`,
                 session,
             });
-        } catch (error: any) {
-            return errorResponse(error.message || 'Failed to execute action', 500);
+        } catch (error: unknown) {
+            return liveExamErrorResponse(error, 'Failed to execute action');
         }
     }
 
@@ -244,13 +255,13 @@ export async function handleLiveExamRoutes(
         if (authError) return authError;
 
         try {
-            await LiveExamService.deleteLiveExam(db, sessionId, user.username);
+            await LiveExamService.deleteLiveExam(db, sessionId, user.username, user.role === 'admin');
             return jsonResponse({
                 success: true,
-                message: 'Session deleted successfully',
+                message: 'Session archived successfully',
             });
-        } catch (error: any) {
-            return errorResponse(error.message || 'Failed to delete session', 500);
+        } catch (error: unknown) {
+            return liveExamErrorResponse(error, 'Failed to archive session');
         }
     }
 
@@ -373,8 +384,8 @@ export async function handleLiveExamRoutes(
                     endsAt: session!.endsAt,
                 },
             });
-        } catch (error: any) {
-            return errorResponse(error.message || 'Failed to join session', 400);
+        } catch (error: unknown) {
+            return liveExamErrorResponse(error, 'Failed to join session', 400);
         }
     }
 
@@ -394,6 +405,9 @@ export async function handleLiveExamRoutes(
 
         const sessionId = path.split('/')[3];
         if (!sessionId) return errorResponse('Invalid session ID');
+
+        const participant = await requireStudentParticipant(db, sessionId, studentId);
+        if (!participant) return errorResponse('Forbidden: Join session first', 403);
 
         try {
             await LiveExamService.checkAndAutoCloseExpiredExams(db);
@@ -475,8 +489,8 @@ export async function handleLiveExamRoutes(
                 message: 'Answers submitted successfully',
                 participant: submission,
             });
-        } catch (error: any) {
-            return errorResponse(error.message || 'Failed to submit answers', 500);
+        } catch (error: unknown) {
+            return liveExamErrorResponse(error, 'Failed to submit answers');
         }
     }
 
@@ -520,8 +534,8 @@ export async function handleLiveExamRoutes(
             return jsonResponse({
                 success: true,
             });
-        } catch (error: any) {
-            return errorResponse(error.message || 'Failed to update activity', 500);
+        } catch (error: unknown) {
+            return liveExamErrorResponse(error, 'Failed to update activity');
         }
     }
 
@@ -565,17 +579,16 @@ export async function handleLiveExamRoutes(
                 return errorResponse('Participant not found', 404);
             }
 
-            // Get leaderboard (top 10)
-            const leaderboard = await db
-                .prepare(`
+            const leaderboardVisible = session.settings.showLeaderboard !== false;
+            const leaderboard = leaderboardVisible
+                ? await db.prepare(`
                     SELECT username, score, rank
                     FROM live_exam_participants
                     WHERE live_exam_id = ?
-                    ORDER BY rank ASC
+                    ORDER BY rank ASC, submitted_at ASC
                     LIMIT 10
-                `)
-                .bind(sessionId)
-                .all();
+                `).bind(sessionId).all()
+                : { results: [] as any[] };
 
             // Calculate rewards
             const baseCoins = participant.score || 0;
@@ -609,6 +622,7 @@ export async function handleLiveExamRoutes(
                     xp: baseXP,
                     bonusCoins: bonusCoins > 0 ? bonusCoins : undefined,
                 },
+                leaderboardVisible,
                 leaderboard: leaderboard.results.map((row: any) => ({
                     rank: row.rank,
                     username: row.username,
@@ -754,37 +768,49 @@ export async function handleLiveExamRoutes(
         }
 
         try {
-            const sessions = await db
-                .prepare(`
+            const sessions = await db.prepare(`
                     SELECT
-                        id,
-                        title,
-                        quiz_id,
-                        teacher_id,
-                        class_id,
-                        duration,
-                        scheduled_at,
-                        started_at,
-                        ends_at,
-                        closed_at,
-                        settings,
-                        status,
-                        access_code,
-                        created_at,
-                        updated_at
-                    FROM live_exam_sessions
-                    WHERE teacher_id = ?
-                    ORDER BY created_at DESC
-                `)
-                .bind(user.username)
-                .all();
+                        s.id,
+                        s.title,
+                        s.quiz_id,
+                        s.teacher_id,
+                        s.class_id,
+                        s.duration,
+                        s.scheduled_at,
+                        s.started_at,
+                        s.ends_at,
+                        s.closed_at,
+                        s.settings,
+                        s.status,
+                        s.access_code,
+                        s.archived_at,
+                        s.created_at,
+                        s.updated_at,
+                        q.title AS quiz_title,
+                        c.name AS class_name,
+                        COUNT(p.id) AS participant_count,
+                        SUM(CASE WHEN p.submitted_at IS NOT NULL THEN 1 ELSE 0 END) AS submitted_count,
+                        ROUND(AVG(CASE WHEN p.score IS NOT NULL THEN p.score END), 1) AS average_score
+                    FROM live_exam_sessions s
+                    LEFT JOIN quizzes q ON q.id = s.quiz_id
+                    LEFT JOIN classes c ON c.id = s.class_id
+                    LEFT JOIN live_exam_participants p ON p.live_exam_id = s.id
+                    WHERE s.teacher_id = ? AND s.archived_at IS NULL
+                    GROUP BY s.id
+                    ORDER BY s.created_at DESC
+                `).bind(user.username).all();
 
             const mappedSessions = (sessions.results || []).map((row: any) => ({
                 id: row.id,
                 title: row.title,
                 quizId: row.quiz_id,
                 teacherId: row.teacher_id,
-                classId: row.class_id || undefined,
+                classId: row.class_id || '',
+                className: row.class_name || undefined,
+                quizTitle: row.quiz_title || undefined,
+                participantCount: Number(row.participant_count || 0),
+                submittedCount: Number(row.submitted_count || 0),
+                averageScore: row.average_score === null || row.average_score === undefined ? undefined : Number(row.average_score),
                 duration: row.duration,
                 scheduledAt: row.scheduled_at || undefined,
                 startedAt: row.started_at || undefined,
@@ -793,6 +819,7 @@ export async function handleLiveExamRoutes(
                 settings: row.settings ? JSON.parse(row.settings) : {},
                 status: row.status,
                 accessCode: row.access_code,
+                archivedAt: row.archived_at || undefined,
                 createdAt: row.created_at,
                 updatedAt: row.updated_at,
             }));
@@ -806,6 +833,24 @@ export async function handleLiveExamRoutes(
     // ========================================================================
     // ANALYTICS ENDPOINTS
     // ========================================================================
+
+    // GET /api/live-exam/:id/analytics (teacher/admin only)
+    if (path.match(/^\/api\/live-exam\/[^/]+\/analytics$/) && method === 'GET') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        const user = authResult.user;
+        const sessionId = path.split('/')[3];
+        if (!sessionId) return errorResponse('Invalid session ID');
+        const authError = await requireTeacherForSession(db, user, sessionId);
+        if (authError) return authError;
+
+        try {
+            const analytics = await LiveExamAnalyticsService.calculateSessionAnalytics(db, sessionId);
+            return jsonResponse({ success: true, analytics });
+        } catch (error: unknown) {
+            return liveExamErrorResponse(error, 'Failed to calculate analytics');
+        }
+    }
 
     // POST /api/live-exam/:id/track-timing
     // Track time spent on a question (student only)
@@ -829,6 +874,14 @@ export async function handleLiveExamRoutes(
         if (!participant) {
             return errorResponse('Forbidden: Join session first', 403);
         }
+        if (participant.submitted_at) {
+            return errorResponse('Answers already submitted', 409);
+        }
+        const session = await LiveExamService.getLiveExamById(db, sessionId);
+        if (!session || session.archivedAt) return errorResponse('Session not found', 404);
+        if (session.status !== 'active' || !session.endsAt || Date.parse(session.endsAt) <= Date.now()) {
+            return errorResponse('Exam is not active', 409);
+        }
 
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
@@ -844,8 +897,8 @@ export async function handleLiveExamRoutes(
                     body.timings
                 );
                 return jsonResponse({ success: true });
-            } catch (error: any) {
-                return errorResponse(error.message || 'Failed to track timing', 500);
+            } catch (error: unknown) {
+                return liveExamErrorResponse(error, 'Failed to track timing', 400);
             }
         } else {
             // Single timing
@@ -863,8 +916,8 @@ export async function handleLiveExamRoutes(
                     timeSpentSeconds
                 );
                 return jsonResponse({ success: true });
-            } catch (error: any) {
-                return errorResponse(error.message || 'Failed to track timing', 500);
+            } catch (error: unknown) {
+                return liveExamErrorResponse(error, 'Failed to track timing', 400);
             }
         }
     }

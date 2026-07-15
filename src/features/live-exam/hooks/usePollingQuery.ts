@@ -21,6 +21,8 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
     return fallback;
 };
 
+const MAX_BACKOFF_MS = 30_000;
+
 export function usePollingQuery<TData>({
     enabled = true,
     intervalMs,
@@ -30,64 +32,90 @@ export function usePollingQuery<TData>({
     fallbackError,
 }: UsePollingQueryOptions<TData>): UsePollingQueryReturn<TData> {
     const [data, setData] = useState<TData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(enabled);
     const [error, setError] = useState<string | null>(null);
     const dataRef = useRef<TData | null>(null);
     const requestSeqRef = useRef(0);
     const shouldPollRef = useRef(shouldPoll);
-    const isMountedRef = useRef(true);
+    const mountedRef = useRef(true);
 
     useEffect(() => {
         shouldPollRef.current = shouldPoll;
     }, [shouldPoll]);
 
-    const runFetch = useCallback(async ({ showLoading = false }: { showLoading?: boolean } = {}) => {
-        if (!enabled) return;
-
-        if (showLoading) {
-            setIsLoading(true);
-        }
-
-        const requestSeq = ++requestSeqRef.current;
+    const runFetch = useCallback(async ({ showLoading = false }: { showLoading?: boolean } = {}): Promise<boolean> => {
+        if (!enabled) return false;
+        if (showLoading) setIsLoading(true);
+        const requestSequence = ++requestSeqRef.current;
 
         try {
             const result = await fetcher();
-
-            if (!isMountedRef.current || requestSeq !== requestSeqRef.current) return;
-
+            if (!mountedRef.current || requestSequence !== requestSeqRef.current) return false;
             dataRef.current = result;
             setData(result);
             setError(null);
             setIsLoading(false);
+            return true;
         } catch (err) {
             console.error(errorLabel, err);
-
-            if (!isMountedRef.current || requestSeq !== requestSeqRef.current) return;
-
+            if (!mountedRef.current || requestSequence !== requestSeqRef.current) return false;
             setError(getErrorMessage(err, fallbackError));
             setIsLoading(false);
+            return false;
         }
     }, [enabled, errorLabel, fallbackError, fetcher]);
 
     useEffect(() => {
-        isMountedRef.current = true;
+        mountedRef.current = true;
+        let stopped = false;
+        let timer: number | undefined;
+        let nextDelay = intervalMs;
+
+        const clearTimer = () => {
+            if (timer !== undefined) window.clearTimeout(timer);
+            timer = undefined;
+        };
+
+        const schedule = (delay: number) => {
+            clearTimer();
+            if (stopped || !enabled || document.visibilityState === 'hidden') return;
+            timer = window.setTimeout(() => void cycle(false), delay);
+        };
+
+        const cycle = async (showLoading: boolean) => {
+            if (stopped || !enabled || document.visibilityState === 'hidden') return;
+            const succeeded = await runFetch({ showLoading });
+            if (stopped || !enabled) return;
+            nextDelay = succeeded ? intervalMs : Math.min(MAX_BACKOFF_MS, Math.max(intervalMs, nextDelay * 2));
+            if (shouldPollRef.current(dataRef.current)) schedule(nextDelay);
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                clearTimer();
+                return;
+            }
+            nextDelay = intervalMs;
+            void cycle(false);
+        };
 
         if (!enabled) {
-            return;
+            setIsLoading(false);
+            return () => {
+                stopped = true;
+                mountedRef.current = false;
+            };
         }
 
-        runFetch({ showLoading: dataRef.current === null });
-
-        const interval = window.setInterval(() => {
-            if (shouldPollRef.current(dataRef.current)) {
-                void runFetch();
-            }
-        }, intervalMs);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        void cycle(dataRef.current === null);
 
         return () => {
-            isMountedRef.current = false;
+            stopped = true;
+            mountedRef.current = false;
             requestSeqRef.current += 1;
-            window.clearInterval(interval);
+            clearTimer();
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [enabled, intervalMs, runFetch]);
 
@@ -95,10 +123,5 @@ export function usePollingQuery<TData>({
         await runFetch({ showLoading: true });
     }, [runFetch]);
 
-    return {
-        data,
-        isLoading,
-        error,
-        refetch,
-    };
+    return { data, isLoading, error, refetch };
 }

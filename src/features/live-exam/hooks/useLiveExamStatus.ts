@@ -30,6 +30,9 @@ export function useLiveExamStatus({
     enabled = true,
 }: UseLiveExamStatusOptions): UseLiveExamStatusReturn {
     const fetchStatus = useCallback(() => getSessionStatus(sessionId), [sessionId]);
+    const shouldPoll = useCallback((data: LiveExamStatusResponse | null) => {
+        return data?.session?.status !== 'closed';
+    }, []);
 
     const {
         data: status,
@@ -40,6 +43,7 @@ export function useLiveExamStatus({
         enabled,
         intervalMs: POLL_INTERVAL,
         fetcher: fetchStatus,
+        shouldPoll,
         errorLabel: '[useLiveExamStatus] Error:',
         fallbackError: 'Failed to fetch status',
     });

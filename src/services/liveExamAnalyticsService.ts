@@ -8,6 +8,7 @@ import { fetchWithJWTInterceptor } from '../utils/jwtInterceptor';
 const REMOTE_WORKERS_API_URL = 'https://phieu.thitong.site';
 const API_BASE = (import.meta.env.VITE_WORKERS_API_URL || REMOTE_WORKERS_API_URL).replace(/\/$/, '');
 const TEACHER_JWT_STORAGE_KEY = 'itongquiz_teacher_jwt_token';
+const STUDENT_JWT_STORAGE_KEY = 'itongquiz_jwt_token';
 
 function getLiveExamApiBaseUrl(): string {
   if (import.meta.env.DEV && API_BASE === REMOTE_WORKERS_API_URL) {
@@ -15,6 +16,14 @@ function getLiveExamApiBaseUrl(): string {
   }
 
   return API_BASE;
+}
+
+function getStudentJWTToken(): string {
+  try {
+    return localStorage.getItem(STUDENT_JWT_STORAGE_KEY) || '';
+  } catch {
+    return '';
+  }
 }
 
 function getTeacherJWTToken(): string {
@@ -92,8 +101,8 @@ export async function fetchAnalytics(sessionId: string): Promise<SessionAnalytic
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to fetch analytics' }));
-    throw new Error(error.error || 'Failed to fetch analytics');
+    const error = await response.json().catch(() => ({ message: 'Failed to fetch analytics' }));
+    throw new Error(error.message || error.error || 'Failed to fetch analytics');
   }
 
   const data = await response.json();
@@ -108,10 +117,13 @@ export async function trackQuestionTiming(
   questionIndex: number,
   timeSpentSeconds: number
 ): Promise<void> {
+  const studentToken = getStudentJWTToken();
   const response = await fetchWithJWTInterceptor(`${getLiveExamApiBaseUrl()}/api/live-exam/${sessionId}/track-timing`, {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...(studentToken ? { Authorization: `Bearer ${studentToken}` } : {}),
     },
     body: JSON.stringify({
       questionIndex,
@@ -120,8 +132,8 @@ export async function trackQuestionTiming(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to track timing' }));
-    throw new Error(error.error || 'Failed to track timing');
+    const error = await response.json().catch(() => ({ message: 'Failed to track timing' }));
+    throw new Error(error.message || error.error || 'Failed to track timing');
   }
 }
 
@@ -132,10 +144,13 @@ export async function batchTrackQuestionTiming(
   sessionId: string,
   timings: Array<{ questionIndex: number; timeSpentSeconds: number }>
 ): Promise<void> {
+  const studentToken = getStudentJWTToken();
   const response = await fetchWithJWTInterceptor(`${getLiveExamApiBaseUrl()}/api/live-exam/${sessionId}/track-timing`, {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...(studentToken ? { Authorization: `Bearer ${studentToken}` } : {}),
     },
     body: JSON.stringify({
       timings,
@@ -143,7 +158,7 @@ export async function batchTrackQuestionTiming(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to track timing' }));
-    throw new Error(error.error || 'Failed to track timing');
+    const error = await response.json().catch(() => ({ message: 'Failed to track timing' }));
+    throw new Error(error.message || error.error || 'Failed to track timing');
   }
 }

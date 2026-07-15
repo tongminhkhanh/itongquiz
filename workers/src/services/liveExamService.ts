@@ -8,6 +8,9 @@
  */
 
 import type { D1Database } from '@cloudflare/workers-types';
+import type { Quiz } from '../../../src/types';
+import { calculateStudentScore } from '../../../src/features/quiz-player/utils/quizScoring';
+import { mapLiveExamQuestionRow } from './liveExamQuestionMapper';
 import type {
     LiveExamSession,
     LiveExamParticipant,
@@ -26,7 +29,8 @@ export interface CreateLiveExamParams {
     title: string;
     quizId: string;
     teacherId: string;
-    classId?: string;
+    classId: string;
+    actorRole: 'teacher' | 'admin';
     duration: number;
     scheduledAt?: string;
     settings: LiveExamSettings;
@@ -56,6 +60,44 @@ export interface UpdateActivityParams {
     studentId: string;
     currentQuestion?: number;
     answeredCount: number;
+}
+
+export class LiveExamServiceError extends Error {
+    constructor(message: string, public readonly status: number = 400) {
+        super(message);
+        this.name = 'LiveExamServiceError';
+    }
+}
+
+function getChangedRows(result: unknown): number {
+    const candidate = result as any;
+    return Number(candidate?.meta?.changes ?? candidate?.changes ?? 0);
+}
+
+async function loadLiveExamQuiz(db: D1Database, session: LiveExamSession): Promise<Quiz> {
+    const quizRow = await db
+        .prepare('SELECT id, title, class_level, time_limit, created_at, created_by FROM quizzes WHERE id = ?')
+        .bind(session.quizId)
+        .first<any>();
+    if (!quizRow) throw new LiveExamServiceError('Quiz not found', 404);
+
+    const questionRows = await db.prepare(`
+        SELECT id, type, question, options, correct_answer, items, text_field, blanks,
+               distractors, sentence, words, correct_word_indexes, image, difficulty
+        FROM questions
+        WHERE quiz_id = ?
+        ORDER BY rowid ASC
+    `).bind(session.quizId).all<any>();
+
+    return {
+        id: String(quizRow.id),
+        title: String(quizRow.title || session.title),
+        classLevel: String(quizRow.class_level || ''),
+        timeLimit: Number(quizRow.time_limit || session.duration),
+        createdAt: String(quizRow.created_at || session.createdAt),
+        createdBy: String(quizRow.created_by || ''),
+        questions: (questionRows.results || []).map(mapLiveExamQuestionRow),
+    };
 }
 
 export interface WaitingRoomChatMessageParams {
@@ -107,6 +149,33 @@ function calculateEndTime(startedAt: string, durationMinutes: number): string {
     return start.toISOString();
 }
 
+function mapSessionRow(row: any): LiveExamSession & { chatEnabled?: boolean } {
+    return {
+        id: String(row.id),
+        title: String(row.title),
+        quizId: String(row.quiz_id),
+        quizTitle: row.quiz_title ? String(row.quiz_title) : undefined,
+        teacherId: String(row.teacher_id),
+        classId: String(row.class_id || ''),
+        className: row.class_name ? String(row.class_name) : undefined,
+        participantCount: row.participant_count === undefined ? undefined : Number(row.participant_count),
+        submittedCount: row.submitted_count === undefined ? undefined : Number(row.submitted_count),
+        averageScore: row.average_score === null || row.average_score === undefined ? undefined : Number(row.average_score),
+        duration: Number(row.duration),
+        scheduledAt: row.scheduled_at || undefined,
+        startedAt: row.started_at || undefined,
+        endsAt: row.ends_at || undefined,
+        closedAt: row.closed_at || undefined,
+        settings: row.settings ? JSON.parse(String(row.settings)) : {},
+        status: row.status as LiveExamStatus,
+        accessCode: String(row.access_code),
+        chatEnabled: Boolean(row.chat_enabled ?? 1),
+        archivedAt: row.archived_at || undefined,
+        createdAt: String(row.created_at),
+        updatedAt: String(row.updated_at),
+    };
+}
+
 // ============================================================================
 // Session Management
 // ============================================================================
@@ -122,60 +191,62 @@ export async function createLiveExam(
     const accessCode = generateAccessCode();
     const timestamp = now();
 
-    // Verify quiz exists
     const quiz = await db
-        .prepare('SELECT id, title FROM quizzes WHERE id = ?')
+        .prepare('SELECT id, title, created_by FROM quizzes WHERE id = ?')
         .bind(params.quizId)
-        .first();
-
-    if (!quiz) {
-        throw new Error('Quiz not found');
+        .first<{ id: string; title: string; created_by: string | null }>();
+    if (!quiz) throw new LiveExamServiceError('Quiz not found', 404);
+    if (params.actorRole !== 'admin' && quiz.created_by !== params.teacherId) {
+        throw new LiveExamServiceError('Forbidden: You do not own this quiz', 403);
     }
 
-    // Verify teacher exists. Teacher IDs in this project are usernames.
     const teacher = await db
         .prepare('SELECT username FROM teachers WHERE username = ?')
         .bind(params.teacherId)
         .first();
+    if (!teacher) throw new LiveExamServiceError('Teacher not found', 404);
 
-    if (!teacher) {
-        throw new Error('Teacher not found');
+    const classroom = await db
+        .prepare('SELECT id, name, teacher_username FROM classes WHERE id = ? AND archived_at IS NULL')
+        .bind(params.classId)
+        .first<{ id: string; name: string; teacher_username: string }>();
+    if (!classroom) throw new LiveExamServiceError('Class not found or archived', 404);
+    if (params.actorRole !== 'admin' && classroom.teacher_username !== params.teacherId) {
+        throw new LiveExamServiceError('Forbidden: You do not own this class', 403);
     }
 
-    // Insert session
-    await db
-        .prepare(`
-            INSERT INTO live_exam_sessions (
-                id, title, quiz_id, teacher_id, class_id,
-                duration, scheduled_at, settings, status, access_code,
-                created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `)
-        .bind(
-            id,
-            params.title,
-            params.quizId,
-            params.teacherId,
-            params.classId || null,
-            params.duration,
-            params.scheduledAt || null,
-            JSON.stringify(params.settings),
-            'scheduled',
-            accessCode,
-            timestamp,
-            timestamp
-        )
-        .run();
+    await db.prepare(`
+        INSERT INTO live_exam_sessions (
+            id, title, quiz_id, teacher_id, class_id,
+            duration, scheduled_at, settings, status, access_code,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        id,
+        params.title,
+        params.quizId,
+        params.teacherId,
+        params.classId,
+        params.duration,
+        params.scheduledAt || null,
+        JSON.stringify({ ...params.settings, randomizeAnswers: false }),
+        'scheduled',
+        accessCode,
+        timestamp,
+        timestamp,
+    ).run();
 
     return {
         id,
         title: params.title,
         quizId: params.quizId,
+        quizTitle: quiz.title,
         teacherId: params.teacherId,
         classId: params.classId,
+        className: classroom.name,
         duration: params.duration,
         scheduledAt: params.scheduledAt,
-        settings: params.settings,
+        settings: { ...params.settings, randomizeAnswers: false },
         status: 'scheduled' as LiveExamStatus,
         accessCode,
         createdAt: timestamp,
@@ -190,31 +261,14 @@ export async function getLiveExamById(
     db: D1Database,
     sessionId: string
 ): Promise<LiveExamSession | null> {
-    const row = await db
-        .prepare('SELECT * FROM live_exam_sessions WHERE id = ?')
-        .bind(sessionId)
-        .first();
-
-    if (!row) return null;
-
-    return {
-        id: row.id as string,
-        title: row.title as string,
-        quizId: row.quiz_id as string,
-        teacherId: row.teacher_id as string,
-        classId: row.class_id as string | undefined,
-        duration: row.duration as number,
-        scheduledAt: row.scheduled_at as string | undefined,
-        startedAt: row.started_at as string | undefined,
-        endsAt: row.ends_at as string | undefined,
-        closedAt: row.closed_at as string | undefined,
-        settings: JSON.parse(row.settings as string),
-        status: row.status as LiveExamStatus,
-        accessCode: row.access_code as string,
-        chatEnabled: Boolean((row as any).chat_enabled ?? 1),
-        createdAt: row.created_at as string,
-        updatedAt: row.updated_at as string,
-    } as LiveExamSession & { chatEnabled?: boolean };
+    const row = await db.prepare(`
+        SELECT s.*, q.title AS quiz_title, c.name AS class_name
+        FROM live_exam_sessions s
+        LEFT JOIN quizzes q ON q.id = s.quiz_id
+        LEFT JOIN classes c ON c.id = s.class_id
+        WHERE s.id = ?
+    `).bind(sessionId).first<any>();
+    return row ? mapSessionRow(row) : null;
 }
 
 /**
@@ -224,31 +278,14 @@ export async function getLiveExamByAccessCode(
     db: D1Database,
     accessCode: string
 ): Promise<LiveExamSession | null> {
-    const row = await db
-        .prepare('SELECT * FROM live_exam_sessions WHERE access_code = ?')
-        .bind(accessCode)
-        .first();
-
-    if (!row) return null;
-
-    return {
-        id: row.id as string,
-        title: row.title as string,
-        quizId: row.quiz_id as string,
-        teacherId: row.teacher_id as string,
-        classId: row.class_id as string | undefined,
-        duration: row.duration as number,
-        scheduledAt: row.scheduled_at as string | undefined,
-        startedAt: row.started_at as string | undefined,
-        endsAt: row.ends_at as string | undefined,
-        closedAt: row.closed_at as string | undefined,
-        settings: JSON.parse(row.settings as string),
-        status: row.status as LiveExamStatus,
-        accessCode: row.access_code as string,
-        chatEnabled: Boolean((row as any).chat_enabled ?? 1),
-        createdAt: row.created_at as string,
-        updatedAt: row.updated_at as string,
-    } as LiveExamSession & { chatEnabled?: boolean };
+    const row = await db.prepare(`
+        SELECT s.*, q.title AS quiz_title, c.name AS class_name
+        FROM live_exam_sessions s
+        LEFT JOIN quizzes q ON q.id = s.quiz_id
+        LEFT JOIN classes c ON c.id = s.class_id
+        WHERE s.access_code = ? AND s.archived_at IS NULL
+    `).bind(accessCode).first<any>();
+    return row ? mapSessionRow(row) : null;
 }
 
 export async function getWaitingRoomChat(
@@ -346,20 +383,25 @@ export async function hideWaitingRoomChatMessage(
 export async function openSession(
     db: D1Database,
     sessionId: string,
-    teacherId: string
+    teacherId: string,
+    isAdmin = false
 ): Promise<void> {
     const session = await getLiveExamById(db, sessionId);
     
     if (!session) {
-        throw new Error('Session not found');
+        throw new LiveExamServiceError('Session not found', 404);
     }
     
-    if (session.teacherId !== teacherId) {
-        throw new Error('Unauthorized');
+    if (!isAdmin && session.teacherId !== teacherId) {
+        throw new LiveExamServiceError('Forbidden: You do not own this session', 403);
+    }
+
+    if (session.archivedAt) {
+        throw new LiveExamServiceError('Session is archived', 409);
     }
     
     if (session.status !== 'scheduled') {
-        throw new Error(`Cannot open session in status: ${session.status}`);
+        throw new LiveExamServiceError(`Cannot open session in status: ${session.status}`, 409);
     }
 
     await db
@@ -379,20 +421,25 @@ export async function openSession(
 export async function startExam(
     db: D1Database,
     sessionId: string,
-    teacherId: string
+    teacherId: string,
+    isAdmin = false
 ): Promise<void> {
     const session = await getLiveExamById(db, sessionId);
     
     if (!session) {
-        throw new Error('Session not found');
+        throw new LiveExamServiceError('Session not found', 404);
     }
     
-    if (session.teacherId !== teacherId) {
-        throw new Error('Unauthorized');
+    if (!isAdmin && session.teacherId !== teacherId) {
+        throw new LiveExamServiceError('Forbidden: You do not own this session', 403);
+    }
+
+    if (session.archivedAt) {
+        throw new LiveExamServiceError('Session is archived', 409);
     }
     
     if (session.status !== 'waiting') {
-        throw new Error(`Cannot start exam in status: ${session.status}`);
+        throw new LiveExamServiceError(`Cannot start exam in status: ${session.status}`, 409);
     }
 
     const startedAt = now();
@@ -415,20 +462,25 @@ export async function startExam(
 export async function endExamEarly(
     db: D1Database,
     sessionId: string,
-    teacherId: string
+    teacherId: string,
+    isAdmin = false
 ): Promise<void> {
     const session = await getLiveExamById(db, sessionId);
     
     if (!session) {
-        throw new Error('Session not found');
+        throw new LiveExamServiceError('Session not found', 404);
     }
     
-    if (session.teacherId !== teacherId) {
-        throw new Error('Unauthorized');
+    if (!isAdmin && session.teacherId !== teacherId) {
+        throw new LiveExamServiceError('Forbidden: You do not own this session', 403);
+    }
+
+    if (session.archivedAt) {
+        throw new LiveExamServiceError('Session is archived', 409);
     }
     
     if (session.status !== 'active') {
-        throw new Error(`Cannot end exam in status: ${session.status}`);
+        throw new LiveExamServiceError(`Cannot end exam in status: ${session.status}`, 409);
     }
 
     // Auto-submit all incomplete answers
@@ -449,28 +501,29 @@ export async function endExamEarly(
 }
 
 /**
- * Delete a live exam session and all related participant/activity data.
+ * Archive a live exam without destroying participants or results.
  */
 export async function deleteLiveExam(
     db: D1Database,
     sessionId: string,
-    teacherId: string
+    teacherId: string,
+    isAdmin = false
 ): Promise<void> {
     const session = await getLiveExamById(db, sessionId);
-
-    if (!session) {
-        throw new Error('Session not found');
+    if (!session) throw new LiveExamServiceError('Session not found', 404);
+    if (!isAdmin && session.teacherId !== teacherId) {
+        throw new LiveExamServiceError('Forbidden: You do not own this session', 403);
+    }
+    if (session.archivedAt) return;
+    if (session.status === 'waiting' || session.status === 'active' || session.status === 'scoring') {
+        throw new LiveExamServiceError('Cannot archive a session that is waiting, active, or scoring', 409);
     }
 
-    if (session.teacherId !== teacherId) {
-        throw new Error('Unauthorized');
-    }
-
-    await db.batch([
-        db.prepare('DELETE FROM live_exam_activity WHERE live_exam_id = ?').bind(sessionId),
-        db.prepare('DELETE FROM live_exam_participants WHERE live_exam_id = ?').bind(sessionId),
-        db.prepare('DELETE FROM live_exam_sessions WHERE id = ?').bind(sessionId),
-    ]);
+    await db.prepare(`
+        UPDATE live_exam_sessions
+        SET archived_at = ?, updated_at = ?
+        WHERE id = ? AND archived_at IS NULL
+    `).bind(now(), now(), sessionId).run();
 }
 
 /**
@@ -503,20 +556,24 @@ export async function joinSession(
     db: D1Database,
     params: JoinSessionParams
 ): Promise<LiveExamParticipant> {
-    // Get session by access code
     const session = await getLiveExamByAccessCode(db, params.accessCode);
-    
-    if (!session) {
-        throw new Error('Invalid access code');
+    if (!session) throw new LiveExamServiceError('Invalid access code', 404);
+    if (!session.classId) throw new LiveExamServiceError('Session class is not configured', 409);
+
+    const mayJoinWaiting = session.status === 'waiting';
+    const mayJoinActive = session.status === 'active' && session.settings.allowLateJoin;
+    if (!mayJoinWaiting && !mayJoinActive) {
+        if (session.status === 'active') throw new LiveExamServiceError('Late join not allowed', 409);
+        throw new LiveExamServiceError(`Session is not open for joining (${session.status})`, 409);
     }
 
-    // Check if session allows joining
-    if (session.status === 'closed') {
-        throw new Error('Session is closed');
-    }
-
-    if (session.status === 'active' && !session.settings.allowLateJoin) {
-        throw new Error('Late join not allowed');
+    const student = await db.prepare(`
+        SELECT id, class_id FROM students
+        WHERE id = ? AND archived_at IS NULL
+    `).bind(params.studentId).first<{ id: string; class_id: string }>();
+    if (!student) throw new LiveExamServiceError('Student not found or archived', 404);
+    if (student.class_id !== session.classId) {
+        throw new LiveExamServiceError('Forbidden: Student is not in the assigned class', 403);
     }
 
     // Check if student already joined
@@ -627,62 +684,48 @@ export async function submitAnswers(
     params: SubmitAnswersParams
 ): Promise<SubmissionScoreSummary> {
     const timestamp = now();
-
     const session = await getLiveExamById(db, params.liveExamId);
-    if (!session) {
-        throw new Error('Session not found');
+    if (!session || session.archivedAt) throw new LiveExamServiceError('Session not found', 404);
+    if (session.status !== 'active') {
+        throw new LiveExamServiceError('Exam is not active', 409);
+    }
+    if (!session.endsAt || Date.parse(session.endsAt) <= Date.now()) {
+        throw new LiveExamServiceError('Exam time has ended', 409);
     }
 
-    const questions = await db
-        .prepare(`
-            SELECT id, correct_answer
-            FROM questions
-            WHERE quiz_id = ?
-        `)
-        .bind(session.quizId)
-        .all();
+    const participant = await db.prepare(`
+        SELECT id, submitted_at FROM live_exam_participants
+        WHERE live_exam_id = ? AND student_id = ?
+    `).bind(params.liveExamId, params.studentId).first<{ id: string; submitted_at: string | null }>();
+    if (!participant) throw new LiveExamServiceError('Forbidden: Join session first', 403);
+    if (participant.submitted_at) throw new LiveExamServiceError('Answers already submitted', 409);
 
-    const questionMap = new Map(
-        questions.results.map((q: any) => [String(q.id), String(q.correct_answer ?? '')])
-    );
+    const quiz = await loadLiveExamQuiz(db, session);
+    const grading = calculateStudentScore(quiz, params.answers || {});
+    const wrongCount = Math.max(0, grading.totalItems - grading.correctCount);
 
-    let score = 0;
-    let correctCount = 0;
-    let wrongCount = 0;
+    const result = await db.prepare(`
+        UPDATE live_exam_participants
+        SET answers = ?, submitted_at = ?, score = ?, correct_count = ?, wrong_count = ?, updated_at = ?
+        WHERE live_exam_id = ? AND student_id = ? AND submitted_at IS NULL
+    `).bind(
+        JSON.stringify(params.answers || {}),
+        timestamp,
+        grading.score,
+        grading.correctCount,
+        wrongCount,
+        timestamp,
+        params.liveExamId,
+        params.studentId,
+    ).run();
 
-    for (const [questionId, answer] of Object.entries(params.answers || {})) {
-        const correctAnswer = questionMap.get(questionId);
-        if (correctAnswer === undefined) continue;
-
-        if (String(answer) === correctAnswer) {
-            score += 1;
-            correctCount += 1;
-        } else {
-            wrongCount += 1;
-        }
+    if (getChangedRows(result) !== 1) {
+        throw new LiveExamServiceError('Answers already submitted', 409);
     }
-
-    await db
-        .prepare(`
-            UPDATE live_exam_participants
-            SET answers = ?, submitted_at = ?, score = ?, correct_count = ?, wrong_count = ?, updated_at = ?
-            WHERE live_exam_id = ? AND student_id = ?
-        `)
-        .bind(
-            JSON.stringify(params.answers),
-            timestamp,
-            score,
-            correctCount,
-            wrongCount,
-            timestamp,
-            params.liveExamId,
-            params.studentId
-        )
-        .run();
 
     return {
-        score,
-        correctCount,
+        score: grading.score,
+        correctCount: grading.correctCount,
         wrongCount,
         submittedAt: timestamp,
     };
@@ -696,6 +739,16 @@ export async function updateActivity(
     params: UpdateActivityParams
 ): Promise<void> {
     const timestamp = now();
+    const session = await getLiveExamById(db, params.liveExamId);
+    if (!session || session.archivedAt) throw new LiveExamServiceError('Session not found', 404);
+    if (session.status !== 'active' || !session.endsAt || Date.parse(session.endsAt) <= Date.now()) {
+        throw new LiveExamServiceError('Exam is not active', 409);
+    }
+    const participant = await db.prepare(
+        'SELECT submitted_at FROM live_exam_participants WHERE live_exam_id = ? AND student_id = ?'
+    ).bind(params.liveExamId, params.studentId).first<{ submitted_at: string | null }>();
+    if (!participant) throw new LiveExamServiceError('Forbidden: Join session first', 403);
+    if (participant.submitted_at) throw new LiveExamServiceError('Answers already submitted', 409);
 
     // Upsert activity record
     await db
@@ -752,77 +805,55 @@ export async function calculateScoresAndClose(
     sessionId: string
 ): Promise<void> {
     const session = await getLiveExamById(db, sessionId);
-    if (!session) throw new Error('Session not found');
-
-    // Get quiz questions with correct answers
-    const questions = await db
-        .prepare(`
-            SELECT id, correct_answer
-            FROM questions
-            WHERE quiz_id = ?
-        `)
-        .bind(session.quizId)
-        .all();
-
-    const questionMap = new Map(
-        questions.results.map((q: any) => [q.id, { correctAnswer: q.correct_answer, points: 1 }])
-    );
-
-    // Get all participants
+    if (!session) throw new LiveExamServiceError('Session not found', 404);
+    const quiz = await loadLiveExamQuiz(db, session);
     const participants = await getParticipants(db, sessionId);
 
-    // Calculate scores
-    const scoredParticipants = participants.map(p => {
-        if (!p.answers) {
-            return { ...p, score: 0, correctCount: 0, wrongCount: 0 };
-        }
-
-        let totalScore = 0;
-        let correctCount = 0;
-        let wrongCount = 0;
-
-        for (const [questionId, answer] of Object.entries(p.answers)) {
-            const question = questionMap.get(questionId);
-            if (question) {
-                if (answer === question.correctAnswer) {
-                    totalScore += question.points;
-                    correctCount++;
-                } else {
-                    wrongCount++;
-                }
-            }
-        }
-
-        return { ...p, score: totalScore, correctCount, wrongCount };
+    const scoredParticipants = participants.map((participant) => {
+        const grading = calculateStudentScore(quiz, participant.answers || {});
+        return {
+            ...participant,
+            score: grading.score,
+            correctCount: grading.correctCount,
+            wrongCount: Math.max(0, grading.totalItems - grading.correctCount),
+        };
     });
 
-    // Sort by score (descending) and assign ranks
-    scoredParticipants.sort((a, b) => (b.score || 0) - (a.score || 0));
-    scoredParticipants.forEach((p, index) => {
-        p.rank = index + 1;
+    scoredParticipants.sort((a, b) => {
+        const scoreDifference = Number(b.score || 0) - Number(a.score || 0);
+        if (scoreDifference !== 0) return scoreDifference;
+        return Date.parse(a.submittedAt || a.joinedAt) - Date.parse(b.submittedAt || b.joinedAt);
     });
 
-    // Update all participants with scores and ranks
-    for (const p of scoredParticipants) {
-        await db
-            .prepare(`
-                UPDATE live_exam_participants
-                SET score = ?, correct_count = ?, wrong_count = ?, rank = ?, updated_at = ?
-                WHERE id = ?
-            `)
-            .bind(p.score, p.correctCount, p.wrongCount, p.rank, now(), p.id)
-            .run();
+    let previousScore: number | null = null;
+    let previousRank = 0;
+    scoredParticipants.forEach((participant, index) => {
+        const currentScore = Number(participant.score || 0);
+        participant.rank = previousScore !== null && currentScore === previousScore ? previousRank : index + 1;
+        previousScore = currentScore;
+        previousRank = participant.rank;
+    });
+
+    for (const participant of scoredParticipants) {
+        await db.prepare(`
+            UPDATE live_exam_participants
+            SET score = ?, correct_count = ?, wrong_count = ?, rank = ?, updated_at = ?
+            WHERE id = ?
+        `).bind(
+            participant.score,
+            participant.correctCount,
+            participant.wrongCount,
+            participant.rank,
+            now(),
+            participant.id,
+        ).run();
     }
 
-    // Close session
-    await db
-        .prepare(`
-            UPDATE live_exam_sessions
-            SET status = 'closed', closed_at = ?, updated_at = ?
-            WHERE id = ?
-        `)
-        .bind(now(), now(), sessionId)
-        .run();
+    await db.prepare(`
+        UPDATE live_exam_sessions
+        SET status = 'closed', closed_at = ?, updated_at = ?
+        WHERE id = ?
+    `).bind(now(), now(), sessionId).run();
 }
 
 /**
@@ -838,7 +869,7 @@ export async function checkAndAutoCloseExpiredExams(
     const expiredSessions = await db
         .prepare(`
             SELECT id FROM live_exam_sessions
-            WHERE status = 'active' AND ends_at <= ?
+            WHERE status = 'active' AND archived_at IS NULL AND ends_at <= ?
         `)
         .bind(currentTime)
         .all();

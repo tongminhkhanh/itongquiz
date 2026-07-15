@@ -36,7 +36,13 @@ export interface LiveExamSession {
   title: string;
   quizId: string;
   teacherId: string;
-  classId?: string;
+  classId: string;
+  className?: string;
+  quizTitle?: string;
+  participantCount?: number;
+  submittedCount?: number;
+  averageScore?: number;
+  archivedAt?: string;
   
   // Timing
   duration: number;                // Duration in minutes
@@ -209,6 +215,7 @@ export interface LiveExamResultsResponse {
     xp: number;
     bonusCoins?: number;           // Top 3 bonus
   };
+  leaderboardVisible?: boolean;
   leaderboard: Array<{
     rank: number;
     username: string;
@@ -234,7 +241,7 @@ export interface LiveExamSubmissionResponse {
 export interface CreateLiveExamRequest {
   title: string;
   quizId: string;
-  classId?: string;
+  classId: string;
   duration: number;                // Minutes
   scheduledAt?: string;            // ISO 8601 (optional)
   settings: LiveExamSettings;

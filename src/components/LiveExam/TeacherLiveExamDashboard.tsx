@@ -1,22 +1,29 @@
 /**
- * Teacher Live Exam Dashboard Component
- * 
- * Main dashboard for teachers to manage live exam sessions.
- * List all sessions, create new, filter by status.
+ * Teacher dashboard for managing live exam sessions.
  */
 
-import React, { useState } from 'react';
-import { Plus, Clock, Users, Filter, Loader2, Trash2 } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import {
+    Archive,
+    BarChart3,
+    CalendarClock,
+    Clock,
+    Filter,
+    Loader2,
+    Plus,
+    RefreshCw,
+    Users,
+} from 'lucide-react';
 import { showConfirm } from '../../utils/toast';
 import { CreateLiveExamModal } from './CreateLiveExamModal';
-import { getStatusLabel, getStatusColor, formatAccessCode } from '../../services/liveExamService';
-import type { LiveExamSession } from '../../types/liveExam.types';
-import type { WaitingRoomChatMessage } from '../../types/liveExam.types';
+import { formatAccessCode, getStatusColor, getStatusLabel } from '../../services/liveExamService';
+import type { LiveExamSession, LiveExamStatus, WaitingRoomChatMessage } from '../../types/liveExam.types';
 import WaitingRoomChatTeacherCard from './WaitingRoomChatTeacherCard';
 
 interface TeacherLiveExamDashboardProps {
     sessions: LiveExamSession[];
     availableQuizzes: Array<{ id: string; title: string; questionCount: number }>;
+    availableClasses: Array<{ id: string; name: string }>;
     isLoading?: boolean;
     onCreateSession: (sessionId: string, accessCode: string) => void;
     onSelectSession: (session: LiveExamSession) => void;
@@ -34,9 +41,42 @@ interface TeacherLiveExamDashboardProps {
     } | null;
 }
 
+type LiveExamFilter = 'all' | 'scheduled' | 'waiting' | 'active' | 'scoring' | 'closed';
+
+const filters: Array<{ value: LiveExamFilter; label: string }> = [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'scheduled', label: 'Đã lên lịch' },
+    { value: 'waiting', label: 'Đang chờ' },
+    { value: 'active', label: 'Đang thi' },
+    { value: 'scoring', label: 'Đang chấm' },
+    { value: 'closed', label: 'Đã kết thúc' },
+];
+
+const primaryActionLabel: Record<LiveExamStatus, string> = {
+    scheduled: 'Mở phòng chờ',
+    waiting: 'Vào phòng chờ',
+    active: 'Giám sát',
+    scoring: 'Xem tiến trình chấm',
+    closed: 'Xem kết quả',
+};
+
+const formatDateTime = (value?: string) => {
+    if (!value) return 'Chưa bắt đầu';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(date);
+};
+
 export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> = ({
     sessions,
     availableQuizzes,
+    availableClasses,
     isLoading = false,
     onCreateSession,
     onSelectSession,
@@ -45,76 +85,70 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
     waitingRoomChat = null,
 }) => {
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [statusFilter, setStatusFilter] = useState<LiveExamFilter>('all');
 
-    // Filter sessions
-    const filteredSessions = statusFilter === 'all'
-        ? sessions
-        : sessions.filter(s => s.status === statusFilter);
+    const filteredSessions = useMemo(
+        () => statusFilter === 'all' ? sessions : sessions.filter((session) => session.status === statusFilter),
+        [sessions, statusFilter],
+    );
 
-    // Count by status
-    const statusCounts = {
+    const statusCounts = useMemo(() => ({
         all: sessions.length,
-        waiting: sessions.filter(s => s.status === 'waiting').length,
-        active: sessions.filter(s => s.status === 'active').length,
-        closed: sessions.filter(s => s.status === 'closed').length,
-    };
+        scheduled: sessions.filter((session) => session.status === 'scheduled').length,
+        waiting: sessions.filter((session) => session.status === 'waiting').length,
+        active: sessions.filter((session) => session.status === 'active').length,
+        scoring: sessions.filter((session) => session.status === 'scoring').length,
+        closed: sessions.filter((session) => session.status === 'closed').length,
+    }), [sessions]);
 
-    const getStatusBadgeClass = (status: string) => {
-        const color = getStatusColor(status);
+    const statusBadgeClass = (status: string) => {
         const colorMap: Record<string, string> = {
             gray: 'bg-slate-100 text-slate-700',
-            yellow: 'bg-yellow-100 text-yellow-700',
-            green: 'bg-green-100 text-green-700',
-            blue: 'bg-blue-100 text-blue-700',
-            purple: 'bg-purple-100 text-purple-700',
+            yellow: 'bg-yellow-100 text-yellow-800',
+            green: 'bg-green-100 text-green-800',
+            blue: 'bg-blue-100 text-blue-800',
+            purple: 'bg-purple-100 text-purple-800',
         };
-        return colorMap[color] || colorMap.gray;
+        return colorMap[getStatusColor(status)] || colorMap.gray;
     };
 
+    const statCards = [
+        { key: 'all', label: 'Tổng số phiên', value: statusCounts.all, className: 'bg-slate-50 text-slate-800' },
+        { key: 'scheduled', label: 'Đã lên lịch', value: statusCounts.scheduled, className: 'bg-slate-100 text-slate-700' },
+        { key: 'waiting', label: 'Đang chờ', value: statusCounts.waiting, className: 'bg-yellow-50 text-yellow-700' },
+        { key: 'active', label: 'Đang thi', value: statusCounts.active, className: 'bg-green-50 text-green-700' },
+        { key: 'scoring', label: 'Đang chấm', value: statusCounts.scoring, className: 'bg-blue-50 text-blue-700' },
+        { key: 'closed', label: 'Đã kết thúc', value: statusCounts.closed, className: 'bg-purple-50 text-purple-700' },
+    ];
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-4">
-            <div className="max-w-7xl mx-auto">
-                {/* Header */}
-                <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-                    <div className="flex items-center justify-between mb-4">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-3 sm:p-4 lg:p-6">
+            <div className="mx-auto max-w-7xl">
+                <section className="mb-6 rounded-2xl bg-white p-5 shadow-xl sm:p-6">
+                    <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold text-slate-800 mb-2">
-                                Thi Trực Tiếp
-                            </h1>
-                            <p className="text-slate-600">
-                                Quản lý các phiên thi trực tuyến đồng bộ
-                            </p>
+                            <h1 className="mb-1 text-2xl font-bold text-slate-800 sm:text-3xl">Thi Trực Tiếp</h1>
+                            <p className="text-slate-600">Quản lý phòng chờ, tiến độ làm bài và kết quả theo thời gian thực.</p>
                         </div>
                         <button
+                            type="button"
                             onClick={() => setShowCreateModal(true)}
-                            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 flex items-center gap-2 shadow-lg"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg hover:bg-blue-700"
                         >
                             <Plus size={20} />
-                            Tạo Phiên Thi Mới
+                            Tạo phiên thi mới
                         </button>
                     </div>
 
-                    {/* Stats */}
-                    <div className="grid grid-cols-4 gap-4">
-                        <div className="bg-slate-50 rounded-lg p-4">
-                            <div className="text-2xl font-bold text-slate-800">{statusCounts.all}</div>
-                            <div className="text-sm text-slate-600">Tổng số phiên</div>
-                        </div>
-                        <div className="bg-yellow-50 rounded-lg p-4">
-                            <div className="text-2xl font-bold text-yellow-600">{statusCounts.waiting}</div>
-                            <div className="text-sm text-yellow-700">Đang chờ</div>
-                        </div>
-                        <div className="bg-green-50 rounded-lg p-4">
-                            <div className="text-2xl font-bold text-green-600">{statusCounts.active}</div>
-                            <div className="text-sm text-green-700">Đang thi</div>
-                        </div>
-                        <div className="bg-purple-50 rounded-lg p-4">
-                            <div className="text-2xl font-bold text-purple-600">{statusCounts.closed}</div>
-                            <div className="text-sm text-purple-700">Đã kết thúc</div>
-                        </div>
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+                        {statCards.map((card) => (
+                            <div key={card.key} className={`rounded-xl p-4 ${card.className}`}>
+                                <div className="text-2xl font-bold">{card.value}</div>
+                                <div className="text-sm font-medium opacity-90">{card.label}</div>
+                            </div>
+                        ))}
                     </div>
-                </div>
+                </section>
 
                 {waitingRoomChat && (
                     <div className="mb-6">
@@ -130,22 +164,19 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
                     </div>
                 )}
 
-                {/* Filters */}
-                <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
-                    <div className="flex items-center gap-3">
-                        <Filter size={20} className="text-slate-600" />
-                        <span className="font-semibold text-slate-700">Lọc:</span>
-                        <div className="flex gap-2">
-                            {[
-                                { value: 'all', label: 'Tất cả' },
-                                { value: 'waiting', label: 'Đang chờ' },
-                                { value: 'active', label: 'Đang thi' },
-                                { value: 'closed', label: 'Đã kết thúc' },
-                            ].map((filter) => (
+                <section className="mb-6 rounded-xl bg-white p-4 shadow-lg">
+                    <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+                        <div className="flex items-center gap-2 font-semibold text-slate-700">
+                            <Filter size={20} className="text-slate-500" />
+                            Lọc trạng thái
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {filters.map((filter) => (
                                 <button
                                     key={filter.value}
+                                    type="button"
                                     onClick={() => setStatusFilter(filter.value)}
-                                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                                    className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                                         statusFilter === filter.value
                                             ? 'bg-blue-600 text-white'
                                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -157,123 +188,105 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
                         </div>
                         {onRefresh && (
                             <button
+                                type="button"
                                 onClick={onRefresh}
                                 disabled={isLoading}
-                                className="ml-auto px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-50"
+                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-2 font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-50 xl:ml-auto"
                             >
-                                {isLoading ? <Loader2 className="animate-spin" size={20} /> : '🔄 Làm mới'}
+                                <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+                                Làm mới
                             </button>
                         )}
                     </div>
-                </div>
+                </section>
 
-                {/* Sessions List */}
                 {isLoading && sessions.length === 0 ? (
-                    <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-                        <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-                        <p className="text-slate-600">Đang tải...</p>
+                    <div className="rounded-2xl bg-white p-12 text-center shadow-xl">
+                        <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-blue-600" />
+                        <p className="text-slate-600">Đang tải danh sách phiên thi...</p>
                     </div>
                 ) : filteredSessions.length === 0 ? (
-                    <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-                        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span className="text-4xl">📝</span>
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800 mb-2">
-                            {statusFilter === 'all' ? 'Chưa có phiên thi nào' : 'Không tìm thấy phiên thi'}
-                        </h3>
-                        <p className="text-slate-600 mb-6">
-                            {statusFilter === 'all' 
-                                ? 'Tạo phiên thi đầu tiên để bắt đầu'
-                                : 'Thử thay đổi bộ lọc'}
+                    <div className="rounded-2xl bg-white p-10 text-center shadow-xl">
+                        <CalendarClock className="mx-auto mb-4 h-16 w-16 text-slate-300" />
+                        <h2 className="mb-2 text-xl font-bold text-slate-800">
+                            {statusFilter === 'all' ? 'Chưa có phiên thi nào' : 'Không có phiên ở trạng thái này'}
+                        </h2>
+                        <p className="mb-6 text-slate-600">
+                            {statusFilter === 'all' ? 'Tạo phiên đầu tiên và chọn đúng lớp học để bắt đầu.' : 'Hãy chọn một bộ lọc khác.'}
                         </p>
                         {statusFilter === 'all' && (
-                            <button
-                                onClick={() => setShowCreateModal(true)}
-                                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 inline-flex items-center gap-2"
-                            >
-                                <Plus size={20} />
-                                Tạo Phiên Thi Mới
+                            <button type="button" onClick={() => setShowCreateModal(true)} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700">
+                                <Plus size={20} />Tạo phiên thi mới
                             </button>
                         )}
                     </div>
                 ) : (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredSessions.map((session) => (
-                            <div
-                                key={session.id}
-                                onClick={() => onSelectSession(session)}
-                                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all cursor-pointer border-2 border-transparent hover:border-blue-300"
-                            >
-                                {/* Status Badge */}
-                                <div className="flex items-center justify-between mb-4">
-                                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeClass(session.status)}`}>
-                                        {getStatusLabel(session.status)}
-                                    </span>
-                                    {session.accessCode && session.status === 'waiting' && (
-                                        <span className="text-xs font-mono bg-blue-50 text-blue-600 px-2 py-1 rounded">
-                                            {formatAccessCode(session.accessCode)}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Title */}
-                                <h3 className="text-lg font-bold text-slate-800 mb-2 line-clamp-2">
-                                    {session.title}
-                                </h3>
-
-                                {/* Info */}
-                                <div className="space-y-2 mb-4">
-                                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                                        <Clock size={16} />
-                                        <span>{session.duration} phút</span>
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                        {filteredSessions.map((session) => {
+                            const canArchive = session.status === 'scheduled' || session.status === 'closed';
+                            return (
+                                <article key={session.id} className="flex min-h-[310px] flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-lg transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-xl">
+                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                        <span className={`rounded-full px-3 py-1 text-sm font-semibold ${statusBadgeClass(session.status)}`}>{getStatusLabel(session.status)}</span>
+                                        {session.status === 'waiting' && session.accessCode && (
+                                            <span className="rounded bg-blue-50 px-2 py-1 font-mono text-xs font-bold text-blue-700">{formatAccessCode(session.accessCode)}</span>
+                                        )}
                                     </div>
-                                    {session.startedAt && (
-                                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                                            <Users size={16} />
-                                            <span>Bắt đầu: {new Date(session.startedAt).toLocaleString('vi-VN')}</span>
+
+                                    <h3 className="mb-2 line-clamp-2 text-lg font-bold text-slate-800">{session.title}</h3>
+                                    <p className="mb-1 line-clamp-1 text-sm font-medium text-slate-600">Đề: {session.quizTitle || session.quizId}</p>
+                                    <p className="mb-4 line-clamp-1 text-sm text-slate-500">Lớp: {session.className || 'Chưa xác định'}</p>
+
+                                    <div className="mb-4 grid grid-cols-2 gap-3 text-sm text-slate-600">
+                                        <div className="flex items-center gap-2"><Clock size={16} />{session.duration} phút</div>
+                                        <div className="flex items-center gap-2"><Users size={16} />{session.participantCount ?? 0} học sinh</div>
+                                        <div className="col-span-2 flex items-center gap-2"><CalendarClock size={16} />{session.startedAt ? `Bắt đầu ${formatDateTime(session.startedAt)}` : `Tạo ${formatDateTime(session.createdAt)}`}</div>
+                                    </div>
+
+                                    {session.status === 'closed' && (
+                                        <div className="mb-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 text-sm">
+                                            <div><span className="block text-slate-500">Đã nộp</span><strong className="text-slate-800">{session.submittedCount ?? 0}/{session.participantCount ?? 0}</strong></div>
+                                            <div><span className="block text-slate-500">Điểm TB</span><strong className="text-slate-800">{session.averageScore ?? '—'}</strong></div>
                                         </div>
                                     )}
-                                </div>
 
-                                {/* Footer */}
-                                <div className="pt-4 border-t border-slate-100">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div className="text-xs text-slate-500">
-                                            Tạo: {new Date(session.createdAt).toLocaleDateString('vi-VN')}
-                                        </div>
-                                        {onDeleteSession && (
+                                    <div className="mt-auto flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row">
+                                        <button
+                                            type="button"
+                                            onClick={() => onSelectSession(session)}
+                                            className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white hover:bg-blue-700"
+                                        >
+                                            {session.status === 'closed' && <BarChart3 size={17} />}
+                                            {primaryActionLabel[session.status]}
+                                        </button>
+                                        {onDeleteSession && canArchive && (
                                             <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    showConfirm({
-                                                        message: `Xóa phiên thi "${session.title}"? Tất cả dữ liệu tham gia và kết quả của phiên này sẽ bị xóa.`,
-                                                        confirmLabel: 'Xóa phiên',
-                                                        destructive: true,
-                                                        onConfirm: async () => {
-                                                            await onDeleteSession(session);
-                                                        },
-                                                    });
-                                                }}
-                                                className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                                type="button"
+                                                onClick={() => showConfirm({
+                                                    message: `Lưu trữ phiên thi "${session.title}"? Dữ liệu tham gia và kết quả vẫn được giữ lại.`,
+                                                    confirmLabel: 'Lưu trữ',
+                                                    destructive: false,
+                                                    onConfirm: () => onDeleteSession(session),
+                                                })}
+                                                className="inline-flex items-center justify-center gap-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
                                             >
-                                                <Trash2 size={14} />
-                                                Xóa
+                                                <Archive size={16} />Lưu trữ
                                             </button>
                                         )}
                                     </div>
-                                </div>
-                            </div>
-                        ))}
+                                </article>
+                            );
+                        })}
                     </div>
                 )}
             </div>
 
-            {/* Create Modal */}
             <CreateLiveExamModal
                 isOpen={showCreateModal}
                 onClose={() => setShowCreateModal(false)}
                 onCreateSuccess={onCreateSession}
                 availableQuizzes={availableQuizzes}
+                availableClasses={availableClasses}
             />
         </div>
     );

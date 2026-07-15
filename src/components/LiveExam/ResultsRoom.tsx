@@ -64,8 +64,8 @@ export const ResultsRoom: React.FC<ResultsRoomProps> = ({
     }
 
     const { participant, leaderboard } = results;
-    const scorePercent = Math.round((participant.score / participant.correctCount + participant.wrongCount) * 100);
-    const isTopThree = participant.rank <= 3;
+    const leaderboardVisible = results.leaderboardVisible !== false;
+    const isTopThree = leaderboardVisible && participant.rank > 0 && participant.rank <= 3;
 
     // Medal colors
     const getMedalColor = (rank: number) => {
@@ -133,9 +133,9 @@ export const ResultsRoom: React.FC<ResultsRoomProps> = ({
                             <div className={`text-5xl font-bold mb-1 ${getMedalColor(participant.rank)}`}>
                                 {getRankBadge(participant.rank)}
                             </div>
-                            <p className="text-slate-600">Xếp hạng</p>
+                            <p className="text-slate-600">{leaderboardVisible ? 'Xếp hạng' : 'Kết quả riêng tư'}</p>
                             <div className="mt-2 text-sm text-slate-500">
-                                Trong {leaderboard.length} học sinh
+                                {leaderboardVisible ? `Trong ${leaderboard.length} học sinh` : 'Giáo viên đã ẩn bảng xếp hạng'}
                             </div>
                         </div>
 
@@ -171,6 +171,7 @@ export const ResultsRoom: React.FC<ResultsRoomProps> = ({
                 </div>
 
                 {/* Leaderboard */}
+                {leaderboardVisible && (
                 <div className="bg-white rounded-2xl shadow-xl p-6">
                     <div className="flex items-center gap-3 mb-6">
                         <Trophy className="text-yellow-600" size={28} />
@@ -229,6 +230,7 @@ export const ResultsRoom: React.FC<ResultsRoomProps> = ({
                         })}
                     </div>
                 </div>
+                )}
 
                 {/* Footer Message */}
                 <div className="mt-6 text-center">

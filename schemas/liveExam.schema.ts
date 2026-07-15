@@ -20,7 +20,7 @@ export const CreateLiveExamRequestSchema = z.object({
         .max(200, 'Title must be less than 200 characters'),
     quizId: z.string()
         .min(1, 'Quiz ID is required'),
-    classId: z.string().optional(),
+    classId: z.string().min(1, 'Class ID is required'),
     duration: z.number()
         .min(5, 'Duration must be at least 5 minutes')
         .max(180, 'Duration must be less than 180 minutes'),

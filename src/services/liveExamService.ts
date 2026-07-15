@@ -91,7 +91,7 @@ async function apiCall<T>(
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
                 const errorData = await response.json();
-                errorMessage = errorData.error || errorMessage;
+                errorMessage = errorData.message || errorData.error || errorMessage;
             }
         } catch (e) {
             // Ignore JSON parse errors for HTML responses

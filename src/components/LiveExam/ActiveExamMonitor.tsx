@@ -25,7 +25,7 @@ export const ActiveExamMonitor: React.FC<ActiveExamMonitorProps> = ({
     totalQuestions,
     onExamEnded,
 }) => {
-    const { participants, isLoading } = useLiveExamParticipants({
+    const { participants, isLoading, error: participantsError } = useLiveExamParticipants({
         sessionId,
         enabled: true,
     });
@@ -55,7 +55,7 @@ export const ActiveExamMonitor: React.FC<ActiveExamMonitorProps> = ({
     const totalParticipants = participants.length;
     const submittedCount = participants.filter(p => p.submittedAt).length;
     const activeCount = totalParticipants - submittedCount;
-    const avgProgress = totalParticipants > 0
+    const avgProgress = totalParticipants > 0 && totalQuestions > 0
         ? Math.round(participants.reduce((sum, p) => sum + p.answeredCount, 0) / totalParticipants / totalQuestions * 100)
         : 0;
 
@@ -147,6 +147,12 @@ export const ActiveExamMonitor: React.FC<ActiveExamMonitorProps> = ({
 
                 {/* Participants List */}
                 <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                    {participantsError && (
+                        <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                            <AlertCircle size={16} />
+                            Không thể cập nhật danh sách học sinh: {participantsError}
+                        </div>
+                    )}
                     <h2 className="text-xl font-bold text-slate-800 mb-4">
                         Danh sách học sinh ({totalParticipants})
                     </h2>
@@ -170,7 +176,9 @@ export const ActiveExamMonitor: React.FC<ActiveExamMonitorProps> = ({
                                 </thead>
                                 <tbody>
                                     {participants.map((participant, index) => {
-                                        const progressPercent = Math.round((participant.answeredCount / totalQuestions) * 100);
+                                        const progressPercent = totalQuestions > 0
+                                            ? Math.min(100, Math.round((participant.answeredCount / totalQuestions) * 100))
+                                            : 0;
                                         return (
                                             <tr key={participant.id} className="border-b border-slate-100 hover:bg-slate-50">
                                                 <td className="py-3 px-4 text-slate-600">{index + 1}</td>
