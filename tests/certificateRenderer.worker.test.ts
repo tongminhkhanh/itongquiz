@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadFont } from '../workers/src/services/fontLoader';
+import { loadCertificateFonts, loadFont } from '../workers/src/services/fontLoader';
 import { buildCertificateSvg } from '../workers/src/services/certificateSvg';
 
 describe('certificate SVG renderer', () => {
@@ -58,5 +58,23 @@ describe('certificate SVG renderer', () => {
     const second = await loadFont(env, 'Cache-Isolation');
 
     expect(new Uint8Array(second)[4]).toBe(0);
+  });
+
+  it('loads the elegant Vietnamese student-name font with the certificate font bundle', async () => {
+    const requestedKeys: string[] = [];
+    const env = {
+      CERT_IMAGES: {
+        get: async (key: string) => {
+          requestedKeys.push(key);
+          const bytes = new Uint8Array(12);
+          bytes.set([0x00, 0x01, 0x00, 0x00]);
+          return { arrayBuffer: async () => bytes.buffer.slice(0) };
+        },
+      },
+    };
+
+    await loadCertificateFonts(env);
+
+    expect(requestedKeys).toContain('fonts/GreatVibes-Regular.ttf');
   });
 });

@@ -66,6 +66,7 @@ export async function loadCertificateFonts(env: any): Promise<ArrayBuffer[]> {
     'Spectral-Bold',
     'Spectral-BoldItalic',
     'DancingScript-Bold',
+    'GreatVibes-Regular',
   ];
   return Promise.all(fontNames.map((fontName) => loadFont(env, fontName)));
 }
