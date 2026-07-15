@@ -1,231 +1,274 @@
 /**
- * Question Analysis Component
- * 
- * Shows difficulty analysis for each question
+ * Cohort question analysis for the teacher results dashboard.
+ * Ranks instructional priorities from the selected class and quiz.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
-import { QuestionAnalysis } from '../../../utils/statisticsUtils';
-import { AlertTriangle, CheckCircle, HelpCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import {
+    AlertTriangle,
+    BookOpenCheck,
+    CheckCircle,
+    ChevronDown,
+    ChevronUp,
+    CircleHelp,
+    Loader2,
+    Target,
+    Users,
+} from 'lucide-react';
+import {
+    type AnalysisAttemptMode,
+    type QuestionAnalysis,
+} from '../../../utils/statisticsUtils';
 import MathSpan from '../../common/MathSpan';
 
 interface QuestionAnalysisTableProps {
     analysis: QuestionAnalysis[];
-    showTopMissed?: number; // Number of top missed questions to highlight
+    showTopMissed?: number;
+    cohortSize: number;
+    attemptMode: AnalysisAttemptMode;
+    onAttemptModeChange: (mode: AnalysisAttemptMode) => void;
+    isLoading?: boolean;
+    error?: string;
 }
+
+const priorityPresentation = {
+    high: {
+        label: 'Ưu tiên cao',
+        badge: 'border-red-200 bg-red-50 text-red-700',
+        bar: 'bg-red-500',
+    },
+    medium: {
+        label: 'Cần củng cố',
+        badge: 'border-amber-200 bg-amber-50 text-amber-700',
+        bar: 'bg-amber-500',
+    },
+    low: {
+        label: 'Đang ổn',
+        badge: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        bar: 'bg-emerald-500',
+    },
+} as const;
 
 export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
     analysis,
     showTopMissed = 5,
+    cohortSize,
+    attemptMode,
+    onAttemptModeChange,
+    isLoading = false,
+    error = '',
 }) => {
-    const [sortBy, setSortBy] = useState<'index' | 'correctRate' | 'difficulty'>('index');
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [showAll, setShowAll] = useState(false);
-    const tableRef = useRef<HTMLDivElement>(null);
+    const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
 
-    // Get top missed questions
-    const topMissedIds = [...analysis]
-        .sort((a, b) => a.correctRate - b.correctRate)
-        .slice(0, showTopMissed)
-        .map(q => q.questionId);
+    const rankedAnalysis = useMemo(() => (
+        analysis
+            .filter(item => item.evaluatedCount > 0)
+            .sort((left, right) => (
+                right.wrongRate - left.wrongRate
+                || right.wrongCount - left.wrongCount
+                || left.questionNumber - right.questionNumber
+            ))
+    ), [analysis]);
 
-    // Sort analysis
-    const sortedAnalysis = [...analysis].sort((a, b) => {
-        let comparison = 0;
-        if (sortBy === 'correctRate') {
-            comparison = a.correctRate - b.correctRate;
-        } else if (sortBy === 'difficulty') {
-            const order = { hard: 0, medium: 1, easy: 2 };
-            comparison = order[a.difficulty] - order[b.difficulty];
-        }
-        return sortOrder === 'asc' ? comparison : -comparison;
-    });
-
-    // Display limited or all
-    const displayAnalysis = showAll ? sortedAnalysis : sortedAnalysis.slice(0, 10);
-
-    const handleSort = (field: typeof sortBy) => {
-        if (sortBy === field) {
-            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortBy(field);
-            setSortOrder('asc');
-        }
-    };
-
-    const getDifficultyBadge = (difficulty: 'easy' | 'medium' | 'hard') => {
-        const styles = {
-            easy: 'bg-green-100 text-green-700 border-green-200',
-            medium: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-            hard: 'bg-red-100 text-red-700 border-red-200',
-        };
-        const labels = {
-            easy: 'Dễ',
-            medium: 'TB',
-            hard: 'Khó',
-        };
-        return (
-            <span className={`px-2 py-1 text-xs font-medium rounded-full border ${styles[difficulty]}`}>
-                {labels[difficulty]}
-            </span>
-        );
-    };
-
-    const getCorrectRateBar = (rate: number) => {
-        const colorClass = rate >= 80 ? 'bg-green-500' : rate >= 50 ? 'bg-yellow-500' : 'bg-red-500';
-        return (
-            <div className="flex items-center gap-2">
-                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                        className={`h-full ${colorClass} transition-all`}
-                        style={{ width: `${rate}%` }}
-                    />
-                </div>
-                <span className="text-sm font-medium w-12 text-right">{rate}%</span>
-            </div>
-        );
-    };
-
-    if (analysis.length === 0) {
-        return (
-            <div className="text-center py-8 text-gray-500">
-                Chưa có dữ liệu phân tích câu hỏi
-            </div>
-        );
-    }
+    const visibleAnalysis = showAll ? rankedAnalysis : rankedAnalysis.slice(0, showTopMissed);
+    const topQuestion = rankedAnalysis[0];
+    const highPriorityCount = rankedAnalysis.filter(item => item.priority === 'high').length;
 
     return (
-        <div ref={tableRef} className="bg-white rounded-xl border shadow-sm overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4">
-                <h3 className="font-bold flex items-center gap-2">
-                    📌 Phân tích độ khó câu hỏi
-                </h3>
-                <p className="text-purple-100 text-sm mt-1">
-                    Xác định những câu hỏi học sinh hay sai để điều chỉnh giảng dạy
-                </p>
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-5 text-white">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h3 className="flex items-center gap-2 text-lg font-bold">
+                            <Target className="h-5 w-5" />
+                            Câu sai nhiều nhất
+                        </h3>
+                        <p className="mt-1 text-sm text-violet-100">
+                            Xếp hạng theo tỷ lệ sai, sau đó theo số học sinh sai để ưu tiên nội dung cần giảng lại.
+                        </p>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm">
+                        <span className="text-violet-100">Cách tính:</span>
+                        <select
+                            value={attemptMode}
+                            onChange={event => onAttemptModeChange(event.target.value as AnalysisAttemptMode)}
+                            className="rounded-lg border border-white/30 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm"
+                        >
+                            <option value="latest">Mỗi học sinh: lượt mới nhất</option>
+                            <option value="all">Tất cả lượt làm</option>
+                        </select>
+                    </label>
+                </div>
             </div>
 
-            {/* Top Missed Alert */}
-            {topMissedIds.length > 0 && (
-                <div className="bg-red-50 border-b border-red-100 p-4">
-                    <div className="flex items-start gap-3">
-                        <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <p className="font-medium text-red-800">
-                                Câu hỏi hay sai nhất ({topMissedIds.length} câu)
+            {error && (
+                <div className="flex items-center gap-2 border-b border-red-100 bg-red-50 px-5 py-3 text-sm text-red-700">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    {error}
+                </div>
+            )}
+
+            {isLoading && rankedAnalysis.length === 0 ? (
+                <div className="flex items-center justify-center gap-3 py-12 text-slate-500">
+                    <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
+                    Đang tổng hợp đáp án của cả lớp...
+                </div>
+            ) : rankedAnalysis.length === 0 ? (
+                <div className="px-5 py-12 text-center">
+                    <CircleHelp className="mx-auto h-10 w-10 text-slate-300" />
+                    <p className="mt-3 font-semibold text-slate-700">Chưa đủ dữ liệu để phân tích câu hỏi</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Các bài làm hiện tại chưa có dữ liệu đáp án tương ứng với bộ câu hỏi đã chọn.
+                    </p>
+                </div>
+            ) : (
+                <>
+                    <div className="grid gap-3 border-b border-slate-100 bg-slate-50/70 p-4 sm:grid-cols-3">
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <Users className="h-4 w-4 text-indigo-500" /> Học sinh được tính
+                            </div>
+                            <p className="mt-1 text-2xl font-bold text-slate-800">{cohortSize}</p>
+                            <p className="mt-1 text-xs text-slate-500">
+                                {attemptMode === 'latest' ? 'Không tính trùng học sinh làm lại' : 'Đang tính tất cả lượt làm'}
                             </p>
-                            <p className="text-sm text-red-600 mt-1">
-                                Những câu hỏi này có tỷ lệ sai cao nhất. Nên xem xét lại nội dung giảng dạy hoặc độ khó câu hỏi.
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <AlertTriangle className="h-4 w-4 text-red-500" /> Cần ưu tiên cao
+                            </div>
+                            <p className="mt-1 text-2xl font-bold text-red-600">{highPriorityCount}</p>
+                            <p className="mt-1 text-xs text-slate-500">Câu có ít nhất 50% học sinh trả lời sai</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <Target className="h-4 w-4 text-violet-500" /> Câu cần xem trước
+                            </div>
+                            <p className="mt-1 text-2xl font-bold text-violet-700">
+                                {topQuestion ? `Câu ${topQuestion.questionNumber}` : '—'}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                                {topQuestion ? `${topQuestion.wrongRate}% trả lời sai` : 'Chưa có dữ liệu'}
                             </p>
                         </div>
                     </div>
-                </div>
-            )}
 
-            {/* Table */}
-            <div className="overflow-x-auto">
-                <table className="w-full">
-                    <thead className="bg-gray-50 border-b">
-                        <tr>
-                            <th className="text-left p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                #
-                            </th>
-                            <th className="text-left p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                Câu hỏi
-                            </th>
-                            <th
-                                className="text-left p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                onClick={() => handleSort('correctRate')}
-                            >
-                                <div className="flex items-center gap-1">
-                                    Tỷ lệ đúng
-                                    {sortBy === 'correctRate' && (
-                                        sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-                                    )}
-                                </div>
-                            </th>
-                            <th
-                                className="text-left p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                onClick={() => handleSort('difficulty')}
-                            >
-                                <div className="flex items-center gap-1">
-                                    Độ khó
-                                    {sortBy === 'difficulty' && (
-                                        sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-                                    )}
-                                </div>
-                            </th>
-                            <th className="text-left p-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                Đúng/Sai
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {displayAnalysis.map((item, index) => {
-                            const isMissed = topMissedIds.includes(item.questionId);
+                    <div className="divide-y divide-slate-100">
+                        {visibleAnalysis.map((item, rank) => {
+                            const presentation = priorityPresentation[item.priority];
+                            const expanded = expandedQuestionId === item.questionId;
+                            const topWrongAnswer = item.commonWrongAnswers[0];
+
                             return (
-                                <tr
-                                    key={item.questionId}
-                                    className={`hover:bg-gray-50 ${isMissed ? 'bg-red-50' : ''}`}
-                                >
-                                    <td className="p-3">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isMissed
-                                            ? 'bg-red-500 text-white'
-                                            : 'bg-gray-200 text-gray-600'
-                                            }`}>
-                                            {index + 1}
+                                <article key={item.questionId} className="p-4 transition-colors hover:bg-slate-50/70 sm:p-5">
+                                    <div className="flex items-start gap-3 sm:gap-4">
+                                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${rank < showTopMissed ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                                            {rank + 1}
                                         </div>
-                                    </td>
-                                    <td className="p-3">
-                                        <MathSpan
-                                            content={item.questionText}
-                                            className="text-sm text-gray-800 line-clamp-2 max-w-md block"
-                                        />
-                                        {isMissed && (
-                                            <span className="inline-flex items-center gap-1 text-xs text-red-600 mt-1">
-                                                <AlertTriangle className="w-3 h-3" />
-                                                Hay sai
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="p-3 min-w-[150px]">
-                                        {getCorrectRateBar(item.correctRate)}
-                                    </td>
-                                    <td className="p-3">
-                                        {getDifficultyBadge(item.difficulty)}
-                                    </td>
-                                    <td className="p-3">
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <span className="text-green-600 flex items-center gap-1">
-                                                <CheckCircle className="w-4 h-4" />
-                                                {item.correctCount}
-                                            </span>
-                                            <span className="text-gray-400">/</span>
-                                            <span className="text-red-600">
-                                                {item.wrongCount}
-                                            </span>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                    Câu {item.questionNumber}
+                                                </span>
+                                                <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${presentation.badge}`}>
+                                                    {presentation.label}
+                                                </span>
+                                                {item.skippedCount > 0 && (
+                                                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                                                        {item.skippedCount} bỏ trống
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <MathSpan
+                                                content={item.questionText}
+                                                className="mt-2 block text-sm font-medium leading-6 text-slate-800"
+                                            />
+
+                                            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200">
+                                                    <div
+                                                        className={`h-full rounded-full ${presentation.bar}`}
+                                                        style={{ width: `${item.wrongRate}%` }}
+                                                    />
+                                                </div>
+                                                <div className="shrink-0 text-sm">
+                                                    <span className="font-bold text-red-600">{item.wrongCount}/{item.evaluatedCount} sai</span>
+                                                    <span className="ml-2 text-slate-500">({item.wrongRate}%)</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-3 grid gap-2 text-sm lg:grid-cols-2">
+                                                <div className="flex items-start gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800">
+                                                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                                                    <span>
+                                                        <strong>Đáp án đúng:</strong>{' '}
+                                                        {item.correctAnswerText || 'Xem trong nội dung câu hỏi'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-amber-800">
+                                                    <BookOpenCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                                                    <span>
+                                                        <strong>Sai phổ biến:</strong>{' '}
+                                                        {topWrongAnswer
+                                                            ? `${topWrongAnswer.answer} (${topWrongAnswer.count} học sinh)`
+                                                            : 'Chưa xác định được mẫu sai'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {(item.affectedStudents.length > 0 || item.unknownCount > 0) && (
+                                                <div className="mt-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setExpandedQuestionId(expanded ? null : item.questionId)}
+                                                        className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+                                                    >
+                                                        {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                                        {expanded ? 'Ẩn chi tiết' : `Xem ${item.affectedStudents.length} học sinh cần hỗ trợ`}
+                                                    </button>
+                                                    {expanded && (
+                                                        <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                                                            {item.affectedStudents.length > 0 && (
+                                                                <p><strong>Học sinh:</strong> {item.affectedStudents.join(', ')}</p>
+                                                            )}
+                                                            {item.commonWrongAnswers.length > 1 && (
+                                                                <p className="mt-1">
+                                                                    <strong>Các mẫu sai:</strong>{' '}
+                                                                    {item.commonWrongAnswers.map(entry => `${entry.answer} (${entry.count})`).join(' • ')}
+                                                                </p>
+                                                            )}
+                                                            {item.unknownCount > 0 && (
+                                                                <p className="mt-1 text-amber-700">
+                                                                    {item.unknownCount} đáp án cũ chưa xác định được đúng/sai và không được đưa vào mẫu số.
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                    </td>
-                                </tr>
+                                    </div>
+                                </article>
                             );
                         })}
-                    </tbody>
-                </table>
-            </div>
+                    </div>
 
-            {/* Show more/less */}
-            {analysis.length > 10 && (
-                <div className="p-4 border-t text-center">
-                    <button
-                        onClick={() => setShowAll(!showAll)}
-                        className="text-purple-600 hover:text-purple-700 font-medium text-sm"
-                    >
-                        {showAll ? 'Thu gọn' : `Xem tất cả ${analysis.length} câu`}
-                    </button>
-                </div>
+                    {rankedAnalysis.length > showTopMissed && (
+                        <div className="border-t border-slate-100 p-4 text-center">
+                            <button
+                                type="button"
+                                onClick={() => setShowAll(current => !current)}
+                                className="font-semibold text-indigo-600 hover:text-indigo-700"
+                            >
+                                {showAll ? 'Thu gọn' : `Xem toàn bộ ${rankedAnalysis.length} câu có dữ liệu`}
+                            </button>
+                        </div>
+                    )}
+                </>
             )}
-        </div>
+        </section>
     );
 };
 

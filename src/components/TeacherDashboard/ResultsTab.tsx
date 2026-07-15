@@ -18,7 +18,7 @@ import {
 } from '../teacher/ResultsView';
 import { useResults } from '../../hooks';
 import { useQuizStore } from '../../../stores/quizStore';
-import { fetchResultAnswers } from '../../services/googleSheetService';
+import { fetchResultAnswers, fetchResultAnswersBulk } from '../../services/googleSheetService';
 import { RefreshCw, Download, ChevronDown, Search, FileText, Users, BarChart, ClipboardList } from 'lucide-react';
 import ResultRowPhieuModal from '../../features/results/components/ResultRowPhieuModal';
 import { PhieuFromResultsPanel } from '../../features/results/components/PhieuFromResultsPanel';
@@ -28,8 +28,10 @@ import { resultPhieuLinkService } from '../../features/results/services/resultPh
 import {
     calculateResultsStatistics,
     analyzeQuestionDifficulty,
+    selectResultsForQuestionAnalysis,
     filterResultsByDateRange,
-    searchResultsByName
+    searchResultsByName,
+    type AnalysisAttemptMode,
 } from '../../utils/statisticsUtils';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 import { useNavigate } from 'react-router-dom';
@@ -63,6 +65,10 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
     const [activeQuizId, setActiveQuizId] = useState<string>('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [resultOverrides, setResultOverrides] = useState<Record<string, ResultDisplayOverride>>({});
+    const [analysisAttemptMode, setAnalysisAttemptMode] = useState<AnalysisAttemptMode>('latest');
+    const [analysisAnswers, setAnalysisAnswers] = useState<Record<string, Record<string, any>>>({});
+    const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
+    const [analysisError, setAnalysisError] = useState('');
     const [showPhieuPanel, setShowPhieuPanel] = useState(false);
     const [phieuResult, setPhieuResult] = useState<StudentResult | null>(null);
     // Cache {savedPhieu, publishedLink} theo submission_id — tồn tại qua lần đóng/mở modal
@@ -244,16 +250,87 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
     // Get questions for the selected quiz (for question analysis)
     const selectedQuizQuestions = useMemo(() => {
         if (activeQuizId === 'all') {
-            // Get all questions from all quizzes
-            return quizzes.flatMap(q => q.questions);
+            return [];
         }
         const quiz = quizzes.find(q => q.id === activeQuizId);
         return quiz?.questions || [];
     }, [activeQuizId, quizzes]);
 
+    // Cohort analysis follows class/date/quiz filters, but intentionally ignores
+    // the name search so a temporary table search cannot skew whole-class rates.
+    const analysisCohortResults = useMemo(() => {
+        if (activeQuizId === 'all') return [];
+        let cohort = resultsHook.filteredResults.filter(result => result.quizId === activeQuizId);
+        if (dateRange.startDate || dateRange.endDate) {
+            cohort = filterResultsByDateRange(
+                cohort,
+                dateRange.startDate ?? undefined,
+                dateRange.endDate ?? undefined
+            );
+        }
+        return selectResultsForQuestionAnalysis(cohort, analysisAttemptMode);
+    }, [activeQuizId, resultsHook.filteredResults, dateRange, analysisAttemptMode]);
+
+    useEffect(() => {
+        if (activeQuizId === 'all' || analysisCohortResults.length === 0) {
+            setIsLoadingAnalysis(false);
+            setAnalysisError('');
+            return;
+        }
+
+        const missingIds = analysisCohortResults
+            .filter(result => (
+                !Object.prototype.hasOwnProperty.call(analysisAnswers, String(result.id))
+                && Object.keys(result.answers || {}).length === 0
+            ))
+            .map(result => String(result.id));
+        if (missingIds.length === 0) {
+            setIsLoadingAnalysis(false);
+            return;
+        }
+
+        let cancelled = false;
+        setIsLoadingAnalysis(true);
+        setAnalysisError('');
+
+        fetchResultAnswersBulk(missingIds)
+            .then((answersById) => {
+                if (cancelled) return;
+                setAnalysisAnswers(previous => {
+                    const next = { ...previous };
+                    missingIds.forEach(resultId => {
+                        next[resultId] = answersById[resultId] ?? {};
+                    });
+                    return next;
+                });
+            })
+            .catch(() => {
+                if (!cancelled) setAnalysisError('Không thể tải đáp án để phân tích. Vui lòng thử làm mới.');
+            })
+            .finally(() => {
+                if (!cancelled) setIsLoadingAnalysis(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeQuizId, analysisCohortResults, analysisAnswers]);
+
+    const hydratedAnalysisResults = useMemo(() => {
+        const selectedQuestionIds = new Set(selectedQuizQuestions.map(question => question.id));
+        return analysisCohortResults
+            .map(result => ({
+                ...result,
+                answers: Object.prototype.hasOwnProperty.call(analysisAnswers, String(result.id))
+                    ? analysisAnswers[String(result.id)]
+                    : result.answers,
+            }))
+            .filter(result => Object.keys(result.answers || {}).some(questionId => selectedQuestionIds.has(questionId)));
+    }, [analysisCohortResults, analysisAnswers, selectedQuizQuestions]);
+
     // Analyze question difficulty
     const questionAnalysis = useMemo(() => {
-        if (selectedQuizQuestions.length === 0 || filteredResults.length === 0) {
+        if (selectedQuizQuestions.length === 0 || hydratedAnalysisResults.length === 0) {
             return [];
         }
         // Helper to get question text regardless of question type
@@ -280,8 +357,8 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
             options: 'options' in q ? (q as any).options : undefined,
         }));
 
-        return analyzeQuestionDifficulty(filteredResults, questionsWithData);
-    }, [filteredResults, selectedQuizQuestions]);
+        return analyzeQuestionDifficulty(hydratedAnalysisResults, questionsWithData);
+    }, [hydratedAnalysisResults, selectedQuizQuestions]);
 
     // Get unique quizzes from results
     const availableQuizzes = useMemo(() => {
@@ -564,8 +641,26 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
             </Card>
 
             {/* Question Analysis */}
-            {activeQuizId !== 'all' && questionAnalysis.length > 0 && (
-                <QuestionAnalysisTable analysis={questionAnalysis} showTopMissed={5} />
+            {activeQuizId === 'all' ? (
+                <Card>
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <BarChart className="mb-3 h-10 w-10 text-purple-500" />
+                        <h3 className="font-bold text-gray-800">Phân tích câu sai nhiều nhất</h3>
+                        <p className="mt-1 max-w-xl text-sm text-gray-500">
+                            Chọn một bài kiểm tra cụ thể ở bộ lọc phía trên để so sánh đúng cùng một bộ câu hỏi.
+                        </p>
+                    </div>
+                </Card>
+            ) : (
+                <QuestionAnalysisTable
+                    analysis={questionAnalysis}
+                    showTopMissed={5}
+                    cohortSize={hydratedAnalysisResults.length}
+                    attemptMode={analysisAttemptMode}
+                    onAttemptModeChange={setAnalysisAttemptMode}
+                    isLoading={isLoadingAnalysis}
+                    error={analysisError}
+                />
             )}
 
             {/* Empty State */}

@@ -138,6 +138,61 @@ export const fetchResultAnswers = async (resultId: string | number): Promise<Rec
     }
 };
 
+/**
+ * Load answers for a result cohort in one authorized request.
+ * Used by teacher question analysis to avoid one network request per student.
+ */
+export const fetchResultAnswersBulk = async (
+    resultIds: Array<string | number>
+): Promise<Record<string, Record<string, any>>> => {
+    const uniqueIds = Array.from(new Set(resultIds.map(String).filter(Boolean)));
+    if (uniqueIds.length === 0) return {};
+
+    try {
+        const batches: string[][] = [];
+        for (let index = 0; index < uniqueIds.length; index += 200) {
+            batches.push(uniqueIds.slice(index, index + 200));
+        }
+        const responses = await Promise.all(batches.map(batch => (
+            callApi<{ data?: Record<string, string | Record<string, any>> }>(
+                'get_result_answers_bulk',
+                { resultIds: batch }
+            )
+        )));
+        const rawById = Object.assign({}, ...responses.map(response => response?.data ?? {})) as Record<
+            string,
+            string | Record<string, any>
+        >;
+        const parsedById: Record<string, Record<string, any>> = {};
+
+        Object.entries(rawById).forEach(([resultId, rawAnswers]) => {
+            try {
+                const parsed = typeof rawAnswers === 'string' ? JSON.parse(rawAnswers) : rawAnswers;
+                if (Array.isArray(parsed)) {
+                    const converted: Record<string, any> = {};
+                    parsed.forEach((item: any) => {
+                        if (item && typeof item === 'object' && item.questionId) {
+                            converted[item.questionId] = item;
+                        }
+                    });
+                    parsedById[resultId] = converted;
+                } else if (parsed && typeof parsed === 'object') {
+                    parsedById[resultId] = parsed;
+                } else {
+                    parsedById[resultId] = {};
+                }
+            } catch {
+                parsedById[resultId] = {};
+            }
+        });
+
+        return parsedById;
+    } catch (error) {
+        console.error('[fetchResultAnswersBulk] Error:', error);
+        throw error;
+    }
+};
+
 // Helper to escape values for Google Sheets (No longer needed for D1 SQLite DB)
 const escapeSheetValue = (val: any): string => {
     if (val === undefined || val === null) return '';

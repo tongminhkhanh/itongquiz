@@ -146,6 +146,37 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
         return jsonResponse({ answers: row.answers });
     }
 
+    // POST /api/results/answers/bulk - Cohort answers for teacher question analysis
+    if (path === '/api/results/answers/bulk' && method === 'POST') {
+        if (!requireTeacher(user)) return errorResponse('Forbidden: Teacher access required', 403);
+
+        const body = await parseBody(request);
+        const rawIds = Array.isArray(body?.resultIds) ? body.resultIds : [];
+        const resultIds = Array.from(new Set(
+            rawIds
+                .filter((id: unknown): id is string | number => typeof id === 'string' || typeof id === 'number')
+                .map((id: string | number) => String(id).trim())
+                .filter(Boolean)
+        ));
+        if (resultIds.length === 0 || resultIds.length > 200 || resultIds.length !== rawIds.length) {
+            return errorResponse('resultIds must contain 1 to 200 unique result IDs');
+        }
+
+        const placeholders = resultIds.map(() => '?').join(',');
+        const bindings: unknown[] = [...resultIds];
+        let query = `SELECT id, answers FROM results WHERE id IN (${placeholders})`;
+        if (!requireAdmin(user)) {
+            query += ' AND class_name IN (SELECT name FROM classes WHERE teacher_username = ?)';
+            bindings.push(user.username);
+        }
+        const rows = await db.prepare(query).bind(...bindings).all<{ id: string; answers: string }>();
+        const answersByResultId = Object.fromEntries(
+            (rows.results || []).map((row) => [String(row.id), row.answers || '{}'])
+        );
+
+        return jsonResponse({ data: answersByResultId });
+    }
+
     // GET /api/results/:id/skill-breakdown
     if (path.match(/^\/api\/results\/[^/]+\/skill-breakdown$/) && method === 'GET') {
         const resultId = path.split('/')[3];

@@ -106,13 +106,24 @@ export const calculateResultsStatistics = (results: StudentResult[]): ResultsSta
 
 export interface QuestionAnalysis {
     questionId: string;
+    questionNumber: number;
     questionText: string;
     correctCount: number;
     wrongCount: number;
+    skippedCount: number;
+    unknownCount: number;
+    evaluatedCount: number;
     correctRate: number; // Percentage
+    wrongRate: number; // Percentage
     avgTimeSpent?: number; // Seconds
     difficulty: 'easy' | 'medium' | 'hard';
+    priority: 'low' | 'medium' | 'high';
+    correctAnswerText?: string;
+    commonWrongAnswers: Array<{ answer: string; count: number }>;
+    affectedStudents: string[];
 }
+
+export type AnalysisAttemptMode = 'latest' | 'all';
 
 // Question with additional fields for fallback calculation
 export interface QuestionWithCorrect {
@@ -126,6 +137,86 @@ export interface QuestionWithCorrect {
     pairs?: any[];
     options?: any[];
 }
+
+const isSkippedAnswer = (value: any): boolean => {
+    if (value === undefined || value === null || value === '') return true;
+    if (Array.isArray(value)) return value.length === 0;
+    if (typeof value === 'object') {
+        const meaningfulKeys = Object.keys(value).filter(key => key !== '__shuffledIds' && key !== 'selectedLeft');
+        return meaningfulKeys.length === 0;
+    }
+    return false;
+};
+
+const formatAnswerValue = (value: any): string => {
+    if (isSkippedAnswer(value)) return 'Bỏ trống';
+    if (Array.isArray(value)) return value.map(formatAnswerValue).join(', ');
+    if (typeof value === 'object') {
+        return Object.entries(value)
+            .filter(([key]) => key !== '__shuffledIds' && key !== 'selectedLeft')
+            .sort(([left], [right]) => left.localeCompare(right))
+            .map(([key, item]) => `${key}: ${formatAnswerValue(item)}`)
+            .join('; ');
+    }
+    if (typeof value === 'boolean') return value ? 'Đúng' : 'Sai';
+    return String(value).trim();
+};
+
+const formatAnswerForQuestion = (value: any, question: QuestionWithCorrect): string => {
+    const formatted = formatAnswerValue(value);
+    if (
+        (question.type === 'MCQ' || question.type === 'IMAGE_QUESTION')
+        && /^[A-Z]$/i.test(formatted)
+        && Array.isArray(question.options)
+    ) {
+        const optionIndex = formatted.toUpperCase().charCodeAt(0) - 65;
+        const option = question.options[optionIndex];
+        const optionText = typeof option === 'string'
+            ? option
+            : option?.text ?? option?.content ?? option?.label;
+        if (optionText) return `${formatted.toUpperCase()}. ${String(optionText)}`;
+    }
+    return formatted;
+};
+
+const getCorrectAnswerText = (question: QuestionWithCorrect): string | undefined => {
+    const value = question.correctAnswers ?? question.correctAnswer;
+    if (!isSkippedAnswer(value)) return formatAnswerForQuestion(value, question);
+    if (Array.isArray(question.pairs) && question.pairs.length > 0) {
+        return question.pairs.map((pair: any) => `${pair.left} → ${pair.right}`).join('; ');
+    }
+    if (Array.isArray(question.blanks) && question.blanks.length > 0) {
+        const values = question.blanks.map((blank: any) => blank?.correctAnswer ?? blank).filter(Boolean);
+        return values.length > 0 ? values.map(formatAnswerValue).join(', ') : undefined;
+    }
+    return undefined;
+};
+
+/**
+ * A class analysis should normally count each student once. The latest mode
+ * prevents repeat attempts by one student from outweighing the whole class.
+ */
+export const selectResultsForQuestionAnalysis = (
+    results: StudentResult[],
+    attemptMode: AnalysisAttemptMode = 'latest'
+): StudentResult[] => {
+    if (attemptMode === 'all') return [...results];
+
+    const latestByStudent = new Map<string, StudentResult>();
+    [...results]
+        .sort((left, right) => {
+            const timeDifference = new Date(right.submittedAt).getTime() - new Date(left.submittedAt).getTime();
+            return timeDifference || String(right.id).localeCompare(String(left.id));
+        })
+        .forEach((result) => {
+            const key = [result.quizId, result.studentClass, result.studentName]
+                .map(value => String(value || '').trim().toLocaleLowerCase('vi-VN'))
+                .join('::');
+            if (!latestByStudent.has(key)) latestByStudent.set(key, result);
+        });
+
+    return Array.from(latestByStudent.values());
+};
 
 /**
  * Fallback function to calculate isCorrect from answer and question data
@@ -235,63 +326,112 @@ export const analyzeQuestionDifficulty = (
     results: StudentResult[],
     questions: QuestionWithCorrect[]
 ): QuestionAnalysis[] => {
-    const questionStats: Record<string, { correct: number; wrong: number; totalTime: number }> = {};
+    interface QuestionStats {
+        correct: number;
+        wrong: number;
+        skipped: number;
+        unknown: number;
+        totalTime: number;
+        wrongAnswers: Map<string, number>;
+        affectedStudents: Set<string>;
+    }
+
+    const questionStats: Record<string, QuestionStats> = {};
     const questionMap = new Map(questions.map(q => [q.id, q]));
 
     // Initialize stats for each question
     questions.forEach(q => {
-        questionStats[q.id] = { correct: 0, wrong: 0, totalTime: 0 };
+        questionStats[q.id] = {
+            correct: 0,
+            wrong: 0,
+            skipped: 0,
+            unknown: 0,
+            totalTime: 0,
+            wrongAnswers: new Map(),
+            affectedStudents: new Set(),
+        };
     });
 
-    // Aggregate results
+    // Aggregate completed result payloads. A result with no matching question
+    // IDs is not loaded (or belongs to another quiz), so it must not alter rates.
     results.forEach(result => {
-        if (result.answers) {
-            Object.entries(result.answers).forEach(([questionId, answer]) => {
-                if (questionStats[questionId]) {
-                    const question = questionMap.get(questionId);
-                    let isCorrect: boolean | undefined;
+        const answers = result.answers && typeof result.answers === 'object' ? result.answers : {};
+        const hasMatchingAnswer = Object.keys(answers).some(questionId => questionMap.has(questionId));
+        if (!hasMatchingAnswer) return;
 
-                    // Try to get isCorrect from answer object first
-                    if (typeof answer === 'object' && typeof answer?.isCorrect === 'boolean') {
-                        isCorrect = answer.isCorrect;
-                    } else if (question) {
-                        // Fallback: calculate from correctAnswer
-                        isCorrect = calculateIsCorrectFallback(answer, question);
-                    }
+        questions.forEach(question => {
+            const stats = questionStats[question.id];
+            const hasAnswer = Object.prototype.hasOwnProperty.call(answers, question.id);
+            const answer = hasAnswer ? answers[question.id] : undefined;
+            const selectedAnswer = answer && typeof answer === 'object' && 'selectedAnswer' in answer
+                ? answer.selectedAnswer
+                : answer;
+            const skipped = !hasAnswer || isSkippedAnswer(selectedAnswer);
+            const persistedCorrectness = answer && typeof answer === 'object' && typeof answer.isCorrect === 'boolean'
+                ? answer.isCorrect
+                : undefined;
+            const isCorrect = persistedCorrectness ?? calculateIsCorrectFallback(answer, question);
 
-                    if (isCorrect === true) {
-                        questionStats[questionId].correct++;
-                    } else if (isCorrect === false) {
-                        questionStats[questionId].wrong++;
-                    }
-                    // If undefined, don't count (unknown)
+            if (skipped) {
+                stats.skipped++;
+                stats.wrong++;
+                stats.affectedStudents.add(result.studentName);
+                stats.wrongAnswers.set('Bỏ trống', (stats.wrongAnswers.get('Bỏ trống') || 0) + 1);
+            } else if (isCorrect === true) {
+                stats.correct++;
+            } else if (isCorrect === false) {
+                stats.wrong++;
+                stats.affectedStudents.add(result.studentName);
+                const label = formatAnswerForQuestion(selectedAnswer, question);
+                stats.wrongAnswers.set(label, (stats.wrongAnswers.get(label) || 0) + 1);
+            } else {
+                stats.unknown++;
+            }
 
-                    if (typeof answer === 'object' && answer?.timeSpent) {
-                        questionStats[questionId].totalTime += answer.timeSpent;
-                    }
-                }
-            });
-        }
+            const timeSpent = answer && typeof answer === 'object' ? Number(answer.timeSpent) : 0;
+            if (Number.isFinite(timeSpent) && timeSpent > 0) stats.totalTime += timeSpent;
+        });
     });
 
     // Calculate analysis
-    return questions.map(q => {
-        const stats = questionStats[q.id] || { correct: 0, wrong: 0, totalTime: 0 };
-        const total = stats.correct + stats.wrong;
-        const correctRate = total > 0 ? (stats.correct / total) * 100 : 0;
+    return questions.map((q, questionIndex) => {
+        const stats = questionStats[q.id];
+        const evaluatedCount = stats.correct + stats.wrong;
+        const correctRate = evaluatedCount > 0 ? (stats.correct / evaluatedCount) * 100 : 0;
+        const wrongRate = evaluatedCount > 0 ? (stats.wrong / evaluatedCount) * 100 : 0;
 
         let difficulty: 'easy' | 'medium' | 'hard' = 'medium';
         if (correctRate >= 80) difficulty = 'easy';
         else if (correctRate < 50) difficulty = 'hard';
 
+        let priority: 'low' | 'medium' | 'high' = 'low';
+        if (evaluatedCount > 0 && wrongRate >= 50) priority = 'high';
+        else if (evaluatedCount > 0 && wrongRate >= 25) priority = 'medium';
+
+        const commonWrongAnswers = Array.from(stats.wrongAnswers.entries())
+            .map(([answer, count]) => ({ answer, count }))
+            .sort((left, right) => right.count - left.count || left.answer.localeCompare(right.answer, 'vi-VN'))
+            .slice(0, 3);
+
         return {
             questionId: q.id,
+            questionNumber: questionIndex + 1,
             questionText: q.question,
             correctCount: stats.correct,
             wrongCount: stats.wrong,
+            skippedCount: stats.skipped,
+            unknownCount: stats.unknown,
+            evaluatedCount,
             correctRate: Math.round(correctRate),
-            avgTimeSpent: total > 0 ? Math.round(stats.totalTime / total) : undefined,
+            wrongRate: Math.round(wrongRate),
+            avgTimeSpent: evaluatedCount > 0 && stats.totalTime > 0
+                ? Math.round(stats.totalTime / evaluatedCount)
+                : undefined,
             difficulty,
+            priority,
+            correctAnswerText: getCorrectAnswerText(q),
+            commonWrongAnswers,
+            affectedStudents: Array.from(stats.affectedStudents).sort((left, right) => left.localeCompare(right, 'vi-VN')),
         };
     });
 };

@@ -11,6 +11,11 @@ export const resultRoutes: RouteRegistry = {
         auth: 'session',
         path: ({ resultId }) => `/api/results/${resultId}/answers`,
     },
+    get_result_answers_bulk: {
+        method: 'POST',
+        auth: 'session',
+        path: () => '/api/results/answers/bulk',
+    },
     get_result_skill_breakdown: {
         method: 'GET',
         auth: 'session',
