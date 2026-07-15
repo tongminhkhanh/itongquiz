@@ -14,7 +14,7 @@ class ProcessorStatement {
   bind(...values: unknown[]) { this.bindings = values; return this; }
   first<T>() {
     if (this.sql.includes('certificate_templates')) {
-      return Promise.resolve({ bg_image_r2_key: 'templates/bg.png', fields_config: '[]' } as T);
+      return Promise.resolve({ bg_image_r2_key: 'templates/bg.png', fields_config: '[]', canvas_width: 1270, canvas_height: 698 } as T);
     }
     return Promise.resolve(null);
   }
@@ -58,6 +58,7 @@ describe('certificate batch processor', () => {
     });
     expect(put).toHaveBeenCalledWith('certs/cert-ok.png', expect.any(Uint8Array), expect.any(Object));
     expect(renderInputs[0].env).toBe(env);
+    expect(renderInputs[0]).toMatchObject({ width: 1270, height: 698 });
     const finalBatchUpdate = db.runs.find((statement) => statement.sql.includes('SET status = ?, sent_at'));
     expect(finalBatchUpdate?.bindings[0]).toBe('partial');
     const notifications = db.runs.filter((statement) => statement.sql.includes('INSERT INTO notifications'));

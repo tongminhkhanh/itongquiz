@@ -21,6 +21,9 @@ export interface AdminTemplate {
     thumbnail_r2_key: string | null;
     fields_config: string;
     is_active: number;
+    is_default: number;
+    canvas_width: number;
+    canvas_height: number;
     created_at: string;
 }
 
@@ -74,7 +77,7 @@ export function useAdminTemplates() {
 
     const updateTemplate = useCallback(async (
         id: string,
-        patch: { name?: string; fields_config?: string; is_active?: number }
+        patch: { name?: string; fields_config?: string; is_active?: number; is_default?: number; canvas_width?: number; canvas_height?: number }
     ): Promise<void> => {
         const res = await fetch(`${base()}/api/admin/certificate-templates/${id}`, {
             method: 'PATCH',

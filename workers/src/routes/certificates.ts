@@ -436,10 +436,10 @@ export async function handleGetTemplates(request: Request, env: Env): Promise<Re
 
   const schoolId = authResult.user.school_id ?? authResult.user.username;
   const { results } = await env.DB.prepare(`
-    SELECT id, name, description, thumbnail_r2_key, is_active
+    SELECT id, name, description, thumbnail_r2_key, is_active, is_default
     FROM certificate_templates
     WHERE is_active = 1 AND (school_id = ? OR school_id IS NULL OR created_by = 'admin')
-    ORDER BY created_at DESC
+    ORDER BY is_default DESC, created_at DESC
   `).bind(schoolId).all();
 
   return certificateSuccess(results);

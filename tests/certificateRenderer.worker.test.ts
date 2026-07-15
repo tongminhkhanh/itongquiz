@@ -21,6 +21,23 @@ describe('certificate SVG renderer', () => {
     expect(svg).not.toContain('& <Bạn>');
   });
 
+  it('renders static text, custom fonts, prefixes, and Vietnamese long dates', () => {
+    const svg = buildCertificateSvg('data:image/png;base64,AA==', [
+      { key: 'static_text', text: 'CHỨNG NHẬN', x: 600, y: 100, fontSize: 48, fontFamily: 'Spectral', fontWeight: 'bold' },
+      { key: 'student_name', x: 600, y: 200, fontSize: 52, fontFamily: 'Dancing Script' },
+      { key: 'score', x: 600, y: 300, fontSize: 28, prefix: 'Điểm: ' },
+      { key: 'date', x: 600, y: 400, fontSize: 22, prefix: 'Mường La, ngày ', format: 'vi-long-date', fontStyle: 'italic' },
+    ], {
+      student_name: 'Tòng Minh Khánh', score: '9/10', quiz_title: '', date: '10/10/2026', teacher_name: '', custom_note: '',
+    }, 1270, 698);
+
+    expect(svg).toContain('CHỨNG NHẬN');
+    expect(svg).toContain('font-family="Dancing Script"');
+    expect(svg).toContain('Điểm: 9/10');
+    expect(svg).toContain('Mường La, ngày 10 tháng 10 năm 2026');
+    expect(svg).toContain('font-style="italic"');
+  });
+
   it('fails closed when the R2 font is missing or invalid', async () => {
     await expect(loadFont({}, 'Missing-Binding')).rejects.toThrow('CERT_IMAGES binding is required');
     await expect(loadFont({ CERT_IMAGES: { get: async () => null } }, 'Missing-Object'))

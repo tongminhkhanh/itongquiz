@@ -3,7 +3,7 @@ import { Plus, Trash2, ChevronDown } from 'lucide-react';
 import type { FieldConfig } from './certificates.types';
 
 const FIELD_KEYS: FieldConfig['key'][] = [
-    'student_name', 'score', 'quiz_title', 'date', 'teacher_name', 'custom_note',
+    'student_name', 'score', 'quiz_title', 'date', 'teacher_name', 'custom_note', 'static_text',
 ];
 const FIELD_LABELS: Record<FieldConfig['key'], string> = {
     student_name: 'Tên học sinh',
@@ -12,6 +12,7 @@ const FIELD_LABELS: Record<FieldConfig['key'], string> = {
     date: 'Ngày cấp',
     teacher_name: 'Giáo viên',
     custom_note: 'Ghi chú',
+    static_text: 'Văn bản cố định',
 };
 
 interface Props {

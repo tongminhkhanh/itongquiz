@@ -15,14 +15,20 @@ export interface Certificate {
 }
 
 export interface FieldConfig {
-  key: 'student_name' | 'score' | 'quiz_title' | 'date' | 'teacher_name' | 'custom_note';
+  key: 'student_name' | 'score' | 'quiz_title' | 'date' | 'teacher_name' | 'custom_note' | 'static_text';
+  text?: string;
   x: number;
   y: number;
   fontSize: number;
   fontWeight?: 'normal' | 'bold';
+  fontFamily?: 'Roboto' | 'Spectral' | 'Dancing Script';
+  fontStyle?: 'normal' | 'italic';
   color?: string;
   align?: 'left' | 'center' | 'right';
   maxWidth?: number;
+  prefix?: string;
+  suffix?: string;
+  format?: 'vi-long-date';
 }
 
 export interface CertificateTemplate {

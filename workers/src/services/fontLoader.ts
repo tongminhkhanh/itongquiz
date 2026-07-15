@@ -57,3 +57,15 @@ export async function preloadFonts(env: any, fontNames: string[]): Promise<Recor
   );
   return fonts;
 }
+
+export async function loadCertificateFonts(env: any): Promise<ArrayBuffer[]> {
+  const fontNames = [
+    'Roboto-Regular',
+    'Roboto-Bold',
+    'Spectral-Regular',
+    'Spectral-Bold',
+    'Spectral-BoldItalic',
+    'DancingScript-Bold',
+  ];
+  return Promise.all(fontNames.map((fontName) => loadFont(env, fontName)));
+}

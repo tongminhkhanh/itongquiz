@@ -43,8 +43,8 @@ export async function processBatch(
 
   try {
     const template = await env.DB.prepare(
-      'SELECT bg_image_r2_key, fields_config FROM certificate_templates WHERE id = ? AND is_active = 1',
-    ).bind(templateId).first<{ bg_image_r2_key: string; fields_config: string }>();
+      'SELECT bg_image_r2_key, fields_config, canvas_width, canvas_height FROM certificate_templates WHERE id = ? AND is_active = 1',
+    ).bind(templateId).first<{ bg_image_r2_key: string; fields_config: string; canvas_width: number; canvas_height: number }>();
     if (!template) throw new Error(`Active template ${templateId} not found`);
 
     const bgObject = await env.CERT_IMAGES.get(template.bg_image_r2_key);
@@ -64,6 +64,8 @@ export async function processBatch(
           env,
           bgImageArrayBuffer: bgBuffer,
           fieldsConfig,
+          width: template.canvas_width,
+          height: template.canvas_height,
           data: {
             student_name: student.student_name,
             score: student.student_score !== null ? `${student.student_score}/10` : '',

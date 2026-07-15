@@ -3,7 +3,7 @@ import { Resvg, initWasm } from '@resvg/resvg-wasm';
 import resvgWasmModule from '@resvg/resvg-wasm/index_bg.wasm';
 import type { Env } from '../types';
 import type { FieldConfig } from '../types/certificates';
-import { loadRobotoFonts } from './fontLoader';
+import { loadCertificateFonts } from './fontLoader';
 import { buildCertificateSvg } from './certificateSvg';
 
 export interface RenderParams {
@@ -60,8 +60,8 @@ export async function renderCertificate(params: RenderParams): Promise<Uint8Arra
   const bgHref = `data:${detectImageMime(bgImageArrayBuffer)};base64,${arrayBufferToBase64(bgImageArrayBuffer)}`;
   const svg = buildCertificateSvg(bgHref, fieldsConfig, data, width, height);
 
-  const fonts = await loadRobotoFonts(env);
-  const fontBuffers = [new Uint8Array(fonts.regular), new Uint8Array(fonts.bold)];
+  const fonts = await loadCertificateFonts(env);
+  const fontBuffers = fonts.map((font) => new Uint8Array(font));
 
   const resvg = new Resvg(svg, {
     background: 'rgba(255,255,255,1)',

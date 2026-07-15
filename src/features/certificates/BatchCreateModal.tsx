@@ -72,7 +72,8 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
         fetchTemplateOptions()
             .then((opts) => {
                 setTemplates(opts);
-                if (opts.length > 0) setTemplateId(opts[0].id);
+                const defaultTemplate = opts.find((template) => template.is_default) ?? opts[0];
+                if (defaultTemplate) setTemplateId(defaultTemplate.id);
             })
             .catch((error: unknown) => {
                 showError(error instanceof Error ? error.message : 'Không thể tải mẫu chứng nhận');

@@ -34,6 +34,7 @@ export interface TemplateOption {
     id: string;
     name: string;
     is_active: number;
+    is_default: number;
 }
 
 const base = () => (WORKERS_API_URL || '').replace(/\/$/, '');
