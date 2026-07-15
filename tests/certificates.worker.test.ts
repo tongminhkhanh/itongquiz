@@ -160,13 +160,18 @@ describe('certificate worker authorization and integrity', () => {
       : [];
     const env = createEnv(db);
 
-    const response = await handleCreateBatch(requestBody(), env);
+    const response = await handleCreateBatch(requestBody({
+      achievement_prefix: 'Đã tiến bộ vượt bậc',
+      date_line: 'Ít Ong, ngày 20 tháng 7 năm 2026',
+    }), env);
     const payload = await response.json() as { data: { batch_id: string; status: string } };
 
     expect(response.status).toBe(201);
     expect(payload.data.status).toBe('pending');
     expect(db.batches).toHaveLength(1);
     expect(db.batches[0]).toHaveLength(2);
+    expect(db.batches[0][0].bindings).toContain('Đã tiến bộ vượt bậc');
+    expect(db.batches[0][0].bindings).toContain('Ít Ong, ngày 20 tháng 7 năm 2026');
     expect(db.batches[0][1].bindings).toContain('Nguyễn Văn A');
     expect(env.CERTIFICATE_QUEUE.send).toHaveBeenCalledWith({ batchId: payload.data.batch_id });
   });

@@ -33,6 +33,8 @@ export interface CreateCertificateBatchRequest {
   template_id: string;
   title: string;
   message?: string;
+  achievement_prefix?: string;
+  date_line?: string;
   class_id: string;
   quiz_id?: string;
   student_ids: string[];

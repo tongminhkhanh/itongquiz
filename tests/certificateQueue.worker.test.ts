@@ -45,6 +45,8 @@ class QueueDB {
     template_id: 'template-1',
     title: 'Hoàn thành tốt',
     message: null,
+    achievement_prefix: 'Đã tiến bộ vượt bậc',
+    date_line: 'Ít Ong, ngày 20 tháng 7 năm 2026',
     status: 'pending',
     processing_started_at: null,
   };
@@ -110,6 +112,8 @@ describe('certificate queue delivery semantics', () => {
     await dispatch(db, message);
 
     expect(processBatchMock).toHaveBeenCalledOnce();
+    expect(processBatchMock.mock.calls[0][7]).toBe('Đã tiến bộ vượt bậc');
+    expect(processBatchMock.mock.calls[0][8]).toBe('Ít Ong, ngày 20 tháng 7 năm 2026');
     expect(message.ack).toHaveBeenCalledOnce();
     expect(message.retry).not.toHaveBeenCalled();
   });

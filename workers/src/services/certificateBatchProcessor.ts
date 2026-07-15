@@ -38,6 +38,8 @@ export async function processBatch(
   teacherName: string,
   batchTitle: string,
   message: string,
+  achievementPrefix: string | null = null,
+  dateLine: string | null = null,
 ): Promise<void> {
   const successfulCertificateIds = new Set<string>();
 
@@ -57,20 +59,32 @@ export async function processBatch(
     } catch {
       throw new Error(`Invalid fields_config for template ${templateId}`);
     }
+    const renderFieldsConfig = fieldsConfig.map((field) => {
+      if (field.key === 'quiz_title' && achievementPrefix !== null) {
+        return {
+          ...field,
+          prefix: achievementPrefix ? `${achievementPrefix} ` : '',
+        };
+      }
+      if (field.key === 'date' && dateLine !== null) {
+        return { ...field, prefix: '', format: undefined };
+      }
+      return field;
+    });
 
     await runWithConcurrency(students, CERTIFICATE_RENDER_CONCURRENCY, async (student) => {
       try {
         const pngBuffer = await renderCertificate({
           env,
           bgImageArrayBuffer: bgBuffer,
-          fieldsConfig,
+          fieldsConfig: renderFieldsConfig,
           width: template.canvas_width,
           height: template.canvas_height,
           data: {
             student_name: student.student_name,
             score: student.student_score !== null ? `${student.student_score}/10` : '',
             quiz_title: student.quiz_title || '',
-            date: new Date().toLocaleDateString('vi-VN'),
+            date: dateLine !== null ? dateLine : new Date().toLocaleDateString('vi-VN'),
             teacher_name: teacherName,
             custom_note: message,
           },

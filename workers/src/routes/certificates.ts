@@ -47,6 +47,8 @@ export async function handleCreateBatch(request: Request, env: Env): Promise<Res
   const templateId = typeof body.template_id === 'string' ? body.template_id.trim() : '';
   const quizId = typeof body.quiz_id === 'string' && body.quiz_id.trim() ? body.quiz_id.trim() : null;
   const message = typeof body.message === 'string' && body.message.trim() ? body.message.trim() : null;
+  const achievementPrefix = typeof body.achievement_prefix === 'string' ? body.achievement_prefix.trim() : null;
+  const dateLine = typeof body.date_line === 'string' ? body.date_line.trim() : null;
   const hasValidStudentIds = Array.isArray(body.student_ids)
     && body.student_ids.every((studentId) => typeof studentId === 'string');
   const studentIds = hasValidStudentIds
@@ -61,7 +63,13 @@ export async function handleCreateBatch(request: Request, env: Env): Promise<Res
   if (studentIds.length > 100) {
     return certificateError('CERTIFICATE_BATCH_TOO_LARGE', 'A batch can contain at most 100 students');
   }
-  if (requestId.length > 128 || title.length > 200 || (message?.length ?? 0) > 500) {
+  if (
+    requestId.length > 128
+    || title.length > 200
+    || (message?.length ?? 0) > 500
+    || (achievementPrefix?.length ?? 0) > 160
+    || (dateLine?.length ?? 0) > 200
+  ) {
     return certificateError('CERTIFICATE_VALIDATION_ERROR', 'One or more fields exceed the allowed length');
   }
 
@@ -168,8 +176,8 @@ export async function handleCreateBatch(request: Request, env: Env): Promise<Res
   const statements: D1PreparedStatement[] = [env.DB.prepare(`
     INSERT INTO certificate_batches (
       id, teacher_id, request_id, class_id, quiz_id, template_id, title, message,
-      status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+      achievement_prefix, date_line, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
   `).bind(
     batchId,
     teacherId,
@@ -179,6 +187,8 @@ export async function handleCreateBatch(request: Request, env: Env): Promise<Res
     templateId,
     title,
     message,
+    achievementPrefix,
+    dateLine,
     now,
     now,
   )];

@@ -14,7 +14,15 @@ class ProcessorStatement {
   bind(...values: unknown[]) { this.bindings = values; return this; }
   first<T>() {
     if (this.sql.includes('certificate_templates')) {
-      return Promise.resolve({ bg_image_r2_key: 'templates/bg.png', fields_config: '[]', canvas_width: 1270, canvas_height: 698 } as T);
+      return Promise.resolve({
+        bg_image_r2_key: 'templates/bg.png',
+        fields_config: JSON.stringify([
+          { key: 'quiz_title', x: 100, y: 100, prefix: 'Đã hoàn thành xuất sắc ' },
+          { key: 'date', x: 100, y: 200, prefix: 'Mường La, ngày ', format: 'vi-long-date' },
+        ]),
+        canvas_width: 1270,
+        canvas_height: 698,
+      } as T);
     }
     return Promise.resolve(null);
   }
@@ -51,11 +59,17 @@ describe('certificate batch processor', () => {
     await processBatch(env, 'batch-1', 'template-1', [
       { certificate_id: 'cert-ok', student_id: 'student-1', student_name: 'Nguyễn Việt Anh', student_score: 0, quiz_title: 'Tiếng Việt' },
       { certificate_id: 'cert-fail', student_id: 'student-2', student_name: 'Học sinh lỗi', student_score: 9, quiz_title: 'Bài rất dài '.repeat(30) },
-    ], 'Cô Nguyễn', 'Hoàn thành xuất sắc', 'Tiếp tục cố gắng');
+    ], 'Cô Nguyễn', 'Hoàn thành xuất sắc', 'Tiếp tục cố gắng',
+    'Đã tiến bộ vượt bậc', 'Ít Ong, ngày 20 tháng 7 năm 2026');
 
     expect(renderInputs[0].data).toMatchObject({
       student_name: 'Nguyễn Việt Anh', score: '0/10', teacher_name: 'Cô Nguyễn',
+      date: 'Ít Ong, ngày 20 tháng 7 năm 2026',
     });
+    expect(renderInputs[0].fieldsConfig).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'quiz_title', prefix: 'Đã tiến bộ vượt bậc ' }),
+      expect.objectContaining({ key: 'date', prefix: '', format: undefined }),
+    ]));
     expect(put).toHaveBeenCalledWith('certs/cert-ok.png', expect.any(Uint8Array), expect.any(Object));
     expect(renderInputs[0].env).toBe(env);
     expect(renderInputs[0]).toMatchObject({ width: 1270, height: 698 });

@@ -42,12 +42,19 @@ function authH(): HeadersInit {
 
 const apiBase = () => (WORKERS_API_URL || '').replace(/\/$/, '');
 
+function defaultCertificateDateLine(): string {
+    const now = new Date();
+    return `Mường La, ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`;
+}
+
 const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) => {
     const requestIdRef = useRef(crypto.randomUUID());
     const [templates, setTemplates] = useState<TemplateOption[]>([]);
     const [templateId, setTemplateId] = useState('');
     const [title, setTitle] = useState('');
     const [customNote, setCustomNote] = useState('');
+    const [achievementPrefix, setAchievementPrefix] = useState('Đã hoàn thành xuất sắc');
+    const [dateLine, setDateLine] = useState(defaultCertificateDateLine);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Class + students
@@ -190,6 +197,8 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
                 template_id: templateId,
                 title: title.trim(),
                 message: customNote.trim() || undefined,
+                achievement_prefix: achievementPrefix.trim(),
+                date_line: dateLine.trim(),
                 class_id: classId,
                 quiz_id: quizId || undefined,
                 student_ids: selectedStudents.map((student) => student.student_id),
@@ -201,7 +210,7 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
         } finally {
             setIsSubmitting(false);
         }
-    }, [templateId, title, customNote, classId, quizId, studentRows, selectedIds, createBatch, onCreated]);
+    }, [templateId, title, customNote, achievementPrefix, dateLine, classId, quizId, studentRows, selectedIds, createBatch, onCreated]);
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
@@ -258,6 +267,37 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
                             placeholder="Vd: Chúc mừng em đã hoàn thành xuất sắc!"
                             className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
+                    </div>
+
+                    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 space-y-3">
+                        <p className="text-sm font-semibold text-amber-900">Nội dung in trên chứng nhận</p>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                Mở đầu thành tích
+                            </label>
+                            <input
+                                type="text"
+                                value={achievementPrefix}
+                                maxLength={160}
+                                onChange={(e) => setAchievementPrefix(e.target.value)}
+                                placeholder="Đã hoàn thành xuất sắc"
+                                className="w-full border border-amber-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            />
+                            <p className="mt-1 text-xs text-slate-500">Tên bài thi sẽ được tự động nối phía sau.</p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                Dòng ngày cấp
+                            </label>
+                            <input
+                                type="text"
+                                value={dateLine}
+                                maxLength={200}
+                                onChange={(e) => setDateLine(e.target.value)}
+                                placeholder="Mường La, ngày 15 tháng 7 năm 2026"
+                                className="w-full border border-amber-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            />
+                        </div>
                     </div>
 
                     {/* Lớp + Bài thi */}
