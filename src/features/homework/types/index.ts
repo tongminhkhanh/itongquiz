@@ -18,6 +18,21 @@ export interface HomeworkAssignment {
   created_at: string;
   total_students?: number;
   submitted_count?: number;
+  class?: { id: string; name: string };
+  status?: 'DRAFT' | 'OPEN' | 'CLOSED' | 'ARCHIVED';
+  effectiveStatus?: 'DRAFT' | 'OPEN' | 'CLOSED' | 'EXPIRED' | 'ARCHIVED';
+  max_attempts?: number;
+  maxAttempts?: number;
+  gradedCount?: number;
+  pendingCount?: number;
+  totalStudents?: number;
+  submittedCount?: number;
+  published_at?: string | null;
+  updated_at?: string;
+  archived_at?: string | null;
+  source_ocr_text?: string;
+  rubric_json?: string;
+  rubric?: GradingCriterion[];
 }
 
 export interface HomeworkSubmission {
@@ -25,7 +40,7 @@ export interface HomeworkSubmission {
   assignment_id: string;
   student_id: string;
   student_name: string;
-  status: 'SUBMITTED' | 'GRADED';
+  status: 'SUBMITTED' | 'AI_REVIEW' | 'GRADED';
   file_urls: string[]; // List of student image URLs
   student_note: string;
   teacher_feedback: string;
@@ -33,6 +48,48 @@ export interface HomeworkSubmission {
   score: number;
   submitted_at: string;
   analyticsData?: AnalyticsNode[];
+  attempt_no?: number;
+  attemptNo?: number;
+  idempotency_key?: string;
+  ai_score?: number | null;
+  ai_confidence?: number | null;
+  ai_feedback?: string;
+  gradingBreakdown?: GradingCriterion[];
+  graded_by?: string | null;
+  graded_at?: string | null;
+  published_at?: string | null;
+}
+
+export interface GradingCriterion {
+  questionId: string;
+  label: string;
+  score: number;
+  maxScore: number;
+  comment?: string;
+}
+
+export interface HomeworkAssignmentAnalytics {
+  assignmentId: string;
+  totalStudents: number;
+  submitted: number;
+  onTime: number;
+  late: number;
+  notSubmitted: number;
+  graded: number;
+  pending: number;
+  averageScore: number;
+  medianScore: number;
+  scoreDistribution: Record<string, number>;
+  criteria: Array<{
+    questionId: string;
+    label: string;
+    notMet: number;
+    partial: number;
+    mastered: number;
+    total: number;
+    studentsNeedingHelp: string[];
+  }>;
+  mostMissed: HomeworkAssignmentAnalytics['criteria'];
 }
 
 export interface AnalyticsNode {

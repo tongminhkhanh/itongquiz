@@ -48,7 +48,10 @@ export function buildAuthHeaders(
 ): Record<string, string> {
     const headers: Record<string, string> = {};
 
-    if (policy === 'session') {
+    if (policy === 'studentSession') {
+        const token = localStorage.getItem('itongquiz_jwt_token') || '';
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+    } else if (policy === 'session') {
         const token = getStoredJWTToken(path);
         if (token) headers['Authorization'] = `Bearer ${token}`;
     }

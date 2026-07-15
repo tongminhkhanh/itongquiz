@@ -15,14 +15,14 @@ export const StudentHomeworkSection: React.FC<StudentHomeworkSectionProps> = ({
   classId,
   onSelectAssignment
 }) => {
-  const { assignments, submissions, isLoading, fetchClassAssignments, fetchStudentSubmissions } = useHomeworkStore();
+  const { assignments, submissions, isLoading, error, fetchClassAssignments, fetchStudentSubmissions } = useHomeworkStore();
+
+  const loadData = async () => {
+    await fetchClassAssignments(classId);
+    await fetchStudentSubmissions(studentId);
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      // Clear current assignments first if needed or just fetch
-      await fetchClassAssignments(classId);
-      await fetchStudentSubmissions(studentId);
-    };
     if (classId && studentId) {
       loadData();
     }
@@ -59,6 +59,8 @@ export const StudentHomeworkSection: React.FC<StudentHomeworkSectionProps> = ({
           <span className="text-[11px] font-black text-amber-700 uppercase tracking-wider">Công nghệ AI mới</span>
         </div> */}
       </div>
+
+      {error && <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700"><span>{error}</span><button onClick={loadData} className="font-black whitespace-nowrap">Thử lại</button></div>}
 
       {assignments.length === 0 ? (
         <div className="bg-white/50 backdrop-blur-sm rounded-3xl p-12 text-center border-2 border-dashed border-slate-200">

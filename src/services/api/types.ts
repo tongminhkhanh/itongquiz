@@ -5,7 +5,7 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
  * public: Không cần xác thực (public endpoints)
  * legacyToken: [DEPRECATED] Giữ lại tạm thời cho một số route cũ
  */
-export type AuthPolicy = 'session' | 'public' | 'legacyToken';
+export type AuthPolicy = 'session' | 'studentSession' | 'public' | 'legacyToken';
 
 export type ApiPayload = Record<string, any>;
 

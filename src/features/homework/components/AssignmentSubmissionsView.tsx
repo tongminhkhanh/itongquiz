@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { HomeworkAssignment, HomeworkSubmission } from '../types';
+import { HomeworkAssignment, HomeworkAssignmentAnalytics, HomeworkSubmission } from '../types';
 import { useHomeworkStore } from '../stores/useHomeworkStore';
 import { useRosterStore } from '../../../stores/useRosterStore';
 import { ArrowLeft, User, Clock, CheckCircle2, Sparkles, Send, Eye, MessageSquare, Trophy, Loader2 } from 'lucide-react';
@@ -8,8 +8,7 @@ import { Button } from '../../../components/common';
 import MathSpan from '../../../components/common/MathSpan';
 import { homeworkBackendService } from '../services/homeworkBackendService';
 import { homeworkService } from '../services/homeworkService';
-import { ClassHeatmap, StudentProgressChart, ProgressData } from '../../analytics';
-import { analyticsService, ClassAnalyticsResponse } from '../../analytics/services/analyticsService';
+import { ClassHeatmap } from '../../analytics';
 import { PhieuBatchPanel } from './PhieuBatchPanel';
 
 interface AssignmentSubmissionsViewProps {
@@ -36,7 +35,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
   const [editFeedback, setEditFeedback] = useState<string>('');
 
   // Analytics data
-  const [analyticsData, setAnalyticsData] = useState<ClassAnalyticsResponse | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<HomeworkAssignmentAnalytics | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -46,8 +45,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
       setLocalSubmissions(subs);
       
       try {
-        // Lấy báo cáo xu hướng lớp
-        const stats = await analyticsService.getClassAnalytics(assignment.class_id);
+        const stats = await homeworkBackendService.getAssignmentAnalytics(assignment.id);
         setAnalyticsData(stats);
       } catch (e) {
         console.warn('Could not load analytics', e);
@@ -70,14 +68,20 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
     if (!selectedSubmission) return;
     setIsGrading(true);
     try {
-      const updatedSubmission = {
+      const published = await homeworkBackendService.publishGrade(
+        selectedSubmission.id,
+        editScore,
+        editFeedback,
+        selectedSubmission.gradingBreakdown || []
+      );
+      const updatedSubmission: HomeworkSubmission = {
         ...selectedSubmission,
         score: editScore,
         teacher_feedback: editFeedback,
-        status: 'GRADED' as const
+        status: 'GRADED',
+        published_at: published.publishedAt,
+        graded_at: published.publishedAt,
       };
-      
-      await homeworkBackendService.submitHomework(updatedSubmission); // Re-submitting with GRADED status
       
       // Update local state
       setLocalSubmissions(prev => prev.map(s => s.id === updatedSubmission.id ? updatedSubmission : s));
@@ -95,11 +99,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
     if (!selectedSubmission) return;
     setIsAILoading(true);
     try {
-      // Use assignment description as rubric if available
-      const rubric = assignment.description || "";
-      const imageUrl = selectedSubmission.file_urls[0];
-      
-      const result = await homeworkService.gradeSubmission(imageUrl, rubric);
+      const result = await homeworkService.gradeSubmission(selectedSubmission.id);
       
       // Auto-fill the form with AI results
       setEditScore(result.score);
@@ -109,6 +109,10 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
       setSelectedSubmission({
         ...selectedSubmission,
         ai_evaluation: result.feedback,
+        ai_feedback: result.feedback,
+        ai_score: result.score,
+        ai_confidence: result.confidence,
+        gradingBreakdown: result.criteriaBreakdown.map((item, index) => ({ questionId: String(index + 1), ...item })),
         score: result.score
       });
     } catch (err) {
@@ -139,7 +143,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
         </button>
         <div>
           <h2 className="text-2xl font-black text-slate-800 tracking-tight">{assignment.title}</h2>
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Quản lý bài nộp • Lớp {assignment.class_id}</p>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Quản lý bài nộp • Lớp {assignment.class?.name || assignment.class_id}</p>
         </div>
       </div>
 
@@ -177,23 +181,20 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <div className="bg-white p-2 rounded-3xl">
-              <div className="mb-4">
-                <h3 className="text-lg font-black text-slate-800">Biểu đồ Phổ Điểm (Biến Động)</h3>
-                <p className="text-sm text-slate-500">Trung bình chung của lớp qua các bài tập.</p>
-              </div>
-              <div className="h-[350px]">
-                <StudentProgressChart 
-                  title="Xu hướng Lớp Học" 
-                  data={analyticsData?.homeworkTrend.map((t, idx) => ({ 
-                    timeLabel: 'Lần ' + (idx + 1), 
-                    score: Math.round(t.avg_score * 10) / 10 
-                  })) || []} 
-                />
+            <div className="bg-white p-5 rounded-3xl border border-slate-100">
+              <h3 className="text-lg font-black text-slate-800">Tổng quan bài tập</h3>
+              <p className="text-sm text-slate-500 mb-4">Chỉ tính lần nộp mới nhất của từng học sinh.</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  ['Đã nộp', `${analyticsData?.submitted || 0}/${analyticsData?.totalStudents || 0}`],
+                  ['Đã chấm', analyticsData?.graded || 0],
+                  ['Điểm TB', (analyticsData?.averageScore || 0).toFixed(1)],
+                  ['Trung vị', (analyticsData?.medianScore || 0).toFixed(1)],
+                ].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold text-slate-400 uppercase">{label}</p><p className="text-2xl font-black text-indigo-600">{value}</p></div>)}
               </div>
             </div>
 
-            <div className="bg-white p-2 rounded-3xl">
+            <div className="bg-white p-5 rounded-3xl border border-slate-100">
               <div className="mb-4">
                 <h3 className="text-lg font-black text-slate-800">Ma trận phổ điểm Từng Cầu (Heatmap)</h3>
                 <p className="text-sm text-slate-500">Bảng màu Xanh/Đỏ giúp phát hiện nhanh các "điểm mù" kiến thức của cả lớp bài này.</p>
@@ -201,6 +202,15 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
               <React.Suspense fallback={<div className="h-64 flex items-center justify-center animate-pulse bg-slate-50 rounded-xl">Đang tải ma trận...</div>}>
                 <ClassHeatmap submissions={localSubmissions} />
               </React.Suspense>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-3xl p-5">
+            <h3 className="text-lg font-black text-slate-800">Câu/tiêu chí sai nhiều nhất</h3>
+            <p className="text-sm text-slate-500 mb-4">Dưới 50%: chưa đạt; 50–79%: đạt một phần; từ 80%: thành thạo.</p>
+            <div className="space-y-3">
+              {(analyticsData?.mostMissed || []).map(item => <div key={item.questionId} className="rounded-2xl border border-slate-100 p-4"><div className="flex justify-between gap-3"><span className="font-bold text-slate-700">{item.label}</span><span className="text-sm font-bold text-rose-600">{item.notMet}/{item.total} chưa đạt</span></div>{item.studentsNeedingHelp.length > 0 && <p className="text-xs text-slate-500 mt-2">Cần hỗ trợ: {item.studentsNeedingHelp.join(', ')}</p>}</div>)}
+              {(analyticsData?.mostMissed || []).length === 0 && <p className="text-sm text-slate-400">Chưa có đủ bài đã duyệt để phân tích.</p>}
             </div>
           </div>
 

@@ -1,51 +1,36 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { requestAiSuggestion, performOCR } = vi.hoisted(() => ({
+  requestAiSuggestion: vi.fn(),
+  performOCR: vi.fn(),
+}));
+
+vi.mock('../homeworkBackendService', () => ({
+  homeworkBackendService: { requestAiSuggestion, performOCR },
+}));
+
 import { homeworkService } from '../homeworkService';
 
-// Mock the global fetch
-global.fetch = vi.fn();
-
 describe('homeworkService', () => {
-  it('should correctly parse AI JSON response', async () => {
-    const mockAIResponse = {
-      choices: [{
-        message: {
-          content: JSON.stringify({
-            ocrText: "Bài làm của học sinh...",
-            score: 8.5,
-            confidence: 0.95,
-            feedback: "Làm tốt lắm!",
-            criteriaBreakdown: [
-              { label: "Trình bày", score: 2, maxScore: 2, comment: "Sạch sẽ" }
-            ]
-          })
-        }
-      }]
-    };
+  beforeEach(() => vi.clearAllMocks());
 
-    (fetch as any).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockAIResponse),
+  it('routes AI grading through the authenticated Worker', async () => {
+    requestAiSuggestion.mockResolvedValue({
+      ocrText: 'Bài làm của học sinh', score: 8.5, confidence: 0.95, feedback: 'Làm tốt lắm!',
+      criteriaBreakdown: [{ label: 'Trình bày', score: 2, maxScore: 2, comment: 'Sạch sẽ' }],
     });
-
-    const result = await homeworkService.gradeSubmission('https://test-image.com/url');
-
+    const result = await homeworkService.gradeSubmission('submission-1');
+    expect(requestAiSuggestion).toHaveBeenCalledWith('submission-1');
     expect(result.score).toBe(8.5);
-    expect(result.confidence).toBe(0.95);
-    expect(result.criteriaBreakdown[0].label).toBe("Trình bày");
   });
 
-  it('should handle AI formatting errors gracefully', async () => {
-    (fetch as any).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        choices: [{
-          message: {
-            content: "Lỗi không phải JSON" 
-          }
-        }]
-      }),
-    });
+  it('propagates Worker validation failures without publishing a grade', async () => {
+    requestAiSuggestion.mockRejectedValue(new Error('AI response failed validation'));
+    await expect(homeworkService.gradeSubmission('submission-1')).rejects.toThrow('validation');
+  });
 
-    await expect(homeworkService.gradeSubmission('...')).rejects.toThrow();
+  it('routes OCR through the Worker without a browser token', async () => {
+    performOCR.mockResolvedValue('Nội dung đề');
+    await expect(homeworkService.performOCR('https://res.cloudinary.com/example/image.png')).resolves.toBe('Nội dung đề');
   });
 });

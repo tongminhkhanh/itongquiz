@@ -353,8 +353,16 @@ CREATE TABLE IF NOT EXISTS hw_assignments (
   class_id TEXT NOT NULL,
   teacher_id TEXT NOT NULL,
   file_url TEXT DEFAULT '',
-  ai_content TEXT DEFAULT '',
-  created_at TEXT NOT NULL
+  ai_content TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('DRAFT', 'OPEN', 'CLOSED', 'ARCHIVED')),
+  max_attempts INTEGER NOT NULL DEFAULT 1 CHECK (max_attempts BETWEEN 1 AND 10),
+  published_at TEXT,
+  updated_at TEXT NOT NULL,
+  archived_at TEXT,
+  source_ocr_text TEXT NOT NULL DEFAULT '',
+  rubric_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (class_id) REFERENCES classes(id)
 );
 
 -- Homework Submissions (Student-submitted)
@@ -363,14 +371,27 @@ CREATE TABLE IF NOT EXISTS hw_submissions (
   assignment_id TEXT NOT NULL,
   student_id TEXT NOT NULL,
   student_name TEXT NOT NULL,
-  status TEXT DEFAULT 'SUBMITTED', -- SUBMITTED, GRADED
+  status TEXT NOT NULL DEFAULT 'SUBMITTED', -- SUBMITTED, AI_REVIEW, GRADED
   file_urls TEXT DEFAULT '[]', -- JSON array of image links (Cloudinary)
   student_note TEXT DEFAULT '',
   teacher_feedback TEXT DEFAULT '',
   ai_evaluation TEXT DEFAULT '',
   score REAL DEFAULT 0,
   submitted_at TEXT NOT NULL,
-  analytics_json TEXT DEFAULT '[]'
+  analytics_json TEXT NOT NULL DEFAULT '[]',
+  attempt_no INTEGER NOT NULL DEFAULT 1,
+  idempotency_key TEXT NOT NULL,
+  ai_score REAL,
+  ai_confidence REAL,
+  ai_feedback TEXT NOT NULL DEFAULT '',
+  grading_breakdown_json TEXT NOT NULL DEFAULT '[]',
+  graded_by TEXT,
+  graded_at TEXT,
+  published_at TEXT,
+  FOREIGN KEY (assignment_id) REFERENCES hw_assignments(id),
+  FOREIGN KEY (student_id) REFERENCES students(id),
+  UNIQUE (assignment_id, student_id, attempt_no),
+  UNIQUE (student_id, idempotency_key)
 );
 
 -- Performance indexes for homework
@@ -379,6 +400,10 @@ CREATE INDEX IF NOT EXISTS idx_hw_assignments_teacher ON hw_assignments(teacher_
 CREATE INDEX IF NOT EXISTS idx_hw_submissions_assignment ON hw_submissions(assignment_id);
 CREATE INDEX IF NOT EXISTS idx_hw_submissions_student ON hw_submissions(student_id);
 CREATE INDEX IF NOT EXISTS idx_hw_submissions_analytics ON hw_submissions(assignment_id, submitted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_hw_assignments_class_status ON hw_assignments(class_id, status, deadline);
+CREATE INDEX IF NOT EXISTS idx_hw_assignments_teacher_status ON hw_assignments(teacher_id, status, deadline);
+CREATE INDEX IF NOT EXISTS idx_hw_submissions_assignment_latest ON hw_submissions(assignment_id, student_id, attempt_no DESC);
+CREATE INDEX IF NOT EXISTS idx_hw_submissions_published ON hw_submissions(assignment_id, published_at, submitted_at DESC);
 
 -- Test Bank Table
 CREATE TABLE IF NOT EXISTS test_bank (

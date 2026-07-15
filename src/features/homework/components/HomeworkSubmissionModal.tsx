@@ -35,12 +35,9 @@ const AssignmentDetails = React.memo(({ assignment, submission, isGraded }: {
       
       {assignment.file_url && (
         <div className="mt-4 rounded-2xl overflow-hidden border border-slate-100 shadow-sm transition-transform hover:scale-[1.01]">
-          <img 
-            src={assignment.file_url} 
-            alt="Đề bài" 
-            className="w-full h-auto object-cover"
-            loading="lazy"
-          />
+          {assignment.file_url.toLowerCase().includes('.pdf')
+            ? <iframe src={assignment.file_url} title="Đề bài PDF" className="w-full h-[520px]" />
+            : <img src={assignment.file_url} alt="Đề bài" className="w-full h-auto object-cover" loading="lazy" />}
         </div>
       )}
     </section>
@@ -69,6 +66,45 @@ const AssignmentDetails = React.memo(({ assignment, submission, isGraded }: {
 
 AssignmentDetails.displayName = 'AssignmentDetails';
 
+async function inspectImageQuality(file: File): Promise<string[]> {
+  const url = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = reject;
+      element.src = url;
+    });
+    const warnings: string[] = [];
+    if (image.naturalWidth < 800 || image.naturalHeight < 600) warnings.push('độ phân giải thấp');
+    const canvas = document.createElement('canvas');
+    const scale = Math.min(1, 320 / Math.max(image.naturalWidth, image.naturalHeight));
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return warnings;
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let luminance = 0;
+    let edgeEnergy = 0;
+    const gray = new Float32Array(canvas.width * canvas.height);
+    for (let index = 0; index < gray.length; index++) {
+      const offset = index * 4;
+      gray[index] = 0.299 * pixels[offset] + 0.587 * pixels[offset + 1] + 0.114 * pixels[offset + 2];
+      luminance += gray[index];
+    }
+    for (let y = 1; y < canvas.height - 1; y++) for (let x = 1; x < canvas.width - 1; x++) {
+      const index = y * canvas.width + x;
+      edgeEnergy += Math.abs(4 * gray[index] - gray[index - 1] - gray[index + 1] - gray[index - canvas.width] - gray[index + canvas.width]);
+    }
+    if (luminance / Math.max(gray.length, 1) < 45) warnings.push('ảnh quá tối');
+    if (edgeEnergy / Math.max((canvas.width - 2) * (canvas.height - 2), 1) < 5) warnings.push('ảnh có thể bị mờ');
+    return warnings;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 // 2. Submission Area Helper Component
 const SubmissionArea = React.memo(({ 
   isSubmitted, 
@@ -77,6 +113,8 @@ const SubmissionArea = React.memo(({
   previewUrl, 
   isSubmitting, 
   storeError,
+  allowUpload,
+  maxAttempts,
   onFileChange,
   onCancelPreview,
   onSubmit
@@ -87,6 +125,8 @@ const SubmissionArea = React.memo(({
   previewUrl: string | null;
   isSubmitting: boolean;
   storeError: string | null;
+  allowUpload: boolean;
+  maxAttempts: number;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onCancelPreview: () => void;
   onSubmit: () => void;
@@ -96,7 +136,7 @@ const SubmissionArea = React.memo(({
       <Camera className="w-4 h-4" /> Bài làm của em
     </h3>
     
-    {isSubmitted && submission ? (
+    {isSubmitted && submission && (
       <div className="rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner relative group">
         <img 
           src={submission.file_urls[0]} 
@@ -113,7 +153,8 @@ const SubmissionArea = React.memo(({
           </div>
         )}
       </div>
-    ) : (
+    )}
+    {allowUpload ? (
       <div className="space-y-4">
         <div 
           className={`border-3 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center text-center transition-all min-h-[300px] ${
@@ -142,7 +183,8 @@ const SubmissionArea = React.memo(({
                 type="file" 
                 id="hw-upload" 
                 className="hidden" 
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
                 capture="environment"
                 onChange={onFileChange}
               />
@@ -180,10 +222,10 @@ const SubmissionArea = React.memo(({
           {isSubmitting ? 'ĐANG NỘP BÀI...' : 'NỘP BÀI NGAY'}
         </button>
         <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">
-          ⚠️ Lưu ý: Em chỉ được nộp bài duy nhất 1 lần.
+          Bài này cho phép tối đa {maxAttempts} lần nộp. Mỗi lần đều được lưu trong lịch sử.
         </p>
       </div>
-    )}
+    ) : !isSubmitted ? <div className="rounded-2xl bg-rose-50 border border-rose-100 p-4 text-sm font-bold text-rose-700">Bài tập đã đóng hoặc hết hạn nộp.</div> : null}
   </div>
 ));
 
@@ -196,41 +238,56 @@ export const HomeworkSubmissionModal: React.FC<HomeworkSubmissionModalProps> = (
   studentName,
   onClose
 }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { submitHomework, error: storeError } = useHomeworkStore();
 
   const isSubmitted = useMemo(() => !!submission, [submission]);
   const isGraded = useMemo(() => submission?.status === 'GRADED', [submission]);
+  const maxAttempts = assignment.maxAttempts || assignment.max_attempts || 1;
+  const attemptsUsed = submission?.attemptNo || submission?.attempt_no || (submission ? 1 : 0);
+  const isOpen = assignment.effectiveStatus === 'OPEN' || (!assignment.effectiveStatus && Date.parse(assignment.deadline) > Date.now());
+  const allowUpload = isOpen && !isGraded && attemptsUsed < maxAttempts;
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).slice(0, 8);
+    if (files.length) {
+      const invalid = files.find(file => file.size > 10 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type));
+      if (invalid) {
+        window.alert('Chỉ nhận ảnh JPG, PNG hoặc WebP, tối đa 10 MB mỗi ảnh.');
+        return;
+      }
+      const warnings = (await Promise.all(files.map(inspectImageQuality))).flat();
+      if (warnings.length && window.confirm(`Phát hiện ${[...new Set(warnings)].join(', ')}. Chọn OK để chọn lại ảnh, hoặc Cancel để vẫn dùng ảnh này.`)) {
+        e.target.value = '';
+        return;
+      }
+      setSelectedFiles(files);
+      setPreviewUrl(URL.createObjectURL(files[0]));
     }
   }, []);
 
   const handleCancelPreview = useCallback(() => {
     setPreviewUrl(null);
-    setSelectedFile(null);
+    setSelectedFiles([]);
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (!selectedFile) return;
+    if (!selectedFiles.length || !allowUpload) return;
     
     setIsSubmitting(true);
     try {
       // 1. Upload to Cloudinary first
-      const cloudinaryUrl = await uploadToCloudinary(selectedFile);
+      const cloudinaryUrls = await Promise.all(selectedFiles.map(uploadToCloudinary));
       
       // 2. Submit to backend with real URL and student name
       await submitHomework({
         assignment_id: assignment.id,
         student_id: studentId,
         student_name: studentName,
-        file_urls: [cloudinaryUrl], 
+        file_urls: cloudinaryUrls,
+        idempotency_key: crypto.randomUUID(),
         status: 'SUBMITTED'
       });
       onClose();
@@ -239,7 +296,7 @@ export const HomeworkSubmissionModal: React.FC<HomeworkSubmissionModalProps> = (
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedFile, assignment.id, studentId, studentName, submitHomework, onClose]);
+  }, [selectedFiles, allowUpload, assignment.id, studentId, studentName, submitHomework, onClose]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -302,6 +359,8 @@ export const HomeworkSubmissionModal: React.FC<HomeworkSubmissionModalProps> = (
               previewUrl={previewUrl}
               isSubmitting={isSubmitting}
               storeError={storeError}
+              allowUpload={allowUpload}
+              maxAttempts={maxAttempts}
               onFileChange={handleFileChange}
               onCancelPreview={handleCancelPreview}
               onSubmit={handleSubmit}

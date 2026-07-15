@@ -18,6 +18,7 @@ import { handleGameLoopRoutes } from './routes/gameLoop';
 import { handleHelpRagRoutes } from './routes/helpRag';
 import { handleSystemSettingsRoutes } from './routes/systemSettings';
 import { handleAnalyticsRoutes } from './routes/analytics';
+import { handleHomeworkRoutes, handleLegacyHomeworkAction } from './routes/homework';
 import {
   createBatch,
   getBatches,
@@ -121,6 +122,10 @@ export default {
                 response = await handleHelpRagRoutes(request, env, path, method);
             } else if (path.startsWith('/api/system-settings')) {
                 response = await handleSystemSettingsRoutes(request, env, path, method);
+            } else if (path.startsWith('/api/homework')) {
+                const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 60 });
+                if (rateLimitRes) return addCors(rateLimitRes, request);
+                response = await handleHomeworkRoutes(request, env, path, method);
             } else if (path.startsWith('/api/analytics')) {
                 response = await handleAnalyticsRoutes(request, env, path, method);
             } else if (path.startsWith('/api/test-bank')) {
@@ -291,6 +296,12 @@ async function handleLegacyGasRequest(request: Request, env: Env): Promise<Respo
 
     const authResult = await verifyJWTMiddleware(request, env);
     if (authResult instanceof Response) return authResult;
+
+    if (action === 'get_hw_assignments' || action === 'save_hw_assignment' ||
+        action === 'delete_hw_assignment' || action === 'submit_hw' || action === 'get_hw_submissions') {
+        return handleLegacyHomeworkAction(env, authResult.user, action, body);
+    }
+
     if (!requireTeacher(authResult.user)) {
         return errorResponse('Forbidden: Teacher access required', 403);
     }

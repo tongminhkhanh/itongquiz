@@ -35,7 +35,9 @@ export const useHomeworkUpload = () => {
         initialQuality: IMAGE_CONFIG.COMPRESSION_LEVEL,
       };
 
-      const compressedFile = await imageCompression(file, options);
+      const compressedFile = file.type === 'application/pdf'
+        ? file
+        : await imageCompression(file, options);
       
       setState(prev => ({ 
         ...prev, 

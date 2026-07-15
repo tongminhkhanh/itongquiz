@@ -11,6 +11,7 @@ import { giftShopRoutes } from './giftShop';
 import { phieuRoutes } from './phieu';
 import { systemRoutes } from './system';
 import { legacyHomeworkRoutes } from './legacyHomework';
+import { homeworkRoutes } from './homework';
 
 export const routes: RouteRegistry = {
     ...teacherRoutes,
@@ -25,4 +26,5 @@ export const routes: RouteRegistry = {
     ...phieuRoutes,
     ...systemRoutes,
     ...legacyHomeworkRoutes,
+    ...homeworkRoutes,
 };

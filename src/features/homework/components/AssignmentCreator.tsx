@@ -19,6 +19,8 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
   const [deadline, setDeadline] = useState('');
   const [aiContent, setAiContent] = useState('');
   const [selectedClassId, setSelectedClassId] = useState('');
+  const [maxAttempts, setMaxAttempts] = useState(1);
+  const [uploadedFileType, setUploadedFileType] = useState('');
   
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const { addAssignment, isLoading: isSaving } = useHomeworkStore();
@@ -39,6 +41,7 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploadedFileType(file.type);
 
     // 1. Upload & Get URL
     const uploadedUrl = await uploadHomework(file);
@@ -71,20 +74,27 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
         return;
     }
 
-    // Save to store (D1 Backend)
-    await addAssignment({
-      title,
-      description,
-      subject,
-      deadline,
-      ai_content: aiContent,
-      file_url: url,
-      teacher_id: username,
-      class_id: selectedClassId,
-    });
-
-    showSuccess('Đã tạo phiếu bài tập thành công!');
-    onSuccess();
+    try {
+      await addAssignment({
+        title: title.trim(),
+        description: description.trim(),
+        subject: subject.trim(),
+        deadline: new Date(deadline).toISOString(),
+        source_ocr_text: aiContent,
+        ai_content: aiContent,
+        rubric: aiContent.trim() ? [{ questionId: 'rubric', label: 'Đáp án mẫu / Tiêu chí', score: 0, maxScore: 10, comment: aiContent.trim() }] : [],
+        file_url: url,
+        teacher_id: username,
+        class_id: selectedClassId,
+        maxAttempts,
+        status: 'OPEN',
+      });
+      showSuccess('Đã tạo phiếu bài tập thành công!');
+      onSuccess();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể tạo bài tập';
+      showError(message);
+    }
   };
 
   const resetFile = () => {
@@ -177,6 +187,18 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm leading-relaxed"
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Số lần được nộp</label>
+            <select
+              value={maxAttempts}
+              onChange={(e) => setMaxAttempts(Number(e.target.value))}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none"
+            >
+              {[1, 2, 3, 4, 5].map(value => <option key={value} value={value}>{value} lần</option>)}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">Mỗi lần nộp được lưu riêng; giáo viên luôn xem được lịch sử.</p>
+          </div>
         </div>
 
         {/* Right Side: File Upload Display */}
@@ -206,7 +228,9 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
             {url && (
               <div className="relative w-full h-full flex flex-col items-center justify-center text-center py-4">
                 <div className="bg-white p-3 rounded-2xl shadow-xl w-full max-w-[240px]">
-                  <img src={url} alt="Preview" className="w-full h-40 object-contain rounded-xl mb-2" />
+                  {uploadedFileType === 'application/pdf'
+                    ? <div className="h-40 flex items-center justify-center rounded-xl bg-slate-50 text-slate-600 font-bold">Tài liệu PDF đã sẵn sàng</div>
+                    : <img src={url} alt="Preview" className="w-full h-40 object-contain rounded-xl mb-2" />}
                   <p className="text-[10px] text-slate-400 truncate">{url}</p>
                 </div>
                 <div className="mt-4 flex items-center gap-2 text-green-600 font-bold bg-white/60 backdrop-blur px-4 py-2 rounded-full border border-green-100">

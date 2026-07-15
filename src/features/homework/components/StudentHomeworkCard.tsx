@@ -20,6 +20,7 @@ export const StudentHomeworkCard: React.FC<StudentHomeworkCardProps> = ({
   const getStatusDisplay = () => {
     if (isGraded) return { label: 'Đã chấm', color: 'bg-emerald-100 text-emerald-700', icon: <CheckCircle2 className="w-3.5 h-3.5" /> };
     if (isSubmitted) return { label: 'Đã nộp', color: 'bg-blue-100 text-blue-700', icon: <Clock className="w-3.5 h-3.5" /> };
+    if (assignment.effectiveStatus === 'EXPIRED' || assignment.effectiveStatus === 'CLOSED') return { label: 'Đã đóng', color: 'bg-rose-100 text-rose-700', icon: <Timer className="w-3.5 h-3.5" /> };
     return { label: 'Mới', color: 'bg-orange-100 text-orange-700', icon: <Timer className="w-3.5 h-3.5" /> };
   };
 
@@ -75,7 +76,7 @@ export const StudentHomeworkCard: React.FC<StudentHomeworkCardProps> = ({
           </div>
         ) : (
           <span className="text-xs font-bold text-slate-400">
-            {isSubmitted ? 'Đang chờ chấm điểm' : 'Nhấn để xem đề bài'}
+            {isSubmitted ? 'Đang chờ chấm điểm' : isOverdue ? 'Đã hết hạn nộp' : 'Nhấn để xem đề bài'}
           </span>
         )}
         
@@ -85,10 +86,12 @@ export const StudentHomeworkCard: React.FC<StudentHomeworkCardProps> = ({
               ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' 
               : isSubmitted 
                 ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
+                : isOverdue
+                  ? 'bg-slate-100 text-slate-500'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
           }`}
         >
-          {isGraded ? 'Xem lỗi sai' : isSubmitted ? 'Xem bài nộp' : 'Làm bài ngay'}
+          {isGraded ? 'Xem lỗi sai' : isSubmitted ? 'Xem bài nộp' : isOverdue ? 'Xem đề' : 'Làm bài ngay'}
         </button>
       </div>
     </motion.div>

@@ -1,83 +1,68 @@
 import { callApi } from '../../../services/apiAdapter';
-import { HomeworkAssignment, HomeworkSubmission } from '../types';
+import { HomeworkAssignment, HomeworkAssignmentAnalytics, HomeworkSubmission, AIResult } from '../types';
 
-/**
- * Service for interacting with the Homework Center D1 Backend
- */
+type ApiEnvelope<T> = { status: 'success' | 'error'; data: T; message?: string };
+
+async function unwrap<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
+  const response = await callApi<ApiEnvelope<T>>(action, payload);
+  if (response.status !== 'success') throw new Error(response.message || 'Homework request failed');
+  return response.data;
+}
+
 export const homeworkBackendService = {
-  /**
-   * Get all homework assignments for a class
-   */
-  async getAssignments(classId: string): Promise<HomeworkAssignment[]> {
-    const response = await callApi('get_hw_assignments', { classId });
-    if (response.status === 'success') {
-      return response.data;
-    }
-    throw new Error(response.message || 'Failed to fetch assignments');
+  getAssignments(classId?: string) {
+    return unwrap<HomeworkAssignment[]>('homework_list_student_assignments', classId ? { classId } : {});
   },
-
-  /**
-   * Get all homework assignments created by a teacher
-   */
-  async getTeacherAssignments(teacherId: string): Promise<HomeworkAssignment[]> {
-    const response = await callApi('get_hw_assignments', { teacherId });
-    if (response.status === 'success') {
-      return response.data;
-    }
-    throw new Error(response.message || 'Failed to fetch teacher assignments');
+  getTeacherAssignments(_teacherId?: string, classId?: string) {
+    return unwrap<HomeworkAssignment[]>('homework_list_teacher_assignments', classId ? { classId } : {});
   },
-
-  /**
-   * Save (create or update) a homework assignment
-   */
   async saveAssignment(assignment: Partial<HomeworkAssignment>): Promise<string> {
-    const response = await callApi('save_hw_assignment', assignment);
-    if (response.status === 'success') {
-      return response.data.id;
-    }
-    throw new Error(response.message || 'Failed to save assignment');
+    const data = assignment.id
+      ? await unwrap<{ id: string }>('homework_update_assignment', { ...assignment, assignmentId: assignment.id })
+      : await unwrap<{ id: string }>('homework_create_assignment', assignment);
+    return data.id;
   },
-
-  /**
-   * Delete a homework assignment
-   */
+  archiveAssignment(assignmentId: string) {
+    return unwrap<{ id: string; status: string }>('homework_archive_assignment', { assignmentId });
+  },
   async deleteAssignment(assignmentId: string): Promise<void> {
-    const response = await callApi('delete_hw_assignment', { assignmentId });
-    if (response.status !== 'success') {
-      throw new Error(response.message || 'Failed to delete assignment');
-    }
+    await this.archiveAssignment(assignmentId);
   },
-
-  /**
-   * Submit student homework
-   */
-  async submitHomework(submission: Partial<HomeworkSubmission>): Promise<string> {
-    const response = await callApi('submit_hw', submission);
-    if (response.status === 'success') {
-      return response.data.id;
-    }
-    throw new Error(response.message || 'Failed to submit homework');
+  async submitHomework(submission: Partial<HomeworkSubmission> & { idempotencyKey?: string }): Promise<string> {
+    const data = await unwrap<HomeworkSubmission>('homework_submit', {
+      ...submission,
+      assignmentId: submission.assignment_id,
+      fileUrls: submission.file_urls,
+      idempotencyKey: submission.idempotencyKey || submission.idempotency_key,
+    });
+    return data.id;
   },
-
-  /**
-   * Get submissions for an assignment
-   */
-  async getSubmissions(assignmentId: string): Promise<HomeworkSubmission[]> {
-    const response = await callApi('get_hw_submissions', { assignmentId });
-    if (response.status === 'success') {
-      return response.data;
-    }
-    throw new Error(response.message || 'Failed to fetch submissions');
+  getSubmissions(assignmentId: string) {
+    return unwrap<HomeworkSubmission[]>('homework_list_submissions', { assignmentId });
   },
-
-  /**
-   * Get submission for a specific student for an assignment
-   */
-  async getStudentSubmission(assignmentId: string, studentId: string): Promise<HomeworkSubmission | null> {
-    const response = await callApi('get_hw_submissions', { assignmentId, studentId });
-    if (response.status === 'success' && response.data.length > 0) {
-      return response.data[0];
-    }
-    return null;
-  }
+  async getStudentSubmissions(assignmentId: string): Promise<HomeworkSubmission[]> {
+    return unwrap<HomeworkSubmission[]>('homework_list_my_submissions', { assignmentId });
+  },
+  getAllMySubmissions(): Promise<HomeworkSubmission[]> {
+    return unwrap<HomeworkSubmission[]>('homework_list_all_my_submissions');
+  },
+  async getStudentSubmission(assignmentId: string, _studentId?: string): Promise<HomeworkSubmission | null> {
+    const rows = await this.getStudentSubmissions(assignmentId);
+    return rows[0] || null;
+  },
+  async performOCR(mediaUrl: string): Promise<string> {
+    const data = await unwrap<{ ocrText: string }>('homework_ocr', { mediaUrl });
+    return data.ocrText;
+  },
+  requestAiSuggestion(submissionId: string) {
+    return unwrap<AIResult>('homework_ai_suggestion', { submissionId });
+  },
+  publishGrade(submissionId: string, score: number, feedback: string, gradingBreakdown: unknown[] = []) {
+    return unwrap<{ id: string; score: number; publishedAt: string }>('homework_publish_grade', {
+      submissionId, score, feedback, gradingBreakdown,
+    });
+  },
+  getAssignmentAnalytics(assignmentId: string) {
+    return unwrap<HomeworkAssignmentAnalytics>('homework_assignment_analytics', { assignmentId });
+  },
 };

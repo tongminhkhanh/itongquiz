@@ -12,7 +12,7 @@ interface HomeworkState {
   fetchTeacherAssignments: (teacherId: string) => Promise<void>;
   fetchClassAssignments: (classId: string) => Promise<void>;
   fetchStudentSubmissions: (studentId: string) => Promise<void>;
-  addAssignment: (assignment: Partial<HomeworkAssignment>) => Promise<void>;
+  addAssignment: (assignment: Partial<HomeworkAssignment>) => Promise<string>;
   updateAssignment: (id: string, updates: Partial<HomeworkAssignment>) => Promise<void>;
   deleteAssignment: (id: string) => Promise<void>;
   submitHomework: (submission: Partial<HomeworkSubmission>) => Promise<void>;
@@ -49,16 +49,10 @@ export const useHomeworkStore = create<HomeworkState>((set, get) => ({
     }
   },
 
-  fetchStudentSubmissions: async (studentId) => {
+  fetchStudentSubmissions: async (_studentId) => {
     set({ isLoading: true, error: null });
     try {
-      // Since there is no global 'get_all_student_submissions' yet, we fetch them for currently loaded assignments
-      const assignments = get().assignments;
-      const submissionPromises = assignments.map(a => 
-        homeworkBackendService.getStudentSubmission(a.id, studentId)
-      );
-      const results = await Promise.all(submissionPromises);
-      const activeSubmissions = results.filter((s): s is HomeworkSubmission => s !== null);
+      const activeSubmissions = await homeworkBackendService.getAllMySubmissions();
       set({ submissions: activeSubmissions, isLoading: false });
     } catch (err: unknown) {
       const normalizedError = err instanceof Error ? err : new Error(String(err));
@@ -71,11 +65,8 @@ export const useHomeworkStore = create<HomeworkState>((set, get) => ({
     try {
       if (!data.assignment_id || !data.student_id) throw new Error('Thiếu thông tin nộp bài');
       
-      // Check if already submitted (Single submission rule)
-      const existing = get().submissions.find(s => s.assignment_id === data.assignment_id);
-      if (existing) throw new Error('Em đã nộp bài này rồi!');
-
-      const id = await homeworkBackendService.submitHomework(data);
+      const idempotencyKey = data.idempotency_key || crypto.randomUUID();
+      await homeworkBackendService.submitHomework({ ...data, idempotencyKey });
       
       // Fetch the full submission object after submit to update local state
       const newSubmission = await homeworkBackendService.getStudentSubmission(data.assignment_id, data.student_id);
@@ -105,9 +96,11 @@ export const useHomeworkStore = create<HomeworkState>((set, get) => ({
       } else {
         set({ isLoading: false });
       }
+      return id;
     } catch (err: unknown) {
       const normalizedError = err instanceof Error ? err : new Error(String(err));
       set({ error: normalizedError.message || 'Không thể lưu bài tập', isLoading: false });
+      throw normalizedError;
     }
   },
 
@@ -122,20 +115,22 @@ export const useHomeworkStore = create<HomeworkState>((set, get) => ({
     } catch (err: unknown) {
       const normalizedError = err instanceof Error ? err : new Error(String(err));
       set({ error: normalizedError.message || 'Không thể cập nhật bài tập', isLoading: false });
+      throw normalizedError;
     }
   },
 
   deleteAssignment: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await homeworkBackendService.deleteAssignment(id);
+      await homeworkBackendService.archiveAssignment(id);
       set((state) => ({
         assignments: state.assignments.filter((a) => a.id !== id),
         isLoading: false
       }));
     } catch (err: unknown) {
       const normalizedError = err instanceof Error ? err : new Error(String(err));
-      set({ error: normalizedError.message || 'Không thể xoá bài tập', isLoading: false });
+      set({ error: normalizedError.message || 'Không thể lưu trữ bài tập', isLoading: false });
+      throw normalizedError;
     }
   },
 

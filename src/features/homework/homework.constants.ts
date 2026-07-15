@@ -2,14 +2,6 @@
  * ítong Homework Constants
  */
 
-export const HOMEWORK_API = {
-  BASE_URL: import.meta.env.VITE_CLIPROXY_API || 'https://api.thitong.site/v1',
-  TOKEN: import.meta.env.VITE_CLIPROXY_TOKEN || '',
-  ENDPOINTS: {
-    VISION: '/chat/completions', // Standard OpenAI-compatible endpoint for Gemini Proxy
-  },
-};
-
 export const IMAGE_CONFIG = {
   MAX_SIZE_MB: 0.8,              // Max 800KB for faster upload and processing
   MAX_WIDTH_HEIGHT: 1920,       // Full HD is enough for OCR
