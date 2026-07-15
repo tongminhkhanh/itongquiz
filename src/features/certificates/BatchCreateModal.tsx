@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { X, Send, Loader2, ChevronDown, Users, BookOpen, Search, CheckSquare, Square, AlertCircle } from 'lucide-react';
+import { X, Send, Eye, Loader2, ChevronDown, Users, BookOpen, Search, CheckSquare, Square, AlertCircle } from 'lucide-react';
 import { showSuccess, showError } from '../../utils/toast';
 import type { BatchStudent } from './useBatches';
 import { fetchTemplateOptions } from './useBatches';
@@ -56,6 +56,9 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
     const [achievementPrefix, setAchievementPrefix] = useState('Đã hoàn thành xuất sắc');
     const [dateLine, setDateLine] = useState(defaultCertificateDateLine);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isPreviewing, setIsPreviewing] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState('');
+    const [previewStudentName, setPreviewStudentName] = useState('');
 
     // Class + students
     const [classes, setClasses] = useState<ClassOption[]>([]);
@@ -174,6 +177,55 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
             return next;
         });
     }, []);
+
+    const closePreview = useCallback(() => {
+        setPreviewUrl((current) => {
+            if (current) URL.revokeObjectURL(current);
+            return '';
+        });
+        setPreviewStudentName('');
+    }, []);
+
+    useEffect(() => () => {
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+    }, [previewUrl]);
+
+    const handlePreview = useCallback(async () => {
+        if (!templateId) { showError('Vui lòng chọn mẫu chứng nhận'); return; }
+        const previewStudent = studentRows.find((student) => selectedIds.has(student.id));
+        if (!previewStudent) { showError('Cần chọn ít nhất 1 học sinh để xem trước'); return; }
+
+        setIsPreviewing(true);
+        try {
+            const response = await fetch(`${apiBase()}/api/certificates/render-preview`, {
+                method: 'POST',
+                headers: authH(),
+                body: JSON.stringify({
+                    template_id: templateId,
+                    class_id: classId,
+                    quiz_id: quizId || undefined,
+                    student_id: previewStudent.id,
+                    achievement_prefix: achievementPrefix.trim(),
+                    date_line: dateLine.trim(),
+                }),
+            });
+            if (!response.ok) {
+                const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
+                throw new Error(payload?.error?.message || `Không thể tạo ảnh xem trước (${response.status})`);
+            }
+            const blob = await response.blob();
+            const nextUrl = URL.createObjectURL(blob);
+            setPreviewUrl((current) => {
+                if (current) URL.revokeObjectURL(current);
+                return nextUrl;
+            });
+            setPreviewStudentName(previewStudent.fullName);
+        } catch (error: unknown) {
+            showError(error instanceof Error ? error.message : 'Không thể tạo ảnh xem trước');
+        } finally {
+            setIsPreviewing(false);
+        }
+    }, [templateId, classId, quizId, achievementPrefix, dateLine, studentRows, selectedIds]);
 
     const handleSubmit = useCallback(async () => {
         if (!templateId) { showError('Vui lòng chọn mẫu chứng nhận'); return; }
@@ -437,6 +489,16 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
                         Hủy
                     </button>
                     <button
+                        onClick={handlePreview}
+                        disabled={isPreviewing || isSubmitting || templates.length === 0 || selectedIds.size === 0}
+                        className="flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-700 hover:bg-blue-50 disabled:opacity-50 text-sm font-semibold rounded-xl transition-colors"
+                    >
+                        {isPreviewing
+                            ? <><Loader2 size={15} className="animate-spin" /> Đang dựng ảnh...</>
+                            : <><Eye size={15} /> Xem trước ảnh</>
+                        }
+                    </button>
+                    <button
                         onClick={handleSubmit}
                         disabled={isSubmitting || templates.length === 0 || selectedIds.size === 0}
                         className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
@@ -448,6 +510,37 @@ const BatchCreateModal: React.FC<Props> = ({ onClose, onCreated, createBatch }) 
                     </button>
                 </div>
             </div>
+
+            {previewUrl && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/75 p-4" onClick={closePreview}>
+                    <div className="w-full max-w-5xl rounded-2xl bg-white shadow-2xl overflow-hidden" onClick={(event) => event.stopPropagation()}>
+                        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+                            <div>
+                                <h3 className="font-bold text-slate-800">Xem trước chứng nhận</h3>
+                                <p className="text-xs text-slate-500">Dữ liệu mẫu: {previewStudentName}. Chưa gửi cho học sinh.</p>
+                            </div>
+                            <button onClick={closePreview} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" aria-label="Đóng xem trước">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="bg-slate-100 p-3 sm:p-5">
+                            <img src={previewUrl} alt={`Xem trước chứng nhận của ${previewStudentName}`} className="mx-auto max-h-[70vh] w-full object-contain shadow-lg" />
+                        </div>
+                        <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-5 py-3">
+                            <button onClick={closePreview} className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+                                Quay lại chỉnh sửa
+                            </button>
+                            <button
+                                onClick={() => { closePreview(); void handleSubmit(); }}
+                                disabled={isSubmitting}
+                                className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                <Send size={15} /> Xác nhận gửi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -21,7 +21,7 @@ export interface FieldConfig {
   y: number;
   fontSize: number;
   fontWeight?: 'normal' | 'bold';
-  fontFamily?: 'Roboto' | 'Spectral' | 'Dancing Script';
+  fontFamily?: 'Roboto' | 'Spectral' | 'Dancing Script' | 'Great Vibes';
   fontStyle?: 'normal' | 'italic';
   color?: string;
   align?: 'left' | 'center' | 'right';

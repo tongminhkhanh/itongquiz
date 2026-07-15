@@ -1,6 +1,9 @@
 import { verifyJWTMiddleware, requireTeacher } from '../middleware/jwtAuth';
 import { jsonResponse } from '../utils/response';
 import type { Env } from '../types';
+import type { FieldConfig } from '../types/certificates';
+import { loadFont } from '../services/fontLoader';
+import { buildCertificateSvg } from '../services/certificateSvg';
 import type {
   CertificateApiError,
   CertificateApiSuccess,
@@ -20,6 +23,212 @@ function certificateSuccess<T>(data: T, status = 200): Response {
 
 function normalizeLookupText(value: string): string {
   return value.trim().toLocaleLowerCase('vi-VN');
+}
+
+interface CertificateRenderPreviewRequest {
+  template_id?: string;
+  class_id?: string;
+  quiz_id?: string;
+  student_id?: string;
+  achievement_prefix?: string;
+  date_line?: string;
+}
+
+interface PreviewFontAsset {
+  r2Name: string;
+  family: string;
+  weight: '400' | '700';
+  style: 'normal' | 'italic';
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = '';
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, Math.min(index + chunkSize, bytes.length)));
+  }
+  return btoa(binary);
+}
+
+function imageMime(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  return 'image/png';
+}
+
+function previewFontAssets(fieldsConfig: FieldConfig[]): PreviewFontAsset[] {
+  const assets = new Map<string, PreviewFontAsset>();
+  for (const field of fieldsConfig) {
+    const configuredFamily = field.fontFamily ?? 'Roboto';
+    const family = ['Spectral', 'Great Vibes', 'Dancing Script', 'Roboto'].includes(configuredFamily)
+      ? configuredFamily
+      : 'Roboto';
+    const weight = field.fontWeight === 'bold' ? '700' : '400';
+    const style = field.fontStyle === 'italic' ? 'italic' : 'normal';
+    let r2Name: string;
+    if (family === 'Spectral') {
+      r2Name = weight === '700' && style === 'italic'
+        ? 'Spectral-BoldItalic'
+        : weight === '700' ? 'Spectral-Bold' : 'Spectral-Regular';
+    } else if (family === 'Great Vibes') {
+      r2Name = 'GreatVibes-Regular';
+    } else if (family === 'Dancing Script') {
+      r2Name = 'DancingScript-Bold';
+    } else {
+      r2Name = weight === '700' ? 'Roboto-Bold' : 'Roboto-Regular';
+    }
+    assets.set(`${family}:${weight}:${style}`, { r2Name, family, weight, style });
+  }
+  return [...assets.values()];
+}
+
+// POST /api/certificates/render-preview
+// Produces an exact, non-persistent SVG preview. It never creates a batch,
+// notification, certificate row, or R2 object.
+export async function handleRenderCertificatePreview(request: Request, env: Env): Promise<Response> {
+  const authResult = await verifyJWTMiddleware(request, env);
+  if (authResult instanceof Response) return authResult;
+  if (!requireTeacher(authResult.user)) {
+    return certificateError('CERTIFICATE_FORBIDDEN', 'Forbidden', 403);
+  }
+
+  let body: CertificateRenderPreviewRequest;
+  try {
+    body = await request.json<CertificateRenderPreviewRequest>();
+  } catch {
+    return certificateError('CERTIFICATE_INVALID_JSON', 'Request body must be valid JSON');
+  }
+  const templateId = typeof body.template_id === 'string' ? body.template_id.trim() : '';
+  const classId = typeof body.class_id === 'string' ? body.class_id.trim() : '';
+  const studentId = typeof body.student_id === 'string' ? body.student_id.trim() : '';
+  const quizId = typeof body.quiz_id === 'string' && body.quiz_id.trim() ? body.quiz_id.trim() : null;
+  const achievementPrefix = typeof body.achievement_prefix === 'string' ? body.achievement_prefix.trim() : null;
+  const dateLine = typeof body.date_line === 'string' ? body.date_line.trim() : null;
+  if (!templateId || !classId || !studentId) {
+    return certificateError('CERTIFICATE_VALIDATION_ERROR', 'template_id, class_id and student_id are required');
+  }
+  if ((achievementPrefix?.length ?? 0) > 160 || (dateLine?.length ?? 0) > 200) {
+    return certificateError('CERTIFICATE_VALIDATION_ERROR', 'Preview text exceeds the allowed length');
+  }
+
+  const classroom = await env.DB.prepare(`
+    SELECT id, name, teacher_username FROM classes WHERE id = ?
+  `).bind(classId).first<{ id: string; name: string; teacher_username: string }>();
+  if (!classroom) return certificateError('CERTIFICATE_CLASS_NOT_FOUND', 'Class not found', 404);
+  if (authResult.user.role !== 'admin' && classroom.teacher_username !== authResult.user.username) {
+    return certificateError('CERTIFICATE_CLASS_FORBIDDEN', 'You do not own this class', 403);
+  }
+
+  const student = await env.DB.prepare(`
+    SELECT id, full_name FROM students WHERE id = ? AND class_id = ?
+  `).bind(studentId, classId).first<{ id: string; full_name: string }>();
+  if (!student) {
+    return certificateError('CERTIFICATE_STUDENT_SCOPE_INVALID', 'Student does not belong to the selected class', 403);
+  }
+
+  const template = await env.DB.prepare(`
+    SELECT id, school_id, created_by, bg_image_r2_key, fields_config, canvas_width, canvas_height
+    FROM certificate_templates WHERE id = ? AND is_active = 1
+  `).bind(templateId).first<{
+    id: string;
+    school_id: string | null;
+    created_by: string;
+    bg_image_r2_key: string;
+    fields_config: string;
+    canvas_width: number;
+    canvas_height: number;
+  }>();
+  if (!template) return certificateError('CERTIFICATE_TEMPLATE_NOT_FOUND', 'Active template not found', 404);
+  const schoolId = authResult.user.school_id ?? authResult.user.username;
+  if (
+    authResult.user.role !== 'admin'
+    && template.school_id !== null
+    && template.created_by !== 'admin'
+    && template.school_id !== schoolId
+  ) {
+    return certificateError('CERTIFICATE_TEMPLATE_FORBIDDEN', 'Template is outside your scope', 403);
+  }
+
+  let quizTitle = '';
+  let score: number | null = null;
+  if (quizId) {
+    const quiz = await env.DB.prepare('SELECT id, title, created_by FROM quizzes WHERE id = ?')
+      .bind(quizId).first<{ id: string; title: string; created_by: string }>();
+    if (!quiz) return certificateError('CERTIFICATE_QUIZ_NOT_FOUND', 'Quiz not found', 404);
+    if (authResult.user.role !== 'admin') {
+      const quizAccess = await env.DB.prepare(`
+        SELECT q.id FROM quizzes q
+        WHERE q.id = ? AND (
+          q.created_by = ? OR EXISTS (
+            SELECT 1 FROM assignments a WHERE a.quiz_id = q.id AND a.class_id = ?
+          )
+        )
+      `).bind(quizId, authResult.user.username, classId).first();
+      if (!quizAccess) return certificateError('CERTIFICATE_QUIZ_FORBIDDEN', 'Quiz is outside your scope', 403);
+    }
+    quizTitle = quiz.title;
+    const result = await env.DB.prepare(`
+      SELECT score, quiz_title FROM results
+      WHERE quiz_id = ? AND class_name = ? AND student_name = ?
+        AND answers != '{"status":"STARTED"}'
+      ORDER BY submitted_at DESC LIMIT 1
+    `).bind(quizId, classroom.name, student.full_name).first<{ score: number | null; quiz_title: string | null }>();
+    if (result) {
+      score = result.score;
+      quizTitle = result.quiz_title || quizTitle;
+    }
+  }
+
+  let fieldsConfig: FieldConfig[];
+  try {
+    fieldsConfig = JSON.parse(template.fields_config || '[]') as FieldConfig[];
+  } catch {
+    return certificateError('CERTIFICATE_TEMPLATE_INVALID', 'Template field configuration is invalid', 500);
+  }
+  fieldsConfig = fieldsConfig.map((field) => {
+    if (field.key === 'quiz_title' && achievementPrefix !== null) {
+      return { ...field, prefix: achievementPrefix ? `${achievementPrefix} ` : '' };
+    }
+    if (field.key === 'date' && dateLine !== null) {
+      return { ...field, prefix: '', format: undefined };
+    }
+    return field;
+  });
+
+  const [background, teacher] = await Promise.all([
+    env.CERT_IMAGES.get(template.bg_image_r2_key),
+    env.DB.prepare('SELECT full_name FROM teachers WHERE username = ?')
+      .bind(authResult.user.username).first<{ full_name: string }>(),
+  ]);
+  if (!background) return certificateError('CERTIFICATE_BACKGROUND_NOT_FOUND', 'Template background is missing', 500);
+  const backgroundBuffer = await background.arrayBuffer();
+  const fontAssets = previewFontAssets(fieldsConfig);
+  const fontBuffers = await Promise.all(fontAssets.map((asset) => loadFont(env, asset.r2Name)));
+  const fontCss = fontAssets.map((asset, index) => {
+    const bytes = new Uint8Array(fontBuffers[index]);
+    const mime = bytes[0] === 0x4f && bytes[1] === 0x54 ? 'font/otf' : 'font/ttf';
+    return `@font-face{font-family:'${asset.family}';src:url(data:${mime};base64,${arrayBufferToBase64(fontBuffers[index])});font-weight:${asset.weight};font-style:${asset.style};}`;
+  }).join('');
+  const backgroundHref = `data:${imageMime(backgroundBuffer)};base64,${arrayBufferToBase64(backgroundBuffer)}`;
+  const svg = buildCertificateSvg(backgroundHref, fieldsConfig, {
+    student_name: student.full_name,
+    score: score !== null ? `${score}/10` : '',
+    quiz_title: quizTitle,
+    date: dateLine !== null ? dateLine : new Date().toLocaleDateString('vi-VN'),
+    teacher_name: teacher?.full_name || 'Giáo viên',
+    custom_note: '',
+  }, template.canvas_width, template.canvas_height).replace(
+    '>',
+    `><defs><style><![CDATA[${fontCss}]]></style></defs>`,
+  );
+  return new Response(svg, {
+    headers: {
+      'Content-Type': 'image/svg+xml; charset=utf-8',
+      'Cache-Control': 'private, no-store',
+      'Content-Disposition': 'inline; filename="certificate-preview.svg"',
+    },
+  });
 }
 
 // POST /api/certificate-batches
@@ -560,6 +769,10 @@ export async function handleCertificateRoutes(
   }
   if (path === '/api/certificate-batches' && method === 'GET') {
     return handleGetBatches(request, env);
+  }
+
+  if (path === '/api/certificates/render-preview' && method === 'POST') {
+    return handleRenderCertificatePreview(request, env);
   }
 
   const retryMatch = path.match(/^\/api\/certificate-batches\/([^/]+)\/retry$/);

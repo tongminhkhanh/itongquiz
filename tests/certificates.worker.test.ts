@@ -14,6 +14,7 @@ import {
   handleGetCertificateImage,
   handleGetNotifications,
   handleMarkNotificationRead,
+  handleRenderCertificatePreview,
 } from '../workers/src/routes/certificates';
 
 class FakeStatement {
@@ -189,6 +190,71 @@ describe('certificate worker authorization and integrity', () => {
     expect(await response.json()).toEqual({
       data: { batch_id: 'batch-existing', status: 'pending' },
     });
+    expect(db.batches).toHaveLength(0);
+    expect(env.CERTIFICATE_QUEUE.send).not.toHaveBeenCalled();
+  });
+
+  it('renders an exact SVG preview without creating certificate data', async () => {
+    const db = new FakeDB();
+    db.first = (sql) => {
+      if (sql.includes('FROM classes')) {
+        return { id: 'class-1', name: '5A', teacher_username: 'teacher-1' };
+      }
+      if (sql.includes('FROM students')) {
+        return { id: 'student-1', full_name: 'Lê Văn Tuấn' };
+      }
+      if (sql.includes('FROM certificate_templates')) {
+        return {
+          id: 'template-1', school_id: null, created_by: 'admin', is_active: 1,
+          bg_image_r2_key: 'backgrounds/default.png', canvas_width: 1270, canvas_height: 698,
+          fields_config: JSON.stringify([
+            { key: 'student_name', x: 635, y: 304, fontSize: 64, fontFamily: 'Great Vibes' },
+            { key: 'quiz_title', x: 635, y: 390, fontSize: 28, fontFamily: 'Spectral', fontWeight: 'bold', prefix: 'Mặc định ' },
+            { key: 'date', x: 990, y: 535, fontSize: 22, fontFamily: 'Spectral', fontWeight: 'bold', prefix: 'Mặc định ' },
+          ]),
+        };
+      }
+      if (sql.includes('SELECT id, title, created_by FROM quizzes')) {
+        return { id: 'quiz-1', title: 'Ôn tập Toán', created_by: 'teacher-1' };
+      }
+      if (sql.includes('SELECT q.id FROM quizzes')) return { id: 'quiz-1' };
+      if (sql.includes('SELECT score, quiz_title FROM results')) {
+        return { score: 9, quiz_title: 'Ôn tập Toán' };
+      }
+      if (sql.includes('FROM teachers')) return { full_name: 'Cô Khánh' };
+      return null;
+    };
+    const env = createEnv(db);
+    env.CERT_IMAGES.get.mockImplementation(async (key: string) => {
+      if (key === 'backgrounds/default.png') {
+        const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+        return { arrayBuffer: async () => png.buffer.slice(0) };
+      }
+      const font = new Uint8Array(12);
+      font.set([0x00, 0x01, 0x00, 0x00]);
+      return { arrayBuffer: async () => font.buffer.slice(0) };
+    });
+
+    const response = await handleRenderCertificatePreview(new Request(
+      'https://example.test/api/certificates/render-preview',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          template_id: 'template-1', class_id: 'class-1', student_id: 'student-1', quiz_id: 'quiz-1',
+          achievement_prefix: 'Đã tiến bộ vượt bậc',
+          date_line: 'Ít Ong, ngày 20 tháng 7 năm 2026',
+        }),
+      },
+    ), env);
+    const svg = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('image/svg+xml');
+    expect(svg).toContain('Lê Văn Tuấn');
+    expect(svg).toContain('Đã tiến bộ vượt bậc Ôn tập Toán');
+    expect(svg).toContain('Ít Ong, ngày 20 tháng 7 năm 2026');
+    expect(svg).toContain('@font-face');
     expect(db.batches).toHaveLength(0);
     expect(env.CERTIFICATE_QUEUE.send).not.toHaveBeenCalled();
   });
