@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import type { DropdownEditorDraft } from '../../../types/quiz-editor.types';
-import { FieldRow, RemoveBtn, AddRowBtn, MathFieldPreview, TextInput } from './shared';
+import { FieldRow, RemoveBtn, AddRowBtn, MathTextarea, TextInput } from './shared';
 
 interface DropdownEditorProps {
     draft: DropdownEditorDraft;
@@ -19,6 +19,8 @@ const DropdownEditor: React.FC<DropdownEditorProps> = ({ draft, onChange }) => (
                 value={draft.image ?? ''}
                 onChange={(e) => onChange({ ...draft, image: e.target.value })}
                 placeholder="https://example.com/image.jpg"
+                showMathPreview={false}
+                showMathToolbar={false}
             />
         </FieldRow>
 
@@ -26,14 +28,12 @@ const DropdownEditor: React.FC<DropdownEditorProps> = ({ draft, onChange }) => (
             label="Đoạn văn"
             hint="Dùng [1], [2]... để đánh dấu vị trí dropdown. VD: Thủ đô Việt Nam là [1]."
         >
-            <textarea
+            <MathTextarea
                 value={draft.text}
                 onChange={(e) => onChange({ ...draft, text: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                 placeholder="Thủ đô Việt Nam là [1]. Dân số khoảng [2] triệu."
             />
-            <MathFieldPreview value={draft.text} />
         </FieldRow>
 
         {/* Blanks editor */}

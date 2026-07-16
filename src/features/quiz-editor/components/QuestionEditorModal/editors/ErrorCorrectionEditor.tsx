@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import type { ErrorCorrectionEditorDraft } from '../../../types/quiz-editor.types';
-import { FieldRow, TextInput } from './shared';
+import { FieldRow, MathTextarea, TextInput } from './shared';
 
 interface ErrorCorrectionEditorProps {
     draft: ErrorCorrectionEditorDraft;
@@ -14,11 +14,10 @@ interface ErrorCorrectionEditorProps {
 const ErrorCorrectionEditor: React.FC<ErrorCorrectionEditorProps> = ({ draft, onChange }) => (
     <div className="space-y-4">
         <FieldRow label="Đoạn văn (có chứa lỗi)">
-            <textarea
+            <MathTextarea
                 value={draft.passage}
                 onChange={(e) => onChange({ ...draft, passage: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                 placeholder="Nhập đoạn văn có lỗi..."
             />
         </FieldRow>

@@ -19,6 +19,8 @@ const ImageQuestionEditor: React.FC<ImageQuestionEditorProps> = ({ draft, onChan
                 value={draft.image}
                 onChange={(e) => onChange({ ...draft, image: e.target.value })}
                 placeholder="Nhập URL hoặc Base64..."
+                showMathPreview={false}
+                showMathToolbar={false}
             />
             {draft.image && (
                 <div className="mt-2">
@@ -78,6 +80,8 @@ const ImageQuestionEditor: React.FC<ImageQuestionEditorProps> = ({ draft, onChan
                                             onChange({ ...draft, optionImages: next });
                                         }}
                                         placeholder="https://..."
+                                        showMathPreview={false}
+                                        showMathToolbar={false}
                                     />
                                     {optImg && (
                                         <img

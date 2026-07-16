@@ -68,6 +68,8 @@ const MatchingEditor: React.FC<MatchingEditorProps> = ({ draft, onChange }) => {
                                     onChange({ ...draft, pairs: next });
                                 }}
                                 placeholder="URL hình cho cặp nối này (tùy chọn)"
+                                showMathPreview={false}
+                                showMathToolbar={false}
                             />
                         </div>
                     ))}

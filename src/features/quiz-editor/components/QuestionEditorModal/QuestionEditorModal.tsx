@@ -31,7 +31,7 @@ import CategorizationEditor from './editors/CategorizationEditor';
 import WordScrambleEditor from './editors/WordScrambleEditor';
 import RiddleEditor from './editors/RiddleEditor';
 import ErrorCorrectionEditor from './editors/ErrorCorrectionEditor';
-import { FieldRow, MathFieldPreview, TextInput } from './editors/shared';
+import { FieldRow, MathTextarea, TextInput } from './editors/shared';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -78,17 +78,16 @@ const SharedHeaderEditor: React.FC<{
     return (
         <div className="space-y-3">
             <FieldRow label="Nội dung câu hỏi">
-                <textarea
+                <MathTextarea
                     ref={textareaRef}
                     value={questionValue}
                     onChange={(e) =>
                         onDraftChange((prev) => ({ ...prev, [questionField]: e.target.value }))
                     }
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                    className="resize-none"
                     placeholder="Nhập nội dung câu hỏi..."
                 />
-                <MathFieldPreview value={questionValue} />
             </FieldRow>
 
             <div className="flex items-center gap-4">
@@ -129,6 +128,8 @@ const SharedHeaderEditor: React.FC<{
                                         }))
                                     }
                                     placeholder="https://..."
+                                    showMathPreview={false}
+                                    showMathToolbar={false}
                                 />
                             </FieldRow>
                         </div>
