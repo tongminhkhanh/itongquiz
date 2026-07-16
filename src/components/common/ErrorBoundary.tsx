@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { recoverFromStaleChunk } from '../../utils/chunkRecovery';
 
 interface Props {
     children: ReactNode;
@@ -33,7 +34,11 @@ class ErrorBoundary extends Component<Props, State> {
 
     componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
         this.setState({ errorInfo });
-        // Log error to console (could be sent to error tracking service)
+
+        // A tab opened before a deployment can still reference removed hashed chunks.
+        // Reload once to fetch the current HTML/module graph instead of showing a fatal error.
+        if (recoverFromStaleChunk(error)) return;
+
         console.error('[ErrorBoundary] Caught error:', error);
         console.error('[ErrorBoundary] Error info:', errorInfo);
     }
@@ -67,9 +72,9 @@ class ErrorBoundary extends Component<Props, State> {
                             <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <AlertTriangle className="w-8 h-8" />
                             </div>
-                            <h2 className="text-2xl font-bold">Đã xảy ra lỗi</h2>
+                            <h2 className="text-2xl font-bold">ÄÃ£ xáº£y ra lá»—i</h2>
                             <p className="text-red-100 mt-2 text-sm">
-                                Rất tiếc, ứng dụng gặp sự cố không mong muốn
+                                Ráº¥t tiáº¿c, á»©ng dá»¥ng gáº·p sá»± cá»‘ khÃ´ng mong muá»‘n
                             </p>
                         </div>
 
@@ -82,7 +87,7 @@ class ErrorBoundary extends Component<Props, State> {
                                 {this.state.errorInfo && (
                                     <details className="mt-2">
                                         <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
-                                            Chi tiết lỗi
+                                            Chi tiáº¿t lá»—i
                                         </summary>
                                         <pre className="mt-2 text-xs text-gray-600 overflow-auto max-h-32 bg-gray-100 p-2 rounded">
                                             {this.state.errorInfo.componentStack}
@@ -99,7 +104,7 @@ class ErrorBoundary extends Component<Props, State> {
                                 className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
                             >
                                 <RefreshCw className="w-5 h-5" />
-                                Thử lại
+                                Thá»­ láº¡i
                             </button>
 
                             <button
@@ -107,21 +112,21 @@ class ErrorBoundary extends Component<Props, State> {
                                 className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-all"
                             >
                                 <Home className="w-5 h-5" />
-                                Về trang chủ
+                                Vá» trang chá»§
                             </button>
 
                             <button
                                 onClick={this.handleReload}
                                 className="w-full text-center py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
                             >
-                                Tải lại trang
+                                Táº£i láº¡i trang
                             </button>
                         </div>
 
                         {/* Footer */}
                         <div className="px-6 pb-4 text-center">
                             <p className="text-xs text-gray-400">
-                                Nếu lỗi vẫn tiếp tục, vui lòng liên hệ quản trị viên
+                                Náº¿u lá»—i váº«n tiáº¿p tá»¥c, vui lÃ²ng liÃªn há»‡ quáº£n trá»‹ viÃªn
                             </p>
                         </div>
                     </div>

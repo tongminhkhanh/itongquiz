@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom';
 import { MathJaxContext } from 'better-react-mathjax';
 import App from './App';
 import MathRenderTelemetryObserver from './src/components/common/MathRenderTelemetryObserver';
+import { installChunkRecovery } from './src/utils/chunkRecovery';
+
+installChunkRecovery();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
