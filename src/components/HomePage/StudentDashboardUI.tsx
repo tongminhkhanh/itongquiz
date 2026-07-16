@@ -31,6 +31,7 @@ import type { GameLoopMission, GameLoopRewardResult } from '../../types/gameLoop
 import type { LiveExamSubmissionResponse } from '../../types/liveExam.types';
 import { getAchievementBadgeAlt, getAchievementBadgeImage } from '../../config/achievementBadges';
 import NotificationBell from '../common/NotificationBell';
+import CurrentAnnouncementBanner from '../common/CurrentAnnouncementBanner';
 
 // --- Subject Config (Reused from HomePage) ---
 export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color: string; desc: string; showOnHome?: boolean }> = {
@@ -867,6 +868,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
     return (
         <div className="min-h-dvh bg-[#F4F7FC] font-sans text-slate-800 flex flex-col items-center">
+            <CurrentAnnouncementBanner role="student" />
             {/* --- NAVBAR --- */}
             <header className="w-full bg-white shadow-sm border-b border-slate-100 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-3 md:px-8 h-16 md:h-20 flex items-center justify-between">

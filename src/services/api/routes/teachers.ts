@@ -1,34 +1,40 @@
 import type { RouteRegistry } from '../types';
 
+const adminBase = '/api/admin/teachers';
+
 export const teacherRoutes: RouteRegistry = {
     get_teachers: {
-        method: 'GET',
-        auth: 'session',
-        path: () => '/api/teachers',
+        method: 'GET', auth: 'session', path: () => adminBase,
+        query: (payload) => new URLSearchParams(Object.entries({
+            search: payload.search || '', role: payload.role || '', status: payload.status || '',
+            page: String(payload.page || 1), pageSize: String(payload.pageSize || 25),
+        }).filter(([, value]) => value !== '')),
     },
-    create_teacher: {
-        method: 'POST',
-        auth: 'session',
-        path: () => '/api/teachers',
-    },
+    create_teacher: { method: 'POST', auth: 'session', path: () => adminBase },
     update_teacher: {
-        method: 'PUT',
-        auth: 'session',
-        path: ({ username }) => `/api/teachers/${encodeURIComponent(username)}`,
+        method: 'PUT', auth: 'session',
+        path: ({ username }) => `${adminBase}/${encodeURIComponent(username)}`,
     },
-    delete_teacher: {
-        method: 'DELETE',
-        auth: 'session',
-        path: ({ username }) => `/api/teachers/${encodeURIComponent(username)}`,
+    reset_teacher_password: {
+        method: 'POST', auth: 'session',
+        path: ({ username }) => `${adminBase}/${encodeURIComponent(username)}/reset-password`,
     },
-    login: {
-        method: 'POST',
-        auth: 'session',
-        path: () => '/api/login',
+    disable_teacher: {
+        method: 'POST', auth: 'session',
+        path: ({ username }) => `${adminBase}/${encodeURIComponent(username)}/disable`,
+        body: (_action, payload) => ({ transferTo: payload.transferTo, reason: payload.reason }),
     },
-    logout: {
-        method: 'POST',
-        auth: 'session',
-        path: () => '/api/logout',
+    enable_teacher: {
+        method: 'POST', auth: 'session',
+        path: ({ username }) => `${adminBase}/${encodeURIComponent(username)}/enable`,
+        body: () => ({}),
     },
+    get_account_profile: { method: 'GET', auth: 'session', path: () => '/api/account/me' },
+    change_password: {
+        method: 'POST', auth: 'session', path: () => '/api/account/change-password',
+        body: (_action, payload) => ({ currentPassword: payload.currentPassword, newPassword: payload.newPassword }),
+    },
+    logout_all: { method: 'POST', auth: 'session', path: () => '/api/account/logout-all', body: () => ({}) },
+    login: { method: 'POST', auth: 'session', path: () => '/api/login' },
+    logout: { method: 'POST', auth: 'session', path: () => '/api/logout' },
 };

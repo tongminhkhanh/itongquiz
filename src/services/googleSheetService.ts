@@ -22,7 +22,8 @@ const callGasApi = async (action: string, payload: any = {}): Promise<any> => {
 
 export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Promise<Teacher[]> => {
     try {
-        const data = await callApi<any[]>('get_teachers');
+        const response = await callApi<{ data?: { items?: any[] } }>('get_teachers', { status: 'ACTIVE', pageSize: 100 });
+        const data = response.data?.items || [];
 
         if (!data || !Array.isArray(data)) {
             console.error('[fetchTeachersFromSheets] Data is not an array:', typeof data);
@@ -31,7 +32,7 @@ export const fetchTeachersFromSheets = async (sheetId: string, gid: string): Pro
 
         const teachers = data.map((row: any) => ({
             username: String(row.username || row.id || '').trim(),
-            password: String(row.password || '').trim(),
+            password: '',
             fullName: row.fullName || row.fullname || row.name || '',
             role: row.role || 'teacher',
             class: row.class ? String(row.class).trim() : undefined

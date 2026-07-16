@@ -16,6 +16,7 @@ interface AuthState {
     loginStart: () => void;
     loginSuccess: (username: string, name: string, isAdmin: boolean, teacherClass?: string | null, token?: string | null) => void; // Update signature
     loginFailure: () => void;
+    loginPendingPasswordChange: () => void;
     logout: () => void;
     resetError: () => void;
 }
@@ -52,9 +53,14 @@ export const useAuthStore = create<AuthState>()(
                 loginError: true
             }),
 
+            loginPendingPasswordChange: () => set({ isLoggingIn: false, loginError: false }),
+
             logout: () => set({
                 ...(() => {
-                    try { localStorage.removeItem('itongquiz_jwt_token'); } catch {}
+                    try {
+                        localStorage.removeItem('itongquiz_jwt_token');
+                        localStorage.removeItem('itongquiz_teacher_jwt_token');
+                    } catch {}
                     return {};
                 })(),
                 isLoggedIn: false,

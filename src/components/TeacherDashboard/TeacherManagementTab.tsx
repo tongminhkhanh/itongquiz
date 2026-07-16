@@ -1,430 +1,239 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Ban, CheckCircle2, KeyRound, Loader2, Pencil, Plus, RefreshCw, Search, X } from 'lucide-react';
 import { callApi } from '../../services/apiAdapter';
-import { UserPlus, Pencil, Trash2, X, Save, Loader2, Eye, EyeOff, RefreshCw } from 'lucide-react';
-import { ResponsiveDataView } from '../common';
-import { useAuthStore } from '../../../stores/authStore';
-import { showError, showSuccess, showConfirm } from '../../utils/toast';
+import { showConfirm, showError, showSuccess } from '../../utils/toast';
 
+type TeacherStatus = 'ACTIVE' | 'DISABLED';
 interface TeacherRecord {
     username: string;
-    password: string;
-    full_name: string;
-    role: string;
-    class: string;
-}
-
-interface TeacherForm {
-    username: string;
-    password: string;
     fullName: string;
-    role: string;
-    teacherClass: string;
+    full_name: string;
+    role: 'admin' | 'teacher';
+    class: string;
+    status: TeacherStatus;
+    classCount: number;
+    mustChangePassword: boolean;
+    lastLoginAt: string | null;
 }
 
-const EMPTY_FORM: TeacherForm = {
-    username: '',
-    password: '',
-    fullName: '',
-    role: 'teacher',
-    teacherClass: '',
-};
+interface TeacherListResponse {
+    status: string;
+    data: { items: TeacherRecord[]; page: number; pageSize: number; total: number };
+}
+
+interface TeacherForm { username: string; fullName: string; role: 'admin' | 'teacher'; teacherClass: string }
+const EMPTY_FORM: TeacherForm = { username: '', fullName: '', role: 'teacher', teacherClass: '' };
 
 const TeacherManagementTab: React.FC = () => {
-    const authStore = useAuthStore();
     const [teachers, setTeachers] = useState<TeacherRecord[]>([]);
+    const [total, setTotal] = useState(0);
+    const [page, setPage] = useState(1);
+    const [search, setSearch] = useState('');
+    const [roleFilter, setRoleFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [form, setForm] = useState(EMPTY_FORM);
+    const [editing, setEditing] = useState<string | null>(null);
+    const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const [showModal, setShowModal] = useState(false);
-    const [editingUsername, setEditingUsername] = useState<string | null>(null);
-    const [form, setForm] = useState<TeacherForm>(EMPTY_FORM);
-    const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+    const [temporaryPassword, setTemporaryPassword] = useState('');
+    const [disableTarget, setDisableTarget] = useState<TeacherRecord | null>(null);
+    const [transferTo, setTransferTo] = useState('');
+    const [disableReason, setDisableReason] = useState('');
 
     const fetchTeachers = useCallback(async () => {
         setLoading(true);
-        setError(null);
+        setError('');
         try {
-            const data = await callApi<TeacherRecord[]>('get_teachers');
-            if (Array.isArray(data)) {
-                setTeachers(data);
-            }
-        } catch (err: unknown) {
-            const normalizedError = err instanceof Error ? err : new Error(String(err));
-            setError(normalizedError.message || 'Không thể tải danh sách giáo viên');
+            const response = await callApi<TeacherListResponse>('get_teachers', {
+                search, role: roleFilter, status: statusFilter, page, pageSize: 25,
+            });
+            setTeachers(response.data?.items || []);
+            setTotal(response.data?.total || 0);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Không thể tải danh sách giáo viên.');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [page, roleFilter, search, statusFilter]);
 
-    useEffect(() => { fetchTeachers(); }, [fetchTeachers]);
+    useEffect(() => { void fetchTeachers(); }, [fetchTeachers]);
+    useEffect(() => { setPage(1); }, [search, roleFilter, statusFilter]);
 
-    const handleCreate = () => {
-        setEditingUsername(null);
+    const activeRecipients = useMemo(
+        () => teachers.filter((teacher) => teacher.status === 'ACTIVE' && teacher.username !== disableTarget?.username),
+        [teachers, disableTarget],
+    );
+
+    const openCreate = () => {
+        setEditing(null);
         setForm(EMPTY_FORM);
-        setShowModal(true);
+        setShowForm(true);
     };
 
-    const handleEdit = (teacher: TeacherRecord) => {
-        setEditingUsername(teacher.username);
-        setForm({
-            username: teacher.username,
-            password: teacher.password,
-            fullName: teacher.full_name,
-            role: teacher.role,
-            teacherClass: teacher.class || '',
-        });
-        setShowModal(true);
+    const openEdit = (teacher: TeacherRecord) => {
+        setEditing(teacher.username);
+        setForm({ username: teacher.username, fullName: teacher.fullName || teacher.full_name, role: teacher.role, teacherClass: teacher.class || '' });
+        setShowForm(true);
     };
 
-    const handleDelete = async (username: string, fullName: string) => {
-        showConfirm({
-            message: `Xác nhận xóa tài khoản "${fullName}" (${username})?`,
-            confirmLabel: 'Xóa',
-            destructive: true,
-            onConfirm: async () => {
-                try {
-                    const result = await callApi<{ status: string; message: string }>('delete_teacher', {
-                        username,
-                        actorUsername: authStore.username || '',
-                    });
-                    if (result.status === 'success') {
-                        setTeachers(prev => prev.filter(t => t.username !== username));
-                        showSuccess('Xóa tài khoản thành công');
-                    } else {
-                        showError(result.message || 'Lỗi khi xóa');
-                    }
-                } catch (err: unknown) {
-                    const normalizedError = err instanceof Error ? err : new Error(String(err));
-                    showError(normalizedError.message || 'Lỗi khi xóa');
-                }
-            },
-        });
-    };
-
-    const handleSave = async () => {
-        if (!form.fullName.trim()) { showError('Vui lòng nhập họ tên'); return; }
-        if (!form.username.trim()) { showError('Vui lòng nhập tên đăng nhập'); return; }
-        if (!editingUsername && !form.password.trim()) { showError('Vui lòng nhập mật khẩu'); return; }
-
+    const saveTeacher = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!form.username.trim() || !form.fullName.trim()) return showError('Vui lòng nhập đủ tên và username.');
         setSaving(true);
         try {
-            if (editingUsername) {
-                const result = await callApi<{ status: string; message: string }>('update_teacher', {
-                    username: editingUsername,
-                    password: form.password || undefined,
-                    fullName: form.fullName,
-                    role: form.role,
-                    teacherClass: form.teacherClass,
-                    actorUsername: authStore.username || '',
-                });
-                if (result.status === 'error') { showError(result.message); return; }
+            if (editing) {
+                await callApi('update_teacher', { username: editing, fullName: form.fullName, role: form.role, teacherClass: form.teacherClass });
+                showSuccess('Đã cập nhật giáo viên.');
             } else {
-                const result = await callApi<{ status: string; message: string }>('create_teacher', {
-                    username: form.username,
-                    password: form.password,
-                    fullName: form.fullName,
-                    role: form.role,
-                    teacherClass: form.teacherClass,
-                    actorUsername: authStore.username || '',
-                });
-                if (result.status === 'error') { showError(result.message); return; }
+                const response = await callApi<{ data?: { temporaryPassword?: string } }>('create_teacher', form);
+                setTemporaryPassword(response.data?.temporaryPassword || '');
+                showSuccess('Đã tạo tài khoản.');
             }
-
-            setShowModal(false);
-            setForm(EMPTY_FORM);
-            showSuccess(editingUsername ? 'Cập nhật thành công' : 'Tạo tài khoản thành công');
+            setShowForm(false);
             await fetchTeachers();
-        } catch (err: unknown) {
-            const normalizedError = err instanceof Error ? err : new Error(String(err));
-            showError(normalizedError.message || 'Lỗi khi lưu');
+        } catch (err) {
+            showError(err instanceof Error ? err.message : 'Không thể lưu tài khoản.');
         } finally {
             setSaving(false);
         }
     };
 
-    const togglePassword = (username: string) => {
-        setShowPasswords(prev => ({ ...prev, [username]: !prev[username] }));
+    const resetPassword = (teacher: TeacherRecord) => showConfirm({
+        message: `Tạo mật khẩu tạm mới cho ${teacher.fullName || teacher.full_name}? Tất cả phiên hiện tại sẽ bị đăng xuất.`,
+        confirmLabel: 'Tạo mật khẩu tạm',
+        onConfirm: async () => {
+            try {
+                const response = await callApi<{ data?: { temporaryPassword?: string } }>('reset_teacher_password', { username: teacher.username });
+                setTemporaryPassword(response.data?.temporaryPassword || '');
+                await fetchTeachers();
+            } catch (err) {
+                showError(err instanceof Error ? err.message : 'Không thể đặt lại mật khẩu.');
+            }
+        },
+    });
+
+    const disableTeacher = async () => {
+        if (!disableTarget) return;
+        if (disableTarget.classCount > 0 && !transferTo) return showError('Vui lòng chọn giáo viên nhận lớp.');
+        setSaving(true);
+        try {
+            await callApi('disable_teacher', {
+                username: disableTarget.username,
+                transferTo: transferTo || undefined,
+                reason: disableReason,
+            });
+            setDisableTarget(null);
+            setTransferTo('');
+            setDisableReason('');
+            showSuccess('Đã vô hiệu hóa tài khoản.');
+            await fetchTeachers();
+        } catch (err) {
+            showError(err instanceof Error ? err.message : 'Không thể vô hiệu hóa tài khoản.');
+        } finally {
+            setSaving(false);
+        }
     };
 
-    const roleLabel = (role: string) => {
-        if (role === 'admin') return <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium">Admin</span>;
-        return <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Giáo viên</span>;
-    };
+    const enableTeacher = (teacher: TeacherRecord) => showConfirm({
+        message: `Kích hoạt lại tài khoản ${teacher.username}? Các lớp đã chuyển sẽ không tự động chuyển lại.`,
+        confirmLabel: 'Kích hoạt',
+        onConfirm: async () => {
+            try {
+                await callApi('enable_teacher', { username: teacher.username });
+                showSuccess('Đã kích hoạt tài khoản.');
+                await fetchTeachers();
+            } catch (err) {
+                showError(err instanceof Error ? err.message : 'Không thể kích hoạt tài khoản.');
+            }
+        },
+    });
 
     return (
-        <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-800">Quản lý Giáo viên</h2>
-                    <p className="text-sm text-gray-500">Tạo, sửa, xóa tài khoản giáo viên</p>
+                    <h2 className="text-2xl font-bold text-slate-900">Quản lý giáo viên</h2>
+                    <p className="text-sm text-slate-500">Quản lý quyền, trạng thái, lớp phụ trách và mật khẩu tạm.</p>
                 </div>
-                <div className="flex gap-2 w-full sm:w-auto">
-                    <button
-                        onClick={fetchTeachers}
-                        className="flex items-center gap-2 px-3 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
-                    >
-                        <RefreshCw className="w-4 h-4" />
-                        Làm mới
-                    </button>
-                    <button
-                        onClick={handleCreate}
-                        className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"
-                    >
-                        <UserPlus className="w-4 h-4" />
-                        Thêm giáo viên
-                    </button>
+                <div className="flex gap-2">
+                    <button onClick={() => void fetchTeachers()} className="inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold"><RefreshCw className="h-4 w-4" />Làm mới</button>
+                    <button onClick={openCreate} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white"><Plus className="h-4 w-4" />Thêm giáo viên</button>
                 </div>
             </div>
 
-            {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                    {error}
-                </div>
-            )}
+            <div className="grid gap-3 rounded-2xl border bg-white p-4 md:grid-cols-[1fr_180px_180px]">
+                <label className="relative">
+                    <Search className="absolute left-3 top-2.5 h-5 w-5 text-slate-400" />
+                    <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm họ tên hoặc username" className="h-10 w-full rounded-xl border pl-10 pr-3" />
+                </label>
+                <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="h-10 rounded-xl border px-3">
+                    <option value="">Mọi vai trò</option><option value="teacher">Giáo viên</option><option value="admin">Quản trị viên</option>
+                </select>
+                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-10 rounded-xl border px-3">
+                    <option value="">Mọi trạng thái</option><option value="ACTIVE">Đang hoạt động</option><option value="DISABLED">Đã vô hiệu hóa</option>
+                </select>
+            </div>
 
-            {loading ? (
-                <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-                </div>
-            ) : (
-                <ResponsiveDataView
-                    items={teachers}
-                    keyExtractor={(teacher) => teacher.username}
-                    emptyState={(
-                        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                            <div className="text-center py-8 text-gray-400">
-                                Chưa có giáo viên nào. Nhấn "Thêm giáo viên" để bắt đầu.
-                            </div>
-                        </div>
-                    )}
-                    renderDesktop={() => (
-                        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="bg-gray-50 border-b border-gray-200">
-                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">#</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Họ tên</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Username</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Mật khẩu</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Vai trò</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-gray-600">Lớp</th>
-                                            <th className="text-center px-4 py-3 font-semibold text-gray-600">Thao tác</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {teachers.map((t, idx) => (
-                                            <tr key={t.username} className="border-b border-gray-100 hover:bg-orange-50/50 transition-colors">
-                                                <td className="px-4 py-3 text-gray-400">{idx + 1}</td>
-                                                <td className="px-4 py-3 font-medium text-gray-800">{t.full_name}</td>
-                                                <td className="px-4 py-3 text-gray-600 font-mono text-xs">{t.username}</td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-gray-500 font-mono text-xs">
-                                                            {showPasswords[t.username] ? t.password : '••••••'}
-                                                        </span>
-                                                        <button
-                                                            onClick={() => togglePassword(t.username)}
-                                                            className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
-                                                        >
-                                                            {showPasswords[t.username]
-                                                                ? <EyeOff className="w-3.5 h-3.5" />
-                                                                : <Eye className="w-3.5 h-3.5" />
-                                                            }
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3">{roleLabel(t.role)}</td>
-                                                <td className="px-4 py-3 text-gray-600">{t.class || '-'}</td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        <button
-                                                            onClick={() => handleEdit(t)}
-                                                            className="p-1.5 hover:bg-blue-100 rounded-lg text-blue-500 hover:text-blue-700 transition-colors"
-                                                            title="Sửa"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(t.username, t.full_name)}
-                                                            className="p-1.5 hover:bg-red-100 rounded-lg text-red-400 hover:text-red-600 transition-colors"
-                                                            title="Xóa"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-400">
-                                Tổng cộng: {teachers.length} giáo viên
-                            </div>
-                        </div>
-                    )}
-                    renderMobileCard={(teacher, idx) => (
-                        <div className="space-y-3">
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <p className="text-xs text-slate-400">#{idx + 1}</p>
-                                    <p className="text-sm font-bold text-slate-800">{teacher.full_name}</p>
-                                    <p className="text-xs text-slate-500 mt-1 font-mono">{teacher.username}</p>
-                                </div>
-                                {roleLabel(teacher.role)}
-                            </div>
-                            <div className="flex items-center justify-between gap-2">
-                                <span className="text-xs text-slate-500 font-semibold">Mật khẩu:</span>
-                                <div className="flex items-center gap-1">
-                                    <span className="text-gray-500 font-mono text-xs">
-                                        {showPasswords[teacher.username] ? teacher.password : '••••••'}
-                                    </span>
-                                    <button
-                                        onClick={() => togglePassword(teacher.username)}
-                                        className="h-8 w-8 rounded-md bg-gray-100 text-gray-500 inline-flex items-center justify-center"
-                                    >
-                                        {showPasswords[teacher.username] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                                    </button>
-                                </div>
-                            </div>
-                            <p className="text-xs text-slate-600">
-                                <span className="font-semibold">Lớp phụ trách:</span> {teacher.class || '-'}
-                            </p>
-                            <div className="flex items-center justify-end gap-2">
-                                <button
-                                    onClick={() => handleEdit(teacher)}
-                                    className="h-10 px-3 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold inline-flex items-center gap-1.5"
-                                >
-                                    <Pencil className="w-4 h-4" />
-                                    Sửa
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(teacher.username, teacher.full_name)}
-                                    className="h-10 px-3 rounded-lg bg-red-50 text-red-700 text-sm font-semibold inline-flex items-center gap-1.5"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                    Xóa
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                />
-            )}
-
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
-                    <div className="bg-white w-full h-dvh md:h-auto md:max-h-[90vh] md:max-w-md rounded-none md:rounded-2xl shadow-xl p-5 md:p-6 md:mx-4 overflow-y-auto">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-orange-100 rounded-xl">
-                                    <UserPlus className="w-6 h-6 text-orange-600" />
-                                </div>
-                                <h2 className="text-xl font-bold text-gray-800">
-                                    {editingUsername ? 'Sửa giáo viên' : 'Thêm giáo viên mới'}
-                                </h2>
-                            </div>
-                            <button
-                                onClick={() => setShowModal(false)}
-                                className="p-2 hover:bg-gray-100 rounded-full"
-                            >
-                                <X className="w-5 h-5 text-gray-500" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Họ tên <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.fullName}
-                                    onChange={e => setForm(prev => ({ ...prev, fullName: e.target.value }))}
-                                    placeholder="VD: Cô Hương"
-                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Tên đăng nhập <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.username}
-                                    onChange={e => setForm(prev => ({ ...prev, username: e.target.value.toLowerCase().replace(/\s/g, '') }))}
-                                    placeholder="VD: huong"
-                                    disabled={!!editingUsername}
-                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${editingUsername ? 'bg-gray-100 text-gray-500' : ''}`}
-                                />
-                                {editingUsername && (
-                                    <p className="text-xs text-gray-400 mt-1">Không thể đổi username</p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Mật khẩu {!editingUsername && <span className="text-red-500">*</span>}
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.password}
-                                    onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
-                                    placeholder={editingUsername ? 'Để trống nếu không đổi' : 'Nhập mật khẩu'}
-                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Vai trò</label>
-                                    <select
-                                        value={form.role}
-                                        onChange={e => setForm(prev => ({ ...prev, role: e.target.value }))}
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                    >
-                                        <option value="teacher">Giáo viên</option>
-                                        <option value="admin">Admin</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Lớp phụ trách</label>
-                                    <input
-                                        type="text"
-                                        value={form.teacherClass}
-                                        onChange={e => setForm(prev => ({ ...prev, teacherClass: e.target.value }))}
-                                        placeholder="VD: 3A1"
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    onClick={() => setShowModal(false)}
-                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    Hủy
-                                </button>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={saving}
-                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors font-medium disabled:opacity-50"
-                                >
-                                    {saving ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        <Save className="w-4 h-4" />
-                                    )}
-                                    {editingUsername ? 'Cập nhật' : 'Tạo tài khoản'}
-                                </button>
-                            </div>
-                        </div>
+            {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error} <button onClick={() => void fetchTeachers()} className="ml-2 font-bold underline">Thử lại</button></div>}
+            <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+                {loading ? <div className="flex h-48 items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-blue-600" /></div> : teachers.length === 0 ? (
+                    <div className="p-12 text-center text-slate-500">Không có giáo viên phù hợp bộ lọc.</div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="min-w-[900px] w-full text-sm">
+                            <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr>
+                                <th className="px-4 py-3">Giáo viên</th><th className="px-4 py-3">Vai trò</th><th className="px-4 py-3">Lớp</th>
+                                <th className="px-4 py-3">Trạng thái</th><th className="px-4 py-3">Đăng nhập cuối</th><th className="px-4 py-3 text-right">Thao tác</th>
+                            </tr></thead>
+                            <tbody className="divide-y">
+                                {teachers.map((teacher) => <tr key={teacher.username} className="align-top hover:bg-slate-50/60">
+                                    <td className="px-4 py-3"><div className="font-semibold text-slate-900">{teacher.fullName || teacher.full_name}</div><div className="font-mono text-xs text-slate-500">{teacher.username}</div></td>
+                                    <td className="px-4 py-3">{teacher.role === 'admin' ? 'Quản trị viên' : 'Giáo viên'}</td>
+                                    <td className="px-4 py-3">{teacher.classCount} lớp</td>
+                                    <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${teacher.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>{teacher.status === 'ACTIVE' ? 'Hoạt động' : 'Đã khóa'}</span>{teacher.mustChangePassword && <div className="mt-1 text-xs text-amber-700">Cần đổi mật khẩu</div>}</td>
+                                    <td className="px-4 py-3 text-slate-600">{teacher.lastLoginAt ? new Date(teacher.lastLoginAt).toLocaleString('vi-VN') : 'Chưa có'}</td>
+                                    <td className="px-4 py-3"><div className="flex justify-end gap-1">
+                                        <button onClick={() => openEdit(teacher)} title="Sửa" aria-label={`Sửa ${teacher.username}`} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50"><Pencil className="h-4 w-4" /></button>
+                                        <button onClick={() => resetPassword(teacher)} title="Đặt lại mật khẩu" aria-label={`Đặt lại mật khẩu ${teacher.username}`} className="rounded-lg p-2 text-amber-600 hover:bg-amber-50"><KeyRound className="h-4 w-4" /></button>
+                                        {teacher.status === 'ACTIVE' ? <button onClick={() => setDisableTarget(teacher)} title="Vô hiệu hóa" aria-label={`Vô hiệu hóa ${teacher.username}`} className="rounded-lg p-2 text-red-600 hover:bg-red-50"><Ban className="h-4 w-4" /></button>
+                                            : <button onClick={() => enableTeacher(teacher)} title="Kích hoạt" aria-label={`Kích hoạt ${teacher.username}`} className="rounded-lg p-2 text-emerald-600 hover:bg-emerald-50"><CheckCircle2 className="h-4 w-4" /></button>}
+                                    </div></td>
+                                </tr>)}
+                            </tbody>
+                        </table>
                     </div>
+                )}
+                <div className="flex items-center justify-between border-t bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    <span>Tổng cộng {total} tài khoản</span><div className="flex gap-2"><button disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className="rounded-lg border bg-white px-3 py-1 disabled:opacity-40">Trước</button><span className="px-2 py-1">Trang {page}</span><button disabled={page * 25 >= total} onClick={() => setPage((value) => value + 1)} className="rounded-lg border bg-white px-3 py-1 disabled:opacity-40">Sau</button></div>
                 </div>
-            )}
+            </div>
+
+            {showForm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"><form onSubmit={saveTeacher} className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-xl">
+                <div className="flex items-center justify-between"><h3 className="text-xl font-bold">{editing ? 'Sửa giáo viên' : 'Thêm giáo viên'}</h3><button type="button" onClick={() => setShowForm(false)} aria-label="Đóng"><X /></button></div>
+                <label className="block text-sm font-semibold">Họ tên<input required value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label>
+                <label className="block text-sm font-semibold">Username<input required disabled={Boolean(editing)} value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3 disabled:bg-slate-100" /></label>
+                <label className="block text-sm font-semibold">Vai trò<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as 'teacher' | 'admin' })} className="mt-1 h-10 w-full rounded-xl border px-3"><option value="teacher">Giáo viên</option><option value="admin">Quản trị viên</option></select></label>
+                <label className="block text-sm font-semibold">Lớp mô tả (dữ liệu cũ)<input value={form.teacherClass} onChange={(event) => setForm({ ...form, teacherClass: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label>
+                {!editing && <p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-700">Hệ thống sẽ tạo mật khẩu tạm và chỉ hiển thị một lần sau khi lưu.</p>}
+                <button disabled={saving} className="h-11 w-full rounded-xl bg-blue-600 font-semibold text-white disabled:opacity-50">{saving ? 'Đang lưu…' : 'Lưu tài khoản'}</button>
+            </form></div>}
+
+            {temporaryPassword && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-4"><div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-xl">
+                <KeyRound className="mx-auto h-10 w-10 text-amber-600" /><h3 className="mt-3 text-xl font-bold">Mật khẩu tạm — chỉ hiển thị một lần</h3>
+                <div className="my-5 select-all rounded-xl bg-slate-900 p-4 font-mono text-lg font-bold tracking-wider text-white">{temporaryPassword}</div>
+                <button onClick={async () => { await navigator.clipboard.writeText(temporaryPassword); showSuccess('Đã sao chép mật khẩu.'); }} className="mr-2 rounded-xl border px-4 py-2 font-semibold">Sao chép</button>
+                <button onClick={() => setTemporaryPassword('')} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Tôi đã lưu lại</button>
+            </div></div>}
+
+            {disableTarget && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"><div className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-xl">
+                <h3 className="text-xl font-bold">Vô hiệu hóa {disableTarget.fullName || disableTarget.full_name}</h3>
+                <p className="text-sm text-slate-600">Tài khoản sẽ bị đăng xuất khỏi mọi thiết bị. Dữ liệu lịch sử được giữ nguyên.</p>
+                {disableTarget.classCount > 0 && <label className="block text-sm font-semibold">Chuyển {disableTarget.classCount} lớp cho<select required value={transferTo} onChange={(event) => setTransferTo(event.target.value)} className="mt-1 h-10 w-full rounded-xl border px-3"><option value="">Chọn giáo viên nhận lớp</option>{activeRecipients.map((teacher) => <option key={teacher.username} value={teacher.username}>{teacher.fullName || teacher.full_name}</option>)}</select></label>}
+                <label className="block text-sm font-semibold">Lý do<input value={disableReason} onChange={(event) => setDisableReason(event.target.value)} className="mt-1 h-10 w-full rounded-xl border px-3" /></label>
+                <div className="flex gap-3"><button onClick={() => setDisableTarget(null)} className="h-10 flex-1 rounded-xl border">Hủy</button><button disabled={saving} onClick={() => void disableTeacher()} className="h-10 flex-1 rounded-xl bg-red-600 font-semibold text-white">Vô hiệu hóa</button></div>
+            </div></div>}
         </div>
     );
 };

@@ -7,8 +7,20 @@ CREATE TABLE IF NOT EXISTS teachers (
   password TEXT NOT NULL,
   full_name TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'teacher',
-  class TEXT DEFAULT ''
+  class TEXT DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'DISABLED')),
+  must_change_password INTEGER NOT NULL DEFAULT 1 CHECK (must_change_password IN (0, 1)),
+  token_version INTEGER NOT NULL DEFAULT 1,
+  password_changed_at TEXT,
+  last_login_at TEXT,
+  disabled_at TEXT,
+  disabled_by TEXT,
+  disabled_reason TEXT,
+  created_at TEXT,
+  updated_at TEXT
 );
+
+CREATE INDEX IF NOT EXISTS idx_teachers_status_role ON teachers(status, role, username);
 
 -- Classes
 CREATE TABLE IF NOT EXISTS classes (
@@ -256,7 +268,34 @@ CREATE TABLE IF NOT EXISTS announcements (
   id TEXT PRIMARY KEY DEFAULT '1',
   content TEXT DEFAULT '',
   is_active TEXT DEFAULT 'false',
-  updated_at TEXT DEFAULT ''
+  updated_at TEXT DEFAULT '',
+  banner_title TEXT DEFAULT '',
+  banner_subtitle TEXT DEFAULT '',
+  banner_link TEXT DEFAULT '',
+  banner_image TEXT DEFAULT '',
+  is_banner_active TEXT DEFAULT 'false',
+  days_to_live INTEGER DEFAULT 7,
+  status TEXT NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT', 'SCHEDULED', 'PUBLISHED', 'EXPIRED', 'ARCHIVED')),
+  audience TEXT NOT NULL DEFAULT 'ALL' CHECK (audience IN ('ALL', 'TEACHERS', 'STUDENTS')),
+  starts_at TEXT,
+  ends_at TEXT,
+  created_by TEXT,
+  updated_by TEXT,
+  created_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_announcements_delivery ON announcements(status, audience, starts_at, ends_at);
+
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+  id TEXT PRIMARY KEY,
+  actor_username TEXT NOT NULL,
+  action TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  before_json TEXT,
+  after_json TEXT,
+  created_at TEXT NOT NULL
 );
 
 -- System settings (global toggles)

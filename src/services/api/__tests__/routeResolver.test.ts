@@ -91,9 +91,9 @@ describe('resolveApiRoute', () => {
         expect(r.auth).toBe('session');
     });
 
-    it('resolves get_announcement with the session policy', () => {
+    it('resolves get_announcement with the public policy', () => {
         const r = resolveApiRoute('get_announcement');
-        expect(r.auth).toBe('session');
+        expect(r.auth).toBe('public');
     });
 
     it('resolves get_hw_assignments to /api/gas with GAS body', () => {

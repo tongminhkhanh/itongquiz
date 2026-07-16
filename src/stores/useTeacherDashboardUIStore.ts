@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type {
     SmartAssignmentRecommendedQuiz,
     SmartAssignmentWarning,
@@ -20,7 +21,8 @@ export type TeacherDashboardTab =
     | 'homework'
     | 'live-exam'
     | 'certificates'
-    | 'admin-templates';
+    | 'admin-templates'
+    | 'personal-settings';
 
 export type AssignmentComposerDraft = {
     source: 'smart-preview' | 'manual';
@@ -55,7 +57,7 @@ interface TeacherDashboardUIState {
     clearAssignmentComposerDraft: () => void;
 }
 
-export const useTeacherDashboardUIStore = create<TeacherDashboardUIState>((set) => ({
+export const useTeacherDashboardUIStore = create<TeacherDashboardUIState>()(persist((set) => ({
     activeTab: 'overview',
     assignmentComposerDraft: null,
     setActiveTab: (tab) => set({ activeTab: tab }),
@@ -64,4 +66,7 @@ export const useTeacherDashboardUIStore = create<TeacherDashboardUIState>((set) 
         activeTab: 'assignments',
     }),
     clearAssignmentComposerDraft: () => set({ assignmentComposerDraft: null }),
+}), {
+    name: 'itongquiz_teacher_dashboard_ui',
+    partialize: (state) => ({ activeTab: state.activeTab }),
 }));

@@ -4,6 +4,8 @@ export interface Env {
     CLIPROXY_API: string;
     CLIPROXY_TOKEN: string;
     JWT_SECRET: string;
+    AUTH_MIGRATION_MODE?: 'compat' | 'enforce';
+    ANNOUNCEMENT_IMAGE_HOSTS?: string;
     OG_IMAGES: R2Bucket;             // R2 bucket binding (phieu-og-images)
     R2_PUBLIC_URL: string;           // https://r2.thitong.site
     // Task 1.4: Cloudflare Queues binding

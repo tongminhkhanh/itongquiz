@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Home,
     FileText,
@@ -15,6 +15,7 @@ import {
     Radio,
     Award,
     LayoutTemplate,
+    Settings,
 } from 'lucide-react';
 import { SCHOOL_NAME } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
@@ -29,7 +30,15 @@ export interface SidebarProps {
     setIsMobileOpen?: (open: boolean) => void;
 }
 
-type GroupKey = 'main' | 'ioe' | 'certificates' | 'system';
+type GroupKey = 'main' | 'ioe' | 'certificates' | 'account' | 'system';
+
+const groupForTab = (tab: TeacherDashboardTab): GroupKey => {
+    if (['ioe', 'ioe-manage', 'ioe-results'].includes(tab)) return 'ioe';
+    if (['certificates', 'admin-templates'].includes(tab)) return 'certificates';
+    if (tab === 'personal-settings') return 'account';
+    if (['announcements', 'teachers'].includes(tab)) return 'system';
+    return 'main';
+};
 
 const Sidebar: React.FC<SidebarProps> = ({
     activeTab,
@@ -40,7 +49,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     setIsMobileOpen = () => {},
 }) => {
     const authStore = useAuthStore();
-    const [openGroup, setOpenGroup] = useState<GroupKey>('main');
+    const [openGroup, setOpenGroup] = useState<GroupKey>(() => groupForTab(activeTab));
+
+    useEffect(() => {
+        const nextGroup = groupForTab(activeTab);
+        setOpenGroup(nextGroup);
+        localStorage.setItem('itongquiz_dashboard_open_group', nextGroup);
+    }, [activeTab]);
 
     // Keep prop referenced for future user-menu action
     void onLogout;
@@ -73,6 +88,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     const settingItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
         { id: 'announcements', label: 'Thông báo', icon: <Megaphone className="w-5 h-5" /> },
         { id: 'teachers', label: 'Giáo viên', icon: <Users className="w-5 h-5" /> },
+    ];
+
+    const accountItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
+        { id: 'personal-settings', label: 'Cài đặt cá nhân', icon: <Settings className="w-5 h-5" /> },
     ];
 
     const certificateItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
@@ -168,7 +187,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <NavGroup title="Chính" items={navItems} groupKey="main" />
                     <NavGroup title="Tiếng Anh IOE" items={ioeItems} groupKey="ioe" adminOnly={true} />
                     <NavGroup title="Chứng nhận" items={certificateItems} groupKey="certificates" />
-                    <NavGroup title="Hệ thống" items={settingItems} groupKey="system" adminOnly={true} />
+                    <NavGroup title="Tài khoản" items={accountItems} groupKey="account" />
+                    <NavGroup title="Quản trị hệ thống" items={settingItems} groupKey="system" adminOnly={true} />
                 </div>
             </aside>
         </>

@@ -36,6 +36,33 @@ export async function verifyJWTMiddleware(
         return errorResponse('Unauthorized: Invalid or expired token', 401);
     }
 
+    if (payload.purpose === 'password_change' && new URL(request.url).pathname !== '/api/account/change-password') {
+        return errorResponse('Password change required', 403);
+    }
+
+    if (payload.role === 'teacher' || payload.role === 'admin') {
+        const enforce = (env.AUTH_MIGRATION_MODE || 'compat') === 'enforce';
+        // During the short compatibility window, legacy JWTs have no tokenVersion.
+        // New sessions are always versioned and therefore always checked against D1.
+        if (!enforce && payload.tokenVersion === undefined) return { user: payload };
+
+        const account = await env.DB.prepare(`
+            SELECT status, token_version
+            FROM teachers
+            WHERE username = ?
+            LIMIT 1
+        `).bind(payload.username).first<{ status: string; token_version: number }>();
+
+        if (!account || account.status === 'DISABLED') {
+            return errorResponse('Unauthorized: Account is disabled', 401);
+        }
+
+        if ((enforce && payload.tokenVersion === undefined)
+            || (payload.tokenVersion !== undefined && payload.tokenVersion !== Number(account.token_version))) {
+            return errorResponse('Unauthorized: Session has been revoked', 401);
+        }
+    }
+
     // Return user context to be attached to request
     return { user: payload };
 }

@@ -53,6 +53,18 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
         }, 300); // Match animation duration
     };
 
+    const openLink = () => {
+        if (!link) return;
+        const isInternal = link.startsWith('/') && !link.startsWith('//');
+        let safe = isInternal;
+        if (!isInternal) {
+            try { safe = new URL(link).protocol === 'https:'; } catch { safe = false; }
+        }
+        if (!safe) return;
+        const opened = window.open(link, '_blank', 'noopener,noreferrer');
+        if (opened) opened.opener = null;
+    };
+
     if (!isVisible) return null;
 
     return (
@@ -67,8 +79,6 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
                 padding: '12px 16px',
                 display: 'flex',
                 justifyContent: 'center',
-                paddingLeft: '220px', 
-                paddingRight: '540px', 
                 pointerEvents: 'none'
             }}
         >
@@ -76,8 +86,7 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
                 className="announcement-banner-inner"
                 style={{
                     maxWidth: '800px',
-                    width: 'auto',
-                    minWidth: '320px',
+                    width: '100%',
                     background: 'rgba(220, 252, 231, 0.7)',
                     backdropFilter: 'blur(12px)',
                     WebkitBackdropFilter: 'blur(12px)',
@@ -93,7 +102,15 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
                     cursor: link ? 'pointer' : 'default',
                     transition: 'transform 0.2s ease'
                 }}
-                onClick={() => link && window.open(link, '_blank')}
+                onClick={openLink}
+                onKeyDown={(event) => {
+                    if (link && (event.key === 'Enter' || event.key === ' ')) {
+                        event.preventDefault();
+                        openLink();
+                    }
+                }}
+                role={link ? 'link' : undefined}
+                tabIndex={link ? 0 : undefined}
             >
                 {/* Leading Icon/Image */}
                 <div className="banner-icon-container" style={{ flexShrink: 0 }}>
@@ -146,6 +163,8 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
                     {link && (
                         <button 
                             className="banner-cta"
+                            type="button"
+                            onClick={(event) => { event.stopPropagation(); openLink(); }}
                             style={{
                                 background: '#16a34a',
                                 color: 'white',
@@ -180,7 +199,7 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
                             borderRadius: '50%',
                             transition: 'background 0.2s'
                         }}
-                        aria-label="Close"
+                        aria-label="Đóng thông báo"
                     >
                         <X size={20} />
                     </button>
@@ -208,8 +227,9 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
                     @media (max-width: 640px) {
                         .banner-text-content p { display: none; }
                         .banner-icon-container { display: none; }
-                        .announcement-banner-inner { gap: 8px; border-radius: 16px; }
+                        .announcement-banner-inner { gap: 8px; border-radius: 16px; min-width: 0; }
                         .announcement-banner-wrapper { padding: 8px; }
+                        .banner-cta { padding: 6px 10px !important; }
                     }
                 `}</style>
             </div>

@@ -13,6 +13,7 @@ import BottomNavigation from './BottomNavigation';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '../../utils/toast';
 import { checkAndWarnJWTExpiry } from '../../utils/jwtInterceptor';
+import CurrentAnnouncementBanner from '../common/CurrentAnnouncementBanner';
 
 // Lazy load tab components
 const OverviewTab = React.lazy(() => import('./OverviewTab'));
@@ -31,6 +32,7 @@ const HomeworkTab = React.lazy(() => import('../../features/homework/components/
 const LiveExamTab = React.lazy(() => import('../LiveExam/TeacherLiveExamDashboardContainer'));
 const TeacherCertificatesPage = React.lazy(() => import('../../features/certificates/TeacherCertificatesPage'));
 const AdminTemplatesPage = React.lazy(() => import('../../features/certificates/AdminTemplatesPage'));
+const PersonalSettingsTab = React.lazy(() => import('./PersonalSettingsTab'));
 
 const TeacherDashboard: React.FC = () => {
     // --- STORES ---
@@ -75,7 +77,10 @@ const TeacherDashboard: React.FC = () => {
         if (!isGiftShopFeatureEnabled && activeTab === 'gift-shop') {
             setActiveTab('overview');
         }
-    }, [isGiftShopFeatureEnabled, activeTab]);
+        if (!authStore.isAdmin && ['announcements', 'teachers', 'admin-templates'].includes(activeTab)) {
+            setActiveTab('overview');
+        }
+    }, [isGiftShopFeatureEnabled, activeTab, authStore.isAdmin, setActiveTab]);
 
     // Editing state
     const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
@@ -111,6 +116,7 @@ const TeacherDashboard: React.FC = () => {
             case 'ioe-results': return 'Kết quả IOE';
             case 'announcements': return 'Cài đặt & Thông báo';
             case 'teachers': return 'Quản lý Giáo viên';
+            case 'personal-settings': return 'Cài đặt cá nhân';
             case 'gift-shop': return 'Tiệm Tạp Hóa';
             case 'homework': return 'Phiếu bài tập (AI)';
             case 'live-exam': return 'Thi Trực Tiếp';
@@ -153,6 +159,8 @@ const TeacherDashboard: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+
+            <CurrentAnnouncementBanner role="teacher" />
 
             {/* Lệch Sidebar */}
             <Sidebar
@@ -294,7 +302,7 @@ const TeacherDashboard: React.FC = () => {
                                 <IoeResultsTab />
                             )}
 
-                            {activeTab === 'announcements' && (
+                            {activeTab === 'announcements' && authStore.isAdmin && (
                                 <div className="max-w-4xl mx-auto">
                                     <AnnouncementSettings />
                                 </div>
@@ -308,8 +316,12 @@ const TeacherDashboard: React.FC = () => {
                                 <AssignmentTab />
                             )}
 
-                            {activeTab === 'teachers' && (
+                            {activeTab === 'teachers' && authStore.isAdmin && (
                                 <TeacherManagementTab />
+                            )}
+
+                            {activeTab === 'personal-settings' && (
+                                <PersonalSettingsTab />
                             )}
 
                             {activeTab === 'gift-shop' && isGiftShopFeatureEnabled && (

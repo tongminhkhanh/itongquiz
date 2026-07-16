@@ -50,9 +50,10 @@ export const useClassManagement = (isAdmin: boolean, username: string | null) =>
         setIsLoadingTeachers(true);
         
         try {
-            const data = await callApi<TeacherRecord[]>('get_teachers');
-            if (Array.isArray(data)) {
-                const teacherList = data.filter((t) => {
+            const data = await callApi<{ data?: { items?: TeacherRecord[] } }>('get_teachers', { status: 'ACTIVE', pageSize: 100 });
+            const rows = data.data?.items || [];
+            if (Array.isArray(rows)) {
+                const teacherList = rows.filter((t) => {
                     const isAdminRole = String(t.role || '').trim().toLowerCase() === 'admin';
                     return !isAdminRole || t.username === classroom.teacherUsername;
                 });
