@@ -14,20 +14,19 @@
 
 import React from 'react';
 import { PhieuNhanXet, PhieuNhanXetInput } from '../../homework/types/phieu.types';
+import { formatPhieuDate, formatPhieuScore } from '../utils/phieuFormat';
 
 interface Props {
   phieu: PhieuNhanXet | PhieuNhanXetInput;
   editable?: boolean;
+  editableIdentity?: boolean;
   onChange?: (patch: Partial<PhieuNhanXetInput>) => void;
   tenGVCN?: string;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-const fmtDate = (raw?: string) =>
-  raw ? new Date(raw).toLocaleDateString('vi-VN') : '..........................................';
-
 const dotLine = (val?: string | number) =>
-  val != null && val !== '' && val !== 0
+  val != null && val !== ''
     ? String(val)
     : '..........................................';
 
@@ -234,17 +233,19 @@ const EditBlock: React.FC<{
 export const PhieuBTCard: React.FC<Props> = ({
   phieu,
   editable = false,
+  editableIdentity = true,
   onChange,
   tenGVCN = '',
 }) => {
   const update = (field: keyof PhieuNhanXetInput, val: string) => onChange?.({ [field]: val });
+  const canEditIdentity = editable && editableIdentity;
 
   const score   = Number(phieu.diem_so    ?? 0);
   const tongCau = Number(phieu.tong_cau   ?? 0);
   const caudung = Number(phieu.so_cau_dung ?? 0);
   const causai  = Number(phieu.so_cau_sai  ?? 0);
   const sc      = scoreColor(score);
-  const ngay    = fmtDate(phieu.ngay_lam_bai);
+  const ngay    = formatPhieuDate(phieu.ngay_lam_bai, '..........................................');
 
   return (
     <article
@@ -305,7 +306,7 @@ export const PhieuBTCard: React.FC<Props> = ({
         {/* Họ tên + Lớp cùng hàng */}
         <div style={{ display: 'flex', gap: 16 }}>
           <div style={{ flex: 2 }}>
-            {editable ? (
+            {canEditIdentity ? (
               <EditableInfoRow
                 label="Họ và tên"
                 value={phieu.student_name ?? ''}
@@ -317,7 +318,7 @@ export const PhieuBTCard: React.FC<Props> = ({
             )}
           </div>
           <div style={{ flex: 1 }}>
-            {editable ? (
+            {canEditIdentity ? (
               <EditableInfoRowCompact
                 label="Lớp"
                 value={phieu.class_id ?? ''}
@@ -329,7 +330,7 @@ export const PhieuBTCard: React.FC<Props> = ({
           </div>
         </div>
 
-        {editable ? (
+        {canEditIdentity ? (
           <EditableInfoRow
             label="Môn học"
             value={phieu.mon_hoc ?? ''}
@@ -366,7 +367,7 @@ export const PhieuBTCard: React.FC<Props> = ({
           />
           <StatBox
             label="Điểm số"
-            value={score > 0 ? score.toFixed(1) : '—'}
+            value={formatPhieuScore(phieu.diem_so, '—')}
             bg={sc.bg} border={sc.border} textColor={sc.text}
           />
           <StatBox

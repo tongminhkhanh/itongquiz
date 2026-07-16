@@ -7,6 +7,7 @@
 
 import React, { useCallback } from 'react';
 import { PhieuNhanXet, PhieuNhanXetInput } from '../../homework/types/phieu.types';
+import { formatPhieuDate, formatPhieuScore } from '../utils/phieuFormat';
 
 interface Props {
   phieu: PhieuNhanXet | PhieuNhanXetInput;
@@ -15,14 +16,11 @@ interface Props {
 }
 
 const PhieuPrintView: React.FC<Props> = ({ phieu, showPrintButton = true }) => {
-  const score   = Number(phieu.diem_so   ?? 0);
   const tongCau = Number(phieu.tong_cau  ?? 0);
   const caudung = Number(phieu.so_cau_dung ?? 0);
   const causai  = Number(phieu.so_cau_sai  ?? 0);
 
-  const ngayFormatted = phieu.ngay_lam_bai
-    ? new Date(phieu.ngay_lam_bai).toLocaleDateString('vi-VN')
-    : '...............';
+  const ngayFormatted = formatPhieuDate(phieu.ngay_lam_bai, '...............');
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -288,7 +286,7 @@ const PhieuPrintView: React.FC<Props> = ({ phieu, showPrintButton = true }) => {
             />
             <ResultBox
               icon="⭐" label="Điểm số"
-              value={score > 0 ? `${score.toFixed(1)}` : ''}
+              value={formatPhieuScore(phieu.diem_so, '')}
               bg="#fef9c3" border="#fde047"
             />
             <ResultBox

@@ -42,9 +42,11 @@ export function buildPhieuFromResult(
     };
   };
 
+  const resultKey = `result:${String(result.id)}`;
+
   return {
-    submission_id:  result.id,
-    student_id:     result.id,
+    submission_id:  resultKey,
+    student_id:     resultKey,
     student_name:   studentName,
     class_id:       classId,
     mon_hoc:        '',

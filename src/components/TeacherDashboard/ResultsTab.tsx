@@ -75,19 +75,25 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
     const [phieuCache, setPhieuCache] = useState<Record<string, { savedPhieu: PhieuNhanXet | null; publishedLink: PhieuPublicLink | null }>>({});
 
     const handleOpenPhieu = async (result: StudentResult) => {
+        const resultId = String(result.id || '').trim();
+        if (!resultId) {
+            showError('Kết quả không có mã định danh hợp lệ.');
+            return;
+        }
+
         setPhieuResult(result);
-        const sid = result.submissionId ?? result.id;
-        if (!sid || phieuCache[sid] !== undefined) return; // đã fetch hoặc không có id
+        if (phieuCache[resultId] !== undefined) return;
         try {
-            const fetched = await resultPhieuLinkService.getActiveLinkBySubmission(sid);
+            const fetched = await resultPhieuLinkService.getByResult(resultId);
             setPhieuCache(prev => ({
                 ...prev,
-                [sid]: fetched
+                [resultId]: fetched
                     ? { savedPhieu: fetched.phieu, publishedLink: fetched.link }
                     : { savedPhieu: null, publishedLink: null },
             }));
-        } catch {
-            setPhieuCache(prev => ({ ...prev, [sid]: { savedPhieu: null, publishedLink: null } }));
+        } catch (error) {
+            setPhieuCache(prev => ({ ...prev, [resultId]: { savedPhieu: null, publishedLink: null } }));
+            showError(error instanceof Error ? error.message : 'Không thể tải phiếu kết quả.');
         }
     };
 
@@ -690,7 +696,7 @@ ${statistics.scoreDistribution.map(d => `${d.range}: ${d.count} học sinh (${d.
 
         {/* Modal phiếu kết quả cho từng học sinh */}
         {phieuResult && (() => {
-            const sid = phieuResult.submissionId ?? phieuResult.id ?? '';
+            const sid = String(phieuResult.id || '');
             const cache = phieuCache[sid] ?? { savedPhieu: null, publishedLink: null };
             return (
                 <ResultRowPhieuModal

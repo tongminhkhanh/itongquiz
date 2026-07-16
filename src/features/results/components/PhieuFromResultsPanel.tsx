@@ -4,6 +4,7 @@ import { FileText, Sparkles, Send, Copy, CheckCircle2, Loader2, X, ClipboardList
 import { PhieuNhanXet, PhieuNhanXetInput, PhieuNhanXetStyle, PhieuPublicLink } from '../../homework/types/phieu.types';
 import { phieuService, getXepLoai, phieuStyleLabels } from '../../homework/services/phieuService';
 import { phieuBatchService } from '../../homework/services/phieuBatchService';
+import { resultPhieuLinkService } from '../services/resultPhieuLinkService';
 import { PhieuKetQuaCardV2 } from './PhieuKetQuaCardV2';
 import PhieuPrintView from './PhieuPrintView';
 import { useAuthStore } from '../../../../stores/authStore';
@@ -64,9 +65,11 @@ const resultToPhieuInput = (
     };
   };
 
+  const resultKey = `result:${String(result.id)}`;
+
   return {
-    submission_id: result.id,
-    student_id: result.id,
+    submission_id: resultKey,
+    student_id: resultKey,
     student_name: studentName,
     class_id: classId,
     mon_hoc: '',
@@ -88,17 +91,17 @@ const resultToPhieuInput = (
 export const PhieuFromResultsPanel: React.FC<Props> = ({ results, onClose }) => {
   const { username } = useAuthStore();
   const [style, setStyle] = useState<PhieuNhanXetStyle>('nhe_nhang');
-  const [selectedIds, setSelectedIds] = useState<string[]>(results.map((r) => r.id));
+  const [selectedIds, setSelectedIds] = useState<string[]>(results.map((r) => String(r.id)));
   const [drafts, setDrafts] = useState<Record<string, PhieuNhanXet | PhieuNhanXetInput>>({});
   const [links, setLinks] = useState<PhieuPublicLink[]>([]);
-  const [activeId, setActiveId] = useState<string>(results[0]?.id || '');
+  const [activeId, setActiveId] = useState<string>(String(results[0]?.id || ''));
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
 
   const selectedResults = useMemo(
-    () => results.filter((r) => selectedIds.includes(r.id)),
+    () => results.filter((r) => selectedIds.includes(String(r.id))),
     [results, selectedIds]
   );
   const activePhieu = activeId ? drafts[activeId] : null;
@@ -115,10 +118,11 @@ export const PhieuFromResultsPanel: React.FC<Props> = ({ results, onClose }) => 
       const next: Record<string, PhieuNhanXet | PhieuNhanXetInput> = { ...drafts };
       for (const result of selectedResults) {
         const input = resultToPhieuInput(result, style, username || 'teacher');
-        next[result.id] = await phieuService.upsertPhieu(input);
+        const resultId = String(result.id);
+        next[resultId] = await resultPhieuLinkService.upsertResult(resultId, input);
       }
       setDrafts(next);
-      if (!activeId || !next[activeId]) setActiveId(selectedResults[0]?.id || '');
+      if (!activeId || !next[activeId]) setActiveId(String(selectedResults[0]?.id || ''));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Không thể tạo phiếu');
     } finally {
@@ -129,7 +133,11 @@ export const PhieuFromResultsPanel: React.FC<Props> = ({ results, onClose }) => 
   const handleSaveActive = async () => {
     if (!activeId || !activePhieu) return;
     try {
-      const saved = await phieuService.upsertPhieu(activePhieu as PhieuNhanXetInput);
+      const saved = await resultPhieuLinkService.upsertResult(
+        String(activeId),
+        activePhieu as PhieuNhanXetInput,
+        (activePhieu as PhieuNhanXet).id,
+      );
       setDrafts((prev) => ({ ...prev, [activeId]: saved }));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Không thể lưu phiếu');
@@ -147,7 +155,11 @@ export const PhieuFromResultsPanel: React.FC<Props> = ({ results, onClose }) => 
         const input: PhieuNhanXetInput = (phieu as PhieuNhanXet).id
           ? { ...(phieu as PhieuNhanXetInput), id: (phieu as PhieuNhanXet).id }
           : (phieu as PhieuNhanXetInput);
-        const saved = await phieuService.upsertPhieu(input);
+        const saved = await resultPhieuLinkService.upsertResult(
+          String(id),
+          input,
+          (phieu as PhieuNhanXet).id,
+        );
         syncedDrafts[id] = saved;
       }
       setDrafts(syncedDrafts);
@@ -223,20 +235,21 @@ export const PhieuFromResultsPanel: React.FC<Props> = ({ results, onClose }) => 
               {results.map((r) => {
                 const name = r['Student Name'] || r.student_name;
                 const score = Number(r['Score'] ?? r.score ?? 0);
-                const hasDraft = Boolean(drafts[r.id]);
-                const isActive = activeId === r.id;
+                const resultId = String(r.id);
+                const hasDraft = Boolean(drafts[resultId]);
+                const isActive = activeId === resultId;
                 return (
                   <button
-                    key={r.id}
-                    onClick={() => setActiveId(r.id)}
+                    key={resultId}
+                    onClick={() => setActiveId(resultId)}
                     className={`w-full text-left p-2.5 rounded-xl mb-1 flex items-center gap-2 transition-colors ${
                       isActive ? 'bg-blue-50 border border-blue-200' : 'hover:bg-slate-50'
                     }`}
                   >
                     <input
                       type="checkbox"
-                      checked={selectedIds.includes(r.id)}
-                      onChange={(e) => { e.stopPropagation(); toggleSelect(r.id); }}
+                      checked={selectedIds.includes(resultId)}
+                      onChange={(e) => { e.stopPropagation(); toggleSelect(resultId); }}
                       className="accent-blue-600"
                     />
                     <div className="flex-1 min-w-0">

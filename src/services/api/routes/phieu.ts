@@ -1,4 +1,4 @@
-﻿import type { RouteRegistry } from '../types';
+import type { RouteRegistry } from '../types';
 
 export const phieuRoutes: RouteRegistry = {
     get_public_phieu: {
@@ -16,6 +16,22 @@ export const phieuRoutes: RouteRegistry = {
         auth: 'session',
         path: ({ submissionId, submission_id }) =>
             `/api/phieu/submissions/${encodeURIComponent(String(submissionId || submission_id || ''))}`,
+    },
+    get_result_phieu: {
+        method: 'GET',
+        auth: 'session',
+        path: ({ resultId }) =>
+            `/api/phieu/results/${encodeURIComponent(String(resultId || ''))}`,
+    },
+    upsert_result_phieu: {
+        method: 'POST',
+        auth: 'session',
+        path: ({ resultId }) =>
+            `/api/phieu/results/${encodeURIComponent(String(resultId || ''))}`,
+        body: (_action, payload) => {
+            const { resultId: _resultId, ...data } = payload;
+            return data;
+        },
     },
     publish_phieu_batch: {
         method: 'POST',

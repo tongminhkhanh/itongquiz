@@ -6,7 +6,7 @@
  * @blueprint senior-engineering-toolkit
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Printer, FileDown, ImageDown, Loader2, Sparkles } from 'lucide-react';
 import type { StudentResult } from '../../../types';
 import type { PhieuNhanXetInput, PhieuNhanXet, PhieuPublicLink } from '../../homework/types/phieu.types';
@@ -15,6 +15,7 @@ import { exportPhieuAsPDF, exportPhieuAsImage } from '../utils/exportPhieu';
 import { useAuthStore } from '../../../../stores/authStore';
 import { PhieuBTCard } from './PhieuBTCard';
 import PhieuLinkSection from './PhieuLinkSection';
+import PhieuPrintView from './PhieuPrintView';
 
 interface Props {
   result: StudentResult;
@@ -36,6 +37,7 @@ const ResultRowPhieuModal: React.FC<Props> = ({
   const [loadingPDF, setLoadingPDF]   = useState(false);
   const [loadingPNG, setLoadingPNG]   = useState(false);
   const [loadingAI,  setLoadingAI]    = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
   // savedPhieu: khi được lưu lên server thì có id — dùng cho xuất link
   const [savedPhieu, setSavedPhieu]   = useState<PhieuNhanXet | null>(initialSavedPhieu ?? null);
   const [publishedLink, setPublishedLink] = useState<PhieuPublicLink | null>(initialPublishedLink ?? null);
@@ -45,9 +47,18 @@ const ResultRowPhieuModal: React.FC<Props> = ({
   const handleRevoke        = ()                     => { setPublishedLink(null); onPublishedLinkChange?.(null); };
 
   // Local editable state — khởi tạo từ builder
-  const [phieu, setPhieu] = useState<PhieuNhanXetInput>(() =>
-    buildPhieuFromResult(result, quizTitle, 'nhe_nhang', username ?? ''),
-  );
+  const [phieu, setPhieu] = useState<PhieuNhanXetInput>(() => ({
+    ...buildPhieuFromResult(result, quizTitle, 'nhe_nhang', username ?? ''),
+    ...(initialSavedPhieu ?? {}),
+  }));
+
+  useEffect(() => {
+    setSavedPhieu(initialSavedPhieu ?? null);
+    setPublishedLink(initialPublishedLink ?? null);
+    if (initialSavedPhieu) {
+      setPhieu((previous) => ({ ...previous, ...initialSavedPhieu }));
+    }
+  }, [initialSavedPhieu, initialPublishedLink]);
 
   const studentName = result.studentName ?? 'hoc_sinh';
 
@@ -79,7 +90,7 @@ const ResultRowPhieuModal: React.FC<Props> = ({
     }
   }, [phieu.nhan_xet_style, result, quizTitle, username]);
 
-  const handlePrint = useCallback(() => { window.print(); }, []);
+  const handlePrint = useCallback(() => { setShowPrintModal(true); }, []);
 
   const handleDownloadPDF = useCallback(async () => {
     if (!phieuRef.current) return;
@@ -162,6 +173,7 @@ const ResultRowPhieuModal: React.FC<Props> = ({
           <PhieuBTCard
             phieu={phieu}
             editable={true}
+            editableIdentity={false}
             onChange={handleChange}
             tenGVCN={teacherName ?? username ?? ''}
           />
@@ -169,6 +181,7 @@ const ResultRowPhieuModal: React.FC<Props> = ({
 
         {/* ── Link phụ huynh ── */}
         <PhieuLinkSection
+          resultId={String(result.id)}
           phieuInput={phieu}
           savedPhieu={savedPhieu}
           onPhieuSaved={handleSavedPhieu}
@@ -216,6 +229,22 @@ const ResultRowPhieuModal: React.FC<Props> = ({
           </button>
         </div>
       </div>
+
+      {showPrintModal && (
+        <div className="fixed inset-0 z-[60] flex flex-col items-center overflow-y-auto bg-slate-900/80 py-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg">
+            <div className="mb-2 flex justify-end px-4 print:hidden">
+              <button
+                onClick={() => setShowPrintModal(false)}
+                className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow hover:bg-slate-100"
+              >
+                <X className="mr-1 inline h-4 w-4" /> Đóng
+              </button>
+            </div>
+            <PhieuPrintView phieu={phieu} showPrintButton />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

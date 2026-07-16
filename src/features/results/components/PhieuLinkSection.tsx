@@ -5,13 +5,15 @@
  *
  * @blueprint senior-engineering-toolkit
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ExternalLink, Copy, Trash2, Loader2, Check } from 'lucide-react';
 import type { PhieuNhanXet, PhieuNhanXetInput, PhieuPublicLink } from '../../homework/types/phieu.types';
 import { resultPhieuLinkService } from '../services/resultPhieuLinkService';
 import ShareBar from './ShareBar';
 
 interface Props {
+  /** ID của bản ghi trong bảng results — dùng để Worker xác thực quyền sở hữu. */
+  resultId: string;
   /** phieuInput đã build sẵn từ modal state — luôn có */
   phieuInput: PhieuNhanXetInput;
   /** Nếu phiếu đã được upsert trước đó thì truyền vào để skip upsert */
@@ -26,18 +28,23 @@ interface Props {
   onLinkRevoked?: () => void;
 }
 
-const PhieuLinkSection: React.FC<Props> = ({ phieuInput, savedPhieu, onPhieuSaved, existingLink, onLinkPublished, onLinkRevoked }) => {
+const PhieuLinkSection: React.FC<Props> = ({ resultId, phieuInput, savedPhieu, onPhieuSaved, existingLink, onLinkPublished, onLinkRevoked }) => {
   const [link, setLink]           = useState<PhieuPublicLink | null>(existingLink ?? null);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isRevoking,   setIsRevoking]   = useState(false);
   const [copied,       setCopied]       = useState(false);
   const [error,        setError]        = useState<string | null>(null);
 
+  useEffect(() => {
+    setLink(existingLink ?? null);
+  }, [existingLink]);
+
   const handlePublish = useCallback(async () => {
     setIsPublishing(true);
     setError(null);
     try {
       const { phieu, link: newLink } = await resultPhieuLinkService.upsertAndPublish({
+        resultId,
         phieuInput,
         existingPhieuId: savedPhieu?.id,
       });
@@ -49,7 +56,7 @@ const PhieuLinkSection: React.FC<Props> = ({ phieuInput, savedPhieu, onPhieuSave
     } finally {
       setIsPublishing(false);
     }
-  }, [phieuInput, savedPhieu?.id, onPhieuSaved]);
+  }, [resultId, phieuInput, savedPhieu?.id, onPhieuSaved, onLinkPublished]);
 
   const handleCopy = useCallback(async () => {
     if (!link) return;
@@ -71,7 +78,7 @@ const PhieuLinkSection: React.FC<Props> = ({ phieuInput, savedPhieu, onPhieuSave
     } finally {
       setIsRevoking(false);
     }
-  }, [link]);
+  }, [link, onLinkRevoked]);
 
   return (
     <div className="border-t border-gray-100 px-5 py-4 bg-gray-50 rounded-b-none space-y-3">

@@ -80,7 +80,7 @@ const PhieuPublicPage: React.FC = () => {
         <PhieuKetQuaCardV2
           phieu={data.phieu}
           editable={false}
-          tenGVCN={data.phieu.created_by ?? ''}
+          tenGVCN={data.phieu.teacher_name || data.phieu.created_by || ''}
         />
 
         {/* Chia sẻ phiếu — ẩn khi in */}

@@ -25,6 +25,7 @@ export interface PhieuNhanXet {
   status: PhieuNhanXetStatus;
   version: number;
   created_by: string;
+  teacher_name?: string;
   created_at: string;
   updated_at: string;
 }

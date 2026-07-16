@@ -78,6 +78,16 @@ describe('resolveApiRoute', () => {
         expect(bySubmission.method).toBe('GET');
         expect(bySubmission.path({ submissionId: 'sub 1' })).toBe('/api/phieu/submissions/sub%201');
 
+        const resultPhieu = resolveApiRoute('get_result_phieu');
+        expect(resultPhieu.method).toBe('GET');
+        expect(resultPhieu.path({ resultId: 'result 1' })).toBe('/api/phieu/results/result%201');
+
+        const upsertResult = resolveApiRoute('upsert_result_phieu');
+        expect(upsertResult.method).toBe('POST');
+        expect(upsertResult.path({ resultId: 'result 1' })).toBe('/api/phieu/results/result%201');
+        expect(upsertResult.body?.('upsert_result_phieu', { resultId: 'r1', nhan_xet: 'Tốt' }))
+            .toEqual({ nhan_xet: 'Tốt' });
+
         expect(resolveApiRoute('publish_phieu_batch').path({})).toBe('/api/phieu/batches');
         expect(resolveApiRoute('deactivate_public_phieu_link').path({ publicToken: 'tok 1' }))
             .toBe('/api/phieu/public-links/tok%201/deactivate');

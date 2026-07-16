@@ -1,5 +1,6 @@
 import React from 'react';
 import { PhieuNhanXet, PhieuNhanXetInput } from '../../homework/types/phieu.types';
+import { formatPhieuDate, formatPhieuScore } from '../utils/phieuFormat';
 
 interface Props {
   phieu: PhieuNhanXet | PhieuNhanXetInput;
@@ -12,14 +13,11 @@ interface Props {
 export const PhieuKetQuaCardV2: React.FC<Props> = ({ phieu, editable = false, onChange, tenGVCN }) => {
   const update = (field: keyof PhieuNhanXetInput, value: string) => onChange?.({ [field]: value });
 
-  const score = Number(phieu.diem_so || 0);
   const tongCau = Number(phieu.tong_cau || 0);
   const soCauDung = Number(phieu.so_cau_dung || 0);
   const soCauSai = Number(phieu.so_cau_sai || 0);
 
-  const ngayFormatted = phieu.ngay_lam_bai
-    ? new Date(phieu.ngay_lam_bai).toLocaleDateString('vi-VN')
-    : '---';
+  const ngayFormatted = formatPhieuDate(phieu.ngay_lam_bai);
 
   return (
     <article
@@ -88,7 +86,7 @@ export const PhieuKetQuaCardV2: React.FC<Props> = ({ phieu, editable = false, on
           <ResultBox
             icon="⭐"
             label="Điểm số"
-            value={score > 0 ? score.toFixed(1) : '---'}
+            value={formatPhieuScore(phieu.diem_so)}
             color="#fef9c3"
             borderColor="#fde047"
           />
@@ -147,7 +145,7 @@ export const PhieuKetQuaCardV2: React.FC<Props> = ({ phieu, editable = false, on
           <p className="text-xs text-slate-500 italic">Giáo viên chủ nhiệm</p>
           <div className="w-32 border-b border-slate-400 mt-4 mb-1" />
           <p className="text-sm font-black text-slate-700 tracking-wide">
-            {tenGVCN || (phieu as PhieuNhanXet).created_by || ''}
+            {tenGVCN || (phieu as PhieuNhanXet).teacher_name || (phieu as PhieuNhanXet).created_by || ''}
           </p>
         </div>
       </div>
