@@ -54,3 +54,7 @@ skills-lock.json
 .wrangler
 .dev.vars*
 !.dev.vars.example
+
+# Visual regression output (baselines are tracked separately)
+cypress/screenshots/
+artifacts/math-screenshots/

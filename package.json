@@ -13,6 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "cypress": "cypress open",
     "cypress:run": "cypress run",
+    "cypress:math-screenshots": "node scripts/math-visual-regression.mjs",
+    "cypress:math-screenshots:update": "node scripts/math-visual-regression.mjs --update",
     "learn:sonlaedu": "node scripts/auto_learn_sonla.mjs",
     "deploy": "npm run build && wrangler deploy"
   },
