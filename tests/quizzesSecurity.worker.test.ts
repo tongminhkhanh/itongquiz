@@ -61,10 +61,14 @@ const authRequest = (url: string, init: RequestInit = {}) => new Request(url, {
 describe('quiz answer confidentiality and ownership', () => {
   beforeEach(() => { currentUser = null; });
 
-  it('rejects anonymous access to question data', async () => {
+  it('returns only sanitized public question data to anonymous callers', async () => {
     const db = new Database();
     const response = await handleQuizRoutes(new Request('https://test/api/questions?quizId=quiz-a'), env(db), '/api/questions', 'GET');
-    expect(response.status).toBe(401);
+    const rows = await response.json() as any[];
+    expect(response.status).toBe(200);
+    expect(rows[0]).not.toHaveProperty('correct_answer');
+    expect(JSON.parse(rows[0].items)[0]).not.toHaveProperty('isCorrect');
+    expect(db.executed.some((statement) => statement.sql.includes('show_on_home'))).toBe(true);
   });
 
   it('strips direct and nested answers for a student', async () => {

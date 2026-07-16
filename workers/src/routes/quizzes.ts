@@ -1,6 +1,6 @@
 // Quizzes + Questions API Routes
 // GET /api/quizzes - List all quizzes (PUBLIC)
-// GET /api/questions - Authenticated; student DTOs exclude answer fields
+// GET /api/questions - Public DTOs exclude answer fields; teachers receive scoped full data
 // POST /api/quizzes - Create quiz (TEACHER/ADMIN)
 // PUT /api/quizzes/:id - Update quiz (TEACHER/ADMIN with ownership check)
 // DELETE /api/quizzes/:id - Delete quiz (TEACHER/ADMIN with ownership check)
@@ -102,17 +102,39 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
     // GET /api/questions
     if (path === '/api/questions' && method === 'GET') {
         const authResult = await verifyJWTMiddleware(request, env);
-        if (authResult instanceof Response) return authResult;
-        const { user } = authResult;
+        const user: JWTPayload | null = authResult instanceof Response ? null : authResult.user;
+        if (authResult instanceof Response && authResult.status !== 401) return authResult;
+
         const url = new URL(request.url);
         const quizId = url.searchParams.get('quizId');
 
-        if (quizId && requireTeacher(user) && !(await canAccessQuiz(db, user, quizId))) {
+        if (user && quizId && requireTeacher(user) && !(await canAccessQuiz(db, user, quizId))) {
             return errorResponse('Forbidden: You do not have permission to read this quiz', 403);
         }
 
         let rows: { results: any[] };
-        if (quizId) {
+        if (!user && quizId) {
+            rows = await withD1Retry(
+                () => db.prepare(`
+                    SELECT q.*
+                    FROM questions q
+                    JOIN quizzes z ON z.id = q.quiz_id
+                    WHERE q.quiz_id = ?
+                      AND UPPER(COALESCE(z.show_on_home, 'FALSE')) = 'TRUE'
+                `).bind(quizId).all<any>(),
+                'GET /api/questions public quiz',
+            );
+        } else if (!user) {
+            rows = await withD1Retry(
+                () => db.prepare(`
+                    SELECT q.*
+                    FROM questions q
+                    JOIN quizzes z ON z.id = q.quiz_id
+                    WHERE UPPER(COALESCE(z.show_on_home, 'FALSE')) = 'TRUE'
+                `).all<any>(),
+                'GET /api/questions public catalog',
+            );
+        } else if (quizId) {
             rows = await withD1Retry(
                 () => db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all<any>(),
                 'GET /api/questions by quizId',
@@ -126,15 +148,14 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
                 'GET /api/questions teacher',
             );
         } else {
-            // Existing clients load the quiz catalog and question rows together.
-            // Keep that contract for authenticated students, but return only sanitized DTOs.
             rows = await withD1Retry(
                 () => db.prepare('SELECT * FROM questions').all<any>(),
                 'GET /api/questions student catalog',
             );
         }
 
-        return jsonResponse(user.role === 'student' ? rows.results.map(sanitizeQuestionForStudent) : rows.results);
+        const mustSanitize = !user || user.role === 'student';
+        return jsonResponse(mustSanitize ? rows.results.map(sanitizeQuestionForStudent) : rows.results);
     }
 
     // POST /api/quizzes - Create quiz (TEACHER/ADMIN only)
