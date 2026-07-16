@@ -42,19 +42,21 @@ export async function verifyJWTMiddleware(
 
     if (payload.role === 'teacher' || payload.role === 'admin') {
         const enforce = (env.AUTH_MIGRATION_MODE || 'compat') === 'enforce';
-        // During the short compatibility window, legacy JWTs have no tokenVersion.
-        // New sessions are always versioned and therefore always checked against D1.
-        if (!enforce && payload.tokenVersion === undefined) return { user: payload };
+        const path = new URL(request.url).pathname;
 
         const account = await env.DB.prepare(`
-            SELECT status, token_version
+            SELECT status, token_version, must_change_password
             FROM teachers
             WHERE username = ?
             LIMIT 1
-        `).bind(payload.username).first<{ status: string; token_version: number }>();
+        `).bind(payload.username).first<{ status: string; token_version: number; must_change_password: number }>();
 
         if (!account || account.status === 'DISABLED') {
             return errorResponse('Unauthorized: Account is disabled', 401);
+        }
+
+        if (Number(account.must_change_password) === 1 && path !== '/api/account/change-password') {
+            return errorResponse('Password change required', 403);
         }
 
         if ((enforce && payload.tokenVersion === undefined)
