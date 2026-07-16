@@ -3,6 +3,7 @@ import { Question } from '../../types';
 import NewQuestionRenderer from '../../features/quiz-player/components/QuestionRenderer';
 
 interface QuestionRendererProps {
+    quizId?: string;
     question: Question;
     index: number;
     answers: Record<string, any>;
@@ -12,14 +13,12 @@ interface QuestionRendererProps {
 
 /**
  * QuestionRenderer (Legacy Wrapper)
- * 
- * This component now acts as a thin wrapper around the new modular 
- * QuestionRenderer Engine located in features/quiz-player.
- * 
+ *
+ * This component now acts as a thin wrapper around the modular renderer.
  * @deprecated Use src/features/quiz-player/components/QuestionRenderer instead.
  */
-const QuestionRenderer: React.FC<QuestionRendererProps> = (props) => {
-    return <NewQuestionRenderer {...props} />;
-};
+const QuestionRenderer: React.FC<QuestionRendererProps> = (props) => (
+    <NewQuestionRenderer {...props} />
+);
 
 export default React.memo(QuestionRenderer);

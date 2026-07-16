@@ -299,6 +299,7 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                     skillCode: row.skillCode || row.skill_code,
                     subskillCode: row.subskillCode || row.subskill_code,
                     difficulty: row.difficulty ?? row.difficulty_level ?? row.difficultyLevel,
+                    mathFormatVersion: row.mathFormatVersion ?? row.math_format_version,
                 };
             };
 
@@ -342,6 +343,9 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                     ...(row.subskillCode ? { subskillCode: row.subskillCode } : {}),
                     ...(parsedTags ? { tags: parsedTags } : {}),
                     ...(normalizedDifficulty ? { difficulty: normalizedDifficulty } : {}),
+                    ...(Number.isFinite(Number(row.mathFormatVersion))
+                        ? { mathFormatVersion: Number(row.mathFormatVersion) }
+                        : {}),
                 };
 
                 let question: Question | null = null;

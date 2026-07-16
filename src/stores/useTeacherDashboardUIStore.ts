@@ -20,7 +20,8 @@ export type TeacherDashboardTab =
     | 'homework'
     | 'live-exam'
     | 'certificates'
-    | 'admin-templates';
+    | 'admin-templates'
+    | 'math-audit';
 
 export type AssignmentComposerDraft = {
     source: 'smart-preview' | 'manual';

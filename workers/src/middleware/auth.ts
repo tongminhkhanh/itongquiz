@@ -58,8 +58,15 @@ export function verifyToken(request: Request, env: Env): Response | null {
     if (path.startsWith('/api/admin/certificate-templates')) return null;
     if (path.startsWith('/api/certificate-batches') || path.startsWith('/api/certificates')) return null;
 
-    // 15. Homework and analytics perform role/ownership checks with JWT in their route handlers.
-    if (path.startsWith('/api/homework') || path.startsWith('/api/analytics') || path.startsWith('/api/phieu')) return null;
+    // 15. Homework, analytics, and math observability perform their own JWT/rate-limit checks.
+    if (
+        path.startsWith('/api/homework') ||
+        path.startsWith('/api/analytics') ||
+        path.startsWith('/api/phieu') ||
+        path.startsWith('/api/math/telemetry') ||
+        path.startsWith('/api/admin/math-audit') ||
+        path.startsWith('/api/admin/math-telemetry')
+    ) return null;
 
     // 16. Verify token from header for REST API routes (legacy auth for non-JWT routes)
     const headerToken = request.headers.get('X-API-Token') || request.headers.get('Authorization')?.replace('Bearer ', '');

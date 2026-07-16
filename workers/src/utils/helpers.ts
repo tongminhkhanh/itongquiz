@@ -3,9 +3,11 @@
 
 import { jsonResponse } from './response';
 import { Question, Assignment, PetData, ShopItem, ResultRow } from '../types';
+import { CURRENT_MATH_FORMAT_VERSION, prepareIncomingQuestion } from '../services/questionMath';
 
 // ============ Map question data for D1 insert ============
 export function mapQuestionForSave(q: Partial<Question> & { type: string }, quizId: string): string[] {
+    const normalizedQuestion = prepareIncomingQuestion(q) as Partial<Question> & { type: string };
     let options = '';
     let items = '';
     let textField = '';
@@ -14,66 +16,65 @@ export function mapQuestionForSave(q: Partial<Question> & { type: string }, quiz
     let sentenceField = '';
     let wordsField = '';
     let correctWordIndexesField = '';
-    const imageField = q.image || '';
+    const imageField = normalizedQuestion.image || '';
 
-    // Legacy object mapping to strings
-    const anyQ = q as any;
+    // Legacy object mapping to strings after server-owned normalization/validation.
+    const anyQ = normalizedQuestion as any;
 
-    if (q.type === 'MCQ') {
+    if (normalizedQuestion.type === 'MCQ') {
         options = (anyQ.options || []).join('|');
-    } else if (q.type === 'IMAGE_QUESTION') {
+    } else if (normalizedQuestion.type === 'IMAGE_QUESTION') {
         options = (anyQ.options || []).join('|');
         distractorsField = JSON.stringify(anyQ.optionImages || []);
-    } else if (q.type === 'TRUE_FALSE') {
+    } else if (normalizedQuestion.type === 'TRUE_FALSE') {
         items = JSON.stringify(anyQ.items || []);
-    } else if (q.type === 'MATCHING') {
+    } else if (normalizedQuestion.type === 'MATCHING') {
         items = JSON.stringify(anyQ.pairs || []);
-    } else if (q.type === 'MULTIPLE_SELECT') {
+    } else if (normalizedQuestion.type === 'MULTIPLE_SELECT') {
         options = (anyQ.options || []).join('|');
-    } else if (q.type === 'DRAG_DROP' || q.type === 'DROPDOWN') {
+    } else if (normalizedQuestion.type === 'DRAG_DROP' || normalizedQuestion.type === 'DROPDOWN') {
         textField = anyQ.text || '';
         blanksField = JSON.stringify(anyQ.blanks || []);
         distractorsField = JSON.stringify(anyQ.distractors || []);
-    } else if (q.type === 'CATEGORIZATION') {
+    } else if (normalizedQuestion.type === 'CATEGORIZATION') {
         items = JSON.stringify(anyQ.items || []);
         distractorsField = JSON.stringify(anyQ.categories || []);
-    } else if (q.type === 'ORDERING') {
+    } else if (normalizedQuestion.type === 'ORDERING') {
         items = JSON.stringify(anyQ.items || []);
         anyQ.correctAnswer = JSON.stringify(anyQ.correctOrder || []);
-    } else if (q.type === 'UNDERLINE') {
+    } else if (normalizedQuestion.type === 'UNDERLINE') {
         items = JSON.stringify(anyQ.words || []);
         anyQ.correctAnswer = JSON.stringify(anyQ.correctWordIndexes || []);
         sentenceField = anyQ.sentence || anyQ.hint || '';
         wordsField = JSON.stringify(anyQ.words || []);
         correctWordIndexesField = JSON.stringify(anyQ.correctWordIndexes || []);
-    } else if (q.type === 'RIDDLE') {
+    } else if (normalizedQuestion.type === 'RIDDLE') {
         items = JSON.stringify(anyQ.items || anyQ.riddleLines || []);
         textField = anyQ.text || anyQ.answerLabel || '';
         sentenceField = anyQ.sentence || anyQ.hint || '';
-    } else if (q.type === 'WORD_SCRAMBLE') {
+    } else if (normalizedQuestion.type === 'WORD_SCRAMBLE') {
         items = JSON.stringify(anyQ.letters || []);
         textField = anyQ.text || anyQ.hint || '';
         anyQ.correctAnswer = anyQ.correctWord || anyQ.correctAnswer || '';
-    } else if (q.type === 'ERROR_CORRECTION') {
+    } else if (normalizedQuestion.type === 'ERROR_CORRECTION') {
         textField = anyQ.text || anyQ.passage || '';
         distractorsField = anyQ.wrongWord || anyQ.distractors || '';
         anyQ.correctAnswer = anyQ.correctWord || anyQ.correctAnswer || '';
     }
 
-    const correctAnswer = q.type === 'MULTIPLE_SELECT'
+    const correctAnswer = normalizedQuestion.type === 'MULTIPLE_SELECT'
         ? JSON.stringify(anyQ.correctAnswers || anyQ.correctAnswer || [])
-        : (anyQ.correctAnswer || q.correct_answer || '');
+        : (anyQ.correctAnswer || normalizedQuestion.correct_answer || '');
 
-    const questionText = q.type === 'TRUE_FALSE'
-        ? (anyQ.mainQuestion || q.question || anyQ.question)
-        : (q.question || anyQ.question);
+    const questionText = normalizedQuestion.type === 'TRUE_FALSE'
+        ? (anyQ.mainQuestion || normalizedQuestion.question || anyQ.question)
+        : (normalizedQuestion.question || anyQ.question);
 
-    // Build tags string from question's tags array or string
     let tagsField = '';
-    if (Array.isArray(q.tags)) {
-        tagsField = q.tags.join(',');
-    } else if (typeof q.tags === 'string') {
-        tagsField = q.tags;
+    if (Array.isArray(normalizedQuestion.tags)) {
+        tagsField = normalizedQuestion.tags.join(',');
+    } else if (typeof normalizedQuestion.tags === 'string') {
+        tagsField = normalizedQuestion.tags;
     }
 
     const subjectField = String((anyQ.subject ?? anyQ.subject_code ?? '') || '');
@@ -85,13 +86,13 @@ export function mapQuestionForSave(q: Partial<Question> & { type: string }, quiz
         : '';
 
     const result = [
-        q.id || '', quizId, q.type, questionText || '', options, correctAnswer,
+        normalizedQuestion.id || '', quizId, normalizedQuestion.type, questionText || '', options, correctAnswer,
         items, textField, blanksField, distractorsField, sentenceField,
         wordsField, correctWordIndexesField, imageField, tagsField,
         subjectField, skillCodeField, subskillCodeField, difficultyField,
+        CURRENT_MATH_FORMAT_VERSION,
     ];
 
-    // Ensure no undefined/null values are sent to D1 bind, which causes silent drops/throws
     return result.map(v => (v === undefined || v === null) ? '' : String(v));
 }
 

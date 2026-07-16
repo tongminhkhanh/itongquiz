@@ -94,7 +94,11 @@ WITH checks(migration, check_name, ok) AS (
           JOIN students st ON st.id=p.student_id
           WHERE p.live_exam_id=s.id AND st.class_id IS NOT NULL
         )
-    ))
+    )),
+
+    ('0027_math_format_observability.sql', 'questions.math_format_version', EXISTS(SELECT 1 FROM pragma_table_info('questions') WHERE name='math_format_version')),
+    ('0027_math_format_observability.sql', 'math observability tables', (SELECT COUNT(*)=2 FROM sqlite_master WHERE type='table' AND name IN ('question_math_repairs','math_render_events'))),
+    ('0027_math_format_observability.sql', 'math observability indexes', (SELECT COUNT(*)=5 FROM sqlite_master WHERE type='index' AND name IN ('idx_questions_math_format_version','idx_question_math_repairs_batch','idx_question_math_repairs_question','idx_math_render_events_last_seen','idx_math_render_events_quiz')))
 ), summary AS (
   SELECT
     migration,

@@ -27,8 +27,11 @@ describe('D1 migration layout', () => {
       .map((match) => match[1])
       .sort();
 
-    expect(registered).toEqual(migrations);
+    // The bootstrap is a frozen one-time history for the 0002-0026 production schema.
+    // New migrations are applied normally by Wrangler and must not rewrite that history.
+    expect(registered).toEqual(migrations.slice(0, registered.length));
     expect(new Set(registered).size).toBe(registered.length);
     expect(registered).toHaveLength(25);
+    expect(migrations.at(-1)).toBe('0027_math_format_observability.sql');
   });
 });

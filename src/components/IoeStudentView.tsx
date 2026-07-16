@@ -446,7 +446,13 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
 
                         {currentQuestion && (
-                            <div className="w-full max-w-4xl">
+                            <div
+                                className="w-full max-w-4xl"
+                                data-math-quiz-id={quiz.id}
+                                data-math-question-id={currentQuestion.id}
+                                data-math-question-type={String(currentQuestion.type || 'UNKNOWN')}
+                                data-math-format-version={(currentQuestion as any).mathFormatVersion || 1}
+                            >
                                 {/* Question Text - Skip for SHORT_ANSWER since it's rendered inline */}
                                 {currentQuestion.type !== QuestionType.SHORT_ANSWER && (
                                     <div className="text-center mb-10">

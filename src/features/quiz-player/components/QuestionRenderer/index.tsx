@@ -23,7 +23,7 @@ import UnderlineRenderer from './renderers/UnderlineRenderer';
  * Includes the common 'Question Shell' (Index, Content, Image).
  */
 const QuestionRenderer: React.FC<BaseRendererProps> = (props) => {
-    const { question: q, index } = props;
+    const { question: q, index, quizId } = props;
     const rawType = (q.type || 'MCQ').toString().toUpperCase();
     const normalizedType = rawType.replace(/-/g, '_');
 
@@ -49,9 +49,14 @@ const QuestionRenderer: React.FC<BaseRendererProps> = (props) => {
 
     const SelectedRenderer = renderers[normalizedType] || 
                             ((q as any).mathType ? MathRenderer : MCQRenderer);
-
     return (
-        <div className="question-renderer-shell bg-white rounded-2xl shadow-sm border border-gray-100 animate-in fade-in duration-500">
+        <div
+            className="question-renderer-shell bg-white rounded-2xl shadow-sm border border-gray-100 animate-in fade-in duration-500"
+            data-math-quiz-id={quizId || ''}
+            data-math-question-id={q.id}
+            data-math-question-type={normalizedType}
+            data-math-format-version={(q as any).mathFormatVersion || (q as any).math_format_version || 1}
+        >
             {/* 1. Question Header (Index & Content) */}
             <div className="p-4 bg-orange-50 border-b border-orange-100 flex items-start gap-4 rounded-t-2xl">
                 <span className="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-sm mt-1">

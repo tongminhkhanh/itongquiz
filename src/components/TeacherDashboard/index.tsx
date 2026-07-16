@@ -31,6 +31,7 @@ const HomeworkTab = React.lazy(() => import('../../features/homework/components/
 const LiveExamTab = React.lazy(() => import('../LiveExam/TeacherLiveExamDashboardContainer'));
 const TeacherCertificatesPage = React.lazy(() => import('../../features/certificates/TeacherCertificatesPage'));
 const AdminTemplatesPage = React.lazy(() => import('../../features/certificates/AdminTemplatesPage'));
+const MathAuditPage = React.lazy(() => import('../../features/math-audit/MathAuditPage'));
 
 const TeacherDashboard: React.FC = () => {
     // --- STORES ---
@@ -113,6 +114,7 @@ const TeacherDashboard: React.FC = () => {
             case 'teachers': return 'Quản lý Giáo viên';
             case 'gift-shop': return 'Tiệm Tạp Hóa';
             case 'homework': return 'Phiếu bài tập (AI)';
+            case 'math-audit': return 'Rà dữ liệu công thức';
             case 'live-exam': return 'Thi Trực Tiếp';
             default: return 'Bảng điều khiển';
         }
@@ -330,6 +332,10 @@ const TeacherDashboard: React.FC = () => {
 
                             {activeTab === 'admin-templates' && authStore.isAdmin && (
                                 <AdminTemplatesPage />
+                            )}
+
+                            {activeTab === 'math-audit' && authStore.isAdmin && (
+                                <MathAuditPage />
                             )}
 
                         </Suspense>

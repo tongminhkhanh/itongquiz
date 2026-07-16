@@ -111,6 +111,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                   >
                     <QuestionRenderer
                       question={q}
+                      quizId={quiz.id}
                       index={(currentPage - 1) * QUESTIONS_PER_PAGE + idx}
                       answers={answers}
                       onAnswerChange={handleAnswerChange}

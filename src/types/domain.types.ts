@@ -8,6 +8,8 @@ import type { QuestionSkillMetadataFields } from '../shared/skillTaxonomy';
 
 export interface QuestionMetadata extends QuestionSkillMetadataFields {
     tags?: string[] | string;
+    /** Version of the server-owned math normalization applied to this question. */
+    mathFormatVersion?: number;
 }
 
 export enum QuestionType {

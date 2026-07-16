@@ -15,6 +15,7 @@ import {
     Radio,
     Award,
     LayoutTemplate,
+    ScanSearch,
 } from 'lucide-react';
 import { SCHOOL_NAME } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
@@ -73,6 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     const settingItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
         { id: 'announcements', label: 'Thông báo', icon: <Megaphone className="w-5 h-5" /> },
         { id: 'teachers', label: 'Giáo viên', icon: <Users className="w-5 h-5" /> },
+        { id: 'math-audit', label: 'Rà công thức toán', icon: <ScanSearch className="w-5 h-5" /> },
     ];
 
     const certificateItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [

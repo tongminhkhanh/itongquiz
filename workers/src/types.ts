@@ -45,6 +45,7 @@ export interface Question {
     skill_code?: string;
     subskill_code?: string;
     difficulty?: 1 | 2 | 3 | null;
+    math_format_version?: number;
 }
 
 export interface Assignment {

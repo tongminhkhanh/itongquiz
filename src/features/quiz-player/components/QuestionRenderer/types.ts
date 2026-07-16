@@ -1,6 +1,7 @@
 import { Question } from '../../../../types';
 
 export interface BaseRendererProps {
+    quizId?: string;
     question: Question;
     index: number;
     answers: Record<string, any>;

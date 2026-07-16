@@ -18,6 +18,7 @@ import { handleGameLoopRoutes } from './routes/gameLoop';
 import { handleHelpRagRoutes } from './routes/helpRag';
 import { handleSystemSettingsRoutes } from './routes/systemSettings';
 import { handleAnalyticsRoutes } from './routes/analytics';
+import { handleMathObservabilityRoutes } from './routes/mathObservability';
 import { handleHomeworkRoutes } from './routes/homework';
 import {
   createBatch,
@@ -120,6 +121,16 @@ export default {
                 const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 60 });
                 if (rateLimitRes) return addCors(rateLimitRes, request);
                 response = await handleHomeworkRoutes(request, env, path, method);
+            } else if (
+                path.startsWith('/api/math/telemetry') ||
+                path.startsWith('/api/admin/math-audit') ||
+                path.startsWith('/api/admin/math-telemetry')
+            ) {
+                if (path === '/api/math/telemetry' && method === 'POST') {
+                    const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 30 });
+                    if (rateLimitRes) return addCors(rateLimitRes, request);
+                }
+                response = await handleMathObservabilityRoutes(request, env, path, method);
             } else if (path.startsWith('/api/analytics')) {
                 response = await handleAnalyticsRoutes(request, env, path, method);
             } else if (path.startsWith('/api/test-bank')) {

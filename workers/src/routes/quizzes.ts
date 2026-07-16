@@ -12,6 +12,13 @@ import { mapQuestionForSave, parseBody, extractIdFromPath } from '../utils/helpe
 import { verifyJWTMiddleware, requireAdmin, requireTeacher } from '../middleware/jwtAuth';
 import { JWTPayload } from '../utils/jwt';
 import { withD1Retry } from '../utils/d1';
+import {
+    auditPersistedQuestionRow,
+    CURRENT_MATH_FORMAT_VERSION,
+    normalizePersistedQuestionRow,
+    QuestionMathValidationError,
+    type PersistedQuestionRow,
+} from '../services/questionMath';
 
 const canAccessQuiz = async (db: D1Database, user: JWTPayload, quizId: string): Promise<boolean> => {
     if (requireAdmin(user)) return true;
@@ -41,6 +48,67 @@ const shuffle = <T>(values: T[]): T[] => {
         [output[i], output[j]] = [output[j], output[i]];
     }
     return output;
+};
+
+const buildQuestionInsertStatement = (db: D1Database) => db.prepare(
+    `INSERT INTO questions (
+        id, quiz_id, type, question, options, correct_answer, items, text_field,
+        blanks, distractors, sentence, words, correct_word_indexes, image, tags,
+        subject, skill_code, subskill_code, difficulty, math_format_version
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+);
+
+const mapQuestionBatch = (questions: unknown[], quizId: string): string[][] =>
+    questions.map((question) => mapQuestionForSave(
+        question as Partial<import('../types').Question> & { type: string },
+        quizId,
+    ));
+
+const mathValidationResponse = (error: QuestionMathValidationError): Response => jsonResponse({
+    status: 'error',
+    code: 'INVALID_MATH_NOTATION',
+    message: 'Một hoặc nhiều trường công thức toán học chưa hợp lệ.',
+    issues: error.issues.map((issue) => ({
+        field: issue.field,
+        code: issue.code,
+        message: issue.message,
+        index: issue.index,
+    })),
+}, 400);
+
+const copiedQuestionValues = (
+    question: import('../types').Question,
+    newQuestionId: string,
+    newQuizId: string,
+): string[] => {
+    const persisted = question as unknown as PersistedQuestionRow;
+    const audit = auditPersistedQuestionRow(persisted);
+    if (audit.remainingIssues.length > 0) {
+        throw new QuestionMathValidationError(audit.remainingIssues);
+    }
+    const normalized = normalizePersistedQuestionRow(persisted);
+    return [
+        newQuestionId,
+        newQuizId,
+        question.type,
+        String(normalized.question ?? ''),
+        String(normalized.options ?? ''),
+        String(normalized.correct_answer ?? ''),
+        String(normalized.items ?? ''),
+        String(normalized.text_field ?? ''),
+        String(normalized.blanks ?? ''),
+        String(normalized.distractors ?? ''),
+        String(normalized.sentence ?? ''),
+        String(normalized.words ?? ''),
+        String(normalized.correct_word_indexes ?? ''),
+        question.image || '',
+        question.tags || '',
+        question.subject || '',
+        question.skill_code || '',
+        question.subskill_code || '',
+        String(question.difficulty || ''),
+        String(CURRENT_MATH_FORMAT_VERSION),
+    ];
 };
 
 export const sanitizeQuestionForStudent = (question: any): any => {
@@ -171,9 +239,18 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
+        const incomingQuestions = Array.isArray(body.questions) ? body.questions : [];
+        let mappedQuestions: string[][];
         try {
-            const batch = [];
-            // Set created_by to the authenticated user
+            // Normalize and validate every question before any D1 statement is executed.
+            mappedQuestions = mapQuestionBatch(incomingQuestions, String(body.id || ''));
+        } catch (error) {
+            if (error instanceof QuestionMathValidationError) return mathValidationResponse(error);
+            throw error;
+        }
+
+        try {
+            const batch: D1PreparedStatement[] = [];
             const createdBy = user.username;
             batch.push(
                 db.prepare(
@@ -188,22 +265,17 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
                 )
             );
 
-            // Insert questions (batch)
-            if (body.questions && Array.isArray(body.questions) && body.questions.length > 0) {
-                const stmt = db.prepare(
-                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags, subject, skill_code, subskill_code, difficulty)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-                );
-                body.questions.forEach((q: Partial<import('../types').Question> & { type: string }) => {
-                    const mapped = mapQuestionForSave(q, body.id);
-                    batch.push(stmt.bind(...mapped));
-                });
+            if (mappedQuestions.length > 0) {
+                const stmt = buildQuestionInsertStatement(db);
+                mappedQuestions.forEach((mapped) => batch.push(stmt.bind(...mapped)));
             }
 
-            // Excute all inside one transaction to ensure atomicity
             await db.batch(batch);
-
-            return jsonResponse({ status: 'success' });
+            return jsonResponse({
+                status: 'success',
+                questionCount: mappedQuestions.length,
+                mathFormatVersion: CURRENT_MATH_FORMAT_VERSION,
+            });
         } catch (err: any) {
             console.error('[POST /api/quizzes] Error:', err.message, err.stack);
             return errorResponse(`Failed to create quiz: ${err.message}`, 500);
@@ -222,67 +294,69 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
 
         const quizId = extractIdFromPath(path, '/api/quizzes');
         if (!quizId) return errorResponse('Missing quiz ID');
-
-        // Check ownership
         if (!(await canAccessQuiz(db, user, quizId))) {
             return errorResponse('Forbidden: You do not have permission to edit this quiz', 403);
         }
 
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
-
         if (body.id && String(body.id) !== quizId) {
             return errorResponse('Quiz ID in body must match the URL', 400);
         }
-        const id = quizId;
+
+        const incomingQuestions = Array.isArray(body.questions) ? body.questions : [];
+        let mappedQuestions: string[][];
+        try {
+            // This must happen before destructive replacement so invalid TeX cannot erase the existing quiz.
+            mappedQuestions = mapQuestionBatch(incomingQuestions, quizId);
+        } catch (error) {
+            if (error instanceof QuestionMathValidationError) return mathValidationResponse(error);
+            throw error;
+        }
 
         try {
-            // Fetch original created_by BEFORE deleting
-            const originalQuiz = await db.prepare('SELECT created_by FROM quizzes WHERE id = ?').bind(id).first<{ created_by: string }>();
+            const originalQuiz = await db.prepare('SELECT created_by FROM quizzes WHERE id = ?')
+                .bind(quizId)
+                .first<{ created_by: string }>();
             const createdBy = originalQuiz?.created_by || user.username;
-
-            const batch = [];
-            // Delete old data then re-insert
-            batch.push(db.prepare('DELETE FROM questions WHERE quiz_id = ?').bind(id));
-            batch.push(db.prepare('DELETE FROM quizzes WHERE id = ?').bind(id));
-
-            batch.push(
+            const batch: D1PreparedStatement[] = [
+                db.prepare('DELETE FROM questions WHERE quiz_id = ?').bind(quizId),
+                db.prepare('DELETE FROM quizzes WHERE id = ?').bind(quizId),
                 db.prepare(
                     `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home, tags)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 ).bind(
-                    id, body.title, body.classLevel, body.category || '',
+                    quizId, body.title, body.classLevel, body.category || '',
                     body.timeLimit, body.createdAt, body.accessCode || '',
                     body.requireCode ? 'TRUE' : 'FALSE', createdBy,
                     body.showOnHome === false ? 'FALSE' : 'TRUE',
                     body.tags ? (Array.isArray(body.tags) ? JSON.stringify(body.tags) : body.tags) : '[]'
-                )
-            );
+                ),
+            ];
 
-            // Re-insert questions
-            if (body.questions && Array.isArray(body.questions) && body.questions.length > 0) {
-                const stmt = db.prepare(
-                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags, subject, skill_code, subskill_code, difficulty)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-                );
-                body.questions.forEach((q: any) => {
-                    const mapped = mapQuestionForSave(q, id);
-                    batch.push(stmt.bind(...mapped));
-                });
+            if (mappedQuestions.length > 0) {
+                const stmt = buildQuestionInsertStatement(db);
+                mappedQuestions.forEach((mapped) => batch.push(stmt.bind(...mapped)));
             }
 
             await db.batch(batch);
 
-            // Verify count
-            const countResult = await db.prepare('SELECT COUNT(*) as cnt FROM questions WHERE quiz_id = ?').bind(id).first<{ cnt: number }>();
+            const countResult = await db.prepare('SELECT COUNT(*) as cnt FROM questions WHERE quiz_id = ?')
+                .bind(quizId)
+                .first<{ cnt: number }>();
             const actualCount = countResult?.cnt || 0;
-            const expectedCount = body.questions?.length || 0;
-
-            if (actualCount !== expectedCount) {
-                return jsonResponse({ status: 'error', message: `Save verification failed: expected ${expectedCount} questions, but ${actualCount} were saved` });
+            if (actualCount !== mappedQuestions.length) {
+                return jsonResponse({
+                    status: 'error',
+                    message: `Save verification failed: expected ${mappedQuestions.length} questions, but ${actualCount} were saved`,
+                }, 500);
             }
 
-            return jsonResponse({ status: 'success', questionCount: actualCount });
+            return jsonResponse({
+                status: 'success',
+                questionCount: actualCount,
+                mathFormatVersion: CURRENT_MATH_FORMAT_VERSION,
+            });
         } catch (err: any) {
             console.error('[PUT /api/quizzes] Error:', err.message, err.stack);
             return errorResponse(`Failed to update quiz: ${err.message}`, 500);
@@ -299,59 +373,49 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
             return errorResponse('Forbidden: Teacher or admin access required', 403);
         }
 
-        const segments = path.split('/');
-        const quizId = segments[3]; // /api/quizzes/{id}/duplicate
+        const quizId = path.split('/')[3];
         if (!quizId) return errorResponse('Missing quiz ID');
         if (!(await canAccessQuiz(db, user, quizId))) {
             return errorResponse('Forbidden: You do not have permission to duplicate this quiz', 403);
         }
 
         try {
-            // Fetch original quiz
-            const originalQuiz = await db.prepare('SELECT * FROM quizzes WHERE id = ?').bind(quizId).first<import('../types').Quiz>();
+            const originalQuiz = await db.prepare('SELECT * FROM quizzes WHERE id = ?')
+                .bind(quizId)
+                .first<import('../types').Quiz>();
             if (!originalQuiz) return errorResponse('Quiz not found', 404);
 
-            // Fetch original questions
-            const originalQuestions = await db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all<import('../types').Question>();
-
-            // Generate new IDs
+            const originalQuestions = await db.prepare('SELECT * FROM questions WHERE quiz_id = ?')
+                .bind(quizId)
+                .all<import('../types').Question>();
             const newQuizId = generateId('quiz');
             const createdAt = new Date().toISOString();
             const newTitle = `Bản sao của ${originalQuiz.title}`;
 
-            const batch = [];
+            // Normalize all copied rows before creating the destination quiz.
+            let copiedValues: string[][];
+            try {
+                copiedValues = originalQuestions.results.map((question) =>
+                    copiedQuestionValues(question, generateId('q'), newQuizId));
+            } catch (error) {
+                if (error instanceof QuestionMathValidationError) return mathValidationResponse(error);
+                throw error;
+            }
 
-            // Insert new quiz (set created_by to current user)
-            batch.push(
+            const batch: D1PreparedStatement[] = [
                 db.prepare(
                     `INSERT INTO quizzes (id, title, class_level, category, time_limit, created_at, access_code, require_code, created_by, show_on_home, tags)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 ).bind(
                     newQuizId, newTitle, originalQuiz.class_level, originalQuiz.category || '',
-                    originalQuiz.time_limit, createdAt, '', // No access code for copy
-                    originalQuiz.require_code || 'FALSE', user.username, // Set to current user
-                    'FALSE', // Don't show copies on home by default
-                    originalQuiz.tags || '[]'
-                )
-            );
-
-            // Insert copied questions
-            if (originalQuestions.results.length > 0) {
-                const stmt = db.prepare(
-                    `INSERT INTO questions (id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags, subject, skill_code, subskill_code, difficulty)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-                );
-                for (const q of originalQuestions.results) {
-                    const newQId = generateId('q');
-                    batch.push(stmt.bind(
-                        newQId, newQuizId, q.type, q.question || '', q.options || '', q.correct_answer || '',
-                        q.items || '', q.text_field || '', q.blanks || '', q.distractors || '',
-                        q.sentence || '', q.words || '', q.correct_word_indexes || '', q.image || '', q.tags || '',
-                        q.subject || '', q.skill_code || '', q.subskill_code || '', q.difficulty || ''
-                    ));
-                }
+                    originalQuiz.time_limit, createdAt, '', originalQuiz.require_code || 'FALSE',
+                    user.username, 'FALSE', originalQuiz.tags || '[]'
+                ),
+            ];
+            if (copiedValues.length > 0) {
+                const stmt = buildQuestionInsertStatement(db);
+                copiedValues.forEach((mapped) => batch.push(stmt.bind(...mapped)));
             }
-
             await db.batch(batch);
 
             return jsonResponse({
@@ -363,7 +427,8 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
                     category: originalQuiz.category || '',
                     timeLimit: originalQuiz.time_limit,
                     createdAt,
-                    questionCount: originalQuestions.results.length,
+                    questionCount: copiedValues.length,
+                    mathFormatVersion: CURRENT_MATH_FORMAT_VERSION,
                 },
             });
         } catch (err: any) {

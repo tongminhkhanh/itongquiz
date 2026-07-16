@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { MathJaxContext } from 'better-react-mathjax';
 import App from './App';
+import MathRenderTelemetryObserver from './src/components/common/MathRenderTelemetryObserver';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -30,6 +31,7 @@ root.render(
   <React.StrictMode>
     <BrowserRouter>
       <MathJaxContext config={mathJaxConfig}>
+        <MathRenderTelemetryObserver />
         <App />
       </MathJaxContext>
     </BrowserRouter>
