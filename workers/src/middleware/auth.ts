@@ -13,9 +13,6 @@ export function verifyToken(request: Request, env: Env): Response | null {
     // 1. Skip auth for OPTIONS (CORS preflight)
     if (method === 'OPTIONS') return null;
 
-    // 2. Allow legacy paths to be handled by body-based auth in handleLegacyGasRequest
-    if (path === '/' || path === '/api/gas') return null;
-
     // 3. Allow public health check
     if (path === '/api/health') return null;
 
@@ -51,7 +48,7 @@ export function verifyToken(request: Request, env: Env): Response | null {
     if (path.startsWith('/api/results') || path === '/api/validate') return null;
     if (path.startsWith('/api/gift-shop')) return null;
 
-    // 12. SECURITY: Quiz/Questions routes - READ operations are public, WRITE operations use JWT (handled in quizzes.ts)
+    // 12. Quiz and question routes enforce JWT/ownership in quizzes.ts
     if (path.startsWith('/api/quizzes') || path.startsWith('/api/questions')) return null;
 
     // 13. SECURITY: Live Exam routes use JWT authentication (handled in liveExam.ts)
@@ -62,7 +59,7 @@ export function verifyToken(request: Request, env: Env): Response | null {
     if (path.startsWith('/api/certificate-batches') || path.startsWith('/api/certificates')) return null;
 
     // 15. Homework and analytics perform role/ownership checks with JWT in their route handlers.
-    if (path.startsWith('/api/homework') || path.startsWith('/api/analytics')) return null;
+    if (path.startsWith('/api/homework') || path.startsWith('/api/analytics') || path.startsWith('/api/phieu')) return null;
 
     // 16. Verify token from header for REST API routes (legacy auth for non-JWT routes)
     const headerToken = request.headers.get('X-API-Token') || request.headers.get('Authorization')?.replace('Bearer ', '');

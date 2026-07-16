@@ -422,36 +422,3 @@ export async function handleHomeworkRoutes(request: Request, env: Env, path: str
     if (gradeMatch && method === 'PATCH') return publishGrade(env.DB, user, gradeMatch[1], await readBody(request));
     return errorResponse('Homework route not found', 404);
 }
-
-/**
- * One-release compatibility adapter for clients that still POST GAS-style actions.
- * All operations deliberately reuse the canonical authorization and soft-delete path.
- */
-export async function handleLegacyHomeworkAction(
-    env: Env,
-    user: JWTPayload,
-    action: string,
-    body: Record<string, any>,
-): Promise<Response> {
-    console.warn(`[Deprecated homework action] ${action}`);
-    const assignmentId = String(body.assignmentId || body.assignment_id || body.id || '');
-    switch (action) {
-        case 'get_hw_assignments': {
-            const url = new URL('https://legacy.local/api/homework/assignments');
-            if (body.classId || body.class_id) url.searchParams.set('classId', String(body.classId || body.class_id));
-            return listAssignments(env.DB, user, url);
-        }
-        case 'save_hw_assignment':
-            return assignmentId
-                ? updateAssignment(env.DB, user, assignmentId, body)
-                : createAssignment(env.DB, user, body);
-        case 'delete_hw_assignment':
-            return archiveAssignment(env.DB, user, assignmentId);
-        case 'submit_hw':
-            return submitHomework(env.DB, user, assignmentId, body);
-        case 'get_hw_submissions':
-            return getSubmissions(env.DB, user, assignmentId);
-        default:
-            return errorResponse('Legacy homework action is not available', 410);
-    }
-}

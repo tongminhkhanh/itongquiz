@@ -7,7 +7,7 @@ vi.mock('../workers/src/middleware/jwtAuth', () => ({
   isStudent: vi.fn((user: TestUser) => user.role === 'student'),
 }));
 
-import { handleHomeworkRoutes, handleLegacyHomeworkAction } from '../workers/src/routes/homework';
+import { handleHomeworkRoutes } from '../workers/src/routes/homework';
 import { verifyToken } from '../workers/src/middleware/auth';
 
 class Statement {
@@ -87,13 +87,6 @@ describe('canonical homework authorization and deadlines', () => {
     expect(payload.data.id).toBe('sub-1');
   });
 
-  it('soft-archives through the legacy compatibility action', async () => {
-    const db = new Database();
-    const response = await handleLegacyHomeworkAction(env(db), currentUser, 'delete_hw_assignment', { assignmentId: 'hw-1' });
-    expect(response.status).toBe(200);
-    expect(db.executed.some(statement => statement.sql.includes("SET status='ARCHIVED'"))).toBe(true);
-    expect(db.executed.some(statement => statement.sql.includes('DELETE FROM hw_'))).toBe(false);
-  });
 
   it('analytics selects only the latest attempt per student', async () => {
     const db = new Database();

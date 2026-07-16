@@ -1,5 +1,5 @@
 // Shared helpers for Workers API routes
-// Extracted from legacy GAS compatibility handler
+// Shared Worker route helpers
 
 import { jsonResponse } from './response';
 import { Question, Assignment, PetData, ShopItem, ResultRow } from '../types';
@@ -145,7 +145,11 @@ export function mapShopItem(i: ShopItem): any {
 
 
 // ============ VALIDATE ANSWERS (Server-side anti-cheat) ============
-export async function handleValidateAnswers(db: D1Database, body: any): Promise<Response> {
+export async function handleValidateAnswers(
+    db: D1Database,
+    body: any,
+    options: { includeCorrectAnswers?: boolean } = {},
+): Promise<Response> {
     const quizId = body.quizId;
     const studentAnswers = body.answers || {};
     const isSkippedAnswer = (value: any): boolean => (
@@ -289,7 +293,11 @@ export async function handleValidateAnswers(db: D1Database, body: any): Promise<
         }
 
         if (isCorrect) correctCount++;
-        details.push({ questionId: qId, isCorrect, correctAnswer: String(correctAnswer || '').replace(/^'/, '') });
+        const detail: Record<string, any> = { questionId: qId, isCorrect };
+        if (options.includeCorrectAnswers) {
+            detail.correctAnswer = String(correctAnswer || '').replace(/^'/, '');
+        }
+        details.push(detail);
     }
 
     const total = questions.results.length;

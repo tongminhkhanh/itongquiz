@@ -1,6 +1,6 @@
 /**
  * Announcement Service
- * Handles marquee announcement API calls via apiAdapter (supports both GAS and D1)
+ * Handles marquee announcement API calls via apiAdapter (uses the canonical Worker API)
  */
 
 import { callApi } from './apiAdapter';

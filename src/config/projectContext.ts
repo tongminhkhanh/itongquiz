@@ -58,7 +58,7 @@ export const PROJECT_CONTEXT = `
 - **Frontend:** React 19, TypeScript, Vite, Zustand (State Management).
 - **UI:** Lucide React Icons, Framer Motion, Headless UI.
 - **AI:** Google Gemini API (@google/genai).
-- **Dữ liệu:** Google Sheets (thông qua Google Apps Script).
+- **Dữ liệu:** Cloudflare D1, R2 và Queues.
 - **Testing:** Vitest, Cypress.
 
 ---

@@ -68,16 +68,19 @@ describe('resolveApiRoute', () => {
         expect(qs).toContain('actorIsAdmin=true');
     });
 
-    it('resolves upsert_phieu to /api/gas with GAS body', () => {
-        const r = resolveApiRoute('upsert_phieu');
-        expect(r.path({})).toBe('/api/gas');
-        const body = r.body?.('upsert_phieu', { foo: 'bar' });
-        expect(body?.action).toBe('upsert_phieu');
-        expect(body?.foo).toBe('bar');
-        // Must not mutate original payload
-        const orig = { foo: 'bar' };
-        r.body?.('upsert_phieu', orig);
-        expect(Object.keys(orig)).toEqual(['foo']);
+    it('resolves phieu actions to canonical REST routes', () => {
+        const upsert = resolveApiRoute('upsert_phieu');
+        expect(upsert.method).toBe('POST');
+        expect(upsert.path({})).toBe('/api/phieu');
+        expect(upsert.body).toBeUndefined();
+
+        const bySubmission = resolveApiRoute('get_phieu_by_submission');
+        expect(bySubmission.method).toBe('GET');
+        expect(bySubmission.path({ submissionId: 'sub 1' })).toBe('/api/phieu/submissions/sub%201');
+
+        expect(resolveApiRoute('publish_phieu_batch').path({})).toBe('/api/phieu/batches');
+        expect(resolveApiRoute('deactivate_public_phieu_link').path({ publicToken: 'tok 1' }))
+            .toBe('/api/phieu/public-links/tok%201/deactivate');
     });
 
     it('resolves get_public_phieu as public', () => {
@@ -96,12 +99,6 @@ describe('resolveApiRoute', () => {
         expect(r.auth).toBe('session');
     });
 
-    it('resolves get_hw_assignments to /api/gas with GAS body', () => {
-        const r = resolveApiRoute('get_hw_assignments');
-        expect(r.path({})).toBe('/api/gas');
-        const body = r.body?.('get_hw_assignments', {});
-        expect(body?.action).toBe('get_hw_assignments');
-    });
 
     it('throws on unknown action', () => {
         expect(() => resolveApiRoute('does_not_exist')).toThrow(

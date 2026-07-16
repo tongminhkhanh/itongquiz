@@ -1,6 +1,6 @@
 // Quizzes + Questions API Routes
 // GET /api/quizzes - List all quizzes (PUBLIC)
-// GET /api/questions - List questions (PUBLIC)
+// GET /api/questions - Authenticated; student DTOs exclude answer fields
 // POST /api/quizzes - Create quiz (TEACHER/ADMIN)
 // PUT /api/quizzes/:id - Update quiz (TEACHER/ADMIN with ownership check)
 // DELETE /api/quizzes/:id - Delete quiz (TEACHER/ADMIN with ownership check)
@@ -23,6 +23,70 @@ const canAccessQuiz = async (db: D1Database, user: JWTPayload, quizId: string): 
     return quiz.created_by === user.username;
 };
 
+const parseJsonArray = (value: unknown): any[] => {
+    if (Array.isArray(value)) return value;
+    if (typeof value !== 'string' || !value.trim()) return [];
+    try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+};
+
+const shuffle = <T>(values: T[]): T[] => {
+    const output = [...values];
+    for (let i = output.length - 1; i > 0; i--) {
+        const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+        [output[i], output[j]] = [output[j], output[i]];
+    }
+    return output;
+};
+
+export const sanitizeQuestionForStudent = (question: any): any => {
+    const safe = { ...question };
+    for (const field of [
+        'correct_answer', 'correctAnswer', 'correct_answers', 'correctAnswers',
+        'correct_order', 'correctOrder', 'correct_word_indexes', 'correctWordIndexes',
+        'correct_word', 'correctWord', 'wrong_word', 'wrongWord',
+    ]) delete safe[field];
+
+    const type = String(question.type || '').toUpperCase();
+    const items = parseJsonArray(question.items);
+    if (type === 'MATCHING' && items.some((item) => item && typeof item === 'object' && 'left' in item && 'right' in item)) {
+        safe.items = '[]';
+        safe.left_items = JSON.stringify(items.map((item) => ({ id: String(item.left), content: String(item.left) })));
+        safe.right_items = JSON.stringify(shuffle(items.map((item) => ({ id: String(item.right), content: String(item.right) }))));
+    } else if (items.length > 0) {
+        safe.items = JSON.stringify(items.map((item) => {
+            if (!item || typeof item !== 'object') return item;
+            const { isCorrect, isTrue, correct, answer, categoryId, ...rest } = item;
+            return rest;
+        }));
+    }
+
+    const blanks = parseJsonArray(question.blanks);
+    if (type === 'DRAG_DROP') {
+        const correctChoices = blanks.map((blank) => String(blank ?? '')).filter(Boolean);
+        const distractors = parseJsonArray(question.distractors).map((item) => String(item ?? '')).filter(Boolean);
+        const originalText = String(question.text_field ?? question.text ?? '');
+        let placeholderIndex = 0;
+        const safeText = originalText.replace(/\[[^\]]*\]/g, () => `[${++placeholderIndex}]`);
+        safe.text_field = safeText;
+        if ('text' in safe) safe.text = safeText;
+        safe.blanks = '[]';
+        safe.distractors = JSON.stringify(shuffle([...correctChoices, ...distractors]));
+    } else if (blanks.length > 0 && blanks.some((blank) => blank && typeof blank === 'object')) {
+        safe.blanks = JSON.stringify(blanks.map((blank) => {
+            if (!blank || typeof blank !== 'object') return blank;
+            const { correctAnswer, answer, ...rest } = blank;
+            return rest;
+        }));
+    }
+    if (type === 'ERROR_CORRECTION') delete safe.distractors;
+    return safe;
+};
+
 export async function handleQuizRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
     const db = env.DB;
 
@@ -37,20 +101,40 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
 
     // GET /api/questions
     if (path === '/api/questions' && method === 'GET') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+        const { user } = authResult;
         const url = new URL(request.url);
         const quizId = url.searchParams.get('quizId');
-        if (quizId) {
-            const rows = await withD1Retry(
-                () => db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all<import('../types').Question>(),
-                'GET /api/questions by quizId'
-            );
-            return jsonResponse(rows.results);
+
+        if (quizId && requireTeacher(user) && !(await canAccessQuiz(db, user, quizId))) {
+            return errorResponse('Forbidden: You do not have permission to read this quiz', 403);
         }
-        const rows = await withD1Retry(
-            () => db.prepare('SELECT * FROM questions').all<import('../types').Question>(),
-            'GET /api/questions'
-        );
-        return jsonResponse(rows.results);
+
+        let rows: { results: any[] };
+        if (quizId) {
+            rows = await withD1Retry(
+                () => db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all<any>(),
+                'GET /api/questions by quizId',
+            );
+        } else if (requireAdmin(user)) {
+            rows = await withD1Retry(() => db.prepare('SELECT * FROM questions').all<any>(), 'GET /api/questions admin');
+        } else if (user.role === 'teacher') {
+            rows = await withD1Retry(
+                () => db.prepare('SELECT q.* FROM questions q JOIN quizzes z ON z.id = q.quiz_id WHERE z.created_by = ?')
+                    .bind(user.username).all<any>(),
+                'GET /api/questions teacher',
+            );
+        } else {
+            // Existing clients load the quiz catalog and question rows together.
+            // Keep that contract for authenticated students, but return only sanitized DTOs.
+            rows = await withD1Retry(
+                () => db.prepare('SELECT * FROM questions').all<any>(),
+                'GET /api/questions student catalog',
+            );
+        }
+
+        return jsonResponse(user.role === 'student' ? rows.results.map(sanitizeQuestionForStudent) : rows.results);
     }
 
     // POST /api/quizzes - Create quiz (TEACHER/ADMIN only)
@@ -126,8 +210,10 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        // Use body.id or path id
-        const id = body.id || quizId;
+        if (body.id && String(body.id) !== quizId) {
+            return errorResponse('Quiz ID in body must match the URL', 400);
+        }
+        const id = quizId;
 
         try {
             // Fetch original created_by BEFORE deleting
@@ -195,6 +281,9 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         const segments = path.split('/');
         const quizId = segments[3]; // /api/quizzes/{id}/duplicate
         if (!quizId) return errorResponse('Missing quiz ID');
+        if (!(await canAccessQuiz(db, user, quizId))) {
+            return errorResponse('Forbidden: You do not have permission to duplicate this quiz', 403);
+        }
 
         try {
             // Fetch original quiz

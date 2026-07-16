@@ -10,7 +10,6 @@ import { gamificationRoutes } from './gamification';
 import { giftShopRoutes } from './giftShop';
 import { phieuRoutes } from './phieu';
 import { systemRoutes } from './system';
-import { legacyHomeworkRoutes } from './legacyHomework';
 import { homeworkRoutes } from './homework';
 
 export const routes: RouteRegistry = {
@@ -25,6 +24,5 @@ export const routes: RouteRegistry = {
     ...giftShopRoutes,
     ...phieuRoutes,
     ...systemRoutes,
-    ...legacyHomeworkRoutes,
     ...homeworkRoutes,
 };

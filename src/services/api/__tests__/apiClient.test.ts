@@ -86,17 +86,17 @@ describe('executeApiAction — auth headers', () => {
     });
 });
 
-describe('executeApiAction — GAS body', () => {
-    it('upsert_phieu body includes action and token without mutating payload', async () => {
+describe('executeApiAction — canonical phieu REST body', () => {
+    it('sends the payload without a legacy GAS action', async () => {
         mockOk({});
-        const orig = { submissionId: 's1' };
+        const orig = { submission_id: 's1' };
         await executeApiAction('upsert_phieu', orig);
-        const [, init] = mockFetch.mock.calls[0];
+        const [url, init] = mockFetch.mock.calls[0];
         const body = JSON.parse((init as RequestInit).body as string);
-        expect(body.action).toBe('upsert_phieu');
-        expect(body.submissionId).toBe('s1');
-        // Original not mutated
-        expect(Object.keys(orig)).toEqual(['submissionId']);
+        expect(String(url)).toMatch('/api/phieu');
+        expect(body).toEqual(orig);
+        expect(body.action).toBeUndefined();
+        expect(Object.keys(orig)).toEqual(['submission_id']);
     });
 });
 

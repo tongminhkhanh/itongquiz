@@ -1,11 +1,11 @@
 /**
  * Classroom Service
  *
- * API calls to Google Apps Script for Virtual Classroom features:
+ * API calls to the Cloudflare Worker for Virtual Classroom features:
  * Classes, Students, Assignments.
  */
 
-// classroomService uses callApi from apiAdapter (supports both GAS and D1)
+// classroomService uses the canonical Worker API adapter
 import { callApi } from './apiAdapter';
 import {
     Classroom, CreateClassPayload,
@@ -16,13 +16,11 @@ import {
     ClassroomApiResponse,
 } from '../types/classroom.types';
 
-// Security: API token for GAS authentication
-const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
 
 /**
- * Helper to call GAS API (same pattern as googleSheetService)
+ * Helper to call the canonical Worker API
  */
-const callGasApi = async <T = any>(action: string, payload: Record<string, any> = {}): Promise<ClassroomApiResponse<T>> => {
+const callWorkerApi = async <T = any>(action: string, payload: Record<string, any> = {}): Promise<ClassroomApiResponse<T>> => {
     try {
         const data = await callApi<ClassroomApiResponse<T>>(action, payload);
         return data;
@@ -38,7 +36,7 @@ const callGasApi = async <T = any>(action: string, payload: Record<string, any> 
  */
 export const getClasses = async (teacherUsername?: string, includeArchived = false): Promise<Classroom[]> => {
     const payload = { ...(teacherUsername ? { teacherUsername } : {}), includeArchived };
-    const res = await callGasApi<Classroom[]>('get_classes', payload);
+    const res = await callWorkerApi<Classroom[]>('get_classes', payload);
     if (res.status === 'success' && Array.isArray(res.data)) {
         return res.data;
     }
@@ -49,7 +47,7 @@ export const getClasses = async (teacherUsername?: string, includeArchived = fal
  * Create a new class
  */
 export const createClass = async (payload: CreateClassPayload): Promise<Classroom | null> => {
-    const res = await callGasApi<Classroom>('create_class', payload);
+    const res = await callWorkerApi<Classroom>('create_class', payload);
     if (res.status === 'success' && res.data) {
         return res.data;
     }
@@ -60,13 +58,13 @@ export const createClass = async (payload: CreateClassPayload): Promise<Classroo
  * Delete a class (and optionally its students)
  */
 export const deleteClass = async (classId: string): Promise<boolean> => {
-    const res = await callGasApi('delete_class', { classId });
+    const res = await callWorkerApi('delete_class', { classId });
     if (res.status !== 'success') throw new Error(res.message || 'Không thể lưu trữ lớp.');
     return true;
 };
 
 export const restoreClass = async (classId: string): Promise<boolean> => {
-    const res = await callGasApi('restore_class', { classId });
+    const res = await callWorkerApi('restore_class', { classId });
     if (res.status !== 'success') throw new Error(res.message || 'Không thể khôi phục lớp.');
     return true;
 };
@@ -81,7 +79,7 @@ export const restoreClass = async (classId: string): Promise<boolean> => {
  * - Student role: omits parentPhone
  */
 export const getStudents = async (classId: string, role: 'teacher' | 'student' = 'teacher'): Promise<Student[]> => {
-    const res = await callGasApi<Student[]>('get_students', { classId, role });
+    const res = await callWorkerApi<Student[]>('get_students', { classId, role });
     if (res.status === 'success' && Array.isArray(res.data)) {
         return res.data;
     }
@@ -89,10 +87,10 @@ export const getStudents = async (classId: string, role: 'teacher' | 'student' =
 };
 
 /**
- * Add a student to a class (password will be hashed on GAS side)
+ * Add a student to a class (password will be hashed by the Worker)
  */
 export const addStudent = async (payload: CreateStudentPayload): Promise<Student | null> => {
-    const res = await callGasApi<Student>('add_student', payload);
+    const res = await callWorkerApi<Student>('add_student', payload);
     if (res.status === 'success' && res.data) {
         return res.data;
     }
@@ -110,7 +108,7 @@ export interface BatchStudentResult {
  * Add multiple students to a class
  */
 export const addStudentsBatch = async (students: CreateStudentPayload[]): Promise<BatchStudentResult> => {
-    const res = await callGasApi<BatchStudentResult>('add_students_batch', { students });
+    const res = await callWorkerApi<BatchStudentResult>('add_students_batch', { students });
     if (res.status === 'success' && res.data) {
         return res.data;
     }
@@ -122,7 +120,7 @@ export const addStudentsBatch = async (students: CreateStudentPayload[]): Promis
  * Delete a student
  */
 export const deleteStudent = async (studentId: string): Promise<boolean> => {
-    const res = await callGasApi('delete_student', { studentId });
+    const res = await callWorkerApi('delete_student', { studentId });
     return res.status === 'success';
 };
 
@@ -134,7 +132,7 @@ export const resetStudentPassword = async (
     newPassword: string,
     _actorUsername?: string
 ): Promise<boolean> => {
-    const res = await callGasApi('reset_student_password', {
+    const res = await callWorkerApi('reset_student_password', {
         studentId,
         newPassword,
     });
@@ -152,7 +150,7 @@ export const changeStudentPassword = async (
     currentPassword: string,
     newPassword: string
 ): Promise<boolean> => {
-    const res = await callGasApi('change_student_password', {
+    const res = await callWorkerApi('change_student_password', {
         studentId,
         currentPassword,
         newPassword,
@@ -167,7 +165,7 @@ export const changeStudentPassword = async (
  * Student login (password verified against hash on server side)
  */
 export const studentLogin = async (payload: StudentLoginPayload): Promise<StudentSession | null> => {
-    const res = await callGasApi<StudentSession>('student_login', payload);
+    const res = await callWorkerApi<StudentSession>('student_login', payload);
     if (res.status === 'success' && res.data) {
         return res.data;
     }
@@ -182,7 +180,7 @@ export const studentLogin = async (payload: StudentLoginPayload): Promise<Studen
  * Get assignments for a class (auto-closes expired ones server-side)
  */
 export const getAssignments = async (classId: string): Promise<Assignment[]> => {
-    const res = await callGasApi<Assignment[]>('get_assignments', { classId });
+    const res = await callWorkerApi<Assignment[]>('get_assignments', { classId });
     if (res.status === 'success' && Array.isArray(res.data)) {
         return res.data;
     }
@@ -193,7 +191,7 @@ export const getAssignments = async (classId: string): Promise<Assignment[]> => 
  * Get all assignments for a teacher (across all their classes)
  */
 export const getTeacherAssignments = async (teacherUsername: string): Promise<Assignment[]> => {
-    const res = await callGasApi<Assignment[]>('get_teacher_assignments', { teacherUsername });
+    const res = await callWorkerApi<Assignment[]>('get_teacher_assignments', { teacherUsername });
     if (res.status === 'success' && Array.isArray(res.data)) {
         return res.data;
     }
@@ -204,7 +202,7 @@ export const getTeacherAssignments = async (teacherUsername: string): Promise<As
  * Create a new assignment (deadline enforced server-side)
  */
 export const createAssignment = async (payload: CreateAssignmentPayload): Promise<Assignment | null> => {
-    const res = await callGasApi<Assignment>('create_assignment', payload);
+    const res = await callWorkerApi<Assignment>('create_assignment', payload);
     if (res.status === 'success' && res.data) {
         return res.data;
     }
@@ -218,14 +216,14 @@ export const createAssignment = async (payload: CreateAssignmentPayload): Promis
 export const getSmartAssignmentPreview = async (
     payload: SmartAssignmentPreviewRequest,
 ): Promise<SmartAssignmentPreviewApiResponse> => {
-    return callGasApi<SmartAssignmentPreviewData | SmartAssignmentPreviewErrorData>('get_smart_assignment_preview', payload);
+    return callWorkerApi<SmartAssignmentPreviewData | SmartAssignmentPreviewErrorData>('get_smart_assignment_preview', payload);
 };
 
 /**
  * Delete an assignment
  */
 export const deleteAssignment = async (assignmentId: string): Promise<boolean> => {
-    const res = await callGasApi('delete_assignment', { assignmentId });
+    const res = await callWorkerApi('delete_assignment', { assignmentId });
     return res.status === 'success';
 };
 
@@ -236,7 +234,7 @@ export const updateAssignmentDeadline = async (
     assignmentId: string,
     newDeadline: string
 ): Promise<boolean> => {
-    const res = await callGasApi('update_assignment_deadline', { assignmentId, newDeadline });
+    const res = await callWorkerApi('update_assignment_deadline', { assignmentId, newDeadline });
     if (res.status !== 'success') {
         console.error('[ClassroomService] updateAssignmentDeadline failed:', res.message);
     }
@@ -250,7 +248,7 @@ export const updateAssignmentStatus = async (
     assignmentId: string,
     newStatus: 'OPEN' | 'CLOSED'
 ): Promise<boolean> => {
-    const res = await callGasApi('update_assignment_status', { assignmentId, newStatus });
+    const res = await callWorkerApi('update_assignment_status', { assignmentId, newStatus });
     if (res.status !== 'success') {
         console.error('[ClassroomService] updateAssignmentStatus failed:', res.message);
     }
@@ -261,7 +259,7 @@ export const updateAssignmentStatus = async (
  * Get student assignments (for student portal dashboard)
  */
 export const getStudentAssignments = async (studentId: string): Promise<Assignment[]> => {
-    const res = await callGasApi<Assignment[]>('get_student_assignments', { studentId });
+    const res = await callWorkerApi<Assignment[]>('get_student_assignments', { studentId });
     if (res.status === 'success' && Array.isArray(res.data)) {
         return res.data;
     }
@@ -272,7 +270,7 @@ export const getStudentAssignments = async (studentId: string): Promise<Assignme
  * Get ALL assignments (for "Bài Tập Lớp" category on HomePage)
  */
 export const getAllAssignments = async (): Promise<Assignment[]> => {
-    const res = await callGasApi<Assignment[]>('get_all_assignments', {});
+    const res = await callWorkerApi<Assignment[]>('get_all_assignments', {});
     if (res.status === 'success' && Array.isArray(res.data)) {
         return res.data;
     }
@@ -283,7 +281,7 @@ export const getAllAssignments = async (): Promise<Assignment[]> => {
  * Start an assignment attempt (tracks attempt count & creates initial result)
  */
 export const startAssignmentAttempt = async (assignmentId: string, studentId: string): Promise<boolean> => {
-    const res = await callGasApi('start_assignment_attempt', { assignmentId, studentId });
+    const res = await callWorkerApi('start_assignment_attempt', { assignmentId, studentId });
     return res.status === 'success';
 };
 
@@ -291,6 +289,6 @@ export const startAssignmentAttempt = async (assignmentId: string, studentId: st
  * Update student avatar
  */
 export const updateStudentAvatar = async (studentId: string, avatar: string): Promise<boolean> => {
-    const res = await callGasApi('update_student_avatar', { studentId, avatar });
+    const res = await callWorkerApi('update_student_avatar', { studentId, avatar });
     return res.status === 'success';
 };

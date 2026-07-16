@@ -119,7 +119,7 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
             'GET /api/results page'
         );
 
-        // Map column names to match GAS output format
+        // Map column names to the frontend result contract
         const mapped = rows.results.map((r) => ({
             id: r.id,
             'Student Name': r.student_name,
@@ -284,7 +284,7 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
             return errorResponse('Forbidden: Authenticated user required', 403);
         }
 
-        return await handleValidateAnswers(db, body);
+        return await handleValidateAnswers(db, body, { includeCorrectAnswers: requireTeacher(user) });
     }
 
     return errorResponse('Not found: ' + path, 404);

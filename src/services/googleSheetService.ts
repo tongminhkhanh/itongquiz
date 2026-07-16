@@ -1,12 +1,12 @@
 import toast from 'react-hot-toast';
 import { Quiz, Question, QuestionType, MCQQuestion, TrueFalseQuestion, ShortAnswerQuestion, Teacher, StudentResult } from '../types';
 import { cacheService, CacheKeys, CacheTTL } from './CacheService';
-// GOOGLE_SCRIPT_URL no longer needed - callGasApi routes through apiAdapter
+// Legacy service name retained for compatibility; all calls use the Worker API
 import { USE_D1 } from '../config/constants';
 import { callApi } from './apiAdapter';
 
 // Helper to call API (routes through apiAdapter for both GAS and D1 backends)
-const callGasApi = async (action: string, payload: any = {}): Promise<any> => {
+const callWorkerApi = async (action: string, payload: any = {}): Promise<any> => {
     try {
         const data = await callApi(action, payload);
         if (data && typeof data === 'object' && (data as any).status === 'error') {
@@ -50,7 +50,7 @@ export const fetchResultsFromSheets = async (sheetId: string, resultsGid: string
     return cacheService.getOrFetch(
         cacheKey,
         async () => {
-            const data = await callGasApi('get_results');
+            const data = await callWorkerApi('get_results');
             // Handle both paginated response {data, meta} and flat array format
             const resultArray = Array.isArray(data) ? data : (data?.data && Array.isArray(data.data) ? data.data : []);
             if (!resultArray.length) return [];
@@ -268,25 +268,17 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
         async () => {
             // Fetch both Quizzes and Questions
             const [quizData, questionData] = await Promise.all([
-                callGasApi('get_quizzes'),
-                callGasApi('get_questions') // Need to ensure GAS supports this or fetch all in one go
+                callWorkerApi('get_quizzes'),
+                callWorkerApi('get_questions')
             ]);
 
-            // Fallback: If get_questions is not implemented separately, we might need to adjust GAS
-            // But for now let's assume we can fetch them. 
-            // Wait, the GAS script I wrote only has 'get_quizzes' which returns the 'Quizzes' sheet.
-            // I need to update GAS to support 'get_questions' OR fetch both.
-            // Let's check the GAS script I wrote.
-            // It has 'get_quizzes' -> 'Quizzes' sheet.
-            // It does NOT have 'get_questions'. I missed that in the GAS script update.
-            // I will implement 'get_questions' in GAS script in a moment.
 
             if (!quizData || !Array.isArray(quizData)) return [];
 
             // Temporary fix: If questionData is missing, we can't map questions.
             const qDataArray = Array.isArray(questionData) ? questionData : [];
 
-            // Helper to normalize snake_case (from D1) to camelCase (expected by frontend/GAS)
+            // Helper to normalize snake_case (from D1) to camelCase (expected by the frontend)
             const normalizeRow = (row: any) => {
                 if (!row) return row;
                 return {
@@ -302,6 +294,8 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                     correctAnswer: row.correctAnswer || row.correct_answer,
                     text: row.text || row.text_field,
                     correctWordIndexes: row.correctWordIndexes || row.correct_word_indexes,
+                    leftItems: row.leftItems || (row.left_items ? JSON.parse(row.left_items) : undefined),
+                    rightItems: row.rightItems || (row.right_items ? JSON.parse(row.right_items) : undefined),
                     skillCode: row.skillCode || row.skill_code,
                     subskillCode: row.subskillCode || row.subskill_code,
                     difficulty: row.difficulty ?? row.difficulty_level ?? row.difficultyLevel,
@@ -388,6 +382,8 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
                         type: QuestionType.MATCHING,
                         mainQuestion: unescapeSheetValue(row.question),
                         pairs: row.items ? JSON.parse(row.items) : [],
+                        leftItems: row.leftItems || [],
+                        rightItems: row.rightItems || [],
                         ...questionMetadata
                     } as any;
                 } else if (row.type === QuestionType.MULTIPLE_SELECT) {
@@ -618,7 +614,7 @@ export const prepareQuizForSave = (quiz: Quiz) => {
 
 export const saveQuizToSheet = async (quiz: Quiz, scriptUrl: string): Promise<boolean> => {
     const escapedQuiz = prepareQuizForSave(quiz);
-    const result = await callGasApi('create_quiz', escapedQuiz);
+    const result = await callWorkerApi('create_quiz', escapedQuiz);
     if (result && result.status === 'success') {
         cacheService.invalidatePrefix('quizzes:');
         return true;
@@ -632,7 +628,7 @@ export const saveResultToSheet = async (result: any, scriptUrl: string): Promise
         className: result.studentClass,
         quizTitle: result.quizTitle || "Unknown Quiz"
     };
-    const res = await callGasApi('submit_result', resultToSave);
+    const res = await callWorkerApi('submit_result', resultToSave);
     if (res && res.status === 'success') {
         cacheService.invalidatePrefix('results:');
         return true;
@@ -641,7 +637,7 @@ export const saveResultToSheet = async (result: any, scriptUrl: string): Promise
 };
 
 export const deleteResultFromSheet = async (resultId: string, scriptUrl: string): Promise<boolean> => {
-    const result = await callGasApi('delete_result', { resultId });
+    const result = await callWorkerApi('delete_result', { resultId });
     if (result && result.status === 'success') {
         cacheService.invalidatePrefix('results:');
         return true;
@@ -650,7 +646,7 @@ export const deleteResultFromSheet = async (resultId: string, scriptUrl: string)
 };
 
 export const deleteQuizFromSheet = async (quizId: string, scriptUrl: string): Promise<boolean> => {
-    const result = await callGasApi('delete_quiz', { quizId });
+    const result = await callWorkerApi('delete_quiz', { quizId });
     if (result && result.status === 'success') {
         cacheService.invalidatePrefix('quizzes:');
         return true;
@@ -661,7 +657,7 @@ export const deleteQuizFromSheet = async (quizId: string, scriptUrl: string): Pr
 export const updateQuizInSheet = async (quiz: Quiz, scriptUrl: string): Promise<boolean> => {
     const escapedQuiz = prepareQuizForSave(quiz);
     const expectedCount = quiz.questions.length;
-    const result = await callGasApi('update_quiz', escapedQuiz);
+    const result = await callWorkerApi('update_quiz', escapedQuiz);
 
     if (result && result.status === 'success') {
         // Verify question count if server returns it

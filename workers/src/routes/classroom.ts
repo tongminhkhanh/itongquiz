@@ -4,7 +4,7 @@
 import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
 import { mapAssignment, mapAssignments, hashSHA256, parseBody, extractIdFromPath } from '../utils/helpers';
-import { generateId, hashPassword } from '../utils/response';
+import { generateId, hashPassword, verifyPassword } from '../utils/response';
 import { getSmartAssignmentPreview } from '../services/smartAssignment';
 import { signJWT, createJWTCookie } from '../utils/jwt';
 import { JWTPayload } from '../utils/jwt';
@@ -83,9 +83,8 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        const inputHash = await hashPassword(body.password);
+        if (!body.username || !body.password) return errorResponse('Missing username or password');
 
-        // Use JOIN to get student, class, and pet in a single query
         const studentData = await db.prepare(`
             SELECT
                 s.*,
@@ -97,12 +96,22 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
             FROM students s
             LEFT JOIN classes c ON c.id = s.class_id
             LEFT JOIN user_pets p ON p.username = s.username
-            WHERE s.username = ? AND s.password_hash = ?
+            WHERE s.username = ?
               AND COALESCE(s.archived_at, '') = ''
               AND COALESCE(c.archived_at, '') = ''
-        `).bind(body.username, inputHash).first<any>();
+        `).bind(body.username).first<any>();
 
-        if (!studentData) return jsonResponse({ status: 'error', message: 'Sai tên đăng nhập hoặc mật khẩu.' });
+        const passwordCheck = studentData
+            ? await verifyPassword(String(body.password), String(studentData.password_hash || ''))
+            : { valid: false, needsRehash: false };
+        if (!studentData || !passwordCheck.valid) {
+            return jsonResponse({ status: 'error', message: 'Sai tên đăng nhập hoặc mật khẩu.' });
+        }
+        if (passwordCheck.needsRehash) {
+            const upgradedHash = await hashPassword(String(body.password));
+            await db.prepare('UPDATE students SET password_hash = ? WHERE id = ?')
+                .bind(upgradedHash, studentData.id).run();
+        }
 
         // Get shop items in a separate query (still optimized compared to before)
         const shopItems = await db.prepare('SELECT * FROM shop_items').all();
@@ -525,8 +534,8 @@ export async function handleClassroomRoutes(request: Request, env: Env, path: st
         const studentWithPassword = await db.prepare('SELECT id, password_hash FROM students WHERE id = ?').bind(studentId).first<any>();
         if (!studentWithPassword) return errorResponse('Student not found', 404);
 
-        const currentHash = await hashPassword(currentPassword);
-        if (String(studentWithPassword.password_hash || '') !== currentHash) {
+        const currentPasswordCheck = await verifyPassword(currentPassword, String(studentWithPassword.password_hash || ''));
+        if (!currentPasswordCheck.valid) {
             return errorResponse('Mật khẩu cũ không đúng.', 400);
         }
 

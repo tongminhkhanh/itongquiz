@@ -174,7 +174,7 @@ export class BaseAPI {
     }
 }
 
-// Default instance for Google Sheets API
+// Default API client instance
 export const googleSheetsApi = new BaseAPI();
 
 // Export for convenience

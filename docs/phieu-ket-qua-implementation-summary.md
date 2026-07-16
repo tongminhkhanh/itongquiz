@@ -105,7 +105,7 @@ Ngày cập nhật: 02/07/2026
 | `callApi` | LOW | Thêm action mapping |
 | `fetch` trong Worker | LOW | Thêm public phieu handler trước auth |
 | `AssignmentSubmissionsView` | LOW | Thêm tab `PHIEU KQ` |
-| `handleLegacyAction` | HIGH | Symbol dùng trong legacy `/api/gas`; thay đổi chỉ thêm case mới, không sửa case cũ |
+| Legacy dispatcher | REMOVED | Phiếu nhận xét đã chuyển sang REST có JWT |
 
 GitNexus status: index up-to-date.
 

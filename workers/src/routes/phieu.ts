@@ -1,6 +1,8 @@
 import { errorResponse, jsonResponse } from '../utils/response';
 import { renderOgPng, PhieuRecord } from '../utils/ogImage';
 import { Env } from '../types';
+import { parseBody } from '../utils/helpers';
+import { verifyJWTMiddleware, requireTeacher } from '../middleware/jwtAuth';
 
 const PUBLIC_PHIEU_HOST = 'phieu.thitong.site';
 const PUBLIC_APP_ORIGIN = 'https://thitong.site';
@@ -70,6 +72,116 @@ export async function handlePhieuSubdomain(request: Request, env: Env): Promise<
     }
 
     return Response.redirect(`${PUBLIC_APP_ORIGIN}/phieu/p/${encodeURIComponent(publicToken)}`, 302);
+}
+
+type PhieuScopeUser = { username: string; role: string };
+
+const canAccessTeacherScope = (user: PhieuScopeUser, teacherUsername: unknown): boolean =>
+    user.role === 'admin' || String(teacherUsername || '') === user.username;
+
+const getSubmissionScope = async (db: D1Database, submissionId: string): Promise<any | null> =>
+    db.prepare(`
+        SELECT hs.id AS submission_id, hs.student_id, hs.student_name, ha.class_id, c.teacher_username
+        FROM hw_submissions hs
+        JOIN hw_assignments ha ON ha.id = hs.assignment_id
+        JOIN classes c ON c.id = ha.class_id
+        WHERE hs.id = ?
+        LIMIT 1
+    `).bind(submissionId).first<any>();
+
+const getPhieuScope = async (db: D1Database, phieuId: string): Promise<any | null> =>
+    db.prepare(`
+        SELECT p.id, p.class_id, c.teacher_username
+        FROM phieu_nhanxet p
+        JOIN classes c ON c.id = p.class_id
+        WHERE p.id = ?
+        LIMIT 1
+    `).bind(phieuId).first<any>();
+
+const getPublicLinkScope = async (db: D1Database, publicToken: string): Promise<any | null> =>
+    db.prepare(`
+        SELECT p.id, p.class_id, c.teacher_username
+        FROM phieu_public_links l
+        JOIN phieu_nhanxet p ON p.id = l.phieu_id
+        JOIN classes c ON c.id = p.class_id
+        WHERE l.public_token = ?
+        LIMIT 1
+    `).bind(publicToken).first<any>();
+
+export async function handlePhieuRoutes(
+    request: Request,
+    env: Env,
+    path: string,
+    method: string,
+): Promise<Response> {
+    const authResult = await verifyJWTMiddleware(request, env);
+    if (authResult instanceof Response) return authResult;
+    const user = authResult.user as PhieuScopeUser;
+    if (!requireTeacher(authResult.user)) {
+        return errorResponse('Forbidden: Teacher access required', 403);
+    }
+
+    if (path === '/api/phieu' && method === 'POST') {
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+        const data = body.data || body;
+        const submissionId = String(data.submission_id || data.submissionId || '').trim();
+        if (!submissionId) return errorResponse('Missing submission_id');
+        const scope = await getSubmissionScope(env.DB, submissionId);
+        if (!scope) return errorResponse('Submission not found', 404);
+        if (!canAccessTeacherScope(user, scope.teacher_username)) return errorResponse('Forbidden', 403);
+        return handleUpsertPhieu(env.DB, {
+            ...data,
+            submission_id: scope.submission_id,
+            student_id: scope.student_id,
+            student_name: scope.student_name,
+            class_id: scope.class_id,
+            created_by: user.username,
+        }, env.OG_IMAGES);
+    }
+
+    const submissionMatch = path.match(/^\/api\/phieu\/submissions\/([^/]+)$/);
+    if (submissionMatch && method === 'GET') {
+        const submissionId = decodeURIComponent(submissionMatch[1]);
+        const scope = await getSubmissionScope(env.DB, submissionId);
+        if (!scope) return errorResponse('Submission not found', 404);
+        if (!canAccessTeacherScope(user, scope.teacher_username)) return errorResponse('Forbidden', 403);
+        return handleGetPhieuBySubmission(env.DB, { submissionId });
+    }
+
+    if (path === '/api/phieu/batches' && method === 'POST') {
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+        const data = body.data || body;
+        const phieuIds = Array.isArray(data.phieuIds) ? data.phieuIds.map(String).filter(Boolean) : [];
+        if (phieuIds.length === 0) return errorResponse('Missing phieuIds');
+        const scopes = [];
+        for (const phieuId of phieuIds) {
+            const scope = await getPhieuScope(env.DB, phieuId);
+            if (!scope) return errorResponse('Phieu not found', 404);
+            if (!canAccessTeacherScope(user, scope.teacher_username)) return errorResponse('Forbidden', 403);
+            scopes.push(scope);
+        }
+        const classIds = new Set(scopes.map((scope) => String(scope.class_id || '')));
+        if (classIds.size !== 1) return errorResponse('All phieu records must belong to one class', 400);
+        return handlePublishPhieuBatch(env.DB, {
+            ...data,
+            phieuIds,
+            classId: String(scopes[0].class_id || ''),
+            teacherId: user.username,
+        });
+    }
+
+    const deactivateMatch = path.match(/^\/api\/phieu\/public-links\/([^/]+)\/deactivate$/);
+    if (deactivateMatch && method === 'POST') {
+        const publicToken = decodeURIComponent(deactivateMatch[1]);
+        const scope = await getPublicLinkScope(env.DB, publicToken);
+        if (!scope) return errorResponse('Public link not found', 404);
+        if (!canAccessTeacherScope(user, scope.teacher_username)) return errorResponse('Forbidden', 403);
+        return handleDeactivatePublicPhieuLink(env.DB, { publicToken });
+    }
+
+    return errorResponse('Phieu route not found', 404);
 }
 
 export async function handlePublicPhieuApi(db: D1Database, path: string, method: string): Promise<Response | null> {

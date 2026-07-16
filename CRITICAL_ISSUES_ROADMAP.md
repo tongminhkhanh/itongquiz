@@ -16,7 +16,7 @@ Báo cáo này chi tiết hóa 3 vấn đề bảo mật CRITICAL không thể s
 
 **File:** `.env`
 ```env
-VITE_API_SECRET_TOKEN=[REDACTED-COMPROMISED-SHARED-TOKEN]
+VITE_API_SECRET_TOKEN=[REDACTED-REMOVED]
 ```
 
 **Tại sao nghiêm trọng:**

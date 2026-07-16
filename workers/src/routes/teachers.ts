@@ -6,7 +6,7 @@
 // POST /api/login - Teacher login
 
 import { Env } from '../types';
-import { jsonResponse, errorResponse, hashPassword } from '../utils/response';
+import { jsonResponse, errorResponse, hashPassword, verifyPassword } from '../utils/response';
 import { parseBody } from '../utils/helpers';
 import { signJWT, createJWTCookie } from '../utils/jwt';
 import { verifyJWTMiddleware, requireAdmin, requireTeacher } from '../middleware/jwtAuth';
@@ -22,27 +22,19 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
         const { username, password } = body;
         if (!username || !password) return errorResponse('Missing username or password');
 
-        const hashedPassword = await hashPassword(password);
-        let teacher = await db.prepare(
-            'SELECT * FROM teachers WHERE username = ? AND password = ?'
-        ).bind(username, hashedPassword).first<any>();
+        const teacher = await db.prepare('SELECT * FROM teachers WHERE username = ?')
+            .bind(username).first<any>();
+        const passwordCheck = teacher
+            ? await verifyPassword(String(password), String(teacher.password || ''))
+            : { valid: false, needsRehash: false };
 
-        // Lazy Migration: If hash login fails, try plain text login
-        if (!teacher) {
-            teacher = await db.prepare(
-                'SELECT * FROM teachers WHERE username = ? AND password = ?'
-            ).bind(username, password).first<any>();
-
-            if (teacher) {
-                // Auto-hash and update the plain text password
-                await db.prepare('UPDATE teachers SET password = ? WHERE username = ?')
-                    .bind(hashedPassword, username).run();
-                console.log(`[Lazy Migration] Password hashed for user: ${username}`);
-            }
+        if (!teacher || !passwordCheck.valid) {
+            return jsonResponse({ status: 'error', message: 'Sai tên đăng nhập hoặc mật khẩu.' });
         }
-
-        if (!teacher) {
-            return jsonResponse({ status: 'error', message: 'Sai tÃªn Ä‘Äƒng nháº­p hoáº·c máº­t kháº©u.' });
+        if (passwordCheck.needsRehash) {
+            const upgradedHash = await hashPassword(String(password));
+            await db.prepare('UPDATE teachers SET password = ? WHERE username = ?')
+                .bind(upgradedHash, username).run();
         }
 
         // SECURITY: Generate JWT token for teacher session

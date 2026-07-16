@@ -47,6 +47,8 @@ const normalizeQuestionRow = (q: any): any => {
     if (typeof q.correctWordIndexes === 'string') try { parsed.correctWordIndexes = JSON.parse(q.correctWordIndexes); } catch { }
     if (typeof q.correctOrder === 'string') try { parsed.correctOrder = JSON.parse(q.correctOrder); } catch { }
     if (typeof q.optionImages === 'string') try { parsed.optionImages = JSON.parse(q.optionImages); } catch { }
+    if (typeof q.left_items === 'string') try { parsed.leftItems = JSON.parse(q.left_items); } catch { }
+    if (typeof q.right_items === 'string') try { parsed.rightItems = JSON.parse(q.right_items); } catch { }
 
     parsed.quizId = parsed.quizId || parsed.quiz_id;
     parsed.correctAnswer = parsed.correctAnswer || parsed.correct_answer;
@@ -88,6 +90,8 @@ const normalizeQuestionRow = (q: any): any => {
         parsed.correctWord = parsed.correctAnswer || '';
     } else if (qType === 'MATCHING') {
         parsed.pairs = parsed.items || [];
+        parsed.leftItems = Array.isArray(parsed.leftItems) ? parsed.leftItems : [];
+        parsed.rightItems = Array.isArray(parsed.rightItems) ? parsed.rightItems : [];
     } else if (qType === 'MULTIPLE_SELECT') {
         const sourceCorrect = parsed.correctAnswers ?? parsed.correctAnswer;
         parsed.correctAnswers = parseMultipleSelectAnswersForQuestion(sourceCorrect);

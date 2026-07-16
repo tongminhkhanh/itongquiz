@@ -1,6 +1,6 @@
 /**
  * Quiz Validation Service
- * Server-side answer validation via apiAdapter (supports both GAS and D1)
+ * Server-side answer validation via apiAdapter (uses the canonical Worker API)
  * Prevents students from seeing answers in DevTools
  */
 

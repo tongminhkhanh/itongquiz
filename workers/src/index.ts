@@ -1,5 +1,5 @@
 // iTongQuiz Workers API - Main Entry Point
-// Replaces Google Apps Script (gas_script.js)
+// Cloudflare Workers API entry point
 
 import { handleCors, corsHeaders } from './middleware/cors';
 import { verifyToken } from './middleware/auth';
@@ -18,7 +18,7 @@ import { handleGameLoopRoutes } from './routes/gameLoop';
 import { handleHelpRagRoutes } from './routes/helpRag';
 import { handleSystemSettingsRoutes } from './routes/systemSettings';
 import { handleAnalyticsRoutes } from './routes/analytics';
-import { handleHomeworkRoutes, handleLegacyHomeworkAction } from './routes/homework';
+import { handleHomeworkRoutes } from './routes/homework';
 import {
   createBatch,
   getBatches,
@@ -31,11 +31,10 @@ import {
 import { handleTestBankRoutes } from './routes/testBank';
 import { handleTeacherAiQuotaRoutes } from './routes/teacherAiQuota';
 import { handleLogoutRoute } from './routes/logout';
-import { verifyJWTMiddleware, requireTeacher } from './middleware/jwtAuth';
 import { handleLiveExamRoutes } from './routes/liveExam';
 import { handleAdminCertificateRoutes } from './routes/adminCertificates';
 import { handleCertificateRoutes } from './routes/certificates';
-import { handlePhieuSubdomain, handlePublicPhieuApi } from './routes/phieu';
+import { handlePhieuSubdomain, handlePublicPhieuApi, handlePhieuRoutes } from './routes/phieu';
 import { Env } from './types';
 import { rateLimit } from './middleware/rateLimit';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
@@ -72,13 +71,6 @@ export default {
         if (authError) return addCors(authError, request);
 
         try {
-            // ============ LEGACY GAS COMPATIBILITY MODE ============
-            // Support POST with action param (same as GAS doPost)
-            // This allows frontend to work WITHOUT changes initially
-            if (method === 'POST' && (path === '/' || path === '/api/gas')) {
-                return addCors(await handleLegacyGasRequest(request, env), request);
-            }
-
             // ============ RESTful API ROUTES ============
             let response: Response | null = null;
 
@@ -122,6 +114,8 @@ export default {
                 response = await handleHelpRagRoutes(request, env, path, method);
             } else if (path.startsWith('/api/system-settings')) {
                 response = await handleSystemSettingsRoutes(request, env, path, method);
+            } else if (path.startsWith('/api/phieu')) {
+                response = await handlePhieuRoutes(request, env, path, method);
             } else if (path.startsWith('/api/homework')) {
                 const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 60 });
                 if (rateLimitRes) return addCors(rateLimitRes, request);
@@ -260,52 +254,5 @@ function addCors(response: Response, request: Request): Response {
         statusText: response.statusText,
         headers,
     });
-}
-
-import { handleLegacyAction } from './routes/legacy';
-
-// ============ LEGACY GAS COMPATIBILITY ============
-// This function handles the old GAS-style POST requests
-// so the frontend can work WITHOUT any changes initially
-async function handleLegacyGasRequest(request: Request, env: Env): Promise<Response> {
-    let body: any = {};
-    try {
-        const text = await request.text();
-        body = JSON.parse(text);
-    } catch {
-        return errorResponse('Invalid JSON body');
-    }
-
-    const action = body.action;
-    const allowedActions = new Set([
-        'get_hw_assignments',
-        'save_hw_assignment',
-        'delete_hw_assignment',
-        'submit_hw',
-        'get_hw_submissions',
-        'upsert_phieu',
-        'get_phieu_by_submission',
-        'publish_phieu_batch',
-        'deactivate_public_phieu_link',
-    ]);
-
-    // A browser-supplied legacy token cannot establish user identity or access.
-    if (!allowedActions.has(action)) {
-        return errorResponse('Legacy action is not available', 410);
-    }
-
-    const authResult = await verifyJWTMiddleware(request, env);
-    if (authResult instanceof Response) return authResult;
-
-    if (action === 'get_hw_assignments' || action === 'save_hw_assignment' ||
-        action === 'delete_hw_assignment' || action === 'submit_hw' || action === 'get_hw_submissions') {
-        return handleLegacyHomeworkAction(env, authResult.user, action, body);
-    }
-
-    if (!requireTeacher(authResult.user)) {
-        return errorResponse('Forbidden: Teacher access required', 403);
-    }
-
-    return await handleLegacyAction(env.DB, action, body, env.OG_IMAGES);
 }
 

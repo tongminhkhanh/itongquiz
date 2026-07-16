@@ -1,38 +1,31 @@
-import type { RouteRegistry, ApiPayload } from '../types';
-
-const toGasPayload = (action: string, payload: ApiPayload): ApiPayload => ({
-    ...payload,
-    action,
-});
+﻿import type { RouteRegistry } from '../types';
 
 export const phieuRoutes: RouteRegistry = {
     get_public_phieu: {
         method: 'GET',
-        auth: 'public',           // Public endpoint - no authentication required
-        path: ({ publicToken }) => `/api/phieu/public/${encodeURIComponent(publicToken)}`,
+        auth: 'public',
+        path: ({ publicToken }) => `/api/phieu/public/${encodeURIComponent(String(publicToken || ''))}`,
     },
     upsert_phieu: {
         method: 'POST',
         auth: 'session',
-        path: () => '/api/gas',
-        body: toGasPayload,
+        path: () => '/api/phieu',
     },
     get_phieu_by_submission: {
-        method: 'POST',
+        method: 'GET',
         auth: 'session',
-        path: () => '/api/gas',
-        body: toGasPayload,
+        path: ({ submissionId, submission_id }) =>
+            `/api/phieu/submissions/${encodeURIComponent(String(submissionId || submission_id || ''))}`,
     },
     publish_phieu_batch: {
         method: 'POST',
         auth: 'session',
-        path: () => '/api/gas',
-        body: toGasPayload,
+        path: () => '/api/phieu/batches',
     },
     deactivate_public_phieu_link: {
         method: 'POST',
         auth: 'session',
-        path: () => '/api/gas',
-        body: toGasPayload,
+        path: ({ publicToken, public_token }) =>
+            `/api/phieu/public-links/${encodeURIComponent(String(publicToken || public_token || ''))}/deactivate`,
     },
 };

@@ -29,7 +29,7 @@ const fixReorderQuestion = (text: string): string => {
 };
 
 // Helper to call IOE API through Cloudflare Workers
-const callIoeGasApi = async (action: string, payload: any = {}, _timeoutMs: number = 120000): Promise<any> => {
+const callIoeWorkerApi = async (action: string, payload: any = {}, _timeoutMs: number = 120000): Promise<any> => {
     try {
         const data = await callApi(action, payload);
         if (data && !Array.isArray(data) && (data as any).status === 'error') {
@@ -105,8 +105,8 @@ export const clearIoeCache = () => {
 const revalidateInBackground = async (onRefresh?: (quizzes: Quiz[]) => void): Promise<void> => {
     try {
         const [quizData, questionData] = await Promise.all([
-            callIoeGasApi('get_quizzes'),
-            callIoeGasApi('get_questions')
+            callIoeWorkerApi('get_quizzes'),
+            callIoeWorkerApi('get_questions')
         ]);
 
         if (quizData && questionData) {
@@ -123,7 +123,7 @@ const revalidateInBackground = async (onRefresh?: (quizzes: Quiz[]) => void): Pr
 
 // Helper to parse quizzes from API data
 const parseQuizzesFromData = (quizData: any[], questionData: any[]): Quiz[] => {
-    // Helper to normalize snake_case (from D1) to camelCase (expected by frontend/GAS)
+    // Helper to normalize snake_case (from D1) to camelCase (expected by the frontend)
     const normalizeRow = (row: any) => {
         if (!row) return row;
         return {
@@ -200,8 +200,8 @@ export const fetchIoeQuizzes = async (
         // 🚀 Agent Skill: Promise.all() for Independent Operations
         // Fetch quizzes and questions in parallel instead of sequential
         const [quizData, questionData] = await Promise.all([
-            callIoeGasApi('get_quizzes'),
-            callIoeGasApi('get_questions')
+            callIoeWorkerApi('get_quizzes'),
+            callIoeWorkerApi('get_questions')
         ]);
 
         if (!quizData || !questionData) {
@@ -324,7 +324,7 @@ export const saveIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
 
     try {
         // Use longer timeout (180s) for large quiz saves (100 questions)
-        const result = await callIoeGasApi('create_quiz', {
+        const result = await callIoeWorkerApi('create_quiz', {
             id: quiz.id,
             title: quiz.title,
             classLevel: quiz.classLevel,
@@ -361,7 +361,7 @@ export const updateIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
     // Update log removed
 
     try {
-        const result = await callIoeGasApi('update_quiz', {
+        const result = await callIoeWorkerApi('update_quiz', {
             id: quiz.id,
             title: quiz.title,
             classLevel: quiz.classLevel,
@@ -388,7 +388,7 @@ export const updateIoeQuiz = async (quiz: Quiz): Promise<boolean> => {
 export const deleteIoeQuiz = async (quizId: string): Promise<boolean> => {
 
     try {
-        const result = await callIoeGasApi('delete_quiz', { quizId });
+        const result = await callIoeWorkerApi('delete_quiz', { quizId });
         if (result && result.status === 'success') {
             clearIoeCache(); // Invalidate cache after delete
             return true;
@@ -405,7 +405,7 @@ export const deleteIoeQuiz = async (quizId: string): Promise<boolean> => {
 export const fetchIoeResults = async (): Promise<StudentResult[]> => {
 
     try {
-        const data = await callIoeGasApi('get_results');
+        const data = await callIoeWorkerApi('get_results');
         if (!data) return [];
 
         return data.map((row: any) => ({
@@ -426,7 +426,7 @@ export const fetchIoeResults = async (): Promise<StudentResult[]> => {
 export const saveIoeResult = async (result: StudentResult): Promise<boolean> => {
 
     try {
-        const response = await callIoeGasApi('submit_result', {
+        const response = await callIoeWorkerApi('submit_result', {
             studentName: result.studentName,
             className: result.studentClass,
             quizTitle: result.quizTitle,

@@ -1,4 +1,4 @@
--- Auto-generated seed file from Google Apps Script
+-- Legacy migration seed retained for local development
 
 
 -- Table: students

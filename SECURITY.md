@@ -19,10 +19,10 @@ A comprehensive security audit has identified **multiple critical vulnerabilitie
 - **Fix:** Removed sending of `X-API-Token` using `VITE_API_SECRET_TOKEN`. Frontend now only sends JWT for `session` policy.
 - **Impact:** Closes major authentication bypass vector.
 
-### Legacy Gas Dispatcher Hardening
+### Legacy GAS Dispatcher Removal
 - **Status:** ✅ FIXED
-- **Location:** `workers/src/index.ts` (`handleLegacyGasRequest`)
-- **Fix:** Added strict allowlist + JWT + `requireTeacher` check.
+- **Location:** `workers/src/index.ts`
+- **Fix:** Removed the legacy dispatcher and migrated remaining calls to REST routes.
 
 ---
 
@@ -82,7 +82,7 @@ A comprehensive security audit has identified **multiple critical vulnerabilitie
 
 **Problem:**
 ```env
-VITE_API_SECRET_TOKEN=[REDACTED-COMPROMISED-SHARED-TOKEN]
+VITE_API_SECRET_TOKEN=[REDACTED-REMOVED]
 ```
 
 This token is:

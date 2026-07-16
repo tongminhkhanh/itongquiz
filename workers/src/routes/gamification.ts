@@ -3,6 +3,7 @@
 import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
 import { mapPetData, mapShopItem, parseBody } from '../utils/helpers';
+import { verifyJWTMiddleware, isStudent } from '../middleware/jwtAuth';
 
 const ATTENDANCE_BASE_REWARD = { exp: 50, coins: 50 };
 
@@ -175,13 +176,26 @@ const applyGameStateReward = async (
 };
 
 export async function handleGamificationRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
+    const authResult = await verifyJWTMiddleware(request, env);
+    if (authResult instanceof Response) return authResult;
+    const { user } = authResult;
     const db = env.DB;
     const url = new URL(request.url);
 
+    const requireStudentSubject = (suppliedUsername?: unknown): string | Response => {
+        if (!isStudent(user)) return errorResponse('Forbidden: Student access required', 403);
+        const supplied = String(suppliedUsername || '').trim();
+        if (supplied && supplied !== user.username) {
+            return errorResponse('Forbidden: You can only access your own game state', 403);
+        }
+        return user.username;
+    };
+
     // GET /api/pets?username=X
     if (path === '/api/pets' && method === 'GET') {
-        const username = url.searchParams.get('username');
-        if (!username) return errorResponse('Missing username parameter');
+        const subject = requireStudentSubject(url.searchParams.get('username'));
+        if (subject instanceof Response) return subject;
+        const username = subject;
 
         let pet = await db.prepare('SELECT * FROM user_pets WHERE username = ?').bind(username).first<import('../types').PetData>();
         if (!pet) {
@@ -209,8 +223,9 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
 
     // GET /api/game-state/attendance-status?username=X
     if (path === '/api/game-state/attendance-status' && method === 'GET') {
-        const username = String(url.searchParams.get('username') || '').trim();
-        if (!username) return errorResponse('Missing username');
+        const subject = requireStudentSubject(url.searchParams.get('username'));
+        if (subject instanceof Response) return subject;
+        const username = subject;
 
         await ensureAttendanceTable(db);
 
@@ -242,8 +257,9 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
 
-        const username = String(body.username || '').trim();
-        if (!username) return errorResponse('Missing username');
+        const subject = requireStudentSubject(body.username);
+        if (subject instanceof Response) return subject;
+        const username = subject;
 
         await ensureAttendanceTable(db);
 
@@ -285,7 +301,7 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
         const multiplier = getAttendanceMultiplier(attendanceDayNumber);
         const awardedExp = ATTENDANCE_BASE_REWARD.exp * multiplier;
         const awardedCoins = ATTENDANCE_BASE_REWARD.coins * multiplier;
-        const claimId = `att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const claimId = `att-${crypto.randomUUID()}`;
 
         await db.prepare(`
             INSERT INTO attendance_claims (id, username, claim_date, reward_exp, reward_coins, created_at)
@@ -323,12 +339,16 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
     if (path === '/api/game-state' && method === 'POST') {
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
-        if (!body.username) return errorResponse('Missing username');
+        const subject = requireStudentSubject(body.username);
+        if (subject instanceof Response) return subject;
 
         const addExp = Number(body.addExp) || 0;
         const addCoins = Number(body.addCoins) || 0;
+        if (!Number.isFinite(addExp) || !Number.isFinite(addCoins) || addExp < 0 || addCoins < 0 || addExp > 500 || addCoins > 250) {
+            return errorResponse('Invalid reward amount', 400);
+        }
 
-        const result = await applyGameStateReward(db, String(body.username), addExp, addCoins);
+        const result = await applyGameStateReward(db, subject, addExp, addCoins);
         if (!result) return errorResponse('Student not found', 404);
 
         return jsonResponse({ status: 'success', data: result });
@@ -338,12 +358,14 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
     if (path === '/api/shop/buy' && method === 'POST') {
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
-        if (!body.username || !body.itemId) return errorResponse('Missing username or itemId');
+        if (!body.itemId) return errorResponse('Missing itemId');
+        const subject = requireStudentSubject(body.username);
+        if (subject instanceof Response) return subject;
 
         const item = await db.prepare('SELECT * FROM shop_items WHERE item_id = ?').bind(body.itemId).first<any>();
         if (!item) return jsonResponse({ status: 'error', message: 'Item not found' });
 
-        const stu = await db.prepare('SELECT coins FROM students WHERE username = ?').bind(body.username).first<any>();
+        const stu = await db.prepare('SELECT coins FROM students WHERE username = ?').bind(subject).first<any>();
         if (!stu) return jsonResponse({ status: 'error', message: 'Student not found' });
 
         const currentCoins = Number(stu.coins) || 0;
@@ -353,7 +375,7 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
         }
 
         // Check already owns
-        const petForBuy = await db.prepare('SELECT items FROM user_pets WHERE username = ?').bind(body.username).first<any>();
+        const petForBuy = await db.prepare('SELECT items FROM user_pets WHERE username = ?').bind(subject).first<any>();
         let currentItems: string[] = [];
         try { currentItems = JSON.parse(petForBuy?.items || '[]'); } catch { currentItems = []; }
 
@@ -362,9 +384,9 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
         }
 
         // Deduct coins and add item
-        await db.prepare('UPDATE students SET coins = coins - ? WHERE username = ?').bind(price, body.username).run();
+        await db.prepare('UPDATE students SET coins = coins - ? WHERE username = ?').bind(price, subject).run();
         currentItems.push(body.itemId);
-        await db.prepare('UPDATE user_pets SET items = ? WHERE username = ?').bind(JSON.stringify(currentItems), body.username).run();
+        await db.prepare('UPDATE user_pets SET items = ? WHERE username = ?').bind(JSON.stringify(currentItems), subject).run();
 
         return jsonResponse({
             status: 'success',

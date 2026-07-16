@@ -1,14 +1,13 @@
 /**
  * Gamification Service
  *
- * API calls to Google Apps Script for Pet System, Shop, and Rewards.
- * Reuses the same callGasApi pattern as classroomService.
+ * API calls to the Cloudflare Worker for Pet System, Shop, and Rewards.
  */
 
 import { PetData as UserPet, ShopItem, PurchaseResult as BuyItemResponse, LeaderboardEntry, GameStateResult, TopGoldStudent } from '../types/gamification.types';
 import { callApi } from './apiAdapter';
 
-// Response type matching GAS API format
+// Response type returned by the Worker API
 interface GamificationApiResponse<T> {
     status: 'success' | 'error';
     data?: T;
@@ -16,9 +15,9 @@ interface GamificationApiResponse<T> {
 }
 
 /**
- * Helper to call GAS API
+ * Helper to call the canonical Worker API
  */
-const callGasApi = async <T = unknown>(action: string, payload: Record<string, unknown> = {}): Promise<GamificationApiResponse<T>> => {
+const callWorkerApi = async <T = unknown>(action: string, payload: Record<string, unknown> = {}): Promise<GamificationApiResponse<T>> => {
     try {
         const data = await callApi<GamificationApiResponse<T>>(action, payload);
         return { status: 'success', data: data.data ?? (data as any) };
@@ -42,7 +41,7 @@ export const getPetData = async (
     petId?: string,
     petName?: string
 ): Promise<{ pet: UserPet; coins: number; shopItems: ShopItem[] } | null> => {
-    const res = await callGasApi<{ pet: UserPet; coins: number; shopItems: ShopItem[] }>(
+    const res = await callWorkerApi<{ pet: UserPet; coins: number; shopItems: ShopItem[] }>(
         'get_pet_data',
         { username, petId, petName }
     );
@@ -65,7 +64,7 @@ export const updateGameState = async (
     addExp: number,
     addCoins: number
 ): Promise<GameStateResult | null> => {
-    const res = await callGasApi<GameStateResult>('update_game_state', {
+    const res = await callWorkerApi<GameStateResult>('update_game_state', {
         username,
         addExp,
         addCoins,
@@ -88,7 +87,7 @@ export const buyShopItem = async (
     username: string,
     itemId: string
 ): Promise<BuyItemResponse | null> => {
-    const res = await callGasApi<BuyItemResponse>('buy_shop_item', {
+    const res = await callWorkerApi<BuyItemResponse>('buy_shop_item', {
         username,
         itemId,
     });
@@ -101,7 +100,7 @@ export const buyShopItem = async (
 
 
 export const getLeaderboard = async (): Promise<LeaderboardEntry[]> => {
-    const res = await callGasApi<LeaderboardEntry[]>('get_leaderboard');
+    const res = await callWorkerApi<LeaderboardEntry[]>('get_leaderboard');
     if (res.status === 'success' && Array.isArray(res.data)) {
         return res.data;
     }
@@ -110,7 +109,7 @@ export const getLeaderboard = async (): Promise<LeaderboardEntry[]> => {
 
 export const getTopGoldLeaderboard = async (): Promise<TopGoldStudent[]> => {
     try {
-        const res = await callGasApi<TopGoldStudent[]>('get_top_gold_leaderboard');
+        const res = await callWorkerApi<TopGoldStudent[]>('get_top_gold_leaderboard');
         if (res.status === 'success' && Array.isArray(res.data)) {
             return res.data;
         }
