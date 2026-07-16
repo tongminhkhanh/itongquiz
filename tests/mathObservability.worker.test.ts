@@ -134,7 +134,7 @@ describe('server-owned math normalization and observability', () => {
     expect(payload.data[0].previewAfter).toContain('$\\frac{2}{4}$');
   });
 
-  it('creates repair snapshots before updating a selected question', async () => {
+  it('keeps the monitoring dashboard read-only even for administrators', async () => {
     currentUser = { username: 'admin', role: 'admin' } as JWTPayload;
     const db = new Database();
     const response = await handleMathObservabilityRoutes(
@@ -145,13 +145,32 @@ describe('server-owned math normalization and observability', () => {
     );
     const payload = await response?.json() as any;
 
+    expect(response?.status).toBe(410);
+    expect(payload.code).toBe('MATH_REPAIR_DISABLED');
+    expect(db.executed).toHaveLength(0);
+  });
+
+  it('does not classify a clean version-one question as a syntax warning', async () => {
+    currentUser = { username: 'admin', role: 'admin' } as JWTPayload;
+    const db = new Database();
+    db.row = {
+      ...db.row,
+      question: 'Một câu hỏi không có công thức lỗi.',
+      options: 'A|B|C|D',
+      math_format_version: 1,
+    };
+
+    const response = await handleMathObservabilityRoutes(
+      request('https://test/api/admin/math-audit/issues'),
+      env(db),
+      '/api/admin/math-audit/issues',
+      'GET',
+    );
+    const payload = await response?.json() as any;
+
     expect(response?.status).toBe(200);
-    expect(payload.data.repaired).toBe(1);
-    const repairInsert = db.executed.find((statement) => statement.sql.includes('INSERT INTO question_math_repairs'));
-    const questionUpdate = db.executed.find((statement) => statement.sql.includes('UPDATE questions SET'));
-    expect(repairInsert).toBeTruthy();
-    expect(questionUpdate).toBeTruthy();
-    expect(String(repairInsert?.bindings[4])).toContain('math_format_version');
-    expect(String(repairInsert?.bindings[5])).toContain('"math_format_version":2');
+    expect(payload.summary.scanned).toBe(1);
+    expect(payload.summary.affected).toBe(0);
+    expect(payload.data).toEqual([]);
   });
 });

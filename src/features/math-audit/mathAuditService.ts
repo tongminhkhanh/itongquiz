@@ -3,7 +3,6 @@ import { buildAuthHeaders } from '../../services/api/auth';
 import type {
     MathAuditIssue,
     MathAuditSummary,
-    MathRepairBatch,
     MathRenderEvent,
 } from './mathAudit.types';
 
@@ -29,28 +28,6 @@ export const mathAuditService = {
         return requestJson(`/api/admin/math-audit/issues?limit=${limit}`);
     },
 
-    async apply(questionIds: string[]): Promise<{
-        data: { batchId: string | null; repaired: number; skipped: Array<{ questionId: string; reason: string }> };
-    }> {
-        return requestJson('/api/admin/math-audit/apply', {
-            method: 'POST',
-            body: JSON.stringify({ questionIds }),
-        });
-    },
-
-    async listBatches(): Promise<{ data: MathRepairBatch[] }> {
-        return requestJson('/api/admin/math-audit/batches');
-    },
-
-    async rollback(batchId: string): Promise<{
-        status: 'success' | 'partial';
-        data: { rolledBack: number; conflicts: Array<{ questionId: string; reason: string }> };
-    }> {
-        return requestJson(`/api/admin/math-audit/batches/${encodeURIComponent(batchId)}/rollback`, {
-            method: 'POST',
-            body: '{}',
-        });
-    },
 
     async listTelemetry(days = 7): Promise<{
         data: MathRenderEvent[];

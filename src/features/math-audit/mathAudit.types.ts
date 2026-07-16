@@ -28,13 +28,6 @@ export interface MathAuditSummary {
     currentVersion: number;
 }
 
-export interface MathRepairBatch {
-    batch_id: string;
-    created_at: string;
-    repaired_by: string;
-    total: number;
-    rolled_back: number;
-}
 
 export interface MathRenderEvent {
     fingerprint: string;

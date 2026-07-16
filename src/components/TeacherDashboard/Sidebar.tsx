@@ -74,7 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     const settingItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
         { id: 'announcements', label: 'Thông báo', icon: <Megaphone className="w-5 h-5" /> },
         { id: 'teachers', label: 'Giáo viên', icon: <Users className="w-5 h-5" /> },
-        { id: 'math-audit', label: 'Rà công thức toán', icon: <ScanSearch className="w-5 h-5" /> },
+        { id: 'math-audit', label: 'Theo dõi lỗi công thức', icon: <ScanSearch className="w-5 h-5" /> },
     ];
 
     const certificateItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [

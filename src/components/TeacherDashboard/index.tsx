@@ -114,7 +114,7 @@ const TeacherDashboard: React.FC = () => {
             case 'teachers': return 'Quản lý Giáo viên';
             case 'gift-shop': return 'Tiệm Tạp Hóa';
             case 'homework': return 'Phiếu bài tập (AI)';
-            case 'math-audit': return 'Rà dữ liệu công thức';
+            case 'math-audit': return 'Theo dõi lỗi công thức';
             case 'live-exam': return 'Thi Trực Tiếp';
             default: return 'Bảng điều khiển';
         }

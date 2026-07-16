@@ -138,7 +138,9 @@ const listAuditIssues = async (request: Request, env: Env): Promise<Response> =>
     const rows = await getAuditRows(env.DB);
     const allIssues = rows
         .map(issueDto)
-        .filter((item) => item.currentIssues.length > 0 || item.changedFields.length > 0 || item.needsUpgrade);
+        // Monitoring mode intentionally ignores version-only legacy rows.
+        // A row appears only when its persisted math syntax currently has a real issue.
+        .filter((item) => item.currentIssues.length > 0);
 
     return jsonResponse({
         status: 'success',
@@ -304,6 +306,17 @@ const rollbackRepairBatch = async (
     });
 };
 
+const mathRepairDisabled = async (request: Request, env: Env): Promise<Response> => {
+    const auth = await requireAdminUser(request, env);
+    if (auth instanceof Response) return auth;
+
+    return jsonResponse({
+        status: 'error',
+        code: 'MATH_REPAIR_DISABLED',
+        message: 'Chế độ sửa hàng loạt công thức đã được vô hiệu hóa. Hãy sửa câu hỏi trong màn Đề kiểm tra.',
+    }, 410);
+};
+
 const ingestMathTelemetry = async (request: Request, env: Env): Promise<Response> => {
     const body = await parseBody(request);
     const payload = sanitizeMathTelemetryPayload(body);
@@ -385,14 +398,14 @@ export async function handleMathObservabilityRoutes(
         return listAuditIssues(request, env);
     }
     if (path === '/api/admin/math-audit/apply' && method === 'POST') {
-        return applyAuditRepairs(request, env);
+        return mathRepairDisabled(request, env);
     }
     if (path === '/api/admin/math-audit/batches' && method === 'GET') {
         return listRepairBatches(request, env);
     }
     const rollbackMatch = path.match(/^\/api\/admin\/math-audit\/batches\/([^/]+)\/rollback$/);
     if (rollbackMatch && method === 'POST') {
-        return rollbackRepairBatch(request, env, decodeURIComponent(rollbackMatch[1]));
+        return mathRepairDisabled(request, env);
     }
     if (path === '/api/admin/math-telemetry' && method === 'GET') {
         return listMathTelemetry(request, env);
