@@ -130,7 +130,7 @@ const getResultScope = async (
 ): Promise<ResultScope | null> => db.prepare(`
     SELECT
         CAST(r.id AS TEXT) AS result_id,
-        COALESCE(s.id, 'result:' || CAST(r.id AS TEXT)) AS student_id,
+        s.id AS student_id,
         r.student_name,
         c.id AS class_id,
         c.teacher_username,
@@ -145,7 +145,7 @@ const getResultScope = async (
     JOIN classes c
       ON LOWER(TRIM(c.name)) = LOWER(TRIM(r.class_name))
      AND COALESCE(c.archived_at, '') = ''
-    LEFT JOIN students s
+    JOIN students s
       ON s.class_id = c.id
      AND LOWER(TRIM(s.full_name)) = LOWER(TRIM(r.student_name))
      AND COALESCE(s.archived_at, '') = ''
@@ -249,7 +249,7 @@ export async function handlePhieuRoutes(
                 student_id: scope.student_id,
                 student_name: scope.student_name,
                 class_id: scope.class_id,
-                mon_hoc: data.mon_hoc || scope.mon_hoc,
+                mon_hoc: scope.mon_hoc,
                 ten_bai_tap: scope.ten_bai_tap,
                 ngay_lam_bai: scope.ngay_lam_bai,
                 tong_cau: Number(scope.tong_cau) || 0,
