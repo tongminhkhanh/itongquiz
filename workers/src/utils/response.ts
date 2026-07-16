@@ -1,4 +1,4 @@
-// Response helpers for Workers API
+﻿// Response helpers for Workers API
 
 export function jsonResponse<T>(data: T, status = 200, cacheSeconds = 0): Response {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -19,7 +19,7 @@ export function generateId(prefix: string): string {
 }
 
 const PASSWORD_SCHEME = 'pbkdf2_sha256';
-const PASSWORD_ITERATIONS = 210_000;
+const PASSWORD_ITERATIONS = 100_000;
 const PASSWORD_SALT_BYTES = 16;
 const PASSWORD_KEY_BYTES = 32;
 
@@ -99,3 +99,4 @@ export function sanitizeInput(str: unknown): string {
     if (/^[=+\-@]/.test(str)) return `'${str}`;
     return str;
 }
+

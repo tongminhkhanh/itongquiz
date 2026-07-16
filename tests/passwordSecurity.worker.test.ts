@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { hashPassword, verifyPassword } from '../workers/src/utils/response';
 
 async function legacySha256(value: string): Promise<string> {
@@ -10,8 +10,8 @@ describe('versioned password hashing', () => {
   it('creates salted PBKDF2 hashes instead of deterministic SHA-256', async () => {
     const first = await hashPassword('correct horse battery staple');
     const second = await hashPassword('correct horse battery staple');
-    expect(first).toMatch(/^pbkdf2_sha256\$\d+\$/);
-    expect(second).toMatch(/^pbkdf2_sha256\$\d+\$/);
+    expect(first).toMatch(/^pbkdf2_sha256\$100000\$/);
+    expect(second).toMatch(/^pbkdf2_sha256\$100000\$/);
     expect(first).not.toBe(second);
   });
 
