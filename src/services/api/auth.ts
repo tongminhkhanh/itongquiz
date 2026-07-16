@@ -42,6 +42,20 @@ export function getStoredJWTToken(path = ''): string {
     }
 }
 
+export function getJWTPurpose(token: string | null | undefined): 'session' | 'password_change' | null {
+    if (!token) return null;
+    try {
+        const segment = token.split('.')[1];
+        if (!segment) return null;
+        const padded = segment.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - segment.length % 4) % 4);
+        const bytes = Uint8Array.from(atob(padded), char => char.charCodeAt(0));
+        const payload = JSON.parse(new TextDecoder().decode(bytes));
+        return payload?.purpose === 'password_change' ? 'password_change' : payload?.purpose === 'session' ? 'session' : null;
+    } catch {
+        return null;
+    }
+}
+
 export function buildAuthHeaders(
     policy: AuthPolicy,
     path: string,

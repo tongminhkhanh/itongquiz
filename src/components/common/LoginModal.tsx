@@ -5,6 +5,8 @@ import { useQuizStore } from '../../../stores/quizStore';
 import { Loader2, KeyRound, User, Lock, GraduationCap, Apple } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { showError } from '../../utils/toast';
+import PasswordChangeDialog from './PasswordChangeDialog';
+import { getJWTPurpose } from '../../services/api/auth';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -16,6 +18,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
     const [activeTab, setActiveTab] = useState<'student' | 'teacher'>(initialTab);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [pendingTeacher, setPendingTeacher] = useState<any | null>(null);
 
     // Stores
     const authStore = useAuthStore();
@@ -66,6 +69,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                     localStorage.removeItem('itongquiz_jwt_token');
                     localStorage.setItem('itongquiz_teacher_jwt_token', tToken);
                 }
+                if (teacher.requiresPasswordChange || getJWTPurpose(tToken) === 'password_change') {
+                    authStore.loginPendingPasswordChange();
+                    setPendingTeacher({ ...teacher, username: tUsername, fullName: tFullName, isAdmin: isTeacherAdmin, class: tClass });
+                    return;
+                }
                 authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass, tToken);
                 onClose();
                 return;
@@ -91,6 +99,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
     };
 
     if (!isOpen) return null;
+
+    if (pendingTeacher) {
+        return <PasswordChangeDialog forced authToken={pendingTeacher.token} onCancel={() => {
+            localStorage.removeItem('itongquiz_teacher_jwt_token');
+            setPendingTeacher(null);
+        }} onComplete={(token) => {
+            authStore.loginSuccess(pendingTeacher.username, pendingTeacher.fullName, pendingTeacher.isAdmin, pendingTeacher.class, token);
+            setPendingTeacher(null);
+            onClose();
+        }} />;
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

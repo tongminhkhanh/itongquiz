@@ -98,7 +98,14 @@ WITH checks(migration, check_name, ok) AS (
 
     ('0027_math_format_observability.sql', 'questions.math_format_version', EXISTS(SELECT 1 FROM pragma_table_info('questions') WHERE name='math_format_version')),
     ('0027_math_format_observability.sql', 'math observability tables', (SELECT COUNT(*)=2 FROM sqlite_master WHERE type='table' AND name IN ('question_math_repairs','math_render_events'))),
-    ('0027_math_format_observability.sql', 'math observability indexes', (SELECT COUNT(*)=5 FROM sqlite_master WHERE type='index' AND name IN ('idx_questions_math_format_version','idx_question_math_repairs_batch','idx_question_math_repairs_question','idx_math_render_events_last_seen','idx_math_render_events_quiz')))
+    ('0027_math_format_observability.sql', 'math observability indexes', (SELECT COUNT(*)=5 FROM sqlite_master WHERE type='index' AND name IN ('idx_questions_math_format_version','idx_question_math_repairs_batch','idx_question_math_repairs_question','idx_math_render_events_last_seen','idx_math_render_events_quiz'))),
+
+    ('0028_harden_teacher_accounts.sql', 'teacher account columns', (SELECT COUNT(*)=10 FROM pragma_table_info('teachers') WHERE name IN ('status','must_change_password','token_version','password_changed_at','last_login_at','disabled_at','disabled_by','disabled_reason','created_at','updated_at'))),
+    ('0028_harden_teacher_accounts.sql', 'teacher account indexes', (SELECT COUNT(*)=2 FROM sqlite_master WHERE type='index' AND name IN ('idx_teachers_status_role','idx_classes_teacher_username'))),
+    ('0028_harden_teacher_accounts.sql', 'admin audit log table/indexes', EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='admin_audit_logs') AND (SELECT COUNT(*)=2 FROM sqlite_master WHERE type='index' AND name IN ('idx_admin_audit_actor_created','idx_admin_audit_target_created'))),
+
+    ('0029_canonicalize_system_announcements.sql', 'announcement delivery columns', (SELECT COUNT(*)=7 FROM pragma_table_info('announcements') WHERE name IN ('status','audience','starts_at','ends_at','created_by','updated_by','created_at'))),
+    ('0029_canonicalize_system_announcements.sql', 'announcement delivery index', EXISTS(SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_announcements_delivery'))
 ), summary AS (
   SELECT
     migration,

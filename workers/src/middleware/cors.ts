@@ -20,18 +20,19 @@ export function corsHeaders(request: Request): Record<string, string> {
     const origin = request.headers.get('Origin') || '';
     const normalizedOrigin = origin.replace(/\/$/, '');
 
-    const isAllowed = ALLOWED_ORIGINS.includes(normalizedOrigin);
+    const isProjectPreview = /^https:\/\/itongquiz1-[a-z0-9-]+-khanhs-projects-e97e400d\.vercel\.app$/i.test(normalizedOrigin);
+    const isAllowed = ALLOWED_ORIGINS.includes(normalizedOrigin) || isProjectPreview;
 
-    const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0];
-
-    return {
-        'Access-Control-Allow-Origin': allowedOrigin,
+    const headers: Record<string, string> = {
         'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
         // SECURITY: Removed x-target-url and x-target-token to prevent SSRF abuse
         'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Token',
         'Access-Control-Allow-Credentials': 'true', // REQUIRED for JWT cookies with credentials: 'include'
         'Access-Control-Max-Age': '86400',
+        'Vary': 'Origin',
     };
+    if (isAllowed) headers['Access-Control-Allow-Origin'] = origin;
+    return headers;
 }
 
 export function handleCors(request: Request): Response | null {

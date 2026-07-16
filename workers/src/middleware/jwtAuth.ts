@@ -36,6 +36,35 @@ export async function verifyJWTMiddleware(
         return errorResponse('Unauthorized: Invalid or expired token', 401);
     }
 
+    if (payload.purpose === 'password_change' && new URL(request.url).pathname !== '/api/account/change-password') {
+        return errorResponse('Password change required', 403);
+    }
+
+    if (payload.role === 'teacher' || payload.role === 'admin') {
+        const enforce = (env.AUTH_MIGRATION_MODE || 'compat') === 'enforce';
+        const path = new URL(request.url).pathname;
+
+        const account = await env.DB.prepare(`
+            SELECT status, token_version, must_change_password
+            FROM teachers
+            WHERE username = ?
+            LIMIT 1
+        `).bind(payload.username).first<{ status: string; token_version: number; must_change_password: number }>();
+
+        if (!account || account.status === 'DISABLED') {
+            return errorResponse('Unauthorized: Account is disabled', 401);
+        }
+
+        if (Number(account.must_change_password) === 1 && path !== '/api/account/change-password') {
+            return errorResponse('Password change required', 403);
+        }
+
+        if ((enforce && payload.tokenVersion === undefined)
+            || (payload.tokenVersion !== undefined && payload.tokenVersion !== Number(account.token_version))) {
+            return errorResponse('Unauthorized: Session has been revoked', 401);
+        }
+    }
+
     // Return user context to be attached to request
     return { user: payload };
 }

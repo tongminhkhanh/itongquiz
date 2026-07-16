@@ -122,6 +122,14 @@ function createFakeDb(
                 bind(...params: any[]) {
                     return {
                         async first<T>() {
+                            if (query.includes('SELECT status, token_version, must_change_password')
+                                && query.includes('FROM teachers')) {
+                                return {
+                                    status: 'ACTIVE',
+                                    token_version: 1,
+                                    must_change_password: 0,
+                                } as T;
+                            }
                             if (query.includes('FROM results WHERE id = ?')) {
                                 return (options.results.find((result) => String(result.id) === String(params[0])) || null) as T;
                             }

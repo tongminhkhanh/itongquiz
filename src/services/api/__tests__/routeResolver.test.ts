@@ -94,9 +94,16 @@ describe('resolveApiRoute', () => {
         expect(r.auth).toBe('session');
     });
 
-    it('resolves get_announcement with the session policy', () => {
+    it('resolves get_announcement with the public policy', () => {
         const r = resolveApiRoute('get_announcement');
+        expect(r.auth).toBe('public');
+    });
+
+    it('resolves the admin-only bulk teacher password reset route', () => {
+        const r = resolveApiRoute('reset_all_teacher_passwords');
+        expect(r.method).toBe('POST');
         expect(r.auth).toBe('session');
+        expect(r.path({})).toBe('/api/admin/teachers/reset-passwords');
     });
 
 

@@ -75,15 +75,7 @@ export default {
             // ============ RESTful API ROUTES ============
             let response: Response | null = null;
 
-            if (path.startsWith('/api/teachers') || path === '/api/login') {
-                // Rate limit for login
-                if (path === '/api/login' && method === 'POST') {
-                    const rateLimitRes = await rateLimit(request, env, {
-                        windowMs: 5 * 60 * 1000, // 5 minutes
-                        maxRequests: 5,
-                    });
-                    if (rateLimitRes) return addCors(rateLimitRes, request);
-                }
+            if (path.startsWith('/api/teachers') || path.startsWith('/api/admin/teachers') || path.startsWith('/api/account') || path === '/api/login') {
                 response = await handleTeacherRoutes(request, env, path, method);
             } else if (path === '/api/logout' && method === 'POST') {
                 response = await handleLogoutRoute(request, env);
@@ -95,7 +87,7 @@ export default {
                 response = await handleClassroomRoutes(request, env, path, method);
             } else if (path.startsWith('/api/pets') || path.startsWith('/api/game-state') || path.startsWith('/api/shop') || path.startsWith('/api/leaderboard')) {
                 response = await handleGamificationRoutes(request, env, path, method);
-            } else if (path.startsWith('/api/announcements')) {
+            } else if (path.startsWith('/api/announcements') || path.startsWith('/api/admin/announcements')) {
                 response = await handleAnnouncementRoutes(request, env, path, method);
             } else if (path.startsWith('/api/ai-tutor')) {
                 const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 10 });

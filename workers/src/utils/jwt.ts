@@ -10,6 +10,8 @@ export interface JWTPayload {
     fullName?: string;
     classId?: string;
     school_id?: string;
+    tokenVersion?: number;
+    purpose?: 'session' | 'password_change';
     iat?: number;
     exp?: number;
 }

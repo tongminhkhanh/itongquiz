@@ -3,6 +3,7 @@ import { errorResponse, jsonResponse } from '../utils/response';
 import { parseBody } from '../utils/helpers';
 import { isTransientD1Error, withD1Retry } from '../utils/d1';
 import { requireAdmin, verifyJWTMiddleware } from '../middleware/jwtAuth';
+import { auditStatement } from '../utils/audit';
 
 type SystemSettingRow = {
     setting_key: string;
@@ -21,21 +22,6 @@ const parseBool = (value: unknown, fallback = false): boolean => {
         if (normalized === 'false' || normalized === '0') return false;
     }
     return fallback;
-};
-
-const ensureSystemSettingsTable = async (db: D1Database): Promise<void> => {
-    await db.prepare(`
-        CREATE TABLE IF NOT EXISTS system_settings (
-            setting_key TEXT PRIMARY KEY,
-            setting_value TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    `).run();
-
-    await db.prepare(`
-        INSERT OR IGNORE INTO system_settings (setting_key, setting_value, updated_at)
-        VALUES (?, ?, ?)
-    `).bind(AI_ASSISTANT_KEY, 'true', new Date().toISOString()).run();
 };
 
 export async function handleSystemSettingsRoutes(request: Request, env: Env, path: string, method: string): Promise<Response | null> {
@@ -62,12 +48,13 @@ export async function handleSystemSettingsRoutes(request: Request, env: Env, pat
             console.warn('[system-settings] Returning defaults after D1 read failure:', error);
         }
 
-        const aiAssistantEnabled = parseBool(row?.setting_value ?? 'true', true);
+        const aiAssistantEnabled = parseBool(row?.setting_value ?? 'false', false);
         return jsonResponse({
             status: 'success',
             data: {
                 aiAssistantEnabled,
                 updatedAt: row?.updated_at || '',
+                degraded: !row,
             },
         });
     }
@@ -77,21 +64,33 @@ export async function handleSystemSettingsRoutes(request: Request, env: Env, pat
         if (authResult instanceof Response) return authResult;
         if (!requireAdmin(authResult.user)) return errorResponse('Forbidden', 403);
 
-        await ensureSystemSettingsTable(db);
-
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
+        if (typeof body.aiAssistantEnabled !== 'boolean') {
+            return errorResponse('aiAssistantEnabled must be a boolean', 400);
+        }
 
-        const aiAssistantEnabled = parseBool(body.aiAssistantEnabled, true);
+        const aiAssistantEnabled = parseBool(body.aiAssistantEnabled, false);
         const now = new Date().toISOString();
 
-        await db.prepare(`
-            INSERT INTO system_settings (setting_key, setting_value, updated_at)
-            VALUES (?, ?, ?)
-            ON CONFLICT(setting_key) DO UPDATE SET
-                setting_value = excluded.setting_value,
-                updated_at = excluded.updated_at
-        `).bind(AI_ASSISTANT_KEY, aiAssistantEnabled ? 'true' : 'false', now).run();
+        await db.batch([
+            db.prepare(`
+                INSERT INTO system_settings (setting_key, setting_value, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(setting_key) DO UPDATE SET
+                    setting_value = excluded.setting_value,
+                    updated_at = excluded.updated_at
+            `).bind(AI_ASSISTANT_KEY, aiAssistantEnabled ? 'true' : 'false', now),
+            auditStatement(db, {
+                actorUsername: authResult.user.username,
+                action: 'SYSTEM_SETTINGS_UPDATED',
+                targetType: 'system_setting',
+                targetId: AI_ASSISTANT_KEY,
+                requestId: request.headers.get('cf-ray') || request.headers.get('x-request-id') || crypto.randomUUID(),
+                before: null,
+                after: { aiAssistantEnabled },
+            }),
+        ]);
 
         return jsonResponse({
             status: 'success',

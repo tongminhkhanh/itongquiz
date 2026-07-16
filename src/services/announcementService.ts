@@ -17,15 +17,20 @@ export interface Announcement {
     bannerImage?: string;
     isBannerActive?: boolean;
     daysToLive?: number;
+    status?: 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'EXPIRED' | 'ARCHIVED';
+    effectiveStatus?: 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'EXPIRED' | 'ARCHIVED';
+    audience?: 'ALL' | 'TEACHERS' | 'STUDENTS';
+    startsAt?: string | null;
+    endsAt?: string | null;
 }
 
 /**
  * Get current announcement
  */
-export const getAnnouncement = async (): Promise<Announcement | null> => {
+export const getAnnouncement = async (role?: 'teacher' | 'student'): Promise<Announcement | null> => {
     try {
-        const data = await callApi<any>('get_announcement');
-        console.log('Raw API Response:', data);
+        const action = role === 'teacher' ? 'get_teacher_announcement' : role === 'student' ? 'get_student_announcement' : 'get_announcement';
+        const data = await callApi<any>(action);
 
         let announcement: any = null;
         if (data && data.status === 'success') {
@@ -53,9 +58,13 @@ export const getAnnouncement = async (): Promise<Announcement | null> => {
                             announcement.is_banner_active === true || 
                             announcement.is_banner_active === 1,
             daysToLive: Number(announcement.daysToLive ?? announcement.days_to_live ?? 7)
+            ,status: announcement.status
+            ,effectiveStatus: announcement.effectiveStatus
+            ,audience: announcement.audience
+            ,startsAt: announcement.startsAt ?? announcement.starts_at
+            ,endsAt: announcement.endsAt ?? announcement.ends_at
         };
     } catch (error) {
-        console.error('Error getting announcement:', error);
         return null;
     }
 };

@@ -17,7 +17,7 @@ export function verifyToken(request: Request, env: Env): Response | null {
     if (path === '/api/health') return null;
 
     // 4. Allow public visual announcements
-    if (path === '/api/announcements' && method === 'GET') return null;
+    if ((path === '/api/announcements' || path === '/api/announcements/current') && method === 'GET') return null;
 
     // 5. Allow public UI feature flags; writes are still protected in systemSettings.ts
     if (path === '/api/system-settings' && method === 'GET') return null;
@@ -39,7 +39,8 @@ export function verifyToken(request: Request, env: Env): Response | null {
     if (path === '/api/logout') return null;
 
     // 9. SECURITY: Teacher management routes now use JWT authentication (handled in teachers.ts)
-    if (path.startsWith('/api/teachers')) return null;
+    if (path.startsWith('/api/teachers') || path.startsWith('/api/admin/teachers') || path.startsWith('/api/account')) return null;
+    if (path.startsWith('/api/admin/announcements')) return null;
 
     // 10. SECURITY: Classroom routes now use JWT authentication (handled in classroom.ts)
     if (path.startsWith('/api/classes') || path.startsWith('/api/students') || path.startsWith('/api/assignments')) return null;

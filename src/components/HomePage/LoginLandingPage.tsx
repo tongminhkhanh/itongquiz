@@ -5,6 +5,8 @@ import { useQuizStore } from '../../../stores/quizStore';
 import { showError, showConfirm } from '../../utils/toast';
 import { getAnnouncement, Announcement as AnnouncementData } from '../../services/announcementService';
 import AnnouncementBanner from '../common/AnnouncementBanner';
+import PasswordChangeDialog from '../common/PasswordChangeDialog';
+import { getJWTPurpose } from '../../services/api/auth';
 
 // Sub-components
 import LandingHeader from './components/LandingHeader';
@@ -25,6 +27,7 @@ const LoginLandingPage: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [announcement, setAnnouncement] = useState<AnnouncementData | null>(null);
+    const [pendingTeacher, setPendingTeacher] = useState<any | null>(null);
 
     const authStore = useAuthStore();
     const classroomStore = useClassroomStore();
@@ -89,6 +92,17 @@ const LoginLandingPage: React.FC = () => {
                     localStorage.removeItem('itongquiz_jwt_token');
                     localStorage.setItem('itongquiz_teacher_jwt_token', teacher.token);
                 }
+                if (teacher.requiresPasswordChange || getJWTPurpose(teacher.token) === 'password_change') {
+                    authStore.loginPendingPasswordChange();
+                    setPendingTeacher({
+                        username: tUsername,
+                        fullName: tFullName,
+                        isAdmin: isTeacherAdmin,
+                        class: tClass,
+                        token: teacher.token,
+                    });
+                    return;
+                }
                 
                 authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass, teacher.token || null);
                 quizStore.setView('teacher_dash');
@@ -114,6 +128,16 @@ const LoginLandingPage: React.FC = () => {
 
     return (
         <div className="min-h-screen flex flex-col relative font-baloo bg-[url('/meadow-bg.webp')] bg-cover bg-bottom bg-no-repeat transition-all duration-500">
+            {pendingTeacher && (
+                <PasswordChangeDialog forced authToken={pendingTeacher.token} onCancel={() => {
+                    localStorage.removeItem('itongquiz_teacher_jwt_token');
+                    setPendingTeacher(null);
+                }} onComplete={(token) => {
+                    authStore.loginSuccess(pendingTeacher.username, pendingTeacher.fullName, pendingTeacher.isAdmin, pendingTeacher.class, token);
+                    setPendingTeacher(null);
+                    quizStore.setView('teacher_dash');
+                }} />
+            )}
             {/* Announcement Banner */}
             {announcement && announcement.isBannerActive && (
                 <AnnouncementBanner

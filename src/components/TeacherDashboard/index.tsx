@@ -13,6 +13,10 @@ import BottomNavigation from './BottomNavigation';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '../../utils/toast';
 import { checkAndWarnJWTExpiry } from '../../utils/jwtInterceptor';
+import CurrentAnnouncementBanner from '../common/CurrentAnnouncementBanner';
+import PasswordChangeDialog from '../common/PasswordChangeDialog';
+import { callApi } from '../../services/apiAdapter';
+import { getJWTPurpose, getStoredJWTToken } from '../../services/api/auth';
 
 // Lazy load tab components
 const OverviewTab = React.lazy(() => import('./OverviewTab'));
@@ -32,6 +36,7 @@ const LiveExamTab = React.lazy(() => import('../LiveExam/TeacherLiveExamDashboar
 const TeacherCertificatesPage = React.lazy(() => import('../../features/certificates/TeacherCertificatesPage'));
 const AdminTemplatesPage = React.lazy(() => import('../../features/certificates/AdminTemplatesPage'));
 const MathAuditPage = React.lazy(() => import('../../features/math-audit/MathAuditPage'));
+const PersonalSettingsTab = React.lazy(() => import('./PersonalSettingsTab'));
 
 const TeacherDashboard: React.FC = () => {
     // --- STORES ---
@@ -42,6 +47,28 @@ const TeacherDashboard: React.FC = () => {
     const activeTab = useTeacherDashboardUIStore((state) => state.activeTab);
     const setActiveTab = useTeacherDashboardUIStore((state) => state.setActiveTab);
     const clearAssignmentComposerDraft = useTeacherDashboardUIStore((state) => state.clearAssignmentComposerDraft);
+    const [passwordGate, setPasswordGate] = useState<{ token: string; requireCurrentPassword: boolean } | null>(null);
+
+    useEffect(() => {
+        if (!authStore.isLoggedIn) return;
+        let active = true;
+        const token = getStoredJWTToken('/api/account/me');
+        const tokenPurpose = getJWTPurpose(token);
+
+        callApi<{ data?: { mustChangePassword?: boolean } }>('get_account_profile')
+            .then((response) => {
+                if (active && response.data?.mustChangePassword && token) {
+                    setPasswordGate({ token, requireCurrentPassword: tokenPurpose !== 'password_change' });
+                }
+            })
+            .catch((error) => {
+                if (active && token && (tokenPurpose === 'password_change' || String(error).includes('Password change required'))) {
+                    setPasswordGate({ token, requireCurrentPassword: tokenPurpose !== 'password_change' });
+                }
+            });
+
+        return () => { active = false; };
+    }, [authStore.isLoggedIn, authStore.username]);
 
     // 🔐 ANTI-CHEAT: Disable answer stripping for teacher views
     // Also force reload quizzes from server to get fresh data with answers
@@ -76,7 +103,10 @@ const TeacherDashboard: React.FC = () => {
         if (!isGiftShopFeatureEnabled && activeTab === 'gift-shop') {
             setActiveTab('overview');
         }
-    }, [isGiftShopFeatureEnabled, activeTab]);
+        if (!authStore.isAdmin && ['announcements', 'teachers', 'admin-templates', 'math-audit'].includes(activeTab)) {
+            setActiveTab('overview');
+        }
+    }, [isGiftShopFeatureEnabled, activeTab, authStore.isAdmin, setActiveTab]);
 
     // Editing state
     const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
@@ -112,6 +142,7 @@ const TeacherDashboard: React.FC = () => {
             case 'ioe-results': return 'Kết quả IOE';
             case 'announcements': return 'Cài đặt & Thông báo';
             case 'teachers': return 'Quản lý Giáo viên';
+            case 'personal-settings': return 'Cài đặt cá nhân';
             case 'gift-shop': return 'Tiệm Tạp Hóa';
             case 'homework': return 'Phiếu bài tập (AI)';
             case 'math-audit': return 'Theo dõi lỗi công thức';
@@ -155,6 +186,26 @@ const TeacherDashboard: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+
+            {passwordGate && (
+                <PasswordChangeDialog
+                    forced
+                    authToken={passwordGate.token}
+                    requireCurrentPassword={passwordGate.requireCurrentPassword}
+                    onComplete={(token) => {
+                        authStore.loginSuccess(
+                            authStore.username || '',
+                            authStore.teacherName || authStore.username || '',
+                            authStore.isAdmin,
+                            authStore.teacherClass,
+                            token,
+                        );
+                        setPasswordGate(null);
+                    }}
+                />
+            )}
+
+            <CurrentAnnouncementBanner role="teacher" />
 
             {/* Lệch Sidebar */}
             <Sidebar
@@ -296,7 +347,7 @@ const TeacherDashboard: React.FC = () => {
                                 <IoeResultsTab />
                             )}
 
-                            {activeTab === 'announcements' && (
+                            {activeTab === 'announcements' && authStore.isAdmin && (
                                 <div className="max-w-4xl mx-auto">
                                     <AnnouncementSettings />
                                 </div>
@@ -310,8 +361,12 @@ const TeacherDashboard: React.FC = () => {
                                 <AssignmentTab />
                             )}
 
-                            {activeTab === 'teachers' && (
+                            {activeTab === 'teachers' && authStore.isAdmin && (
                                 <TeacherManagementTab />
+                            )}
+
+                            {activeTab === 'personal-settings' && (
+                                <PersonalSettingsTab />
                             )}
 
                             {activeTab === 'gift-shop' && isGiftShopFeatureEnabled && (

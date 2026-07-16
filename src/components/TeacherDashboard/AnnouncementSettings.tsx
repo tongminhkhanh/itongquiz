@@ -1,335 +1,155 @@
 import React, { useEffect, useState } from 'react';
-import { getAnnouncement, saveAnnouncement, Announcement } from '../../services/announcementService';
+import { Archive, Eye, Loader2, Megaphone, Plus, RefreshCw, Save, Send, XCircle } from 'lucide-react';
+import { callApi } from '../../services/apiAdapter';
 import { getSystemSettings, saveSystemSettings } from '../../services/systemSettingsService';
 import { useAuthStore } from '../../../stores/authStore';
+import { showError, showSuccess } from '../../utils/toast';
 
-/**
- * Admin UI for managing marquee and banner announcements
- */
+type Status = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'EXPIRED' | 'ARCHIVED';
+type Audience = 'ALL' | 'TEACHERS' | 'STUDENTS';
+interface AnnouncementItem {
+    id: string; content: string; bannerTitle: string; bannerSubtitle: string; bannerLink: string;
+    bannerImage: string; isActive: boolean; isBannerActive: boolean; status: Status;
+    effectiveStatus: Status; audience: Audience; startsAt: string | null; endsAt: string | null; updatedAt: string;
+}
+
+const emptyForm = {
+    id: '', content: '', bannerTitle: '', bannerSubtitle: '', bannerLink: '', bannerImage: '',
+    isActive: false, isBannerActive: false, status: 'DRAFT' as Status, audience: 'ALL' as Audience,
+    startsAt: '', endsAt: '', updatedAt: '',
+};
+
+const toLocalInput = (iso: string | null | undefined) => {
+    if (!iso) return '';
+    const date = new Date(iso);
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return local.toISOString().slice(0, 16);
+};
+
 const AnnouncementSettings: React.FC = () => {
-    const authStore = useAuthStore();
-    
-    // Marquee States (Hệ thống cũ - Chữ chạy)
-    const [content, setContent] = useState('');
-    const [isActive, setIsActive] = useState(false);
-    
-    // Banner States (Hệ thống mới - LoginLandingPage)
-    const [bannerTitle, setBannerTitle] = useState('');
-    const [bannerSubtitle, setBannerSubtitle] = useState('');
-    const [bannerLink, setBannerLink] = useState('');
-    const [bannerImage, setBannerImage] = useState('');
-    const [isBannerActive, setIsBannerActive] = useState(false);
-    const [daysToLive, setDaysToLive] = useState(7);
-    
-    const [aiAssistantEnabled, setAiAssistantEnabled] = useState(true);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isSavingSystem, setIsSavingSystem] = useState(false);
-    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const auth = useAuthStore();
+    const [items, setItems] = useState<AnnouncementItem[]>([]);
+    const [form, setForm] = useState(emptyForm);
+    const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
+    const [announcementError, setAnnouncementError] = useState('');
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
+    const [settingsDegraded, setSettingsDegraded] = useState(false);
+    const [settingsError, setSettingsError] = useState('');
+    const [aiEnabled, setAiEnabled] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [savingSettings, setSavingSettings] = useState(false);
+    const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
+
+    const selectItem = (item: AnnouncementItem) => setForm({
+        id: item.id, content: item.content || '', bannerTitle: item.bannerTitle || '', bannerSubtitle: item.bannerSubtitle || '',
+        bannerLink: item.bannerLink || '', bannerImage: item.bannerImage || '', isActive: Boolean(item.isActive),
+        isBannerActive: Boolean(item.isBannerActive), status: item.status, audience: item.audience || 'ALL',
+        startsAt: toLocalInput(item.startsAt), endsAt: toLocalInput(item.endsAt), updatedAt: item.updatedAt || '',
+    });
+
+    const loadAnnouncements = async () => {
+        setLoadingAnnouncements(true); setAnnouncementError('');
+        try {
+            const response = await callApi<{ data: AnnouncementItem[] }>('list_announcements');
+            const rows = response.data || [];
+            setItems(rows);
+            if (form.id) {
+                const current = rows.find((item) => item.id === form.id);
+                if (current) selectItem(current);
+            } else if (rows[0]) selectItem(rows[0]);
+        } catch (err) {
+            setAnnouncementError(err instanceof Error ? err.message : 'Không thể tải thông báo.');
+        } finally { setLoadingAnnouncements(false); }
+    };
+
+    const loadSettings = async () => {
+        setSettingsError(''); setSettingsLoaded(false);
+        try {
+            const data = await getSystemSettings();
+            setAiEnabled(data.aiAssistantEnabled);
+            setSettingsDegraded(Boolean(data.degraded));
+            setSettingsLoaded(!data.degraded);
+            if (data.degraded) setSettingsError('Cấu hình tạm không khả dụng; Trợ lý AI đang được tắt an toàn.');
+        } catch (err) {
+            setAiEnabled(false); setSettingsDegraded(true);
+            setSettingsError(err instanceof Error ? err.message : 'Cấu hình tạm không khả dụng.');
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [announcementData, settingsData] = await Promise.all([
-                    getAnnouncement(),
-                    getSystemSettings(),
-                ]);
-
-                if (announcementData) {
-                    setContent(announcementData.content || '');
-                    setIsActive(announcementData.isActive);
-                    
-                    setBannerTitle(announcementData.bannerTitle || '');
-                    setBannerSubtitle(announcementData.bannerSubtitle || '');
-                    setBannerLink(announcementData.bannerLink || '');
-                    setBannerImage(announcementData.bannerImage || '');
-                    setIsBannerActive(!!announcementData.isBannerActive);
-                    setDaysToLive(announcementData.daysToLive || 7);
-                }
-                setAiAssistantEnabled(Boolean(settingsData.aiAssistantEnabled));
-            } catch (error) {
-                // Error handled in UI if needed
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchData();
+        void Promise.allSettled([loadAnnouncements(), loadSettings()]);
     }, []);
 
-    const handleSave = async () => {
-        setIsSaving(true);
-        setMessage(null);
+    const payload = () => ({
+        content: form.content, bannerTitle: form.bannerTitle, bannerSubtitle: form.bannerSubtitle,
+        bannerLink: form.bannerLink, bannerImage: form.bannerImage, isActive: form.isActive,
+        isBannerActive: form.isBannerActive, status: form.status, audience: form.audience,
+        startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
+        endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
+        expectedUpdatedAt: form.updatedAt || undefined,
+    });
 
-        // Auto-enable banner if title is provided but switch is off
-        let finalIsBannerActive = isBannerActive;
-        if (bannerTitle && !isBannerActive) {
-            // Auto-enabling log removed
-            finalIsBannerActive = true;
-            setIsBannerActive(true);
-        }
-
-        const payload = {
-            content,
-            isActive,
-            bannerTitle,
-            bannerSubtitle,
-            bannerLink,
-            bannerImage,
-            isBannerActive: finalIsBannerActive,
-            daysToLive
-        };
-
-        // Save log removed
-
+    const save = async () => {
+        setSaving(true);
         try {
-            const success = await saveAnnouncement(payload);
-            
-            if (success) {
-                setMessage({ type: 'success', text: 'Đã lưu cấu hình thông báo thành công!' });
-            } else {
-                setMessage({ type: 'error', text: 'Lỗi khi lưu thông báo!' });
-            }
-        } catch (error) {
-            console.error('Save announcement error:', error);
-            setMessage({ type: 'error', text: 'Lỗi kết nối!' });
-        } finally {
-            setIsSaving(false);
-        }
+            const action = form.id ? 'update_announcement' : 'create_announcement';
+            const response = await callApi<{ data?: { id?: string; updatedAt?: string } }>(action, { id: form.id, ...payload() });
+            setForm((value) => ({ ...value, id: response.data?.id || value.id, updatedAt: response.data?.updatedAt || value.updatedAt }));
+            showSuccess('Đã lưu thông báo.');
+            await loadAnnouncements();
+        } catch (err) { showError(err instanceof Error ? err.message : 'Không thể lưu thông báo.'); }
+        finally { setSaving(false); }
     };
 
-    const handleSaveSystemSettings = async () => {
-        if (!authStore.username) {
-            setMessage({ type: 'error', text: 'Không xác định được tài khoản admin.' });
-            return;
-        }
-
-        setIsSavingSystem(true);
-        setMessage(null);
-
+    const runAction = async (action: 'publish_announcement' | 'cancel_announcement' | 'archive_announcement') => {
+        if (!form.id) return showError('Hãy lưu bản nháp trước.');
+        setSaving(true);
         try {
-            const success = await saveSystemSettings({
-                actorUsername: authStore.username,
-                aiAssistantEnabled,
-            });
-
-            if (success) {
-                setMessage({ type: 'success', text: 'Đã lưu cài đặt Trợ lý AI thành công!' });
-            } else {
-                setMessage({ type: 'error', text: 'Lỗi khi lưu cài đặt Trợ lý AI!' });
-            }
-        } catch (error) {
-            setMessage({ type: 'error', text: 'Lỗi kết nối khi lưu cài đặt hệ thống!' });
-        } finally {
-            setIsSavingSystem(false);
-        }
+            await callApi(action, { id: form.id, expectedUpdatedAt: form.updatedAt });
+            showSuccess(action === 'publish_announcement' ? 'Đã công bố thông báo.' : action === 'archive_announcement' ? 'Đã lưu trữ thông báo.' : 'Đã hủy lịch phát.');
+            await loadAnnouncements();
+        } catch (err) { showError(err instanceof Error ? err.message : 'Không thể cập nhật trạng thái.'); }
+        finally { setSaving(false); }
     };
 
-    if (isLoading) {
-        return (
-            <div className="p-4 bg-white rounded-lg shadow">
-                <div className="animate-pulse">
-                    <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-                    <div className="h-10 bg-gray-200 rounded mb-4"></div>
-                    <div className="h-10 bg-gray-200 rounded w-24"></div>
-                </div>
-            </div>
-        );
-    }
+    const saveSettings = async () => {
+        if (!settingsLoaded || settingsDegraded || !auth.username) return;
+        setSavingSettings(true);
+        try {
+            await saveSystemSettings({ actorUsername: auth.username, aiAssistantEnabled: aiEnabled });
+            showSuccess('Đã lưu cài đặt hệ thống.');
+        } catch (err) { showError(err instanceof Error ? err.message : 'Không thể lưu cài đặt.'); }
+        finally { setSavingSettings(false); }
+    };
 
-    return (
-        <div className="p-6 bg-white rounded-xl shadow-lg border border-gray-100">
-            <div className="flex items-center gap-3 mb-6">
-                <span className="text-2xl">📢</span>
-                <h3 className="text-lg font-semibold text-gray-800">Quản lý Thông báo</h3>
-            </div>
+    return <div className="space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-2xl font-bold text-slate-900">Thông báo hệ thống</h2><p className="text-sm text-slate-500">Soạn bản nháp, chọn đối tượng và đặt lịch theo giờ Việt Nam.</p></div><button onClick={() => setForm(emptyForm)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 font-semibold text-white"><Plus className="h-4 w-4" />Thông báo mới</button></div>
 
-            {/* Section 1: Marquee Announcement (Chữ chạy) */}
-            <div className="mb-8 p-5 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="flex items-center gap-3 mb-5">
-                    <span className="text-xl">🏃‍♂️</span>
-                    <h4 className="text-base font-semibold text-slate-800">Thông báo chữ chạy (Toàn App)</h4>
-                </div>
-                
-                <div className="flex items-center gap-3 mb-5">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={isActive}
-                            onChange={(e) => setIsActive(e.target.checked)}
-                            className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                    </label>
-                    <span className={`font-medium ${isActive ? 'text-indigo-600' : 'text-gray-500'}`}>
-                        {isActive ? 'Đang bật' : 'Đã tắt'}
-                    </span>
-                </div>
+        <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
+            <aside className="rounded-2xl border bg-white p-3 shadow-sm">
+                <div className="mb-2 flex items-center justify-between px-2"><span className="font-bold">Danh sách</span><button onClick={() => void loadAnnouncements()} aria-label="Làm mới"><RefreshCw className="h-4 w-4" /></button></div>
+                {loadingAnnouncements ? <div className="flex h-24 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div> : announcementError ? <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{announcementError}<button onClick={() => void loadAnnouncements()} className="ml-1 font-bold underline">Thử lại</button></div> : items.length === 0 ? <div className="p-5 text-center text-sm text-slate-500">Chưa có thông báo.</div> : <div className="space-y-1">{items.map((item) => <button key={item.id} onClick={() => selectItem(item)} className={`w-full rounded-xl p-3 text-left ${form.id === item.id ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-slate-50'}`}><div className="truncate font-semibold">{item.bannerTitle || item.content || 'Không có tiêu đề'}</div><div className="mt-1 flex justify-between text-xs text-slate-500"><span>{item.effectiveStatus}</span><span>{item.audience}</span></div></button>)}</div>}
+            </aside>
 
-                <div className="mb-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nội dung thông báo
-                    </label>
-                    <textarea
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        placeholder="Nhập nội dung thông báo chữ chạy..."
-                        rows={2}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none transition-all"
-                    />
+            <section className="space-y-5 rounded-2xl border bg-white p-5 shadow-sm">
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="text-sm font-semibold">Trạng thái<select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as Status })} className="mt-1 h-10 w-full rounded-xl border px-3"><option value="DRAFT">Bản nháp</option><option value="SCHEDULED">Lên lịch</option><option value="PUBLISHED">Công bố</option></select></label>
+                    <label className="text-sm font-semibold">Đối tượng<select value={form.audience} onChange={(event) => setForm({ ...form, audience: event.target.value as Audience })} className="mt-1 h-10 w-full rounded-xl border px-3"><option value="ALL">Toàn hệ thống</option><option value="TEACHERS">Giáo viên</option><option value="STUDENTS">Học sinh</option></select></label>
                 </div>
-            </div>
-
-            {/* Section 2: Banner Announcement (Hệ thống mới) */}
-            <div className="mb-8 p-5 bg-indigo-50 rounded-xl border border-indigo-200">
-                <div className="flex items-center gap-3 mb-5">
-                    <span className="text-xl">✨</span>
-                    <h4 className="text-base font-semibold text-indigo-900">Banner nổi (Chỉ hiện ở Trang Đăng Nhập)</h4>
-                </div>
-
-                <div className="flex items-center gap-3 mb-5">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={isBannerActive}
-                            onChange={(e) => setIsBannerActive(e.target.checked)}
-                            className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                    </label>
-                    <span className={`font-medium ${isBannerActive ? 'text-indigo-600' : 'text-gray-500'}`}>
-                        {isBannerActive ? 'Đang bật Banner' : 'Đã tắt Banner'}
-                    </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-medium text-indigo-900 mb-1.5">Tiêu đề Banner</label>
-                        <input
-                            type="text"
-                            value={bannerTitle}
-                            onChange={(e) => setBannerTitle(e.target.value)}
-                            className="w-full px-4 py-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                            placeholder="Vinh danh giáo viên xuất sắc..."
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-indigo-900 mb-1.5">URL Hình ảnh (Icon)</label>
-                        <input
-                            type="text"
-                            value={bannerImage}
-                            onChange={(e) => setBannerImage(e.target.value)}
-                            className="w-full px-4 py-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                            placeholder="https://example.com/image.png"
-                        />
-                    </div>
-                    <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-indigo-900 mb-1.5">Nội dung phụ (Subtitle)</label>
-                        <input
-                            type="text"
-                            value={bannerSubtitle}
-                            onChange={(e) => setBannerSubtitle(e.target.value)}
-                            className="w-full px-4 py-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                            placeholder="Chúc mừng thầy cô đã hoàn thành xuất sắc nhiệm vụ..."
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-indigo-900 mb-1.5">Đường dẫn (Link)</label>
-                        <input
-                            type="text"
-                            value={bannerLink}
-                            onChange={(e) => setBannerLink(e.target.value)}
-                            className="w-full px-4 py-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                            placeholder="https://cdth.vercel.app"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-indigo-900 mb-1.5">Số ngày ghi nhớ đóng (Cookie)</label>
-                        <input
-                            type="number"
-                            value={daysToLive}
-                            onChange={(e) => setDaysToLive(parseInt(e.target.value) || 0)}
-                            className="w-full px-4 py-2.5 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* AI Assistant Settings */}
-            <div className="mb-6 border-t border-gray-200 pt-6">
-                <div className="flex items-center gap-3 mb-3">
-                    <span className="text-2xl">🤖</span>
-                    <h4 className="text-base font-semibold text-gray-800">Cài đặt Trợ lý AI</h4>
-                </div>
-                <div className="flex items-center gap-3 mb-3">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={aiAssistantEnabled}
-                            onChange={(e) => setAiAssistantEnabled(e.target.checked)}
-                            className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                    </label>
-                    <span className={`font-medium ${aiAssistantEnabled ? 'text-indigo-600' : 'text-gray-500'}`}>
-                        {aiAssistantEnabled ? 'Trợ lý AI: Đang bật' : 'Trợ lý AI: Đã tắt'}
-                    </span>
-                </div>
-                <button
-                    onClick={handleSaveSystemSettings}
-                    disabled={isSavingSystem}
-                    className={`px-6 py-2.5 rounded-lg font-medium text-white transition-all ${isSavingSystem
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-slate-700 hover:bg-slate-800 active:scale-95'
-                        }`}
-                >
-                    {isSavingSystem ? 'Đang lưu cài đặt...' : '💾 Lưu cài đặt Trợ lý AI'}
-                </button>
-            </div>
-
-            {/* Message */}
-            {message && (
-                <div className={`mb-4 p-3 rounded-lg ${message.type === 'success'
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
-                    }`}>
-                    {message.type === 'success' ? '✅' : '❌'} {message.text}
-                </div>
-            )}
-
-            {/* Save Button */}
-            <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className={`px-6 py-2.5 rounded-lg font-medium text-white transition-all ${isSaving
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
-                    }`}
-            >
-                {isSaving ? (
-                    <span className="flex items-center gap-2">
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                        Đang lưu...
-                    </span>
-                ) : (
-                    '💾 Lưu cấu hình thông báo'
-                )}
-            </button>
-
-            {/* Preview Marquee */}
-            {content && isActive && (
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                    <p className="text-sm text-gray-600 mb-2">Xem trước Marquee:</p>
-                    <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg overflow-hidden">
-                        <span className="marquee-preview">📢 {content}</span>
-                    </div>
-                </div>
-            )}
+                <div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-semibold">Bắt đầu<input type="datetime-local" value={form.startsAt} onChange={(event) => setForm({ ...form, startsAt: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label><label className="text-sm font-semibold">Kết thúc<input type="datetime-local" value={form.endsAt} onChange={(event) => setForm({ ...form, endsAt: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label></div>
+                <label className="block text-sm font-semibold">Tiêu đề<input maxLength={160} value={form.bannerTitle} onChange={(event) => setForm({ ...form, bannerTitle: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label>
+                <label className="block text-sm font-semibold">Mô tả<input maxLength={300} value={form.bannerSubtitle} onChange={(event) => setForm({ ...form, bannerSubtitle: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label>
+                <label className="block text-sm font-semibold">Chữ chạy<textarea maxLength={1000} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} className="mt-1 min-h-20 w-full rounded-xl border p-3" /></label>
+                <div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-semibold">Liên kết HTTPS hoặc nội bộ<input value={form.bannerLink} onChange={(event) => setForm({ ...form, bannerLink: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label><label className="text-sm font-semibold">Ảnh từ media/R2<input value={form.bannerImage} onChange={(event) => setForm({ ...form, bannerImage: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label></div>
+                <div className="flex flex-wrap gap-5"><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={form.isBannerActive} onChange={(event) => setForm({ ...form, isBannerActive: event.target.checked })} />Hiện banner</label><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} />Hiện chữ chạy</label></div>
+                <div className="flex flex-wrap gap-2"><button disabled={saving} onClick={() => void save()} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 font-semibold text-white disabled:opacity-50"><Save className="h-4 w-4" />Lưu</button>{form.id && <><button disabled={saving} onClick={() => void runAction('publish_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 font-semibold text-white"><Send className="h-4 w-4" />Công bố</button><button disabled={saving} onClick={() => void runAction('cancel_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl border px-4 font-semibold"><XCircle className="h-4 w-4" />Hủy lịch</button><button disabled={saving} onClick={() => void runAction('archive_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl border px-4 font-semibold text-slate-600"><Archive className="h-4 w-4" />Lưu trữ</button></>}</div>
+            </section>
         </div>
-    );
+
+        <section className="rounded-2xl border bg-white p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2"><Eye className="h-5 w-5 text-blue-600" /><h3 className="font-bold">Xem trước</h3></div><div className="rounded-lg bg-slate-100 p-1"><button onClick={() => setPreviewMode('desktop')} className={`rounded-md px-3 py-1 text-sm ${previewMode === 'desktop' ? 'bg-white shadow' : ''}`}>Desktop</button><button onClick={() => setPreviewMode('mobile')} className={`rounded-md px-3 py-1 text-sm ${previewMode === 'mobile' ? 'bg-white shadow' : ''}`}>Mobile</button></div></div><div className={`mx-auto rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-200 ${previewMode === 'mobile' ? 'max-w-sm' : 'max-w-4xl'}`}><div className="flex items-center gap-3"><Megaphone className="h-8 w-8 shrink-0 text-emerald-700" /><div className="min-w-0"><div className="truncate font-bold text-emerald-900">{form.bannerTitle || 'Tiêu đề thông báo'}</div><div className="truncate text-sm text-emerald-700">{form.bannerSubtitle || 'Mô tả ngắn sẽ hiển thị tại đây'}</div></div></div></div></section>
+
+        <section className="rounded-2xl border bg-white p-5 shadow-sm"><h3 className="font-bold">Cài đặt Trợ lý AI</h3>{settingsError && <div className="my-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{settingsError} <button onClick={() => void loadSettings()} className="font-bold underline">Thử lại</button></div>}<label className="my-4 flex items-center gap-3"><input type="checkbox" checked={aiEnabled} disabled={!settingsLoaded || settingsDegraded} onChange={(event) => setAiEnabled(event.target.checked)} className="h-5 w-5" /><span className="font-semibold">{aiEnabled ? 'Đang bật' : 'Đang tắt'}</span></label><button onClick={() => void saveSettings()} disabled={!settingsLoaded || settingsDegraded || savingSettings} className="rounded-xl bg-slate-800 px-4 py-2 font-semibold text-white disabled:opacity-40">{savingSettings ? 'Đang lưu…' : 'Lưu cài đặt hệ thống'}</button></section>
+    </div>;
 };
 
 export default AnnouncementSettings;
