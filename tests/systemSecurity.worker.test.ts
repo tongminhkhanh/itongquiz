@@ -15,8 +15,30 @@ describe('system security password storage', () => {
         expect(isPbkdf2Password(first)).toBe(true);
         expect(first).not.toBe(second);
         expect(first).not.toContain('Mat-khau-rat-manh-2026');
+        expect(first).toMatch(/^pbkdf2_sha256\$100000\$/);
         expect(await verifyPasswordPbkdf2('Mat-khau-rat-manh-2026', first)).toBe(true);
         expect(await verifyPasswordPbkdf2('sai-mat-khau', first)).toBe(false);
+    });
+
+    it('accepts the alternate dollar/base64 PBKDF2 encoding during migration', async () => {
+        const password = 'Mat-khau-tuong-thich-2026';
+        const salt = new Uint8Array(16).fill(7);
+        const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+        const bits = await crypto.subtle.deriveBits(
+            { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100_000 },
+            material,
+            256,
+        );
+        const base64Url = (value: Uint8Array) => {
+            let binary = '';
+            for (const byte of value) binary += String.fromCharCode(byte);
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        };
+        const encoded = `$pbkdf2-sha256$100000$${base64Url(salt)}$${base64Url(new Uint8Array(bits))}`;
+
+        expect(isPbkdf2Password(encoded)).toBe(true);
+        expect(await verifyPasswordPbkdf2(password, encoded)).toBe(true);
+        expect(await verifyPasswordPbkdf2('sai-mat-khau', encoded)).toBe(false);
     });
 
     it('generates a 20-character one-time password using the allowed alphabet', () => {
