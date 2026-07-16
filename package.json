@@ -15,6 +15,9 @@
     "cypress:run": "cypress run",
     "cypress:math-screenshots": "node scripts/math-visual-regression.mjs",
     "cypress:math-screenshots:update": "node scripts/math-visual-regression.mjs --update",
+    "audit:dependencies": "node scripts/dependency-audit-report.mjs",
+    "audit:dependencies:production": "node scripts/dependency-audit-report.mjs --production",
+    "audit:dependencies:enforce": "node scripts/dependency-audit-report.mjs --production --enforce",
     "learn:sonlaedu": "node scripts/auto_learn_sonla.mjs",
     "deploy": "npm run build && wrangler deploy"
   },

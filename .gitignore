@@ -58,3 +58,6 @@ skills-lock.json
 # Visual regression output (baselines are tracked separately)
 cypress/screenshots/
 artifacts/math-screenshots/
+
+# Generated dependency audit reports
+reports/dependency-audit*.json
