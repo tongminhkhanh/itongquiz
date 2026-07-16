@@ -6,6 +6,7 @@ import { showError, showConfirm } from '../../utils/toast';
 import { getAnnouncement, Announcement as AnnouncementData } from '../../services/announcementService';
 import AnnouncementBanner from '../common/AnnouncementBanner';
 import PasswordChangeDialog from '../common/PasswordChangeDialog';
+import { getJWTPurpose } from '../../services/api/auth';
 
 // Sub-components
 import LandingHeader from './components/LandingHeader';
@@ -91,7 +92,7 @@ const LoginLandingPage: React.FC = () => {
                     localStorage.removeItem('itongquiz_jwt_token');
                     localStorage.setItem('itongquiz_teacher_jwt_token', teacher.token);
                 }
-                if (teacher.requiresPasswordChange) {
+                if (teacher.requiresPasswordChange || getJWTPurpose(teacher.token) === 'password_change') {
                     authStore.loginPendingPasswordChange();
                     setPendingTeacher({
                         username: tUsername,

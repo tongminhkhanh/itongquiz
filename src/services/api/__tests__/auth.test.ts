@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getStoredJWTToken, buildAuthHeaders } from '../auth';
+import { getStoredJWTToken, buildAuthHeaders, getJWTPurpose } from '../auth';
 
 const mockStorage: Record<string, string> = {};
 
@@ -72,5 +72,14 @@ describe('buildAuthHeaders', () => {
     it('returns no auth header for session with no token', () => {
         const headers = buildAuthHeaders('session', '/api/quizzes');
         expect(headers['Authorization']).toBeUndefined();
+    });
+});
+
+describe('getJWTPurpose', () => {
+    it('detects a password-change token without trusting storage state', () => {
+        const payload = btoa(JSON.stringify({ purpose: 'password_change' }))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        expect(getJWTPurpose(`header.${payload}.signature`)).toBe('password_change');
+        expect(getJWTPurpose('invalid-token')).toBeNull();
     });
 });

@@ -14,6 +14,9 @@ import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '../../utils/toast';
 import { checkAndWarnJWTExpiry } from '../../utils/jwtInterceptor';
 import CurrentAnnouncementBanner from '../common/CurrentAnnouncementBanner';
+import PasswordChangeDialog from '../common/PasswordChangeDialog';
+import { callApi } from '../../services/apiAdapter';
+import { getJWTPurpose, getStoredJWTToken } from '../../services/api/auth';
 
 // Lazy load tab components
 const OverviewTab = React.lazy(() => import('./OverviewTab'));
@@ -43,6 +46,28 @@ const TeacherDashboard: React.FC = () => {
     const activeTab = useTeacherDashboardUIStore((state) => state.activeTab);
     const setActiveTab = useTeacherDashboardUIStore((state) => state.setActiveTab);
     const clearAssignmentComposerDraft = useTeacherDashboardUIStore((state) => state.clearAssignmentComposerDraft);
+    const [passwordGate, setPasswordGate] = useState<{ token: string; requireCurrentPassword: boolean } | null>(null);
+
+    useEffect(() => {
+        if (!authStore.isLoggedIn) return;
+        let active = true;
+        const token = getStoredJWTToken('/api/account/me');
+        const tokenPurpose = getJWTPurpose(token);
+
+        callApi<{ data?: { mustChangePassword?: boolean } }>('get_account_profile')
+            .then((response) => {
+                if (active && response.data?.mustChangePassword && token) {
+                    setPasswordGate({ token, requireCurrentPassword: tokenPurpose !== 'password_change' });
+                }
+            })
+            .catch((error) => {
+                if (active && token && (tokenPurpose === 'password_change' || String(error).includes('Password change required'))) {
+                    setPasswordGate({ token, requireCurrentPassword: tokenPurpose !== 'password_change' });
+                }
+            });
+
+        return () => { active = false; };
+    }, [authStore.isLoggedIn, authStore.username]);
 
     // 🔐 ANTI-CHEAT: Disable answer stripping for teacher views
     // Also force reload quizzes from server to get fresh data with answers
@@ -159,6 +184,24 @@ const TeacherDashboard: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+
+            {passwordGate && (
+                <PasswordChangeDialog
+                    forced
+                    authToken={passwordGate.token}
+                    requireCurrentPassword={passwordGate.requireCurrentPassword}
+                    onComplete={(token) => {
+                        authStore.loginSuccess(
+                            authStore.username || '',
+                            authStore.teacherName || authStore.username || '',
+                            authStore.isAdmin,
+                            authStore.teacherClass,
+                            token,
+                        );
+                        setPasswordGate(null);
+                    }}
+                />
+            )}
 
             <CurrentAnnouncementBanner role="teacher" />
 

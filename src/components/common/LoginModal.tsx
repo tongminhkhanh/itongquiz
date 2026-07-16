@@ -6,6 +6,7 @@ import { Loader2, KeyRound, User, Lock, GraduationCap, Apple } from 'lucide-reac
 import { motion, AnimatePresence } from 'framer-motion';
 import { showError } from '../../utils/toast';
 import PasswordChangeDialog from './PasswordChangeDialog';
+import { getJWTPurpose } from '../../services/api/auth';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -68,7 +69,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                     localStorage.removeItem('itongquiz_jwt_token');
                     localStorage.setItem('itongquiz_teacher_jwt_token', tToken);
                 }
-                if (teacher.requiresPasswordChange) {
+                if (teacher.requiresPasswordChange || getJWTPurpose(tToken) === 'password_change') {
                     authStore.loginPendingPasswordChange();
                     setPendingTeacher({ ...teacher, username: tUsername, fullName: tFullName, isAdmin: isTeacherAdmin, class: tClass });
                     return;

@@ -6,15 +6,23 @@ import { showError, showSuccess } from '../../utils/toast';
 interface PasswordChangeDialogProps {
     forced?: boolean;
     authToken?: string;
+    requireCurrentPassword?: boolean;
     onComplete: (token: string) => void;
     onCancel?: () => void;
 }
 
-const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ forced = false, authToken, onComplete, onCancel }) => {
+const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({
+    forced = false,
+    authToken,
+    requireCurrentPassword,
+    onComplete,
+    onCancel,
+}) => {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [saving, setSaving] = useState(false);
+    const asksForCurrentPassword = requireCurrentPassword ?? !forced;
 
     const submit = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -24,7 +32,7 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ forced = fa
         try {
             const response = await callApi<{ status: string; data?: { token?: string } }>('change_password', {
                 __authToken: authToken,
-                currentPassword: forced ? undefined : currentPassword,
+                currentPassword: asksForCurrentPassword ? currentPassword : undefined,
                 newPassword,
             });
             const token = response.data?.token;
@@ -55,7 +63,7 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ forced = fa
                 </div>
 
                 <div className="space-y-4">
-                    {!forced && (
+                    {asksForCurrentPassword && (
                         <label className="block text-sm font-semibold text-slate-700">
                             Mật khẩu hiện tại
                             <input type="password" autoComplete="current-password" required value={currentPassword}
