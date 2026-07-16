@@ -100,7 +100,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
     if (!isOpen) return null;
 
     if (pendingTeacher) {
-        return <PasswordChangeDialog forced onCancel={() => {
+        return <PasswordChangeDialog forced authToken={pendingTeacher.token} onCancel={() => {
             localStorage.removeItem('itongquiz_teacher_jwt_token');
             setPendingTeacher(null);
         }} onComplete={(token) => {

@@ -1,20 +1,22 @@
 export async function toApiError(response: Response): Promise<Error> {
     let errorMessage = `Lỗi kết nối Server: ${response.statusText}`;
+    let backendMessage = '';
 
-    if (response.status === 401) {
+    try {
+        const errData = await response.clone().json();
+        if (errData && (errData as any).message) {
+            backendMessage = String((errData as any).message);
+        }
+    } catch {}
+
+    if (response.status === 401 && (!backendMessage || backendMessage === 'Unauthorized')) {
         return new Error('Không có quyền truy cập API (Authentication failed)');
     }
 
-    try {
-        const errData = await response.json();
-        if (errData && (errData as any).message) {
-            errorMessage = (errData as any).message;
-        }
-    } catch {
-        const text = await response.text().catch(() => '');
-        if (text) errorMessage += ` - ${text.substring(0, 100)}`;
-    }
+    if (backendMessage) return new Error(backendMessage);
 
+    const text = await response.text().catch(() => '');
+    if (text) errorMessage += ` - ${text.substring(0, 100)}`;
     return new Error(errorMessage);
 }
 

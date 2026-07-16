@@ -14,11 +14,15 @@ export async function executeApiAction<T = any>(
     payload: ApiPayload = {},
 ): Promise<T> {
     const route = resolveApiRoute(action);
-    const path = route.path(payload);
-    const query = route.query?.(payload);
+    const explicitAuthToken = typeof payload.__authToken === 'string' ? payload.__authToken.trim() : '';
+    const requestPayload = { ...payload };
+    delete requestPayload.__authToken;
+    const path = route.path(requestPayload);
+    const query = route.query?.(requestPayload);
     const url = buildUrl(getWorkersApiBaseUrl(), path, query);
 
     const authHeaders = buildAuthHeaders(route.auth, path);
+    if (explicitAuthToken) authHeaders.Authorization = `Bearer ${explicitAuthToken}`;
 
     const requestInit: RequestInit = {
         method: route.method,
@@ -30,7 +34,7 @@ export async function executeApiAction<T = any>(
     };
 
     if (route.method !== 'GET' && route.method !== 'DELETE') {
-        const body = route.body ? route.body(action, payload) : payload;
+        const body = route.body ? route.body(action, requestPayload) : requestPayload;
         requestInit.body = JSON.stringify(body);
     }
 

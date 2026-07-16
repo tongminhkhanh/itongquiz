@@ -84,6 +84,21 @@ describe('executeApiAction — auth headers', () => {
         const headers = (init as RequestInit).headers as Record<string, string>;
         expect(headers['Authorization']).toBe('Bearer teacher-tok');
     });
+
+    it('uses an explicit one-time auth token without leaking it into the request body', async () => {
+        mockStorage['itongquiz_teacher_jwt_token'] = 'stale-token';
+        mockOk({ status: 'success', data: { token: 'new-session' } });
+        await executeApiAction('change_password', {
+            __authToken: 'password-change-token',
+            newPassword: 'Mat-khau-moi-2026',
+        });
+        const [, init] = mockFetch.mock.calls[0];
+        const headers = (init as RequestInit).headers as Record<string, string>;
+        const body = JSON.parse((init as RequestInit).body as string);
+        expect(headers.Authorization).toBe('Bearer password-change-token');
+        expect(body.__authToken).toBeUndefined();
+        expect(body.newPassword).toBe('Mat-khau-moi-2026');
+    });
 });
 
 describe('executeApiAction — GAS body', () => {

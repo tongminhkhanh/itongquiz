@@ -5,11 +5,12 @@ import { showError, showSuccess } from '../../utils/toast';
 
 interface PasswordChangeDialogProps {
     forced?: boolean;
+    authToken?: string;
     onComplete: (token: string) => void;
     onCancel?: () => void;
 }
 
-const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ forced = false, onComplete, onCancel }) => {
+const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ forced = false, authToken, onComplete, onCancel }) => {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -22,6 +23,7 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ forced = fa
         setSaving(true);
         try {
             const response = await callApi<{ status: string; data?: { token?: string } }>('change_password', {
+                __authToken: authToken,
                 currentPassword: forced ? undefined : currentPassword,
                 newPassword,
             });
