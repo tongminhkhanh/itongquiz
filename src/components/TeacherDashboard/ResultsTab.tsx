@@ -22,7 +22,7 @@ import { fetchResultAnswers, fetchResultAnswersBulk } from '../../services/googl
 import { RefreshCw, Download, ChevronDown, Search, FileText, Users, BarChart, ClipboardList } from 'lucide-react';
 import ResultRowPhieuModal from '../../features/results/components/ResultRowPhieuModal';
 import { PhieuFromResultsPanel } from '../../features/results/components/PhieuFromResultsPanel';
-import { checkAnswer } from '../../utils/question/scoring.util';
+import { calculateResultAnswerSummary } from '../../features/results/utils/resultAnswerScoring';
 import type { PhieuNhanXet, PhieuPublicLink } from '../../features/homework/types/phieu.types';
 import { resultPhieuLinkService } from '../../features/results/services/resultPhieuLinkService';
 import {
@@ -101,47 +101,15 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
         setPhieuCache(prev => ({ ...prev, [sid]: { ...(prev[sid] ?? { savedPhieu: null, publishedLink: null }), ...patch } }));
     };
 
-    const isAnswerSkipped = (value: any): boolean => (
-        value === undefined ||
-        value === null ||
-        value === '' ||
-        (Array.isArray(value) && value.length === 0) ||
-        (typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0)
-    );
-
     const calculateOverrideFromAnswers = useCallback((result: StudentResult, answers: Record<string, any>): ResultDisplayOverride | null => {
-        const answerEntries = Object.entries(answers || {}).filter(([key]) => !key.startsWith('_'));
-        if (answerEntries.length === 0) return null;
+        const summary = calculateResultAnswerSummary(answers, result.validationDetails);
+        if (summary.totalAnswers === 0) return null;
 
-        let correctedCount = 0;
-        answerEntries.forEach(([questionId, answerData]) => {
-            if (answerData && typeof answerData === 'object' && ('selectedAnswer' in answerData || 'questionSnapshot' in answerData)) {
-                const selectedAnswer = (answerData as any).selectedAnswer;
-                if (isAnswerSkipped(selectedAnswer)) return;
-
-                const snapshot = (answerData as any).questionSnapshot;
-                if (snapshot?.type) {
-                    const { status } = checkAnswer(snapshot as any, selectedAnswer);
-                    if (status === 'correct') correctedCount++;
-                    return;
-                }
-
-                if ((answerData as any).isCorrect === true) {
-                    correctedCount++;
-                }
-                return;
-            }
-
-            if (isAnswerSkipped(answerData)) return;
-            const validation = result.validationDetails?.find(v => v.questionId === questionId);
-            if (validation?.isCorrect) correctedCount++;
-        });
-
-        const totalQuestions = result.totalQuestions && result.totalQuestions > 0 ? result.totalQuestions : answerEntries.length;
-        const score = totalQuestions > 0 ? Math.round((correctedCount / totalQuestions) * 100) / 10 : result.score;
+        const totalQuestions = result.totalQuestions && result.totalQuestions > 0 ? result.totalQuestions : summary.totalAnswers;
+        const score = totalQuestions > 0 ? Math.round((summary.correctCount / totalQuestions) * 100) / 10 : result.score;
 
         return {
-            correctCount: correctedCount,
+            correctCount: summary.correctCount,
             totalQuestions,
             score,
         };

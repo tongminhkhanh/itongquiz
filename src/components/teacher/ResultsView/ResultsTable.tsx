@@ -8,7 +8,7 @@ import React from 'react';
 import { StudentResult, Quiz } from '../../../types';
 import { ArrowUpDown, Eye, Trash2, Loader2, Printer } from 'lucide-react';
 import { ResponsiveDataView } from '../../common';
-import { checkAnswer } from '../../../utils/question/scoring.util';
+import { calculateResultAnswerSummary } from '../../../features/results/utils/resultAnswerScoring';
 
 export interface ResultsTableProps {
     results: StudentResult[];
@@ -36,53 +36,14 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({
     isLoading,
     onPhieuClick,
 }) => {
-    const isAnswerSkipped = (value: any): boolean => (
-        value === undefined ||
-        value === null ||
-        value === '' ||
-        (Array.isArray(value) && value.length === 0) ||
-        (typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0)
-    );
-
     const getDisplayedTotalQuestions = (result: StudentResult): number => {
         if (result.totalQuestions && result.totalQuestions > 0) return result.totalQuestions;
         return Object.keys(result.answers || {}).filter(key => !key.startsWith('_')).length;
     };
 
     const getDisplayedCorrectCount = (result: StudentResult): number => {
-        const answerEntries = Object.entries(result.answers || {}).filter(([key]) => !key.startsWith('_'));
-        if (answerEntries.length === 0) {
-            return result.correctCount || 0;
-        }
-
-        let correctCount = 0;
-
-        answerEntries.forEach(([questionId, answerData]) => {
-            if (answerData && typeof answerData === 'object' && ('selectedAnswer' in answerData || 'questionSnapshot' in answerData)) {
-                const selectedAnswer = (answerData as any).selectedAnswer;
-                if (isAnswerSkipped(selectedAnswer)) return;
-
-                const snapshot = (answerData as any).questionSnapshot;
-                if (snapshot?.type) {
-                    const { isCorrect } = checkAnswer(snapshot, selectedAnswer);
-                    if (isCorrect) correctCount++;
-                    return;
-                }
-
-                if ((answerData as any).isCorrect === true) {
-                    correctCount++;
-                }
-                return;
-            }
-
-            if (isAnswerSkipped(answerData)) return;
-            const validation = result.validationDetails?.find(v => v.questionId === questionId);
-            if (validation?.isCorrect) {
-                correctCount++;
-            }
-        });
-
-        return correctCount;
+        const summary = calculateResultAnswerSummary(result.answers, result.validationDetails);
+        return summary.totalAnswers > 0 ? summary.correctCount : result.correctCount || 0;
     };
 
     const getResolvedResult = (result: StudentResult): StudentResult => {
