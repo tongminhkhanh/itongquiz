@@ -35,6 +35,13 @@ describe('system management UI safety', () => {
         vi.useRealTimers();
     });
 
+    it('logs out a stale teacher session when the account profile returns 401', async () => {
+        const source = await import('../src/components/TeacherDashboard/index?raw');
+        expect(source.default).toContain('error instanceof ApiError && error.status === 401');
+        expect(source.default).toContain('authStore.logout()');
+        expect(source.default).toContain("navigate('/', { replace: true })");
+    });
+
     it('does not open a javascript announcement link', async () => {
         vi.useFakeTimers();
         const open = vi.spyOn(window, 'open').mockReturnValue(null);

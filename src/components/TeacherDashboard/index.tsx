@@ -17,6 +17,7 @@ import CurrentAnnouncementBanner from '../common/CurrentAnnouncementBanner';
 import PasswordChangeDialog from '../common/PasswordChangeDialog';
 import { callApi } from '../../services/apiAdapter';
 import { getJWTPurpose, getStoredJWTToken } from '../../services/api/auth';
+import { ApiError } from '../../services/api/errors';
 
 // Lazy load tab components
 const OverviewTab = React.lazy(() => import('./OverviewTab'));
@@ -62,7 +63,17 @@ const TeacherDashboard: React.FC = () => {
                 }
             })
             .catch((error) => {
-                if (active && token && (tokenPurpose === 'password_change' || String(error).includes('Password change required'))) {
+                if (!active) return;
+
+                if (error instanceof ApiError && error.status === 401) {
+                    authStore.logout();
+                    setPasswordGate(null);
+                    showError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                    navigate('/', { replace: true });
+                    return;
+                }
+
+                if (token && (tokenPurpose === 'password_change' || String(error).includes('Password change required'))) {
                     setPasswordGate({ token, requireCurrentPassword: tokenPurpose !== 'password_change' });
                 }
             });

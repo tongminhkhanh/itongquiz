@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
 import { executeApiAction } from '../apiClient';
+import { ApiError } from '../errors';
 
 const mockFetch = vi.fn() as MockedFunction<typeof fetch>;
 vi.stubGlobal('fetch', mockFetch);
@@ -116,11 +117,15 @@ describe('executeApiAction — canonical phieu REST body', () => {
 });
 
 describe('executeApiAction — error handling', () => {
-    it('throws correct message on 401', async () => {
+    it('preserves the HTTP status on 401 errors', async () => {
         mockError(401, { message: 'Unauthorized' });
-        await expect(executeApiAction('get_quizzes')).rejects.toThrow(
-            'Không có quyền truy cập API (Authentication failed)',
-        );
+
+        const error = await executeApiAction('get_quizzes').catch((reason) => reason);
+        expect(error).toBeInstanceOf(ApiError);
+        expect(error).toMatchObject({
+            status: 401,
+            message: 'Không có quyền truy cập API (Authentication failed)',
+        });
     });
 
     it('uses backend message for 4xx errors with message', async () => {

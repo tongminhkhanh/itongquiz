@@ -1,3 +1,13 @@
+export class ApiError extends Error {
+    readonly status: number;
+
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+    }
+}
+
 export async function toApiError(response: Response): Promise<Error> {
     let errorMessage = `Lỗi kết nối Server: ${response.statusText}`;
     let backendMessage = '';
@@ -10,14 +20,14 @@ export async function toApiError(response: Response): Promise<Error> {
     } catch {}
 
     if (response.status === 401 && (!backendMessage || backendMessage === 'Unauthorized')) {
-        return new Error('Không có quyền truy cập API (Authentication failed)');
+        return new ApiError('Không có quyền truy cập API (Authentication failed)', response.status);
     }
 
-    if (backendMessage) return new Error(backendMessage);
+    if (backendMessage) return new ApiError(backendMessage, response.status);
 
     const text = await response.text().catch(() => '');
     if (text) errorMessage += ` - ${text.substring(0, 100)}`;
-    return new Error(errorMessage);
+    return new ApiError(errorMessage, response.status);
 }
 
 export function normalizeNetworkError(error: unknown): Error {
