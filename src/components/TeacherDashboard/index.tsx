@@ -18,6 +18,19 @@ import PasswordChangeDialog from '../common/PasswordChangeDialog';
 import { callApi } from '../../services/apiAdapter';
 import { getJWTPurpose, getStoredJWTToken } from '../../services/api/auth';
 import { ApiError } from '../../services/api/errors';
+import { cn } from '../../utils/cn';
+
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'itongquiz_teacher_sidebar_collapsed';
+
+function getInitialSidebarCollapsed(): boolean {
+    if (typeof window === 'undefined') return false;
+    const savedPreference = window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY);
+    if (savedPreference === 'true' || savedPreference === 'false') {
+        return savedPreference === 'true';
+    }
+    if (typeof window.matchMedia !== 'function') return false;
+    return !window.matchMedia('(min-width: 1440px)').matches;
+}
 
 // Lazy load tab components
 const OverviewTab = React.lazy(() => import('./OverviewTab'));
@@ -109,6 +122,28 @@ const TeacherDashboard: React.FC = () => {
     }, []);
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(getInitialSidebarCollapsed);
+
+    useEffect(() => {
+        if (
+            window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) !== null
+            || typeof window.matchMedia !== 'function'
+        ) return;
+
+        const desktopWideQuery = window.matchMedia('(min-width: 1440px)');
+        const syncSidebarWithViewport = () => {
+            if (window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === null) {
+                setIsSidebarCollapsed(!desktopWideQuery.matches);
+            }
+        };
+        desktopWideQuery.addEventListener('change', syncSidebarWithViewport);
+        return () => desktopWideQuery.removeEventListener('change', syncSidebarWithViewport);
+    }, []);
+
+    const handleSidebarCollapsedChange = (collapsed: boolean) => {
+        setIsSidebarCollapsed(collapsed);
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed));
+    };
 
     useEffect(() => {
         if (!isGiftShopFeatureEnabled && activeTab === 'gift-shop') {
@@ -229,10 +264,17 @@ const TeacherDashboard: React.FC = () => {
                 onLogout={handleLogout}
                 isMobileOpen={isMobileMenuOpen}
                 setIsMobileOpen={setIsMobileMenuOpen}
+                isCollapsed={isSidebarCollapsed}
+                onCollapsedChange={handleSidebarCollapsedChange}
             />
 
             {/* Main Content wrapper */}
-            <div className="flex-1 lg:ml-64 flex flex-col min-h-screen transition-all duration-300 pb-20 lg:pb-0">
+            <div
+                className={cn(
+                    'flex min-h-dvh flex-1 flex-col pb-20 lg:pb-0',
+                    isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72',
+                )}
+            >
 
                 {/* Top Header / Top Bar */}
                 <header className="h-16 bg-white/90 backdrop-blur border-b border-slate-200 sticky top-0 z-30 flex items-center justify-between px-4 lg:px-8">

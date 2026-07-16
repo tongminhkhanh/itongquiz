@@ -32,6 +32,7 @@
     "better-react-mathjax": "^2.3.0",
     "browser-image-compression": "^2.0.2",
     "canvas-confetti": "^1.9.4",
+    "clsx": "^2.1.1",
     "docx": "^9.5.1",
     "dom-to-image-more": "^3.10.0",
     "exceljs": "^4.4.0",
@@ -48,6 +49,7 @@
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.13.2",
     "recharts": "^3.8.1",
+    "tailwind-merge": "^3.6.0",
     "zod": "^4.2.1",
     "zustand": "^5.0.9"
   },
