@@ -19,6 +19,11 @@ export const teacherRoutes: RouteRegistry = {
         method: 'POST', auth: 'session',
         path: ({ username }) => `${adminBase}/${encodeURIComponent(username)}/reset-password`,
     },
+    reset_all_teacher_passwords: {
+        method: 'POST', auth: 'session',
+        path: () => `${adminBase}/reset-passwords`,
+        body: () => ({}),
+    },
     disable_teacher: {
         method: 'POST', auth: 'session',
         path: ({ username }) => `${adminBase}/${encodeURIComponent(username)}/disable`,

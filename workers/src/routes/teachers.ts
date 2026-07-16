@@ -289,6 +289,53 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
         return finish(noStore(jsonResponse({ status: 'success', data: { username, temporaryPassword } }, 201)));
     }
 
+    if (path === `${base}/reset-passwords` && method === 'POST') {
+        const rows = await db.prepare(`
+            SELECT username, full_name
+            FROM teachers
+            WHERE role = 'teacher'
+            ORDER BY full_name, username
+        `).all<{ username: string; full_name: string }>();
+        const teachers = rows.results || [];
+        if (teachers.length === 0) return errorResponse('Không có tài khoản giáo viên để đặt lại mật khẩu.', 404);
+
+        const now = new Date().toISOString();
+        const credentials = await Promise.all(teachers.map(async (teacher) => {
+            const temporaryPassword = generateTemporaryPassword();
+            const encoded = await hashPasswordPbkdf2(temporaryPassword);
+            return { ...teacher, temporaryPassword, encoded };
+        }));
+
+        const statements: D1PreparedStatement[] = [];
+        for (const credential of credentials) {
+            statements.push(
+                db.prepare(`
+                    UPDATE teachers SET password = ?, must_change_password = 1,
+                        token_version = token_version + 1, password_changed_at = NULL, updated_at = ?
+                    WHERE username = ? AND role = 'teacher'
+                `).bind(credential.encoded, now, credential.username),
+                auditStatement(db, {
+                    actorUsername: user.username,
+                    action: 'TEACHER_PASSWORD_RESET',
+                    targetType: 'teacher',
+                    targetId: credential.username,
+                    requestId: requestId(request),
+                    after: { bulk: true },
+                }),
+            );
+        }
+        await db.batch(statements);
+
+        return noStore(jsonResponse({ status: 'success', data: {
+            count: credentials.length,
+            credentials: credentials.map(({ username, full_name, temporaryPassword }) => ({
+                username,
+                fullName: full_name,
+                temporaryPassword,
+            })),
+        } }));
+    }
+
     const suffix = path.slice(base.length + 1);
     const [encodedUsername, action] = suffix.split('/');
     const targetUsername = decodeURIComponent(encodedUsername || '');

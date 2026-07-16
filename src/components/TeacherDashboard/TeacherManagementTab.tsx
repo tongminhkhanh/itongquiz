@@ -22,6 +22,7 @@ interface TeacherListResponse {
 }
 
 interface TeacherForm { username: string; fullName: string; role: 'admin' | 'teacher'; teacherClass: string }
+interface TemporaryCredential { username: string; fullName: string; temporaryPassword: string }
 const EMPTY_FORM: TeacherForm = { username: '', fullName: '', role: 'teacher', teacherClass: '' };
 
 const TeacherManagementTab: React.FC = () => {
@@ -38,6 +39,7 @@ const TeacherManagementTab: React.FC = () => {
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
     const [temporaryPassword, setTemporaryPassword] = useState('');
+    const [bulkCredentials, setBulkCredentials] = useState<TemporaryCredential[]>([]);
     const [disableTarget, setDisableTarget] = useState<TeacherRecord | null>(null);
     const [transferTo, setTransferTo] = useState('');
     const [disableReason, setDisableReason] = useState('');
@@ -114,6 +116,26 @@ const TeacherManagementTab: React.FC = () => {
         },
     });
 
+    const resetAllPasswords = () => showConfirm({
+        message: 'Đặt lại mật khẩu của toàn bộ tài khoản giáo viên? Tất cả phiên hiện tại sẽ bị thu hồi. Admin không bị thay đổi.',
+        confirmLabel: 'Reset toàn bộ giáo viên',
+        onConfirm: async () => {
+            setSaving(true);
+            try {
+                const response = await callApi<{ data?: { count?: number; credentials?: TemporaryCredential[] } }>('reset_all_teacher_passwords');
+                const credentials = response.data?.credentials || [];
+                if (credentials.length === 0) throw new Error('Máy chủ không trả về danh sách mật khẩu tạm.');
+                setBulkCredentials(credentials);
+                showSuccess(`Đã reset ${response.data?.count || credentials.length} tài khoản giáo viên.`);
+                await fetchTeachers();
+            } catch (err) {
+                showError(err instanceof Error ? err.message : 'Không thể reset toàn bộ mật khẩu giáo viên.');
+            } finally {
+                setSaving(false);
+            }
+        },
+    });
+
     const disableTeacher = async () => {
         if (!disableTarget) return;
         if (disableTarget.classCount > 0 && !transferTo) return showError('Vui lòng chọn giáo viên nhận lớp.');
@@ -157,7 +179,8 @@ const TeacherManagementTab: React.FC = () => {
                     <h2 className="text-2xl font-bold text-slate-900">Quản lý giáo viên</h2>
                     <p className="text-sm text-slate-500">Quản lý quyền, trạng thái, lớp phụ trách và mật khẩu tạm.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                    <button disabled={saving} onClick={resetAllPasswords} className="inline-flex h-10 items-center gap-2 rounded-xl bg-amber-500 px-3 text-sm font-semibold text-white disabled:opacity-50"><KeyRound className="h-4 w-4" />Reset toàn bộ mật khẩu</button>
                     <button onClick={() => void fetchTeachers()} className="inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold"><RefreshCw className="h-4 w-4" />Làm mới</button>
                     <button onClick={openCreate} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white"><Plus className="h-4 w-4" />Thêm giáo viên</button>
                 </div>
@@ -225,6 +248,18 @@ const TeacherManagementTab: React.FC = () => {
                 <div className="my-5 select-all rounded-xl bg-slate-900 p-4 font-mono text-lg font-bold tracking-wider text-white">{temporaryPassword}</div>
                 <button onClick={async () => { await navigator.clipboard.writeText(temporaryPassword); showSuccess('Đã sao chép mật khẩu.'); }} className="mr-2 rounded-xl border px-4 py-2 font-semibold">Sao chép</button>
                 <button onClick={() => setTemporaryPassword('')} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Tôi đã lưu lại</button>
+            </div></div>}
+
+            {bulkCredentials.length > 0 && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 p-4"><div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl">
+                <h3 className="text-xl font-bold text-slate-900">Mật khẩu tạm — chỉ hiển thị một lần</h3>
+                <p className="mt-1 text-sm text-red-600">Hãy sao chép và lưu an toàn trước khi đóng cửa sổ này.</p>
+                <div className="mt-4 max-h-[55vh] overflow-auto rounded-xl border"><table className="w-full text-sm"><thead className="sticky top-0 bg-slate-100 text-left"><tr><th className="px-3 py-2">Giáo viên</th><th className="px-3 py-2">Username</th><th className="px-3 py-2">Mật khẩu tạm</th></tr></thead><tbody className="divide-y">
+                    {bulkCredentials.map((credential) => <tr key={credential.username}><td className="px-3 py-2">{credential.fullName}</td><td className="px-3 py-2 font-mono">{credential.username}</td><td className="select-all px-3 py-2 font-mono font-bold">{credential.temporaryPassword}</td></tr>)}
+                </tbody></table></div>
+                <div className="mt-5 flex flex-wrap justify-end gap-2">
+                    <button onClick={async () => { await navigator.clipboard.writeText(bulkCredentials.map((item) => `${item.username}\t${item.temporaryPassword}`).join('\n')); showSuccess('Đã sao chép toàn bộ danh sách.'); }} className="rounded-xl border px-4 py-2 font-semibold">Sao chép toàn bộ</button>
+                    <button onClick={() => setBulkCredentials([])} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Tôi đã lưu danh sách</button>
+                </div>
             </div></div>}
 
             {disableTarget && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"><div className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-xl">

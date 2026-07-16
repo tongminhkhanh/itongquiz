@@ -16,6 +16,13 @@ describe('system management UI safety', () => {
         expect(source.default).toContain('Mật khẩu tạm');
     });
 
+    it('offers a one-time bulk reset flow without exposing stored passwords', async () => {
+        const source = await import('../src/components/TeacherDashboard/TeacherManagementTab?raw');
+        expect(source.default).toContain('reset_all_teacher_passwords');
+        expect(source.default).toContain('Reset toàn bộ mật khẩu');
+        expect(source.default).not.toContain('teacher.password');
+    });
+
     it('opens an HTTPS announcement with noopener and noreferrer', async () => {
         vi.useFakeTimers();
         const opened = { opener: {} };
