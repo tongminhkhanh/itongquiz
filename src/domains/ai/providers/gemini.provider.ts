@@ -10,7 +10,8 @@ import type { IAIProvider, AIProviderType, QuizGenerationOptions, QuizGeneration
 import { buildPrompt, buildFileAttachmentPrompt } from '../shared/prompt-builder';
 import { parseAndRepairJSON, formatMathSymbols } from '../shared/json-repair';
 import { fileToBase64, urlToBase64 } from '../shared/file-utils';
-import { validateLatexSyntax, validateBlankMapping } from '../../../lib/ai/validators/latexValidator';
+import { validateQuestionLatex, validateBlankMapping } from '../../../lib/ai/validators/latexValidator';
+import { normalizeQuestionMath } from '../../../utils/questionMath';
 
 const MODEL_NAME = 'gemini-2.0-flash';
 const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -151,12 +152,10 @@ export class GeminiProvider implements IAIProvider {
                 if (result && Array.isArray(result.questions)) {
                     for (const q of result.questions) {
                         try {
-                            const textToValidate = q.text || q.question;
-                            if (textToValidate) {
-                                validateLatexSyntax(textToValidate);
-                            }
-                            // Validate blanks if available (DRAG_DROP)
-                            if (q.type === 'DRAG_DROP' && q.text && Array.isArray(q.blanks)) {
+                            Object.assign(q, normalizeQuestionMath(q));
+                            validateQuestionLatex(q);
+                            // Validate interactive blanks after math normalization.
+                            if ((q.type === 'DRAG_DROP' || q.type === 'DROPDOWN') && q.text && Array.isArray(q.blanks)) {
                                 validateBlankMapping(q.text, q.blanks);
                             }
                         } catch (validationError: unknown) {

@@ -1,74 +1,59 @@
-import { GeneratedQuestionSchema, GeneratedQuestion } from "./QuestionSchema";
+import { GeneratedQuestionSchema, GeneratedQuestion } from './QuestionSchema';
+import { normalizeMathText } from '../../../utils/mathText';
+import { normalizeQuestionMath, validateQuestionMath } from '../../../utils/questionMath';
 
-/**
- * Kiểm tra số chẵn/lẻ của `$` và đóng mở ngoặc nhọn `{}`
- */
+/** Validate all supported delimiters, braces and common TeX command arguments. */
 export function validateLatexSyntax(text: string): void {
-  const unescapedText = text.replace(/\\\$/g, '');
-  const dollarCount = (unescapedText.match(/\$/g) || []).length;
-
-  if (dollarCount % 2 !== 0) {
-    throw new Error(`Invalid LaTeX syntax: Mismatched '$' symbols (found ${dollarCount}). All math blocks must be closed.`);
-  }
-
-  const mathBlocks = unescapedText.match(/\$([^$]+)\$/g) || [];
-  for (const block of mathBlocks) {
-    let openCount = 0;
-    for (const char of block) {
-      if (char === '{') openCount++;
-      if (char === '}') openCount--;
-      if (openCount < 0) {
-        throw new Error(`Invalid LaTeX syntax: Unmatched '}' found in math block: ${block}`);
-      }
-    }
-    if (openCount !== 0) {
-      throw new Error(`Invalid LaTeX syntax: Unmatched '{' found in math block (missing ${openCount} closing brackets): ${block}`);
-    }
+  const normalized = normalizeMathText(text);
+  const issues = validateQuestionMath({ text: normalized });
+  if (issues.length > 0) {
+    const issue = issues[0];
+    throw new Error(`Invalid LaTeX syntax: ${issue.message}`);
   }
 }
 
-/**
- * Đảm bảo tất cả `[N]` hoặc `[word]` trong text đều khớp với mảng ID/Giá trị của blanks
- */
+/** Validate every string field in a question, including options, statements and pairs. */
+export function validateQuestionLatex(question: unknown): void {
+  const issues = validateQuestionMath(question);
+  if (issues.length > 0) {
+    const issue = issues[0];
+    throw new Error(`Invalid LaTeX syntax in ${issue.field || 'question'}: ${issue.message}`);
+  }
+}
+
+/** Ensure interactive [N]/[word] placeholders map to supplied blanks. */
 export function validateBlankMapping(text: string, blanks: any[]): void {
   const textBlankIds = new Set<string>();
-  const regex = /\[(.*?)\]/g;
-  let match;
+  const regex = /\[([^\]]+)\]/g;
+  let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
-    textBlankIds.add(match[1]);
+    const prefix = text.slice(Math.max(0, match.index - 16), match.index);
+    if (/\\sqrt\s*$/.test(prefix)) continue; // \sqrt[3]{8} is not an answer blank.
+    if (match.index > 0 && text[match.index - 1] === '\\') continue; // \[ display delimiter.
+    textBlankIds.add(match[1].trim());
   }
 
-  // Handle both array of strings (current app) and array of objects (new schema)
   const providedBlankIds = new Set(
-    blanks.map(b => typeof b === 'string' ? b : b.id)
+    blanks.map((blank) => String(typeof blank === 'string' ? blank : blank?.id ?? '')),
   );
 
   for (const id of textBlankIds) {
-    // If ID is numeric (e.g. "1"), check if it corresponds to an index in blanks array
-    const numId = parseInt(id);
-    if (!isNaN(numId) && numId > 0 && numId <= blanks.length) {
-      continue; // Valid index-based blank
-    }
-
-    // Otherwise check for direct ID/value match
+    const numericId = Number.parseInt(id, 10);
+    if (Number.isFinite(numericId) && numericId > 0 && numericId <= blanks.length) continue;
     if (!providedBlankIds.has(id)) {
       throw new Error(`Text contains blank [${id}] but no corresponding blank was provided in blanks array.`);
     }
   }
-
-  // Not enforcing reverse because AI might provide extra options/distractors in blanks array accidentally, 
-  // but it's safer to only throw if the text asks for something missing.
 }
 
-/**
- * Full AI Question validation
- */
+/** Full AI question validation and normalization. */
 export function validateAIQuestion(questionData: any): GeneratedQuestion {
   const parsed = GeneratedQuestionSchema.parse(questionData);
-  const { text, blanks } = parsed.question;
+  const normalizedQuestion = normalizeQuestionMath(parsed.question);
+  const { text, blanks } = normalizedQuestion;
 
   validateBlankMapping(text, blanks);
-  validateLatexSyntax(text);
+  validateQuestionLatex(normalizedQuestion);
 
-  return parsed;
+  return { ...parsed, question: normalizedQuestion } as GeneratedQuestion;
 }

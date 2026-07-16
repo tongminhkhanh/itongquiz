@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { CheckCircle } from 'lucide-react';
 import MathSpan from './MathSpan';
+import { hasMathSyntax } from '../../../../../utils/mathText';
 
 interface LatexDropdownProps {
     options: string[];
@@ -22,7 +23,7 @@ const LatexDropdown: React.FC<LatexDropdownProps> = React.memo(({
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    const hasLatex = options.some(opt => /\$[^$]+\$/.test(opt));
+    const hasLatex = options.some(hasMathSyntax);
 
     // Close dropdown when clicking outside
     useEffect(() => {

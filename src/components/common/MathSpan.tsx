@@ -1,20 +1,33 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { MathJax } from 'better-react-mathjax';
-import { formatMathText } from '../../utils/formatters';
+import { hasMathSyntax, normalizeMathText } from '../../utils/mathText';
+import SafeFormattedText from './SafeFormattedText';
 
-/**
- * MathSpan: Component to render math content seamlessly with better-react-mathjax.
- * This component:
- * 1. Wraps content with <MathJax>
- * 2. Pre-processes text with formatMathText to fix AI output
- */
-const MathSpan: React.FC<{ content: string; className?: string }> = React.memo(({ content, className }) => {
+type WrapperTag = 'span' | 'div' | 'p';
+
+interface MathSpanProps {
+    content: unknown;
+    className?: string;
+    as?: WrapperTag;
+}
+
+/** Shared renderer for safe inline formatting and TeX math. */
+const MathSpan: React.FC<MathSpanProps> = React.memo(({ content, className, as = 'span' }) => {
+    const source = useMemo(() => normalizeMathText(content), [content]);
+    const containsMath = hasMathSyntax(source);
+    const hasDisplayMath = /\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]/.test(source);
+    const Tag = as;
+    const body = <SafeFormattedText content={source} />;
+
     return (
-        <span className={className} style={{ whiteSpace: 'pre-line' }}>
-            <MathJax>{formatMathText(content)}</MathJax>
-        </span>
+        <Tag className={className} style={{ whiteSpace: 'pre-line' }}>
+            {containsMath ? (
+                <MathJax key={source} inline={!hasDisplayMath} dynamic hideUntilTypeset="first">
+                    <span>{body}</span>
+                </MathJax>
+            ) : body}
+        </Tag>
     );
 });
 
 export default MathSpan;
-

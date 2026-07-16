@@ -8,3 +8,5 @@ export * from './formatters';
 export * from './validators';
 export * from './constants';
 export * from './mathJax';
+export * from './mathText';
+export * from './questionMath';

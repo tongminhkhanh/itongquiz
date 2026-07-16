@@ -6,7 +6,6 @@
  */
 import React from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { NewlineMathText } from '../../../../../components/common';
 import type { MCQEditorDraft, MultipleSelectEditorDraft } from '../../../types/quiz-editor.types';
 import { FieldRow, RemoveBtn, AddRowBtn, TextInput } from './shared';
 
@@ -43,15 +42,7 @@ const OptionsEditor: React.FC<OptionsEditorProps> = ({ options, onChange }) => (
                             />
                         )}
                     </div>
-                    {opt.includes('$') && (
-                        <div className="ml-8 text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">
-                            <NewlineMathText
-                                content={opt}
-                                as="span"
-                                className="quiz-text-preserve-inline"
-                            />
-                        </div>
-                    )}
+
                 </div>
             ))}
             {options.length < 8 && (

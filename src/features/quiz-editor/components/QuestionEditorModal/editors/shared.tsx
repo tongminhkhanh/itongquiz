@@ -1,10 +1,8 @@
-/**
- * shared.ts
- * Shared types and mini-components used across all editor forms.
- */
+/** Shared types and mini-components used across all editor forms. */
 import React from 'react';
+import { NewlineMathText } from '../../../../../components/common';
+import { analyzeMathText, hasMathSyntax } from '../../../../../utils/mathText';
 
-/** A consistent label+field wrapper used in every editor form. */
 export const FieldRow: React.FC<{
     label: string;
     hint?: string;
@@ -17,7 +15,29 @@ export const FieldRow: React.FC<{
     </div>
 );
 
-/** A remove button (✕) for list-based fields. */
+export const MathFieldPreview: React.FC<{ value: string; className?: string }> = ({ value, className }) => {
+    if (!hasMathSyntax(value)) return null;
+    const issues = analyzeMathText(value);
+
+    return (
+        <div className={`mt-1.5 rounded-lg border px-2.5 py-2 text-sm ${
+            issues.length > 0
+                ? 'border-red-200 bg-red-50 text-red-700'
+                : 'border-blue-100 bg-blue-50/60 text-gray-700'
+        } ${className || ''}`}>
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider opacity-70">
+                Xem trước công thức
+            </div>
+            <NewlineMathText content={value} as="span" className="quiz-text-preserve-inline" />
+            {issues.length > 0 && (
+                <p className="mt-1 text-xs font-semibold">
+                    ⚠ {issues[0].message}
+                </p>
+            )}
+        </div>
+    );
+};
+
 export const RemoveBtn: React.FC<{ onClick: () => void; title?: string }> = ({
     onClick,
     title = 'Xóa',
@@ -32,7 +52,6 @@ export const RemoveBtn: React.FC<{ onClick: () => void; title?: string }> = ({
     </button>
 );
 
-/** An "add more" text button. */
 export const AddRowBtn: React.FC<{ onClick: () => void; label: string }> = ({
     onClick,
     label,
@@ -46,12 +65,14 @@ export const AddRowBtn: React.FC<{ onClick: () => void; label: string }> = ({
     </button>
 );
 
-/** Controlled text input. */
 export const TextInput: React.FC<
-    React.InputHTMLAttributes<HTMLInputElement> & { value: string }
-> = (props) => (
-    <input
-        {...props}
-        className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm ${props.className ?? ''}`}
-    />
+    React.InputHTMLAttributes<HTMLInputElement> & { value: string; showMathPreview?: boolean }
+> = ({ showMathPreview = true, ...props }) => (
+    <div className="w-full min-w-0">
+        <input
+            {...props}
+            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm ${props.className ?? ''}`}
+        />
+        {showMathPreview && <MathFieldPreview value={props.value} />}
+    </div>
 );

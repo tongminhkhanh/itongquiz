@@ -14,6 +14,8 @@ import { useState, useCallback, useRef } from 'react';
 import type { Quiz, Question } from '../../../types';
 import { questionToDraft, draftToQuestion } from '../utils/questionDraftMapper';
 import type { AnyEditorDraft } from '../types/quiz-editor.types';
+import { normalizeQuestionMath, validateQuestionMath } from '../../../utils/questionMath';
+import { showError } from '../../../utils/toast';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -93,7 +95,14 @@ export function useQuestionEditor({
     const saveEdit = useCallback(() => {
         if (!draft || !editingQuestion || !quiz || !onUpdateQuestions) return;
 
-        const updatedQuestion = draftToQuestion(draft, editingQuestion);
+        const rawQuestion = draftToQuestion(draft, editingQuestion);
+        const updatedQuestion = normalizeQuestionMath(rawQuestion);
+        const mathIssues = validateQuestionMath(updatedQuestion);
+        if (mathIssues.length > 0) {
+            const issue = mathIssues[0];
+            showError(`LaTeX chưa hợp lệ tại ${issue.field || 'nội dung câu hỏi'}: ${issue.message}`, 6000);
+            return;
+        }
 
         let updatedQuestions: Question[];
         if (isAddMode) {

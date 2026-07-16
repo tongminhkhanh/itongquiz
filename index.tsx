@@ -10,16 +10,19 @@ if (!rootElement) {
 }
 
 const mathJaxConfig = {
-  loader: { load: ["input/tex", "output/chtml"] },
+  loader: {
+    load: ['input/tex', 'output/chtml', '[tex]/ams', '[tex]/noerrors', '[tex]/noundefined'],
+  },
   tex: {
+    packages: { '[+]': ['ams', 'noerrors', 'noundefined'] },
     inlineMath: [['$', '$'], ['\\(', '\\)']],
     displayMath: [['$$', '$$'], ['\\[', '\\]']],
-    processEscapes: true
+    processEscapes: true,
   },
   options: {
     ignoreHtmlClass: 'tex2jax_ignore',
-    processHtmlClass: 'tex2jax_process'
-  }
+    processHtmlClass: 'tex2jax_process',
+  },
 };
 
 const root = ReactDOM.createRoot(rootElement);

@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import type { DropdownEditorDraft } from '../../../types/quiz-editor.types';
-import { FieldRow, RemoveBtn, AddRowBtn, TextInput } from './shared';
+import { FieldRow, RemoveBtn, AddRowBtn, MathFieldPreview, TextInput } from './shared';
 
 interface DropdownEditorProps {
     draft: DropdownEditorDraft;
@@ -33,6 +33,7 @@ const DropdownEditor: React.FC<DropdownEditorProps> = ({ draft, onChange }) => (
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                 placeholder="Thủ đô Việt Nam là [1]. Dân số khoảng [2] triệu."
             />
+            <MathFieldPreview value={draft.text} />
         </FieldRow>
 
         {/* Blanks editor */}

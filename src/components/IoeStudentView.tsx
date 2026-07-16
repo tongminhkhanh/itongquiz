@@ -5,7 +5,9 @@ import {
     StudentInfoForm,
     ResultScreen
 } from './student';
-import { formatMathText, formatHtmlText } from '../utils/formatters';
+import { formatMathText } from '../utils/formatters';
+import MathSpan from './common/MathSpan';
+import InteractiveMathText from '../features/quiz-player/components/QuestionRenderer/atoms/InteractiveMathText';
 import { playTingSound, showError } from '../utils/toast';
 
 // 🚀 Agent Skill: Hoist RegExp patterns to module level to avoid re-creation on each render
@@ -14,12 +16,8 @@ const REORDER_QUESTION_REGEX = /^(Reorder(?:\s+the\s+words)?)\s*[:/]\s*/i;
 const SEPARATOR_REGEX = /\s*[:/]\s*/g;
 // Clean up multiple spaces
 const MULTIPLE_SPACES_REGEX = /\s+/g;
-const PLACEHOLDER_REGEX = /_+|\[\.{2,}\]|\[…\]/;
-const SPLIT_PLACEHOLDER_REGEX = /(_+|\[\.{2,}\]|\[…\])/;
-const UNDERSCORE_REGEX = /^_+$/;
-const BRACKET_DOTS_REGEX = /^\[\.{2,}\]$/;
-const BRACKET_ELLIPSIS_REGEX = /^\[…\]$/;
-const UNDERSCORE_FILL_REGEX = /_+/;
+const EXPLICIT_PLACEHOLDER_REGEX = /_{2,}|\[\.{2,}\]|\[…\]/;
+const UNDERSCORE_FILL_REGEX = /_{2,}/;
 const LISTENING_EMOJI_REGEX = /🎧\s*/g;
 const LISTEN_FILL_PREFIX_REGEX = /Listen and fill:\s*/gi;
 
@@ -452,9 +450,10 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                 {/* Question Text - Skip for SHORT_ANSWER since it's rendered inline */}
                                 {currentQuestion.type !== QuestionType.SHORT_ANSWER && (
                                     <div className="text-center mb-10">
-                                        <h2
+                                        <MathSpan
+                                            as="div"
                                             className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-700 leading-relaxed"
-                                            dangerouslySetInnerHTML={{ __html: formatHtmlText(fixReorderQuestion((currentQuestion as any).question || (currentQuestion as any).mainQuestion || '')) }}
+                                            content={fixReorderQuestion((currentQuestion as any).question || (currentQuestion as any).mainQuestion || '')}
                                         />
                                     </div>
                                 )}
@@ -486,9 +485,9 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                         }`}>
                                                         {label}
                                                     </div>
-                                                    <span
+                                                    <MathSpan
                                                         className="text-xl md:text-2xl font-semibold text-slate-600 flex-1"
-                                                        dangerouslySetInnerHTML={{ __html: formatHtmlText(opt.replace(/^[A-D]\.\s*/, '')) }}
+                                                        content={opt.replace(/^[A-D]\.\s*/, '')}
                                                     />
                                                 </button>
                                             );
@@ -568,54 +567,46 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                         <div className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-700 leading-relaxed inline-flex flex-wrap items-center justify-center gap-2">
                                             {(() => {
                                                 const questionText = (currentQuestion as any).question || '';
-                                                // Remove 🎧 emoji for display
-                                                const cleanQuestion = questionText.replace(LISTENING_EMOJI_REGEX, '').replace(LISTEN_FILL_PREFIX_REGEX, '');
-                                                // Check if question has underscore/placeholder pattern
-                                                const hasPlaceholder = PLACEHOLDER_REGEX.test(cleanQuestion);
+                                                const cleanQuestion = questionText
+                                                    .replace(LISTENING_EMOJI_REGEX, '')
+                                                    .replace(LISTEN_FILL_PREFIX_REGEX, '');
+                                                const inputClass = "inline-block w-40 md:w-52 px-4 py-2 text-center text-2xl md:text-3xl font-bold bg-amber-50 border-3 border-amber-300 rounded-xl text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-amber-300/50 focus:border-amber-400 mx-1";
 
-                                                if (hasPlaceholder) {
-                                                    // Split by underscore patterns: _, __, ___, ____, or [...] 
-                                                    const parts = cleanQuestion.split(SPLIT_PLACEHOLDER_REGEX);
-
-                                                    return parts.map((part: string, idx: number) => {
-                                                        // Check if this part is a blank placeholder
-                                                        if (UNDERSCORE_REGEX.test(part) || BRACKET_DOTS_REGEX.test(part) || BRACKET_ELLIPSIS_REGEX.test(part)) {
-                                                            return (
+                                                if (EXPLICIT_PLACEHOLDER_REGEX.test(cleanQuestion)) {
+                                                    const interactiveQuestion = cleanQuestion.replace(EXPLICIT_PLACEHOLDER_REGEX, '[1]');
+                                                    return (
+                                                        <InteractiveMathText
+                                                            content={interactiveQuestion}
+                                                            renderBlank={(_blankId, key) => (
                                                                 <input
-                                                                    key={idx}
+                                                                    key={key}
+                                                                    aria-label="Câu trả lời ngắn"
                                                                     type="text"
                                                                     value={answers[currentQuestion.id] || ''}
-                                                                    onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                                                                    onChange={(event) => handleAnswerChange(currentQuestion.id, event.target.value)}
                                                                     placeholder="..."
                                                                     autoFocus
-                                                                    className="inline-block w-40 md:w-52 px-4 py-2 text-center text-2xl md:text-3xl font-bold bg-amber-50 border-3 border-amber-300 rounded-xl text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-amber-300/50 focus:border-amber-400 mx-1"
+                                                                    className={inputClass}
                                                                 />
-                                                            );
-                                                        }
-                                                        // Regular text
-                                                        return (
-                                                            <span
-                                                                key={idx}
-                                                                dangerouslySetInnerHTML={{ __html: formatHtmlText(part) }}
-                                                            />
-                                                        );
-                                                    });
-                                                } else {
-                                                    // No placeholder - show question + input below
-                                                    return (
-                                                        <>
-                                                            <span dangerouslySetInnerHTML={{ __html: formatHtmlText(cleanQuestion) }} />
-                                                            <input
-                                                                type="text"
-                                                                value={answers[currentQuestion.id] || ''}
-                                                                onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                                                                placeholder="Type your answer..."
-                                                                autoFocus
-                                                                className="inline-block w-48 md:w-64 px-4 py-2 text-center text-2xl md:text-3xl font-bold bg-amber-50 border-3 border-amber-300 rounded-xl text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-amber-300/50 focus:border-amber-400 ml-2"
-                                                            />
-                                                        </>
+                                                            )}
+                                                        />
                                                     );
                                                 }
+
+                                                return (
+                                                    <>
+                                                        <MathSpan content={cleanQuestion} />
+                                                        <input
+                                                            aria-label="Câu trả lời ngắn"
+                                                            type="text"
+                                                            value={answers[currentQuestion.id] || ''}
+                                                            onChange={(event) => handleAnswerChange(currentQuestion.id, event.target.value)}
+                                                            placeholder="Type your answer..."
+                                                            autoFocus
+                                                            className="inline-block w-48 md:w-64 px-4 py-2 text-center text-2xl md:text-3xl font-bold bg-amber-50 border-3 border-amber-300 rounded-xl text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-amber-300/50 focus:border-amber-400 ml-2"
+                                                        />
+                                                    </>
+                                                );
                                             })()}
                                         </div>
 
@@ -666,7 +657,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                             return (
                                                 <div key={itemKey} className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border-2 border-slate-200">
                                                     <span className="text-lg text-slate-700 flex-1 mr-4 font-medium">
-                                                        {String.fromCharCode(97 + i)}. <span dangerouslySetInnerHTML={{ __html: formatHtmlText(item.statement) }} />
+                                                        {String.fromCharCode(97 + i)}. <MathSpan content={item.statement} />
                                                     </span>
                                                     <div className="flex gap-2">
                                                         <button

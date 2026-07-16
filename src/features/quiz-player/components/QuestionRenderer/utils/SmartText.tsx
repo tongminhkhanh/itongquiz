@@ -1,5 +1,6 @@
 import React from 'react';
 import MathSpan from '../atoms/MathSpan';
+import { hasMathSyntax } from '../../../../../utils/mathText';
 
 interface SmartTextProps {
     content: string;
@@ -16,7 +17,7 @@ const SmartText: React.FC<SmartTextProps> = ({ content, className }) => {
     const text = String(content);
     
     // If it contains math delimiters or HTML-like patterns
-    const hasMath = text.includes('$') || text.includes('\\(') || text.includes('\\[');
+    const hasMath = hasMathSyntax(text);
     const hasHtml = /<[^>]+>/.test(text);
 
     if (hasMath || hasHtml) {

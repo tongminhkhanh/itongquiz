@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import type { DragDropEditorDraft } from '../../../types/quiz-editor.types';
-import { FieldRow, RemoveBtn, AddRowBtn, TextInput } from './shared';
+import { FieldRow, RemoveBtn, AddRowBtn, MathFieldPreview, TextInput } from './shared';
 
 interface DragDropEditorProps {
     draft: DragDropEditorDraft;
@@ -24,6 +24,7 @@ const DragDropEditor: React.FC<DragDropEditorProps> = ({ draft, onChange }) => (
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                 placeholder="The sky is [blue] and the grass is [green]."
             />
+            <MathFieldPreview value={draft.text} />
         </FieldRow>
 
         <FieldRow label="Các từ đáp án đúng (blanks)">
