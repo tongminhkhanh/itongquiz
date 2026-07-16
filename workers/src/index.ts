@@ -55,6 +55,22 @@ export default {
         const path = url.pathname;
         const method = request.method;
 
+        // Math observability is self-contained and must not be shadowed by legacy/public handlers.
+        // Dispatch it before the phieu subdomain and shared-token middleware.
+        if (
+            path.startsWith('/api/math/telemetry') ||
+            path.startsWith('/api/admin/math-audit') ||
+            path.startsWith('/api/admin/math-telemetry')
+        ) {
+            if (path === '/api/math/telemetry' && method === 'POST') {
+                const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 30 });
+                if (rateLimitRes) return addCors(rateLimitRes, request);
+            }
+
+            const mathResponse = await handleMathObservabilityRoutes(request, env, path, method);
+            if (mathResponse) return addCors(mathResponse, request);
+        }
+
         const phieuSubdomainResponse = await handlePhieuSubdomain(request, env);
         if (phieuSubdomainResponse) return addCors(phieuSubdomainResponse, request);
 
@@ -113,16 +129,6 @@ export default {
                 const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 60 });
                 if (rateLimitRes) return addCors(rateLimitRes, request);
                 response = await handleHomeworkRoutes(request, env, path, method);
-            } else if (
-                path.startsWith('/api/math/telemetry') ||
-                path.startsWith('/api/admin/math-audit') ||
-                path.startsWith('/api/admin/math-telemetry')
-            ) {
-                if (path === '/api/math/telemetry' && method === 'POST') {
-                    const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 30 });
-                    if (rateLimitRes) return addCors(rateLimitRes, request);
-                }
-                response = await handleMathObservabilityRoutes(request, env, path, method);
             } else if (path.startsWith('/api/analytics')) {
                 response = await handleAnalyticsRoutes(request, env, path, method);
             } else if (path.startsWith('/api/test-bank')) {
