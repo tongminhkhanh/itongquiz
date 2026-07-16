@@ -57,10 +57,8 @@ export async function handlePhieuSubdomain(request: Request, env: Env): Promise<
     const userAgent = request.headers.get('User-Agent') || '';
     const isBot = /bot|crawl|spider|facebookexternalhit|zalo|zalocrawler|telegram|whatsapp|viber|slack|twitter|linkedin|line|kakaotalk|discordbot|iframely/i.test(userAgent);
 
-    await db.prepare('UPDATE phieu_public_links SET view_count = view_count + 1 WHERE public_token = ?')
-        .bind(publicToken)
-        .run();
-
+    // The SPA fetches the public JSON after redirect. Count that content fetch once
+    // instead of counting both this redirect and the API request.
     if (isBot) {
         return new Response(renderOgHtml(record, publicToken), {
             headers: {
@@ -108,6 +106,87 @@ const getPublicLinkScope = async (db: D1Database, publicToken: string): Promise<
         LIMIT 1
     `).bind(publicToken).first<any>();
 
+type ResultScope = {
+    result_id: string;
+    student_id: string;
+    student_name: string;
+    class_id: string;
+    teacher_username: string;
+    mon_hoc: string;
+    ten_bai_tap: string;
+    ngay_lam_bai: string;
+    tong_cau: number;
+    so_cau_dung: number;
+    so_cau_sai: number;
+    diem_so: number;
+};
+
+const resultSubmissionKey = (resultId: string): string => `result:${resultId}`;
+
+const getResultScope = async (
+    db: D1Database,
+    resultId: string,
+    user: PhieuScopeUser,
+): Promise<ResultScope | null> => db.prepare(`
+    SELECT
+        CAST(r.id AS TEXT) AS result_id,
+        COALESCE(s.id, 'result:' || CAST(r.id AS TEXT)) AS student_id,
+        r.student_name,
+        c.id AS class_id,
+        c.teacher_username,
+        COALESCE(q.category, '') AS mon_hoc,
+        r.quiz_title AS ten_bai_tap,
+        r.submitted_at AS ngay_lam_bai,
+        r.total_questions AS tong_cau,
+        r.correct_count AS so_cau_dung,
+        MAX(0, r.total_questions - r.correct_count) AS so_cau_sai,
+        r.score AS diem_so
+    FROM results r
+    JOIN classes c
+      ON LOWER(TRIM(c.name)) = LOWER(TRIM(r.class_name))
+     AND COALESCE(c.archived_at, '') = ''
+    LEFT JOIN students s
+      ON s.class_id = c.id
+     AND LOWER(TRIM(s.full_name)) = LOWER(TRIM(r.student_name))
+     AND COALESCE(s.archived_at, '') = ''
+    LEFT JOIN quizzes q ON q.id = r.quiz_id
+    WHERE CAST(r.id AS TEXT) = ?
+    ORDER BY CASE WHEN c.teacher_username = ? THEN 0 ELSE 1 END, c.id
+    LIMIT 1
+`).bind(resultId, user.username).first<ResultScope>();
+
+const getResultPhieuRecord = async (db: D1Database, resultId: string): Promise<any | null> => {
+    const canonicalKey = resultSubmissionKey(resultId);
+    return db.prepare(`
+        SELECT *
+        FROM phieu_nhanxet
+        WHERE submission_id IN (?, ?)
+        ORDER BY CASE WHEN submission_id = ? THEN 0 ELSE 1 END
+        LIMIT 1
+    `).bind(canonicalKey, resultId, canonicalKey).first<any>();
+};
+
+const mapPublicLink = (row: any): any => row ? ({
+    phieuId: String(row.phieu_id || row.phieuId || ''),
+    studentName: String(row.student_name || row.studentName || ''),
+    publicToken: String(row.public_token || row.publicToken || ''),
+    url: `https://${PUBLIC_PHIEU_HOST}/p/${encodeURIComponent(String(row.public_token || row.publicToken || ''))}`,
+}) : null;
+
+const getActivePublicLinkByPhieuId = async (db: D1Database, phieuId: string): Promise<any | null> => {
+    const row = await db.prepare(`
+        SELECT l.phieu_id, l.batch_id, l.public_token, l.expires_at, p.student_name
+        FROM phieu_public_links l
+        JOIN phieu_nhanxet p ON p.id = l.phieu_id
+        WHERE l.phieu_id = ?
+          AND l.is_active = 1
+          AND (l.expires_at IS NULL OR l.expires_at > datetime('now'))
+        ORDER BY l.created_at DESC, l.id DESC
+        LIMIT 1
+    `).bind(phieuId).first<any>();
+    return row ? { ...mapPublicLink(row), batchId: String(row.batch_id || '') } : null;
+};
+
 export async function handlePhieuRoutes(
     request: Request,
     env: Env,
@@ -138,6 +217,51 @@ export async function handlePhieuRoutes(
             class_id: scope.class_id,
             created_by: user.username,
         }, env.OG_IMAGES);
+    }
+
+    const resultMatch = path.match(/^\/api\/phieu\/results\/([^/]+)$/);
+    if (resultMatch) {
+        const resultId = decodeURIComponent(resultMatch[1]).trim();
+        if (!resultId) return errorResponse('Missing result id');
+
+        const scope = await getResultScope(env.DB, resultId, user);
+        if (!scope) return errorResponse('Result not found or class is inactive', 404);
+        if (!canAccessTeacherScope(user, scope.teacher_username)) return errorResponse('Forbidden', 403);
+
+        const existing = await getResultPhieuRecord(env.DB, resultId);
+        if (method === 'GET') {
+            const link = existing ? await getActivePublicLinkByPhieuId(env.DB, existing.id) : null;
+            return jsonResponse({
+                status: 'success',
+                data: { phieu: existing ? mapPhieu(existing) : null, link },
+            });
+        }
+
+        if (method === 'POST') {
+            const body = await parseBody(request);
+            if (!body) return errorResponse('Invalid JSON body');
+            const data = body.data || body;
+            const score = Number(scope.diem_so) || 0;
+            return handleUpsertPhieu(env.DB, {
+                ...data,
+                id: existing?.id,
+                submission_id: existing?.submission_id || resultSubmissionKey(resultId),
+                student_id: scope.student_id,
+                student_name: scope.student_name,
+                class_id: scope.class_id,
+                mon_hoc: data.mon_hoc || scope.mon_hoc,
+                ten_bai_tap: scope.ten_bai_tap,
+                ngay_lam_bai: scope.ngay_lam_bai,
+                tong_cau: Number(scope.tong_cau) || 0,
+                so_cau_dung: Number(scope.so_cau_dung) || 0,
+                so_cau_sai: Number(scope.so_cau_sai) || 0,
+                diem_so: score,
+                xep_loai: getXepLoai(score),
+                created_by: user.username,
+            }, env.OG_IMAGES);
+        }
+
+        return errorResponse('Method not allowed', 405);
     }
 
     const submissionMatch = path.match(/^\/api\/phieu\/submissions\/([^/]+)$/);
@@ -196,17 +320,23 @@ export async function handlePublicPhieuApi(db: D1Database, path: string, method:
     await db.prepare('UPDATE phieu_public_links SET view_count = view_count + 1 WHERE public_token = ?')
         .bind(publicToken)
         .run();
+    await db.prepare(`
+        UPDATE phieu_batch
+        SET view_count = view_count + 1
+        WHERE id = (SELECT batch_id FROM phieu_public_links WHERE public_token = ?)
+    `).bind(publicToken).run();
 
     return new Response(JSON.stringify({
         status: 'success',
         data: {
-            title: record.batch_title || record.ten_bai_tap || 'Phieu Ket Qua Hoc Tap',
+            title: record.batch_title || record.ten_bai_tap || 'Phiếu Kết Quả Học Tập',
             phieu: mapPhieu(record),
         },
     }), {
         headers: {
             'Content-Type': 'application/json',
             'X-Robots-Tag': 'noindex, nofollow',
+            'Cache-Control': 'no-store',
         },
     });
 }
@@ -217,12 +347,17 @@ export async function handleUpsertPhieu(db: D1Database, body: any, ogImages?: R2
     if (!data.student_id) return errorResponse('Missing student_id');
 
     const now = new Date().toISOString();
-    const existing = await db.prepare('SELECT id, version FROM phieu_nhanxet WHERE submission_id = ?')
+    const existing = await db.prepare('SELECT id, version, created_by FROM phieu_nhanxet WHERE submission_id = ?')
         .bind(data.submission_id)
         .first<any>();
-    const id = data.id || existing?.id || `phieu-${crypto.randomUUID().slice(0, 12)}`;
-    const score = Number(data.diem_so) || 0;
+    if (existing && data.id && String(data.id) !== String(existing.id)) {
+        return errorResponse('Phieu id does not match submission', 409);
+    }
+    const id = existing?.id || data.id || `phieu-${crypto.randomUUID().slice(0, 12)}`;
+    const rawScore = Number(data.diem_so);
+    const score = Number.isFinite(rawScore) ? Math.max(0, Math.min(10, rawScore)) : 0;
     const xepLoai = data.xep_loai || getXepLoai(score);
+    const createdBy = existing?.created_by || data.created_by || 'teacher';
 
     if (existing) {
         await db.prepare(`
@@ -251,7 +386,7 @@ export async function handleUpsertPhieu(db: D1Database, body: any, ogImages?: R2
             data.noi_dung_co_gang || '',
             data.loi_dong_vien || '',
             data.status || 'draft',
-            data.created_by || 'teacher',
+            createdBy,
             now,
             data.submission_id
         ).run();
@@ -284,13 +419,16 @@ export async function handleUpsertPhieu(db: D1Database, body: any, ogImages?: R2
             data.noi_dung_co_gang || '',
             data.loi_dong_vien || '',
             data.status || 'draft',
-            data.created_by || 'teacher',
+            createdBy,
             now,
             now
         ).run();
     }
 
-    const saved = await db.prepare('SELECT * FROM phieu_nhanxet WHERE id = ?').bind(id).first<any>();
+    const saved = await db.prepare('SELECT * FROM phieu_nhanxet WHERE submission_id = ?')
+        .bind(data.submission_id)
+        .first<any>();
+    if (!saved) return errorResponse('Unable to load saved phieu', 500);
 
     // Invalidate R2 OG cache on update
     if (ogImages) {
@@ -316,57 +454,94 @@ export async function handleGetPhieuBySubmission(db: D1Database, body: any): Pro
 
 export async function handlePublishPhieuBatch(db: D1Database, body: any): Promise<Response> {
     const data = body.data || body;
-    const phieuIds: string[] = Array.isArray(data.phieuIds) ? data.phieuIds : [];
+    const phieuIds: string[] = Array.isArray(data.phieuIds)
+        ? Array.from(new Set(data.phieuIds.map(String).map((id: string) => id.trim()).filter(Boolean)))
+        : [];
     if (phieuIds.length === 0) return errorResponse('Missing phieuIds');
 
     const now = new Date().toISOString();
-    const batchId = `pb-${crypto.randomUUID().slice(0, 12)}`;
-    // undefined / null / NaN → link vĩnh viễn (expires_at = NULL)
+    const newBatchId = `pb-${crypto.randomUUID().slice(0, 12)}`;
     const rawDays = data.expiresInDays != null ? Number(data.expiresInDays) : NaN;
     const expiresAt = Number.isFinite(rawDays) && rawDays > 0
         ? new Date(Date.now() + rawDays * 24 * 60 * 60 * 1000).toISOString()
         : null;
 
-    await db.prepare(`
-        INSERT INTO phieu_batch (id, assignment_id, class_id, teacher_id, title, created_at, expires_at, view_count, is_active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1)
-    `).bind(
-        batchId,
-        data.assignmentId || '',
-        data.classId || '',
-        data.teacherId || 'teacher',
-        data.title || 'Phieu Ket Qua Hoc Tap',
-        now,
-        expiresAt
-    ).run();
-
-    const links = [];
+    const phieuRows: any[] = [];
+    const linksByPhieuId = new Map<string, any>();
     for (const phieuId of phieuIds) {
         const phieu = await db.prepare('SELECT id, student_name FROM phieu_nhanxet WHERE id = ?')
             .bind(phieuId)
             .first<any>();
-        if (!phieu) continue;
-
-        const publicToken = createPublicToken();
-        const linkId = `pl-${crypto.randomUUID().slice(0, 12)}`;
-        await db.prepare('INSERT OR IGNORE INTO phieu_batch_items (batch_id, phieu_id, student_name) VALUES (?, ?, ?)')
-            .bind(batchId, phieu.id, phieu.student_name)
-            .run();
-        await db.prepare(`
-            INSERT INTO phieu_public_links (id, phieu_id, batch_id, public_token, is_active, expires_at, view_count, created_at)
-            VALUES (?, ?, ?, ?, 1, ?, 0, ?)
-        `).bind(linkId, phieu.id, batchId, publicToken, expiresAt, now).run();
-        await db.prepare("UPDATE phieu_nhanxet SET status = 'published', updated_at = ? WHERE id = ?")
-            .bind(now, phieu.id)
-            .run();
-
-        links.push({
-            phieuId: phieu.id,
-            studentName: phieu.student_name,
-            publicToken,
-            url: `https://${PUBLIC_PHIEU_HOST}/p/${publicToken}`,
-        });
+        if (!phieu) return errorResponse('Phieu not found', 404);
+        phieuRows.push(phieu);
+        const existingLink = await getActivePublicLinkByPhieuId(db, phieu.id);
+        if (existingLink) linksByPhieuId.set(phieu.id, existingLink);
     }
+
+    const missingRows = phieuRows.filter((phieu) => !linksByPhieuId.has(phieu.id));
+    let insertedCount = 0;
+    if (missingRows.length > 0) {
+        await db.prepare(`
+            INSERT INTO phieu_batch (id, assignment_id, class_id, teacher_id, title, created_at, expires_at, view_count, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1)
+        `).bind(
+            newBatchId,
+            data.assignmentId || '',
+            data.classId || '',
+            data.teacherId || 'teacher',
+            data.title || 'Phiếu Kết Quả Học Tập',
+            now,
+            expiresAt
+        ).run();
+
+        for (const phieu of missingRows) {
+            const publicToken = createPublicToken();
+            const linkId = `pl-${crypto.randomUUID().slice(0, 12)}`;
+            const inserted = await db.prepare(`
+                INSERT INTO phieu_public_links (
+                    id, phieu_id, batch_id, public_token, is_active, expires_at, view_count, created_at
+                )
+                SELECT ?, ?, ?, ?, 1, ?, 0, ?
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM phieu_public_links
+                    WHERE phieu_id = ?
+                      AND is_active = 1
+                      AND (expires_at IS NULL OR expires_at > datetime('now'))
+                )
+            `).bind(linkId, phieu.id, newBatchId, publicToken, expiresAt, now, phieu.id).run();
+
+            if (Number((inserted as any)?.meta?.changes || 0) > 0) {
+                insertedCount += 1;
+                await db.prepare('INSERT OR IGNORE INTO phieu_batch_items (batch_id, phieu_id, student_name) VALUES (?, ?, ?)')
+                    .bind(newBatchId, phieu.id, phieu.student_name)
+                    .run();
+                await db.prepare("UPDATE phieu_nhanxet SET status = 'published', updated_at = ? WHERE id = ?")
+                    .bind(now, phieu.id)
+                    .run();
+            }
+
+            const activeLink = await getActivePublicLinkByPhieuId(db, phieu.id);
+            if (!activeLink) return errorResponse('Unable to create public link', 500);
+            linksByPhieuId.set(phieu.id, activeLink);
+        }
+
+        if (insertedCount === 0) {
+            await db.prepare('DELETE FROM phieu_batch WHERE id = ?').bind(newBatchId).run();
+        }
+    }
+
+    const links = phieuRows.map((phieu) => {
+        const link = linksByPhieuId.get(phieu.id);
+        return {
+            phieuId: link.phieuId,
+            studentName: link.studentName,
+            publicToken: link.publicToken,
+            url: link.url,
+        };
+    });
+    const batchId = insertedCount > 0
+        ? newBatchId
+        : String(linksByPhieuId.get(phieuRows[0].id)?.batchId || '');
 
     return jsonResponse({ status: 'success', data: { batchId, links } });
 }
@@ -382,10 +557,11 @@ export async function handleDeactivatePublicPhieuLink(db: D1Database, body: any)
 
 async function getPublicPhieuRecord(db: D1Database, publicToken: string): Promise<any | null> {
     return await db.prepare(`
-        SELECT p.*, b.title as batch_title
+        SELECT p.*, b.title as batch_title, t.full_name as teacher_full_name
         FROM phieu_public_links l
         JOIN phieu_nhanxet p ON p.id = l.phieu_id
         LEFT JOIN phieu_batch b ON b.id = l.batch_id
+        LEFT JOIN teachers t ON t.username = p.created_by
         WHERE l.public_token = ?
           AND l.is_active = 1
           AND (l.expires_at IS NULL OR l.expires_at > datetime('now'))
@@ -407,7 +583,7 @@ function mapPhieu(row: any): any {
         so_cau_dung: Number(row.so_cau_dung) || 0,
         so_cau_sai: Number(row.so_cau_sai) || 0,
         diem_so: Number(row.diem_so) || 0,
-        xep_loai: row.xep_loai || 'Trung binh',
+        xep_loai: row.xep_loai || 'Trung bình',
         nhan_xet_mode: row.nhan_xet_mode || 'ai',
         nhan_xet_style: row.nhan_xet_style || 'nhe_nhang',
         nhan_xet: row.nhan_xet || '',
@@ -416,6 +592,7 @@ function mapPhieu(row: any): any {
         status: row.status || 'draft',
         version: Number(row.version) || 1,
         created_by: row.created_by || 'teacher',
+        teacher_name: row.teacher_full_name || row.teacher_name || row.created_by || '',
         created_at: row.created_at || '',
         updated_at: row.updated_at || '',
     };
@@ -428,11 +605,11 @@ function createPublicToken(): string {
 }
 
 function getXepLoai(score: number): string {
-    if (score >= 9) return 'Xuat sac';
-    if (score >= 8) return 'Gioi';
-    if (score >= 6.5) return 'Kha';
-    if (score >= 5) return 'Trung binh';
-    return 'Yeu';
+    if (score >= 9) return 'Xuất sắc';
+    if (score >= 8) return 'Giỏi';
+    if (score >= 6.5) return 'Khá';
+    if (score >= 5) return 'Trung bình';
+    return 'Yếu';
 }
 
 function renderOgImageSvg(record: any): string {
