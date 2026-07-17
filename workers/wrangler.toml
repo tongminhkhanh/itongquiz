@@ -27,10 +27,6 @@ bucket_name = "itongquiz-certificates"
 pattern = "phieu.thitong.site/*"
 zone_name = "thitong.site"
 
-[[routes]]
-pattern = "quiz-api.thitong.site/*"
-zone_name = "thitong.site"
-
 [vars]
 CLIPROXY_API = "https://api.thitong.site/v1"
 R2_PUBLIC_URL = "https://r2.thitong.site"
