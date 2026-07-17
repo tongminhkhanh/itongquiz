@@ -331,13 +331,14 @@ export const useQuizStore = create<QuizState>()(
 
             loadResults: async () => {
                 try {
+                    set({ error: null });
                     const data = await callApi<any>('get_results');
 
                     // Handle both legacy array format and new object format { data: [], meta: {} }
                     const rawResults = Array.isArray(data) ? data : (data?.data || []);
 
                     if (!Array.isArray(rawResults)) {
-                        set({ results: [] });
+                        set({ results: [], error: null });
                         return;
                     }
                     const results: StudentResult[] = rawResults.map((row: any) => ({
@@ -358,9 +359,12 @@ export const useQuizStore = create<QuizState>()(
                             return row.answers || {};
                         })()
                     })).filter(r => !!r.studentName);
-                    set({ results });
+                    set({ results, error: null });
                 } catch (err: any) {
                     console.error('Failed to load results:', err);
+                    set({
+                        error: err?.message || 'Không thể tải kết quả học tập.',
+                    });
                 }
             },
 

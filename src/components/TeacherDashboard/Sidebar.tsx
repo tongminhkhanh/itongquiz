@@ -51,12 +51,36 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
     const authStore = useAuthStore();
     const [openGroup, setOpenGroup] = useState<GroupKey>(() => groupForTab(activeTab));
+    const [isDesktopViewport, setIsDesktopViewport] = useState(() => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true;
+        return window.matchMedia('(min-width: 1024px)').matches;
+    });
 
     useEffect(() => {
         const nextGroup = groupForTab(activeTab);
         setOpenGroup(nextGroup);
         localStorage.setItem('itongquiz_dashboard_open_group', nextGroup);
     }, [activeTab]);
+
+    useEffect(() => {
+        if (typeof window.matchMedia !== 'function') return;
+        const desktopQuery = window.matchMedia('(min-width: 1024px)');
+        const syncViewport = () => setIsDesktopViewport(desktopQuery.matches);
+        syncViewport();
+        desktopQuery.addEventListener('change', syncViewport);
+        return () => desktopQuery.removeEventListener('change', syncViewport);
+    }, []);
+
+    useEffect(() => {
+        if (!isMobileOpen) return;
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setIsMobileOpen(false);
+        };
+        window.addEventListener('keydown', closeOnEscape);
+        return () => window.removeEventListener('keydown', closeOnEscape);
+    }, [isMobileOpen, setIsMobileOpen]);
+
+    const isMobileDrawerInactive = !isDesktopViewport && !isMobileOpen;
 
     // Keep prop referenced for future user-menu action
     void onLogout;
@@ -166,6 +190,9 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
 
             <aside
+                aria-label="Điều hướng quản trị"
+                aria-hidden={isMobileDrawerInactive || undefined}
+                inert={isMobileDrawerInactive || undefined}
                 className={`fixed top-0 left-0 z-50 h-[calc(100vh-64px)] lg:h-full pb-20 lg:pb-0 w-64 bg-slate-50 border-r border-slate-200 flex flex-col transition-transform duration-300 ease-in-out overflow-y-auto ${
                     isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                 }`}

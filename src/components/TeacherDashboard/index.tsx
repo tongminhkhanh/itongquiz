@@ -5,7 +5,10 @@ import { Key, X, Save, Loader2, Bell, Search } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
-import { useTeacherDashboardUIStore } from '../../stores/useTeacherDashboardUIStore';
+import {
+    type TeacherDashboardTab,
+    useTeacherDashboardUIStore,
+} from '../../stores/useTeacherDashboardUIStore';
 import { setStripAnswersEnabled } from '../../services/googleSheetService';
 import { cacheService } from '../../services/CacheService';
 import Sidebar from './Sidebar';
@@ -18,6 +21,22 @@ import PasswordChangeDialog from '../common/PasswordChangeDialog';
 import { callApi } from '../../services/apiAdapter';
 import { getJWTPurpose, getStoredJWTToken } from '../../services/api/auth';
 import { ApiError } from '../../services/api/errors';
+import { areClassNamesEqual } from '../../utils/classMatching';
+
+type ResultsLoadState = 'loading' | 'success' | 'error';
+
+const DASHBOARD_SEARCH_ITEMS: Array<{ tab: TeacherDashboardTab; label: string; keywords: string }> = [
+    { tab: 'overview', label: 'Tổng quan', keywords: 'dashboard trang chủ thống kê' },
+    { tab: 'create', label: 'Tạo đề mới', keywords: 'tạo bài kiểm tra' },
+    { tab: 'manage', label: 'Đề kiểm tra', keywords: 'quản lý sửa đề' },
+    { tab: 'results', label: 'Kết quả học tập', keywords: 'điểm bài nộp' },
+    { tab: 'classes', label: 'Lớp học', keywords: 'học sinh lớp' },
+    { tab: 'assignments', label: 'Giao bài', keywords: 'bài tập hạn nộp' },
+    { tab: 'homework', label: 'Bài tập tự luận', keywords: 'phiếu bài tập ai' },
+    { tab: 'live-exam', label: 'Thi trực tiếp', keywords: 'live exam phòng thi' },
+    { tab: 'certificates', label: 'Cấp chứng nhận', keywords: 'giấy khen chứng chỉ' },
+    { tab: 'announcements', label: 'Thông báo', keywords: 'cài đặt hệ thống' },
+];
 
 // Lazy load tab components
 const OverviewTab = React.lazy(() => import('./OverviewTab'));
@@ -49,6 +68,9 @@ const TeacherDashboard: React.FC = () => {
     const setActiveTab = useTeacherDashboardUIStore((state) => state.setActiveTab);
     const clearAssignmentComposerDraft = useTeacherDashboardUIStore((state) => state.clearAssignmentComposerDraft);
     const [passwordGate, setPasswordGate] = useState<{ token: string; requireCurrentPassword: boolean } | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [resultsLoadState, setResultsLoadState] = useState<ResultsLoadState>('loading');
+    const [resultsLoadError, setResultsLoadError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!authStore.isLoggedIn) return;
@@ -81,6 +103,22 @@ const TeacherDashboard: React.FC = () => {
         return () => { active = false; };
     }, [authStore.isLoggedIn, authStore.username]);
 
+    const loadTeacherResults = React.useCallback(async () => {
+        setResultsLoadState('loading');
+        setResultsLoadError(null);
+        useQuizStore.getState().setError(null);
+        await useQuizStore.getState().loadResults();
+
+        const loadError = useQuizStore.getState().error;
+        if (loadError) {
+            setResultsLoadState('error');
+            setResultsLoadError(loadError);
+            return;
+        }
+
+        setResultsLoadState('success');
+    }, []);
+
     // 🔐 ANTI-CHEAT: Disable answer stripping for teacher views
     // Also force reload quizzes from server to get fresh data with answers
     useEffect(() => {
@@ -92,7 +130,7 @@ const TeacherDashboard: React.FC = () => {
         quizStore.loadQuizzes();
 
         // AUTO-LOAD RESULTS for Teacher Dashboard so it's not empty
-        quizStore.loadResults();
+        void loadTeacherResults();
 
         // Check JWT expiry on mount
         checkAndWarnJWTExpiry();
@@ -106,7 +144,7 @@ const TeacherDashboard: React.FC = () => {
             setStripAnswersEnabled(true);
             clearInterval(expiryCheckInterval);
         };
-    }, []);
+    }, [loadTeacherResults]);
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -129,15 +167,12 @@ const TeacherDashboard: React.FC = () => {
     const teacherDisplayName = (authStore.teacherName || '').trim() || authStore.username || 'Giáo viên';
     const teacherInitial = teacherDisplayName.charAt(0).toUpperCase();
 
-    // Filter results by teacherClass (Flexible matching: case-insensitive & partial)
+    // Filter results by the exact normalized class name to avoid leaking another class's data.
     const filteredResultsByClass = authStore.isAdmin || !authStore.teacherClass
         ? quizStore.results
-        : quizStore.results.filter(r => {
-            const stuClass = (r.studentClass || '').toLowerCase().replace(/\s+/g, '');
-            const teaClass = (authStore.teacherClass || '').toLowerCase().replace(/\s+/g, '');
-            // E.g., if teacher is "3A" and student inputs "3A " or "3a"
-            return stuClass.includes(teaClass) || teaClass.includes(stuClass);
-        });
+        : quizStore.results.filter((result) => (
+            areClassNamesEqual(result.studentClass, authStore.teacherClass)
+        ));
 
     // Dynamic title logic based on activeTab
     const getPageTitle = () => {
@@ -160,6 +195,25 @@ const TeacherDashboard: React.FC = () => {
             case 'live-exam': return 'Thi Trực Tiếp';
             default: return 'Bảng điều khiển';
         }
+    };
+
+    const handleDashboardSearch = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const normalizedQuery = searchQuery.trim().toLocaleLowerCase('vi-VN');
+        if (!normalizedQuery) return;
+
+        const destination = DASHBOARD_SEARCH_ITEMS.find((item) => {
+            const searchableText = `${item.label} ${item.keywords}`.toLocaleLowerCase('vi-VN');
+            return searchableText.includes(normalizedQuery);
+        });
+
+        if (!destination) {
+            showError('Không tìm thấy chức năng phù hợp.');
+            return;
+        }
+
+        setActiveTab(destination.tab);
+        setSearchQuery('');
     };
 
     // Handle update access code
@@ -243,51 +297,74 @@ const TeacherDashboard: React.FC = () => {
 
                     {/* Right side: Search, Notifications, Profile */}
                     <div className="flex items-center gap-2 md:gap-4">
-                        <div className="hidden md:flex relative">
-                            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <form onSubmit={handleDashboardSearch} className="relative hidden md:block">
+                            <label htmlFor="teacher-dashboard-search" className="sr-only">Tìm chức năng</label>
                             <input
-                                type="text"
-                                placeholder="Tìm kiếm..."
-                                className="pl-9 pr-4 py-2 bg-slate-100 border border-slate-200 rounded-full text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 w-48 lg:w-64 outline-none transition-all"
+                                id="teacher-dashboard-search"
+                                type="search"
+                                list="teacher-dashboard-search-options"
+                                value={searchQuery}
+                                onChange={(event) => setSearchQuery(event.target.value)}
+                                placeholder="Tìm chức năng..."
+                                className="w-52 rounded-full border border-slate-200 bg-slate-100 py-2 pl-4 pr-10 text-sm outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-500 lg:w-64"
                             />
-                        </div>
+                            <button
+                                type="submit"
+                                aria-label="Tìm chức năng"
+                                className="absolute right-1 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                            >
+                                <Search aria-hidden="true" className="size-4" />
+                            </button>
+                            <datalist id="teacher-dashboard-search-options">
+                                {DASHBOARD_SEARCH_ITEMS.map((item) => (
+                                    <option key={item.tab} value={item.label} />
+                                ))}
+                            </datalist>
+                        </form>
 
-                        <button className="hidden sm:inline-flex p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full relative transition-colors">
-                            <Bell className="w-5 h-5" />
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full border-2 border-white"></span>
+                        <button
+                            type="button"
+                            aria-label="Mở cài đặt thông báo"
+                            title="Thông báo"
+                            onClick={() => setActiveTab('announcements')}
+                            className={`hidden size-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:inline-flex ${activeTab === 'announcements' ? 'bg-blue-50 text-blue-600' : ''}`}
+                        >
+                            <Bell aria-hidden="true" className="size-5" />
                         </button>
 
-                        {/* User Profile Dropdown */}
-                        <div className="flex items-center gap-3 pl-4 border-l border-slate-200 group relative py-2 cursor-pointer">
-                            <div className="flex flex-col items-end hidden sm:flex">
-                                <span className="text-sm font-bold text-slate-700 leading-tight">
-                                    {teacherDisplayName}
+                        <details className="group relative border-l border-slate-200 pl-3 sm:pl-4">
+                            <summary
+                                aria-label={`Mở menu tài khoản của ${teacherDisplayName}`}
+                                className="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 [&::-webkit-details-marker]:hidden"
+                            >
+                                <span className="hidden flex-col items-end sm:flex">
+                                    <span className="text-sm font-bold leading-tight text-slate-700">{teacherDisplayName}</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                                        {authStore.isAdmin ? 'Quản trị viên' : 'Giáo viên'}
+                                    </span>
                                 </span>
-                                <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">
-                                    {authStore.isAdmin ? 'Quản trị viên' : 'Giáo viên'}
+                                <span className="flex size-10 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-blue-500 to-indigo-600 font-bold text-white shadow-sm transition-transform group-open:scale-105">
+                                    {teacherInitial}
                                 </span>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold flex items-center justify-center border-2 border-white shadow-sm transition-transform group-hover:scale-105">
-                                {teacherInitial}
-                            </div>
+                            </summary>
 
-                            {/* Hover Menu */}
-                            <div className="absolute top-full right-0 mt-1 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50 overflow-hidden">
-                                <div className="p-4 border-b border-slate-100 bg-slate-50/80">
-                                    <p className="text-xs text-gray-400 mb-1">Tài khoản</p>
-                                    <p className="text-sm font-bold text-slate-800 truncate">{teacherDisplayName}</p>
+                            <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white opacity-0 invisible shadow-xl transition-all group-open:visible group-open:opacity-100">
+                                <div className="border-b border-slate-100 bg-slate-50/80 p-4">
+                                    <p className="mb-1 text-xs text-slate-400">Tài khoản</p>
+                                    <p className="truncate text-sm font-bold text-slate-800">{teacherDisplayName}</p>
                                 </div>
                                 <div className="p-2">
                                     <button
+                                        type="button"
                                         onClick={handleLogout}
-                                        className="w-full flex items-center gap-3 px-3 py-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors text-sm font-medium"
+                                        className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                                     >
-                                        <X className="w-4 h-4" />
+                                        <X aria-hidden="true" className="size-4" />
                                         Đăng xuất
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                        </details>
                     </div>
                 </header>
 
@@ -300,7 +377,11 @@ const TeacherDashboard: React.FC = () => {
                             </div>
                         }>
                             {activeTab === 'overview' && (
-                                <OverviewTab />
+                                <OverviewTab
+                                    resultsLoadState={resultsLoadState}
+                                    resultsError={resultsLoadError}
+                                    onRetryResults={loadTeacherResults}
+                                />
                             )}
 
                             {activeTab === 'results' && (
@@ -308,8 +389,8 @@ const TeacherDashboard: React.FC = () => {
                                     results={filteredResultsByClass}
                                     quizzes={quizStore.quizzes}
                                     onRefresh={async () => {
-                                        await quizStore.loadResults();
-                                        return quizStore.results;
+                                        await loadTeacherResults();
+                                        return useQuizStore.getState().results;
                                     }}
                                 />
                             )}
@@ -407,7 +488,9 @@ const TeacherDashboard: React.FC = () => {
                         </Suspense>
                     </ErrorBoundary>
                 </main>
-                <Footer onNavigate={(path) => navigate(path)} showPublicLinks={false} />
+                <div className="hidden lg:block">
+                    <Footer onNavigate={(path) => navigate(path)} showPublicLinks={false} />
+                </div>
             </div>
 
             <BottomNavigation

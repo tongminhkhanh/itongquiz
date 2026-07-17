@@ -16,7 +16,7 @@ import { X, Save } from 'lucide-react';
 import { QuestionType } from '../../../../types';
 import type { Question } from '../../../../types';
 import type { AnyEditorDraft, Difficulty } from '../../types/quiz-editor.types';
-import { getTypeLabel } from '../../index';
+import { getTypeLabel } from '../../utils/questionHelpers';
 
 // Editor components (colocated — no lazy needed; modal itself is conditionally rendered)
 import { MCQEditor, MultipleSelectEditor } from './editors/MCQEditor';

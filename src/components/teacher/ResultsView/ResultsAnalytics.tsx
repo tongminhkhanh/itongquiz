@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BarChart } from 'recharts/es6/chart/BarChart';
 import { PieChart } from 'recharts/es6/chart/PieChart';
 import { Bar } from 'recharts/es6/cartesian/Bar';
@@ -6,7 +6,6 @@ import { XAxis } from 'recharts/es6/cartesian/XAxis';
 import { YAxis } from 'recharts/es6/cartesian/YAxis';
 import { CartesianGrid } from 'recharts/es6/cartesian/CartesianGrid';
 import { Tooltip } from 'recharts/es6/component/Tooltip';
-import { ResponsiveContainer } from 'recharts/es6/component/ResponsiveContainer';
 import { Cell } from 'recharts/es6/component/Cell';
 import { Legend } from 'recharts/es6/component/Legend';
 import { Pie } from 'recharts/es6/polar/Pie';
@@ -33,6 +32,30 @@ const pickHistogramColor = (count: number, maxCount: number) => {
         Math.max(0, Math.floor(ratio * INDIGO_MONO_SCALE.length))
     );
     return INDIGO_MONO_SCALE[index];
+};
+
+const useMeasuredChartContainer = () => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container || typeof ResizeObserver === 'undefined') return;
+
+        const updateSize = () => {
+            const { width, height } = container.getBoundingClientRect();
+            if (width > 0 && height > 0) {
+                setSize({ width: Math.floor(width), height: Math.floor(height) });
+            }
+        };
+
+        updateSize();
+        const observer = new ResizeObserver(updateSize);
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, []);
+
+    return { containerRef, size };
 };
 
 type StatTone = 'neutral' | 'success' | 'danger';
@@ -77,6 +100,8 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, value, suffix, tone = 
 };
 
 export const ResultsAnalytics: React.FC<ResultsAnalyticsProps> = ({ statistics, hideStats = false }) => {
+    const histogramContainer = useMeasuredChartContainer();
+    const passFailContainer = useMeasuredChartContainer();
     const passFailData = [
         { name: 'Đạt (≥5đ)', value: statistics.passCount, color: COLORS.pass },
         { name: 'Không đạt (<5đ)', value: statistics.failCount, color: COLORS.fail },
@@ -131,14 +156,29 @@ export const ResultsAnalytics: React.FC<ResultsAnalyticsProps> = ({ statistics, 
                 </div>
             )}
 
-            <div className="grid md:grid-cols-2 gap-8">
-                <div className="bg-white rounded-3xl border border-slate-200 p-7 shadow-sm">
-                    <h3 className="text-3xl font-black text-slate-900 mb-5">
+            {statistics.totalResults === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center shadow-sm sm:px-8">
+                    <span className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                        <Target aria-hidden="true" className="size-6" />
+                    </span>
+                    <h3 className="text-xl font-black text-slate-800">Chưa có dữ liệu để phân tích</h3>
+                    <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                        Biểu đồ sẽ xuất hiện sau khi học sinh hoàn thành và nộp bài.
+                    </p>
+                </div>
+            ) : (
+                <div className="grid min-w-0 gap-5 xl:grid-cols-2">
+                <div className="min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+                    <h3 className="mb-5 text-xl font-black text-slate-900 sm:text-2xl">
                         Phân bố điểm số
                     </h3>
-                    <div className="h-72">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={histogramData}>
+                    <div ref={histogramContainer.containerRef} className="h-72 min-w-0">
+                        {histogramContainer.size ? (
+                            <BarChart
+                                width={histogramContainer.size.width}
+                                height={histogramContainer.size.height}
+                                data={histogramData}
+                            >
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                 <XAxis dataKey="range" tick={{ fill: '#64748b', fontSize: 12 }} />
                                 <YAxis
@@ -160,17 +200,22 @@ export const ResultsAnalytics: React.FC<ResultsAnalyticsProps> = ({ statistics, 
                                     ))}
                                 </Bar>
                             </BarChart>
-                        </ResponsiveContainer>
+                        ) : (
+                            <div className="size-full animate-pulse rounded-2xl bg-slate-100" aria-label="Đang chuẩn bị biểu đồ phân bố điểm" />
+                        )}
                     </div>
                 </div>
 
-                <div className="bg-white rounded-3xl border border-slate-200 p-7 shadow-sm">
-                    <h3 className="text-3xl font-black text-slate-900 mb-5">
-                        Tỷ lệ Đạt / Không đạt
+                <div className="min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+                    <h3 className="mb-5 text-xl font-black text-slate-900 sm:text-2xl">
+                        Tỷ lệ đạt / chưa đạt
                     </h3>
-                    <div className="h-72">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                    <div ref={passFailContainer.containerRef} className="h-72 min-w-0">
+                        {passFailContainer.size ? (
+                            <PieChart
+                                width={passFailContainer.size.width}
+                                height={passFailContainer.size.height}
+                            >
                                 <Pie
                                     data={passFailData}
                                     cx="50%"
@@ -193,16 +238,19 @@ export const ResultsAnalytics: React.FC<ResultsAnalyticsProps> = ({ statistics, 
                                 />
                                 <Tooltip formatter={(value: number) => [`${value} học sinh`, '']} />
                             </PieChart>
-                        </ResponsiveContainer>
+                        ) : (
+                            <div className="size-full animate-pulse rounded-2xl bg-slate-100" aria-label="Đang chuẩn bị biểu đồ tỷ lệ đạt" />
+                        )}
                     </div>
 
                     <div className="mt-5 text-center text-sm">
                         <span className="text-green-600 font-semibold">{statistics.passCount} đạt</span>
                         <span className="text-slate-400 mx-2">/</span>
-                        <span className="text-red-600 font-semibold">{statistics.failCount} không đạt</span>
+                        <span className="text-red-600 font-semibold">{statistics.failCount} chưa đạt</span>
                     </div>
                 </div>
-            </div>
+                </div>
+            )}
         </div>
     );
 };

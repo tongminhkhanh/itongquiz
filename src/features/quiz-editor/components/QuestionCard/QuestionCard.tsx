@@ -16,7 +16,8 @@ import React from 'react';
 import { QuestionType } from '../../../../types';
 import type { Question } from '../../../../types';
 import { NewlineMathText } from '../../../../components/common';
-import { getTypeLabel, getDifficultyLabel, getDifficultyColorClass, fixReorderQuestion } from '../../index';
+import { getTypeLabel, getDifficultyLabel, getDifficultyColorClass } from '../../utils/questionHelpers';
+import { fixReorderQuestion } from '../../utils/questionNormalizers';
 import type { Difficulty } from '../../types/quiz-editor.types';
 import QuestionCardActions from './QuestionCardActions';
 
