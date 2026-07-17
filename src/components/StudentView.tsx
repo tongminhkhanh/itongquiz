@@ -12,6 +12,7 @@ import { useQuizPlayer } from '../features/quiz-player/hooks/useQuizPlayer';
 import QuizHeader from '../features/quiz-player/components/QuizHeader';
 import QuizNavigation from '../features/quiz-player/components/QuizNavigation';
 import QuizPagination from '../features/quiz-player/components/QuizPagination';
+import { useQuizPageNavigation } from '../features/quiz-player/hooks/useQuizPageNavigation';
 
 /**
  * [SENIOR ENGINEERING REFACTOR]
@@ -37,6 +38,15 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     rewardData, currentPage, setCurrentPage, totalPages, questionsOnCurrentPage,
     handleStart, handleCodeVerify, handleAnswerChange, handleMatchingClick, handleSubmit, isQuestionAnswered
   } = useQuizPlayer({ quiz, onExit, onSaveResult });
+
+  const QUESTIONS_PER_PAGE = 10;
+  const { activeQuestionId, changePage } = useQuizPageNavigation({
+    questions: shuffledQuestions,
+    currentPage,
+    totalPages,
+    questionsPerPage: QUESTIONS_PER_PAGE,
+    setCurrentPage,
+  });
 
   // 1. Access Code Step
   if (step === 'code') {
@@ -69,7 +79,6 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
   // 3. Quiz Execution Step
   if (step === 'quiz') {
-    const QUESTIONS_PER_PAGE = 10;
     const answeredCount = shuffledQuestions.filter(isQuestionAnswered).length;
     const unansweredCount = shuffledQuestions.length - answeredCount;
 
@@ -92,11 +101,10 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
             <aside className="hidden lg:block w-72 flex-shrink-0">
               <QuizNavigation 
                 questions={shuffledQuestions}
-                answers={answers}
                 isQuestionAnswered={isQuestionAnswered}
-                currentPage={currentPage}
+                activeQuestionId={activeQuestionId}
                 QUESTIONS_PER_PAGE={QUESTIONS_PER_PAGE}
-                onPageChange={setCurrentPage}
+                onPageChange={changePage}
               />
             </aside>
 
@@ -106,8 +114,10 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                 {questionsOnCurrentPage.map((q, idx) => (
                   <div 
                     key={q.id} 
-                    id={`question-${q.id}`} 
-                    className="scroll-mt-32 transition-all duration-500"
+                    id={`question-${q.id}`}
+                    tabIndex={-1}
+                    aria-label={`Câu ${(currentPage - 1) * QUESTIONS_PER_PAGE + idx + 1}`}
+                    className="scroll-mt-32 transition-all duration-500 focus:outline-none"
                   >
                     <QuestionRenderer
                       question={q}
@@ -125,7 +135,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
               <QuizPagination 
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={setCurrentPage}
+                onPageChange={changePage}
                 onSubmit={() => setShowSubmitConfirm(true)}
                 isSubmitting={isSubmitting}
               />

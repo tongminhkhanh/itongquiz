@@ -15,6 +15,10 @@ import QuestionRenderer from '../student/QuestionRenderer';
 import QuizHeader from '../../features/quiz-player/components/QuizHeader';
 import QuizNavigation from '../../features/quiz-player/components/QuizNavigation';
 import QuizPagination from '../../features/quiz-player/components/QuizPagination';
+import {
+    getActiveQuestionNumber,
+    useQuizPageNavigation,
+} from '../../features/quiz-player/hooks/useQuizPageNavigation';
 import { SubmitConfirmModal } from '../student';
 
 interface LiveExamQuizProps {
@@ -115,6 +119,13 @@ export const LiveExamQuiz: React.FC<LiveExamQuizProps> = ({
     };
 
     const questionsOnCurrentPage = questions.slice((currentPage - 1) * QUESTIONS_PER_PAGE, currentPage * QUESTIONS_PER_PAGE);
+    const { activeQuestionId, changePage } = useQuizPageNavigation({
+        questions,
+        currentPage,
+        totalPages,
+        questionsPerPage: QUESTIONS_PER_PAGE,
+        setCurrentPage,
+    });
     const answeredCount = questions.filter(isQuestionAnswered).length;
     const unansweredCount = totalQuestions - answeredCount;
 
@@ -135,10 +146,15 @@ export const LiveExamQuiz: React.FC<LiveExamQuizProps> = ({
         if (questions.length === 0 || isSubmitting) return;
 
         void updateActivity({
-            currentQuestion: Math.min(currentPage * QUESTIONS_PER_PAGE, totalQuestions),
+            currentQuestion: getActiveQuestionNumber(
+                questions,
+                activeQuestionId,
+                currentPage,
+                QUESTIONS_PER_PAGE,
+            ),
             answeredCount,
         });
-    }, [currentPage, answeredCount, isSubmitting, questions.length, totalQuestions, updateActivity]);
+    }, [activeQuestionId, currentPage, answeredCount, isSubmitting, questions, totalQuestions, updateActivity]);
 
     if (questions.length === 0) {
         return (
@@ -165,18 +181,23 @@ export const LiveExamQuiz: React.FC<LiveExamQuizProps> = ({
                     <aside className="hidden lg:block w-72 flex-shrink-0">
                         <QuizNavigation
                             questions={questions}
-                            answers={answers}
                             isQuestionAnswered={isQuestionAnswered}
-                            currentPage={currentPage}
+                            activeQuestionId={activeQuestionId}
                             QUESTIONS_PER_PAGE={QUESTIONS_PER_PAGE}
-                            onPageChange={setCurrentPage}
+                            onPageChange={changePage}
                         />
                     </aside>
 
                     <main className="flex-1 min-w-0">
                         <div className="space-y-8">
                             {questionsOnCurrentPage.map((q, idx) => (
-                                <div key={q.id} id={`question-${q.id}`} className="scroll-mt-32 transition-all duration-500">
+                                <div
+                                    key={q.id}
+                                    id={`question-${q.id}`}
+                                    tabIndex={-1}
+                                    aria-label={`Câu ${(currentPage - 1) * QUESTIONS_PER_PAGE + idx + 1}`}
+                                    className="scroll-mt-32 transition-all duration-500 focus:outline-none"
+                                >
                                     <QuestionRenderer
                                         question={q}
                                         index={(currentPage - 1) * QUESTIONS_PER_PAGE + idx}
@@ -191,7 +212,7 @@ export const LiveExamQuiz: React.FC<LiveExamQuizProps> = ({
                         <QuizPagination
                             currentPage={currentPage}
                             totalPages={totalPages}
-                            onPageChange={setCurrentPage}
+                            onPageChange={changePage}
                             onSubmit={() => setShowSubmitConfirm(true)}
                             isSubmitting={isSubmitting}
                         />

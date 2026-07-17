@@ -89,7 +89,7 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
     // Pagination state
     const QUESTIONS_PER_PAGE = 10;
     const [currentPage, setCurrentPage] = useState(1);
-    const totalPages = Math.ceil(shuffledQuestions.length / QUESTIONS_PER_PAGE);
+    const totalPages = Math.max(1, Math.ceil(shuffledQuestions.length / QUESTIONS_PER_PAGE));
     const questionsOnCurrentPage = useMemo(() => {
         const startIndex = (currentPage - 1) * QUESTIONS_PER_PAGE;
         return shuffledQuestions.slice(startIndex, startIndex + QUESTIONS_PER_PAGE);
