@@ -31,7 +31,7 @@ const AccessCodeForm: React.FC<AccessCodeFormProps> = ({
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-pink-50 to-orange-100 p-4 relative overflow-hidden">
             {/* Background Decorations */}
             <span className="student-bg-decoration top-10 left-10 student-animate-wiggle">🔐</span>
-            <span className="student-bg-decoration bottom-20 right-10 student-animate-bounce">🎯</span>
+            <span className="student-bg-decoration bottom-20 right-10 student-animate-float">🎯</span>
             <span className="student-bg-decoration top-1/4 right-16">🔑</span>
             <span className="student-bg-decoration bottom-1/3 left-16">✨</span>
 

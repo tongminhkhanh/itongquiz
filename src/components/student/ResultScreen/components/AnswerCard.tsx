@@ -213,7 +213,7 @@ const AnswerCard: React.FC<Props> = ({
         <div
             onClick={onClick}
             className={`
-        relative border-l-4 ${config.borderColor} ${config.bgColor}
+        relative border-l-2 ${config.borderColor} ${config.bgColor}
         rounded-lg p-4 cursor-pointer
         transition-all duration-200
         hover:shadow-md

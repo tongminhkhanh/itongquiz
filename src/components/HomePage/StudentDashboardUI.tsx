@@ -38,7 +38,7 @@ export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color
     'toan': { title: 'Toán Học', icon: 'calculate', color: 'from-blue-400 to-blue-600', desc: 'Rèn luyện tư duy logic' },
     'tieng-viet': { title: 'Tiếng Việt', icon: 'menu_book', color: 'from-amber-400 to-amber-600', desc: 'Vun đắp ngôn ngữ tiếng mẹ đẻ' },
     'tu-nhien-xa-hoi': { title: 'Tự nhiên & Xã hội', icon: 'public', color: 'from-emerald-400 to-emerald-600', desc: 'Khám phá thế giới muôn màu' },
-    'tieng-anh': { title: 'Tiếng Anh', icon: 'language', color: 'from-indigo-400 to-indigo-600', desc: 'Mở rộng giao tiếp quốc tế' },
+    'tieng-anh': { title: 'Tiếng Anh', icon: 'language', color: 'from-blue-400 to-blue-700', desc: 'Mở rộng giao tiếp quốc tế' },
     'tin-hoc': { title: 'Tin học', icon: 'computer', color: 'from-slate-400 to-slate-600', desc: 'Làm chủ công nghệ tương lai' },
     'ioe': { title: 'Luyện thi IOE', icon: 'workspace_premium', color: 'from-yellow-400 to-orange-500', desc: 'Chinh phục kỳ thi tiếng Anh quốc gia', showOnHome: true },
 };
@@ -899,7 +899,11 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                             <button
                                 type="button"
                                 onClick={() => setActiveSection('dashboard')}
-                                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs md:text-sm font-black transition-colors ${activeSection === 'dashboard' ? 'border-sky-200 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+                                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black transition-colors md:text-sm ${
+                                    activeSection === 'dashboard'
+                                        ? 'border-sky-200 bg-sky-50 text-sky-700'
+                                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                                }`}
                             >
                                 <BookOpen className="w-3.5 h-3.5 md:w-4 md:h-4" />
                                 Trang chủ
@@ -907,7 +911,11 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                             <button
                                 type="button"
                                 onClick={() => setActiveSection('achievements')}
-                                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs md:text-sm font-black transition-colors ${activeSection === 'achievements' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+                                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black transition-colors md:text-sm ${
+                                    activeSection === 'achievements'
+                                        ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                                }`}
                             >
                                 <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
                                 Thành tích
@@ -917,14 +925,18 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                         <button
                             type="button"
                             onClick={() => setActiveSection('achievements')}
-                            className={`lg:hidden inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border text-xs md:text-sm font-black transition-colors ${activeSection === 'achievements' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+                            className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-black transition-colors md:px-3 md:text-sm lg:hidden ${
+                                activeSection === 'achievements'
+                                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                            }`}
                         >
                             <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
                             <span className="hidden sm:inline">Thành tích</span>
                         </button>
 
                         {giftShopEnabled && (
-                            <button type="button" onClick={handleOpenGiftShop} className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs md:text-sm font-black hover:bg-indigo-100 transition-colors">
+                            <button type="button" onClick={handleOpenGiftShop} className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-blue-800 text-xs md:text-sm font-black hover:bg-indigo-100 transition-colors">
                                 <Gift className="w-3.5 h-3.5 md:w-4 md:h-4" />
                                 <span className="hidden md:inline">Tiệm Tạp Hóa</span>
                             </button>
@@ -970,7 +982,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     <StudentAchievementsPage />
                 ) : (
                     <>
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full bg-gradient-to-r from-indigo-600 to-blue-500 rounded-[24px] md:rounded-[32px] p-5 sm:p-6 md:p-12 relative overflow-hidden shadow-lg shadow-indigo-200">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 rounded-[24px] md:rounded-[32px] p-5 sm:p-6 md:p-12 relative overflow-hidden shadow-lg shadow-indigo-200">
                     <div className="absolute right-0 top-0 w-1/2 h-full opacity-10 pointer-events-none">
                         <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
                             <defs><pattern id="circles" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="4" fill="currentColor" /></pattern></defs>
@@ -987,7 +999,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                     className={`backdrop-blur-sm rounded-2xl px-4 md:px-5 py-2.5 text-xs md:text-sm font-black flex items-center gap-2 cursor-pointer transition-all duration-200 ${attendanceClaimed
                                         ? 'bg-gradient-to-r from-emerald-400/70 to-teal-300/70 text-white ring-2 ring-emerald-200/70'
                                         : 'bg-gradient-to-r from-amber-300 via-yellow-300 to-lime-300 text-slate-900 animate-pulse'}`}>
-                                    <ShieldCheck className={`w-4 h-4 ${attendanceClaimed ? 'text-white' : 'text-indigo-700'}`} />
+                                    <ShieldCheck className={`w-4 h-4 ${attendanceClaimed ? 'text-white' : 'text-blue-800'}`} />
                                     <span>{attendanceBadgeText}</span>
                                 </div>
                             </div>
@@ -1028,7 +1040,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                         </button>
 
                         <div className="mt-4 flex flex-wrap items-center gap-2 text-sm font-bold">
-                            <span className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 text-violet-700">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 text-cyan-800">
                                 <Sparkles className="w-4 h-4" />
                                 {dashboard
                                     ? `${journeyMissionSummary.completed}/${journeyMissionSummary.total} nhiệm vụ hôm nay`
@@ -1093,7 +1105,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                                             </div>
                                                             <p className="text-sm text-slate-500 font-medium mb-3">{mission.description}</p>
                                                             <div className="h-2.5 rounded-full bg-slate-200 overflow-hidden">
-                                                                <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400" style={{ width: `${progressPercent}%` }} />
+                                                                <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-fuchsia-400" style={{ width: `${progressPercent}%` }} />
                                                             </div>
                                                             <div className="flex items-center justify-between text-xs font-bold text-slate-500 mt-2">
                                                                 <span>{mission.progress}/{mission.target} {mission.unit}</span>
@@ -1127,7 +1139,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                         {/* Weekly Quests Panel — card rieng ngoai Hanh trinh hom nay */}
                         <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6">
                             <div className="flex items-center gap-3 mb-5">
-                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xl">
+                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white text-xl">
                                     📅
                                 </div>
                                 <div>
@@ -1182,7 +1194,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                                 <div className="mb-3">
                                                     <div className="flex justify-between text-xs font-bold mb-1">
                                                         <span className="text-slate-600">{quest.progress}/{quest.target}</span>
-                                                        <span className="text-purple-600">{Math.round(progressPercent)}%</span>
+                                                        <span className="text-blue-700">{Math.round(progressPercent)}%</span>
                                                     </div>
                                                     <div
                                                         className="h-2 bg-slate-200 rounded-full overflow-hidden"
@@ -1195,7 +1207,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                                             className={`h-full rounded-full transition-all duration-500 ${
                                                                 quest.claimed
                                                                     ? 'bg-emerald-400'
-                                                                    : 'bg-gradient-to-r from-purple-500 to-indigo-500'
+                                                                    : 'bg-gradient-to-r from-blue-500 to-indigo-500'
                                                             }`}
                                                             style={{ width: `${progressPercent}%` }}
                                                         />
@@ -1291,7 +1303,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                     Hoàn thành đủ nhiệm vụ trong 5 ngày để giữ nhịp tích lũy đẹp cho Gift Shop.
                                 </p>
                                 {giftShopEnabled && (
-                                    <button type="button" onClick={handleOpenGiftShop} className="w-full py-2.5 rounded-2xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm font-black hover:bg-indigo-100 transition-colors">
+                                    <button type="button" onClick={handleOpenGiftShop} className="w-full py-2.5 rounded-2xl border border-indigo-200 bg-indigo-50 text-blue-800 text-sm font-black hover:bg-indigo-100 transition-colors">
                                         Xem mục tiêu quà thật
                                     </button>
                                 )}
@@ -1310,7 +1322,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                         <button
                                             type="button"
                                             onClick={() => setIsBadgeGalleryOpen(true)}
-                                            className="text-xs font-black text-purple-600 hover:text-purple-700 transition-colors flex items-center gap-1"
+                                            className="text-xs font-black text-blue-700 hover:text-blue-800 transition-colors flex items-center gap-1"
                                         >
                                             Xem tất cả
                                             <Trophy className="w-3.5 h-3.5" />
@@ -1371,7 +1383,12 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 </section>
 
                 <section>
-                    <div className="flex items-center gap-3 mb-6"><div className="bg-orange-100 p-2 rounded-xl text-orange-600"><Target className="w-6 h-6" /></div><h2 className="text-2xl font-black text-slate-800">Nhiệm vụ của em</h2></div>
+                    <div className="mb-6 flex items-center gap-3">
+                        <div className="rounded-xl bg-orange-100 p-2 text-orange-600">
+                            <Target className="h-6 w-6" />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-900">Nhiệm vụ của em</h2>
+                    </div>
                     {isLoadingTasks ? <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 text-indigo-400 animate-spin" /></div> : myAssignmentQuizzes.length > 0 ? (
                         <div className="flex flex-col gap-4 md:gap-6">
                             <AnimatePresence mode="popLayout">
@@ -1382,11 +1399,43 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                     return (
                                         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} key={quiz._assignmentData?.id || quiz.id} className={`bg-white rounded-[24px] p-4 md:p-6 border-2 flex flex-col sm:flex-row sm:items-center gap-4 md:gap-6 ${isCompleted ? 'border-emerald-100 opacity-80' : 'border-slate-100'}`}>
                                             <div className="flex sm:flex-col justify-between items-center w-full sm:w-20 gap-3 shrink-0">
-                                                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center ${isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-indigo-50 text-indigo-500'}`}><BookOpen className="w-6 h-6 md:w-7 md:h-7" /></div>
-                                                {isCompleted ? <span className="bg-emerald-100 text-emerald-600 text-[10px] font-black uppercase px-2 py-1 rounded-lg">Đã xong</span> : isClosed ? <span className="bg-slate-200 text-slate-600 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">Đã đóng</span> : <span className="bg-red-50 text-red-600 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">Bắt buộc</span>}
+                                                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center ${isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-indigo-50 text-blue-600'}`}><BookOpen className="w-6 h-6 md:w-7 md:h-7" /></div>
+                                                {isCompleted ? (
+                                                    <span className="rounded-lg bg-emerald-100 px-2 py-1 text-[10px] font-black uppercase text-emerald-600">Đã xong</span>
+                                                ) : isClosed ? (
+                                                    <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[10px] font-black uppercase text-slate-600">Đã đóng</span>
+                                                ) : (
+                                                    <span className="rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-black uppercase text-red-600">Bắt buộc</span>
+                                                )}
                                             </div>
-                                            <div className="flex-1 min-w-0"><h3 className="text-lg md:text-xl font-bold text-slate-800 mb-2 line-clamp-2">{quiz.title}</h3><div className="flex items-center gap-3"><p className="text-xs font-bold text-slate-400 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {quiz.timeLimit}'</p><p className={`text-xs font-black px-2 py-0.5 rounded-md ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>Lượt làm: {assignment?.attemptCount || 0}/{assignment?.maxAttempts || 1}</p></div></div>
-                                            <button onClick={() => !isCompleted && !isClosed && handleStartQuiz(quiz)} disabled={isCompleted || isClosed} className={`w-full sm:w-auto sm:min-w-[160px] font-extrabold py-3 md:py-3.5 px-4 rounded-xl md:rounded-2xl transition-all ${isCompleted ? 'bg-emerald-50 text-emerald-600' : isClosed ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'}`}>{isCompleted ? 'Xem kết quả' : isClosed ? 'Đã đóng' : <><Play className="w-4 h-4 fill-current inline mr-2" /> Làm bài ngay</>}</button>
+                                            <div className="min-w-0 flex-1">
+                                                <h3 className="mb-2 line-clamp-2 text-lg font-bold text-slate-800 md:text-xl">{quiz.title}</h3>
+                                                <div className="flex items-center gap-3">
+                                                    <p className="flex items-center gap-1 text-xs font-bold text-slate-500">
+                                                        <Clock className="h-3.5 w-3.5" /> {quiz.timeLimit}'
+                                                    </p>
+                                                    <p className={`rounded-md px-2 py-0.5 text-xs font-black ${
+                                                        isCompleted
+                                                            ? 'bg-emerald-50 text-emerald-600'
+                                                            : 'bg-slate-100 text-slate-600'
+                                                    }`}>
+                                                        Lượt làm: {assignment?.attemptCount || 0}/{assignment?.maxAttempts || 1}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => !isCompleted && !isClosed && handleStartQuiz(quiz)}
+                                                disabled={isCompleted || isClosed}
+                                                className={`w-full rounded-xl px-4 py-3 font-extrabold transition-all sm:w-auto sm:min-w-[160px] md:rounded-2xl md:py-3.5 ${
+                                                    isCompleted
+                                                        ? 'bg-emerald-50 text-emerald-600'
+                                                        : isClosed
+                                                            ? 'cursor-not-allowed bg-slate-200 text-slate-500'
+                                                            : 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
+                                                }`}
+                                            >
+                                                {isCompleted ? 'Xem kết quả' : isClosed ? 'Đã đóng' : <><Play className="mr-2 inline h-4 w-4 fill-current" /> Làm bài ngay</>}
+                                            </button>
                                         </motion.div>
                                     );
                                 })}
@@ -1403,7 +1452,12 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
 
                 <section>
-                    <div className="flex items-center gap-3 mb-6"><div className="bg-teal-100 p-2 rounded-xl text-teal-600"><Rocket className="w-6 h-6" /></div><h2 className="text-2xl font-black text-slate-800">Thư viện luyện tập</h2></div>
+                    <div className="mb-6 flex items-center gap-3">
+                        <div className="rounded-xl bg-teal-100 p-2 text-teal-600">
+                            <Rocket className="h-6 w-6" />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-900">Thư viện luyện tập</h2>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {publicCategories.map((cat, i) => (
                             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} key={cat.id} onClick={() => setSelectedSubject(cat.id)} className={`bg-gradient-to-br ${cat.color} p-6 rounded-3xl text-white cursor-pointer transform hover:-translate-y-1 hover:shadow-xl transition-all relative overflow-hidden group`}>
@@ -1428,8 +1482,8 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 {isAttendanceModalOpen && attendanceQuestion && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-0 md:p-4 flex items-end md:items-center justify-center" onClick={() => !isSubmittingAttendance && setIsAttendanceModalOpen(false)}>
                         <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} onClick={(e) => e.stopPropagation()} className="w-full h-dvh md:h-auto md:max-w-2xl bg-white rounded-none md:rounded-3xl p-4 md:p-8 shadow-2xl overflow-y-auto">
-                            <div className="flex items-start justify-between gap-4 mb-5"><div><p className="text-xs font-black text-indigo-500 uppercase tracking-wider mb-1">Điểm danh nhận thưởng</p><h3 className="text-xl md:text-2xl font-black text-slate-800">Câu hỏi ngẫu nhiên</h3><p className="text-sm text-slate-500 mt-1">Nguồn: {attendanceQuestion.quizTitle}</p></div><button type="button" onClick={() => setIsAttendanceModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-sm font-bold">Đóng</button></div>
-                            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 md:p-5 mb-4"><MathSpan content={attendanceQuestion.question || ''} className="text-slate-800 font-semibold leading-relaxed" /></div>
+                            <div className="flex items-start justify-between gap-4 mb-5"><div><p className="text-xs font-black text-blue-600 uppercase tracking-wider mb-1">Điểm danh nhận thưởng</p><h3 className="text-xl md:text-2xl font-black text-slate-800">Câu hỏi ngẫu nhiên</h3><p className="text-sm text-slate-500 mt-1">Nguồn: {attendanceQuestion.quizTitle}</p></div><button type="button" onClick={() => setIsAttendanceModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-sm font-bold">Đóng</button></div>
+                            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 md:p-5 mb-4"><MathSpan content={attendanceQuestion.question || ''} className="text-blue-900 font-semibold leading-relaxed" /></div>
                             <div className="space-y-3 mb-5">
                                 {attendanceQuestion.options.map((option, index) => {
                                     const label = String.fromCharCode(65 + index);
@@ -1438,7 +1492,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                                     const isWrongSelected = attendanceResult === 'wrong' && isSelected && !isCorrectOption;
                                     return (
                                         <button key={`${attendanceQuestion.id}-${label}`} type="button" disabled={attendanceResult !== null || isSubmittingAttendance} onClick={() => setSelectedAttendanceAnswer(label)}
-                                            className={`w-full text-left p-3 rounded-xl border-2 transition-colors flex items-center gap-3 ${isCorrectOption ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : isWrongSelected ? 'border-red-400 bg-red-50 text-red-700' : isSelected ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:border-indigo-300 bg-white'}`}>
+                                            className={`w-full text-left p-3 rounded-xl border-2 transition-colors flex items-center gap-3 ${isCorrectOption ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : isWrongSelected ? 'border-red-400 bg-red-50 text-red-700' : isSelected ? 'border-indigo-400 bg-indigo-50 text-blue-800' : 'border-slate-200 hover:border-indigo-300 bg-white'}`}>
                                             <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 text-xs font-black flex items-center justify-center shrink-0">{label}</span>
                                             <MathSpan content={cleanOptionText(option)} className="font-medium text-slate-700" />
                                         </button>
@@ -1447,7 +1501,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                             </div>
                             {attendanceMessage && <div className={`rounded-xl px-4 py-3 text-sm font-semibold mb-5 ${attendanceResult === 'correct' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>{attendanceMessage}</div>}
                             <div className="flex items-center justify-end gap-3">
-                                {attendanceResult === 'wrong' && !attendanceClaimed && <button type="button" onClick={openAttendanceModal} className="px-4 py-2 rounded-xl border border-indigo-200 text-indigo-600 font-bold hover:bg-indigo-50">Câu khác</button>}
+                                {attendanceResult === 'wrong' && !attendanceClaimed && <button type="button" onClick={openAttendanceModal} className="px-4 py-2 rounded-xl border border-indigo-200 text-blue-700 font-bold hover:bg-indigo-50">Câu khác</button>}
                                 <button type="button" onClick={() => setIsAttendanceModalOpen(false)} className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50">Đóng</button>
                                 {attendanceResult === null && <button type="button" onClick={handleAttendanceSubmit} disabled={!selectedAttendanceAnswer || isSubmittingAttendance} className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed">{isSubmittingAttendance ? 'Đang kiểm tra...' : 'Xác nhận đáp án'}</button>}
                             </div>
@@ -1460,14 +1514,17 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 {isChangePasswordModalOpen && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-0 md:p-4 flex items-end md:items-center justify-center" onClick={closeChangePasswordModal}>
                         <motion.form initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} onClick={(e) => e.stopPropagation()} onSubmit={handleChangePasswordSubmit} className="w-full h-dvh md:h-auto md:max-w-md bg-white rounded-none md:rounded-3xl p-4 md:p-6 shadow-2xl overflow-y-auto">
-                            <div className="flex items-start justify-between gap-4 mb-5"><div><p className="text-xs font-black text-indigo-500 uppercase tracking-wider mb-1">Tài khoản</p><h3 className="text-xl font-black text-slate-800">Đổi mật khẩu</h3></div><button type="button" onClick={closeChangePasswordModal} className="text-slate-400 hover:text-slate-600 text-sm font-bold">Đóng</button></div>
+                            <div className="flex items-start justify-between gap-4 mb-5"><div><p className="text-xs font-black text-blue-600 uppercase tracking-wider mb-1">Tài khoản</p><h3 className="text-xl font-black text-slate-800">Đổi mật khẩu</h3></div><button type="button" onClick={closeChangePasswordModal} className="text-slate-400 hover:text-slate-600 text-sm font-bold">Đóng</button></div>
                             <div className="space-y-4">
                                 <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mật khẩu cũ</label><input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nhập mật khẩu hiện tại" autoFocus /></div>
                                 <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mật khẩu mới</label><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Tối thiểu 6 ký tự" /></div>
                                 <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nhập lại mật khẩu mới</label><input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nhập lại mật khẩu mới" /></div>
                             </div>
                             {changePasswordError && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold px-4 py-3">{changePasswordError}</div>}
-                            <div className="mt-6 flex items-center justify-end gap-3"><button type="button" onClick={closeChangePasswordModal} className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50">Hủy</button><button type="submit" disabled={isChangingPassword} className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-60">{isChangingPassword ? 'Đang lưu...' : 'Lưu mật khẩu'}</button></div>
+                            <div className="mt-6 flex items-center justify-end gap-3">
+                                <button type="button" onClick={closeChangePasswordModal} className="rounded-xl border border-slate-200 px-4 py-2 font-bold text-slate-700 hover:bg-slate-50">Hủy</button>
+                                <button type="submit" disabled={isChangingPassword} className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-700 disabled:opacity-60">{isChangingPassword ? 'Đang lưu...' : 'Lưu mật khẩu'}</button>
+                            </div>
                         </motion.form>
                     </motion.div>
                 )}

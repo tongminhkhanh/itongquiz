@@ -116,8 +116,18 @@ export const HomeworkTab: React.FC = () => {
         </div>
         <div className="flex items-center gap-3">
           <div className="bg-white border border-slate-200 rounded-2xl p-1 flex shadow-sm">
-            <button aria-label="Dạng lưới" onClick={() => setViewMode('grid')} className={`p-2 rounded-xl ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400'}`}><LayoutGrid className="w-5 h-5" /></button>
-            <button aria-label="Dạng danh sách" onClick={() => setViewMode('list')} className={`p-2 rounded-xl ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400'}`}><List className="w-5 h-5" /></button>
+            <button aria-label="Dạng lưới" onClick={() => setViewMode('grid')} className={`p-2 rounded-xl ${viewMode === 'grid' ? 'bg-indigo-50 text-blue-700' : 'text-blue-900'}`}><LayoutGrid className="w-5 h-5" /></button>
+            <button
+              aria-label="Dạng danh sách"
+              onClick={() => setViewMode('list')}
+              className={`rounded-xl p-2 ${
+                viewMode === 'list'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-slate-600'
+              }`}
+            >
+              <List className="h-5 w-5" />
+            </button>
           </div>
           <Button variant="primary" onClick={() => setShowCreator(value => !value)} icon={<Plus className={`w-4 h-4 ${showCreator ? 'rotate-45' : ''}`} />} className="rounded-2xl px-6 py-3">
             {showCreator ? 'Đóng' : 'Giao bài tập mới'}
@@ -127,8 +137,8 @@ export const HomeworkTab: React.FC = () => {
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {[
-          ['Chờ chấm', summary.pending, 'text-indigo-600'], ['Sắp hết hạn', summary.expiring, 'text-amber-600'],
-          ['Chưa nộp', summary.notSubmitted, 'text-rose-600'], ['Cần xem lại', summary.needsReview, 'text-violet-600'],
+          ['Chờ chấm', summary.pending, 'text-blue-700'], ['Sắp hết hạn', summary.expiring, 'text-amber-600'],
+          ['Chưa nộp', summary.notSubmitted, 'text-rose-600'], ['Cần xem lại', summary.needsReview, 'text-blue-700'],
         ].map(([label, value, color]) => <div key={String(label)} className="rounded-2xl border border-slate-100 bg-white p-4"><p className="text-xs font-bold uppercase text-slate-400">{label}</p><p className={`text-2xl font-black ${color}`}>{value}</p></div>)}
       </div>
 
@@ -158,14 +168,33 @@ export const HomeworkTab: React.FC = () => {
           const status = STATUS_META[hw.effectiveStatus || hw.status || 'OPEN'] || STATUS_META.OPEN;
           return <article key={hw.id} onClick={() => setSelectedAssignment(hw)} className={`group bg-white border border-slate-100 p-5 hover:shadow-xl hover:border-indigo-100 cursor-pointer relative ${viewMode === 'grid' ? 'rounded-3xl' : 'rounded-2xl flex items-center justify-between'}`}>
             <div className="absolute top-3 right-3 flex items-center rounded-xl bg-white/95 border border-slate-100 shadow-sm">
-              <button aria-label="Sửa bài" title="Sửa bài" onClick={event => editAssignment(event, hw)} className="p-2 text-slate-400 hover:text-indigo-600"><Pencil className="w-4 h-4" /></button>
-              <button aria-label="Gia hạn" title="Gia hạn" onClick={event => updateDeadline(event, hw)} className="p-2 text-slate-400 hover:text-indigo-600"><CalendarClock className="w-4 h-4" /></button>
-              <button aria-label="Đóng hoặc mở bài" title={hw.effectiveStatus === 'OPEN' ? 'Đóng bài' : 'Mở lại'} onClick={event => toggleStatus(event, hw)} className="p-2 text-slate-400 hover:text-indigo-600">{hw.effectiveStatus === 'OPEN' ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}</button>
-              <button aria-label="Nhân bản" title="Nhân bản" onClick={event => duplicate(event, hw)} className="p-2 text-slate-400 hover:text-indigo-600"><Copy className="w-4 h-4" /></button>
+              <button aria-label="Sửa bài" title="Sửa bài" onClick={event => editAssignment(event, hw)} className="p-2 text-slate-400 hover:text-blue-700"><Pencil className="w-4 h-4" /></button>
+              <button aria-label="Gia hạn" title="Gia hạn" onClick={event => updateDeadline(event, hw)} className="p-2 text-slate-400 hover:text-blue-700"><CalendarClock className="w-4 h-4" /></button>
+              <button aria-label="Đóng hoặc mở bài" title={hw.effectiveStatus === 'OPEN' ? 'Đóng bài' : 'Mở lại'} onClick={event => toggleStatus(event, hw)} className="p-2 text-slate-400 hover:text-blue-700">{hw.effectiveStatus === 'OPEN' ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}</button>
+              <button aria-label="Nhân bản" title="Nhân bản" onClick={event => duplicate(event, hw)} className="p-2 text-slate-400 hover:text-blue-700"><Copy className="w-4 h-4" /></button>
               <button aria-label="Lưu trữ bài" title="Lưu trữ" onClick={event => archive(event, hw)} className="p-2 text-slate-400 hover:text-rose-600"><Archive className="w-4 h-4" /></button>
             </div>
-            <div className="flex items-start gap-4 pr-8"><div className="p-3 rounded-2xl bg-indigo-50 text-indigo-500"><BookText className="w-6 h-6" /></div><div className="min-w-0"><h3 className="font-bold text-slate-800 truncate">{hw.title}</h3><div className="flex flex-wrap gap-2 mt-2 text-xs text-slate-500"><span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg"><Users className="w-3.5 h-3.5" />Lớp {hw.class?.name || hw.class_id}</span><span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg"><Clock className="w-3.5 h-3.5" />{new Date(hw.deadline).toLocaleString('vi-VN')}</span></div></div></div>
-            {viewMode === 'grid' ? <div className="mt-6 space-y-3"><div className="flex justify-between text-xs"><span className="text-slate-400">Tiến độ nộp bài</span><span className="text-indigo-600 font-bold">{submitted}/{total} học sinh · {percent}%</span></div><div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden"><div className="h-full bg-indigo-500 rounded-full" style={{ width: `${percent}%` }} /></div><div className="flex justify-between items-center"><span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${status.className}`}>{status.label}</span><span className="text-indigo-500 text-xs font-bold flex items-center">Xem chi tiết <ChevronRight className="w-4 h-4" /></span></div></div> : <div className="text-right pr-8"><p className="text-xs text-slate-400">Đã nộp</p><p className="font-bold text-indigo-600">{submitted}/{total}</p></div>}
+            <div className="flex items-start gap-4 pr-8"><div className="p-3 rounded-2xl bg-indigo-50 text-blue-600"><BookText className="w-6 h-6" /></div><div className="min-w-0"><h3 className="font-bold text-blue-900 truncate">{hw.title}</h3><div className="flex flex-wrap gap-2 mt-2 text-xs text-blue-900"><span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg"><Users className="w-3.5 h-3.5" />Lớp {hw.class?.name || hw.class_id}</span><span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg"><Clock className="w-3.5 h-3.5" />{new Date(hw.deadline).toLocaleString('vi-VN')}</span></div></div></div>
+            {viewMode === 'grid' ? (
+              <div className="mt-6 space-y-3">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-600">Tiến độ nộp bài</span>
+                  <span className="font-bold text-blue-700">{submitted}/{total} học sinh · {percent}%</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-full rounded-full bg-blue-600" style={{ width: `${percent}%` }} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${status.className}`}>{status.label}</span>
+                  <span className="flex items-center text-xs font-bold text-blue-600">Xem chi tiết <ChevronRight className="w-4 h-4" /></span>
+                </div>
+              </div>
+            ) : (
+              <div className="pr-8 text-right">
+                <p className="text-xs text-slate-500">Đã nộp</p>
+                <p className="font-bold text-blue-700">{submitted}/{total}</p>
+              </div>
+            )}
           </article>;
         })}
       </div>}

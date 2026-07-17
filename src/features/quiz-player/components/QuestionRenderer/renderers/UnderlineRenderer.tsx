@@ -54,7 +54,7 @@ const UnderlineRenderer: React.FC<BaseRendererProps> = ({
                             className={`group relative px-4 py-2 rounded-xl transition-all duration-200 active:scale-90 select-none ${
                                 isSelected 
                                     ? 'bg-orange-500 text-white shadow-lg ring-2 ring-orange-200 ring-offset-2 scale-105 z-10' 
-                                    : 'bg-white hover:bg-orange-50 text-gray-700 hover:text-orange-900 border border-gray-100 shadow-sm hover:shadow-md'
+                                    : 'bg-white hover:bg-orange-50 text-orange-950 hover:text-orange-900 border border-gray-100 shadow-sm hover:shadow-md'
                             }`}
                         >
                             <span className="relative z-10">

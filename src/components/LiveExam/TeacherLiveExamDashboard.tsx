@@ -107,7 +107,7 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
             yellow: 'bg-yellow-100 text-yellow-800',
             green: 'bg-green-100 text-green-800',
             blue: 'bg-blue-100 text-blue-800',
-            purple: 'bg-purple-100 text-purple-800',
+            purple: 'bg-purple-100 text-blue-900',
         };
         return colorMap[getStatusColor(status)] || colorMap.gray;
     };
@@ -118,11 +118,11 @@ export const TeacherLiveExamDashboard: React.FC<TeacherLiveExamDashboardProps> =
         { key: 'waiting', label: 'Đang chờ', value: statusCounts.waiting, className: 'bg-yellow-50 text-yellow-700' },
         { key: 'active', label: 'Đang thi', value: statusCounts.active, className: 'bg-green-50 text-green-700' },
         { key: 'scoring', label: 'Đang chấm', value: statusCounts.scoring, className: 'bg-blue-50 text-blue-700' },
-        { key: 'closed', label: 'Đã kết thúc', value: statusCounts.closed, className: 'bg-purple-50 text-purple-700' },
+        { key: 'closed', label: 'Đã kết thúc', value: statusCounts.closed, className: 'bg-purple-50 text-blue-800' },
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-3 sm:p-4 lg:p-6">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 p-3 sm:p-4 lg:p-6">
             <div className="mx-auto max-w-7xl">
                 <section className="mb-6 rounded-2xl bg-white p-5 shadow-xl sm:p-6">
                     <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

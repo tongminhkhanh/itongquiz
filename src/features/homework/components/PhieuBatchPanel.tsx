@@ -197,7 +197,11 @@ export const PhieuBatchPanel: React.FC<PhieuBatchPanelProps> = ({ assignment, su
                   <span className="block text-sm font-black text-slate-800">{submission.student_name}</span>
                   <span className="text-xs font-bold text-slate-400">{submission.score}/10 diem</span>
                 </span>
-                <span className={`w-8 h-8 rounded-full flex items-center justify-center ${checked ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-300'}`}>
+                <span className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                  checked
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-100 text-slate-500'
+                }`}>
                   {hasDraft || checked ? <Check className="w-4 h-4" /> : null}
                 </span>
               </button>

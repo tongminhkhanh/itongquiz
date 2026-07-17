@@ -40,9 +40,9 @@ export const ResultsRoom: React.FC<ResultsRoomProps> = ({
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-pink-100 flex items-center justify-center p-4">
                 <div className="text-center">
-                    <Loader2 className="w-12 h-12 animate-spin text-purple-600 mx-auto mb-4" />
+                    <Loader2 className="w-12 h-12 animate-spin text-blue-700 mx-auto mb-4" />
                     <p className="text-slate-600">Đang tải kết quả...</p>
                 </div>
             </div>
@@ -51,7 +51,7 @@ export const ResultsRoom: React.FC<ResultsRoomProps> = ({
 
     if (error || !results) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-pink-100 flex items-center justify-center p-4">
                 <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center">
                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <span className="text-3xl">❌</span>
@@ -83,7 +83,7 @@ export const ResultsRoom: React.FC<ResultsRoomProps> = ({
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-pink-100 p-4">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-6">
@@ -128,7 +128,7 @@ export const ResultsRoom: React.FC<ResultsRoomProps> = ({
                             <div className={`w-24 h-24 ${
                                 isTopThree ? 'bg-yellow-100' : 'bg-purple-100'
                             } rounded-full flex items-center justify-center mx-auto mb-3`}>
-                                <Trophy className={isTopThree ? 'text-yellow-600' : 'text-purple-600'} size={40} />
+                                <Trophy className={isTopThree ? 'text-yellow-600' : 'text-blue-700'} size={40} />
                             </div>
                             <div className={`text-5xl font-bold mb-1 ${getMedalColor(participant.rank)}`}>
                                 {getRankBadge(participant.rank)}

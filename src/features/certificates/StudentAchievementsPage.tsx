@@ -11,7 +11,7 @@ const StudentAchievementsPage: React.FC<StudentAchievementsPageProps> = () => {
     const { certificates, isLoading, error, refetch } = useCertificates();
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-amber-50 pb-24 pt-2">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-amber-50 pb-24 pt-2">
             {/* Header */}
             <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-indigo-100 shadow-sm">
                 <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -30,7 +30,7 @@ const StudentAchievementsPage: React.FC<StudentAchievementsPageProps> = () => {
                     <button
                         onClick={refetch}
                         disabled={isLoading}
-                        className="p-2 rounded-xl hover:bg-indigo-50 text-indigo-400 hover:text-indigo-600 transition-colors disabled:opacity-50"
+                        className="p-2 rounded-xl hover:bg-indigo-50 text-indigo-400 hover:text-blue-700 transition-colors disabled:opacity-50"
                         title="Làm mới"
                     >
                         <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
@@ -100,7 +100,7 @@ const StudentAchievementsPage: React.FC<StudentAchievementsPageProps> = () => {
                                 </div>
                             </div>
                             <div className="flex-1 bg-white rounded-2xl shadow-sm border border-indigo-100 p-4 flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-xl flex items-center justify-center">
+                                <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-400 rounded-xl flex items-center justify-center">
                                     <Download size={20} className="text-white" />
                                 </div>
                                 <div>

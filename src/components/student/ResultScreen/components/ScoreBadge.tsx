@@ -19,7 +19,7 @@ const ScoreBadge: React.FC<Props> = ({ score }) => {
             return {
                 emoji: '🌟',
                 text: 'Giỏi',
-                bgColor: 'bg-gradient-to-r from-purple-400 to-indigo-500',
+                bgColor: 'bg-gradient-to-r from-sky-400 to-indigo-500',
                 textColor: 'text-white',
                 glow: 'shadow-lg shadow-purple-500/50'
             };
@@ -60,18 +60,21 @@ const ScoreBadge: React.FC<Props> = ({ score }) => {
         ${config.bgColor} ${config.textColor} ${config.glow}
         font-bold text-sm
         transform transition-all duration-300
-        hover:scale-105 hover:shadow-xl
-        animate-bounce-gentle
+        motion-safe:hover:-translate-y-0.5 hover:shadow-xl
+        animate-gentle-float
       `}
         >
             <span className="text-xl">{config.emoji}</span>
             <span>{config.text}</span>
 
             <style>{`
-        .animate-bounce-gentle {
-          animation: bounceGentle 2s ease-in-out infinite;
+        .animate-gentle-float {
+          animation: gentleFloat 2.4s ease-in-out infinite;
         }
-        @keyframes bounceGentle {
+        @media (prefers-reduced-motion: reduce) {
+          .animate-gentle-float { animation: none; }
+        }
+        @keyframes gentleFloat {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-3px); }
         }

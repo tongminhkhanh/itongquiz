@@ -45,14 +45,20 @@ const PedagogicalProfileSection: React.FC<PedagogicalProfileSectionProps> = ({
                     }`}
                 >
                     <div className="flex items-start gap-3">
-                        <div className={`rounded-xl p-2 ${isThongTu27Enabled ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                        <div className={`rounded-xl p-2 ${
+                            isThongTu27Enabled
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-slate-100 text-slate-500'
+                        }`}>
                             <ShieldCheck className="w-5 h-5" />
                         </div>
                         <div className="flex-1">
                             <div className="flex items-center justify-between gap-3">
                                 <h4 className="text-sm font-bold">Bam Thong tu 27</h4>
                                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${
-                                    isThongTu27Enabled ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'
+                                    isThongTu27Enabled
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-slate-100 text-slate-500'
                                 }`}>
                                     {isThongTu27Enabled ? 'Dang bat' : 'Dang tat'}
                                 </span>
@@ -76,7 +82,11 @@ const PedagogicalProfileSection: React.FC<PedagogicalProfileSectionProps> = ({
                         } ${!isThongTu27Enabled ? 'cursor-not-allowed opacity-50 hover:translate-y-0' : ''}`}
                     >
                         <div className="flex items-start gap-3">
-                            <div className={`rounded-xl p-2 ${promptProfile.learnerMode === 'gifted' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                            <div className={`rounded-xl p-2 ${
+                                promptProfile.learnerMode === 'gifted'
+                                    ? 'bg-amber-500 text-white'
+                                    : 'bg-slate-100 text-slate-500'
+                            }`}>
                                 <GraduationCap className="w-5 h-5" />
                             </div>
                             <div className="flex-1">
@@ -104,7 +114,11 @@ const PedagogicalProfileSection: React.FC<PedagogicalProfileSectionProps> = ({
                         } ${!isThongTu27Enabled ? 'cursor-not-allowed opacity-50 hover:translate-y-0' : ''}`}
                     >
                         <div className="flex items-start gap-3">
-                            <div className={`rounded-xl p-2 ${promptProfile.learnerMode === 'remedial' ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                            <div className={`rounded-xl p-2 ${
+                                promptProfile.learnerMode === 'remedial'
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'bg-slate-100 text-slate-500'
+                            }`}>
                                 <HeartHandshake className="w-5 h-5" />
                             </div>
                             <div className="flex-1">

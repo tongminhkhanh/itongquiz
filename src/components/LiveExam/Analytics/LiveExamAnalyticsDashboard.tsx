@@ -14,7 +14,7 @@ import { TimeAnalysisCard } from './TimeAnalysisCard';
 
 // Loading Skeleton Component
 const LoadingSkeleton: React.FC = () => (
-  <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-4">
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 p-4">
     <div className="max-w-7xl mx-auto">
       {/* Header Skeleton */}
       <div className="mb-6 animate-pulse">
@@ -40,7 +40,7 @@ interface ErrorStateProps {
 }
 
 const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => (
-  <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-4 flex items-center justify-center">
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 p-4 flex items-center justify-center">
     <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
       <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
         <AlertCircle size={32} className="text-red-600" />
@@ -64,7 +64,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => (
 
 // Empty State Component
 const EmptyState: React.FC = () => (
-  <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-4 flex items-center justify-center">
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 p-4 flex items-center justify-center">
     <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
       <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-4">
         <BarChart3 size={32} className="text-slate-400" />
@@ -120,7 +120,7 @@ const AnalyticsHeader: React.FC<AnalyticsHeaderProps> = ({ session, onRefresh, o
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-3">
-              <BarChart3 size={28} className="text-indigo-600" />
+              <BarChart3 size={28} className="text-blue-700" />
               {session.title}
             </h1>
             <div className="flex items-center gap-3 flex-wrap">
@@ -191,7 +191,7 @@ export const LiveExamAnalyticsDashboard: React.FC<LiveExamAnalyticsDashboardProp
 
   // Success state - render full dashboard
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <AnalyticsHeader 

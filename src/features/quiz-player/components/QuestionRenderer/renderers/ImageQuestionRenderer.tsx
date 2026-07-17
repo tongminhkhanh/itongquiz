@@ -82,7 +82,9 @@ const ImageQuestionRenderer: React.FC<BaseRendererProps> = ({
                                 }`}
                             >
                                 <span className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mr-3 flex-shrink-0 ${
-                                    isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-gray-300 text-gray-500'
+                                    isSelected
+                                        ? 'border-orange-500 bg-orange-500 text-white'
+                                        : 'border-gray-300 text-gray-600'
                                 }`}>
                                     {label}
                                 </span>

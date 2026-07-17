@@ -191,14 +191,14 @@ const IoeResultsTab: React.FC = () => {
                         </div>
                     </div>
                 </Card>
-                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                <Card className="bg-gradient-to-br from-blue-50 to-purple-100 border-purple-200">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-purple-500 rounded-lg">
                             <Award className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <p className="text-sm text-purple-600">Tỉ lệ đạt</p>
-                            <p className="text-2xl font-bold text-purple-800">{stats.passRate.toFixed(0)}%</p>
+                            <p className="text-sm text-blue-700">Tỉ lệ đạt</p>
+                            <p className="text-2xl font-bold text-blue-900">{stats.passRate.toFixed(0)}%</p>
                         </div>
                     </div>
                 </Card>

@@ -281,7 +281,7 @@ const DrOwlModal: React.FC<DrOwlModalProps> = ({
                                         const isCorrectAnswer = opt === data.practiceQuestions[currentQIndex]?.correctAnswer;
                                         const showResult = showAnswerFeedback;
 
-                                        let btnClass = 'bg-white border-2 border-slate-200 hover:border-amber-300 hover:bg-amber-50 text-slate-700';
+                                        let btnClass = 'bg-white border-2 border-slate-200 hover:border-amber-300 hover:bg-amber-50 text-amber-950';
                                         if (showResult && isCorrectAnswer) {
                                             btnClass = 'bg-emerald-50 border-2 border-emerald-400 text-emerald-700';
                                         } else if (showResult && isSelected && !isCorrectAnswer) {

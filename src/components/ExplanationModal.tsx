@@ -80,7 +80,7 @@ const ExplanationModal: React.FC<ExplanationModalProps> = ({
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-scale-in">
                 {/* Header */}
-                <div className="sticky top-0 bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 rounded-t-2xl flex items-center justify-between">
+                <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-t-2xl flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <span className="text-2xl">🤖</span>
                         <h2 className="text-xl font-bold">Gia sư AI giải thích</h2>
@@ -113,12 +113,12 @@ const ExplanationModal: React.FC<ExplanationModalProps> = ({
                     {/* AI Explanation */}
                     <div className="bg-indigo-50 rounded-xl p-4">
                         <div className="flex items-center gap-2 mb-3">
-                            <Lightbulb className="w-5 h-5 text-indigo-600" />
-                            <h3 className="font-semibold text-indigo-700">Giải thích:</h3>
+                            <Lightbulb className="w-5 h-5 text-blue-700" />
+                            <h3 className="font-semibold text-blue-800">Giải thích:</h3>
                         </div>
 
                         {isLoadingExplanation ? (
-                            <div className="flex items-center gap-2 text-indigo-600">
+                            <div className="flex items-center gap-2 text-blue-700">
                                 <Loader2 className="w-5 h-5 animate-spin" />
                                 <span>Đang phân tích câu hỏi...</span>
                             </div>
@@ -162,12 +162,12 @@ const ExplanationModal: React.FC<ExplanationModalProps> = ({
                     ) : (
                         <div className="bg-purple-50 rounded-xl p-4">
                             <div className="flex items-center gap-2 mb-4">
-                                <BookOpen className="w-5 h-5 text-purple-600" />
-                                <h3 className="font-semibold text-purple-700">Câu hỏi tương tự:</h3>
+                                <BookOpen className="w-5 h-5 text-blue-700" />
+                                <h3 className="font-semibold text-blue-800">Câu hỏi tương tự:</h3>
                             </div>
 
                             {isLoadingSimilar ? (
-                                <div className="flex items-center gap-2 text-purple-600">
+                                <div className="flex items-center gap-2 text-blue-700">
                                     <Loader2 className="w-5 h-5 animate-spin" />
                                     <span>Đang tạo câu hỏi luyện tập...</span>
                                 </div>

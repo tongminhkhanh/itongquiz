@@ -394,7 +394,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                             setCurrentIndex(Math.max(0, currentIndex - 1));
                         }}
                         disabled={currentIndex === 0}
-                        className="w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-2xl bg-white text-slate-400 border-2 border-slate-200 hover:border-sky-400 hover:text-sky-400 hover:bg-sky-50 transition-all disabled:opacity-30 text-2xl font-bold shadow-sm"
+                        className="w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-2xl bg-white text-sky-900 border-2 border-slate-200 hover:border-sky-400 hover:text-sky-400 hover:bg-sky-50 transition-all disabled:opacity-30 text-2xl font-bold shadow-sm"
                     >
                         ◀
                     </button>
@@ -417,7 +417,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                         ? 'bg-sky-400 text-white border-4 border-white shadow-lg scale-110 -rotate-3'
                                         : isAnswered
                                             ? 'bg-emerald-400 text-white border-2 border-white'
-                                            : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-emerald-50'
+                                            : 'bg-white border-2 border-slate-200 text-emerald-900 hover:bg-emerald-50'
                                         }`}
                                 >
                                     {idx + 1}
@@ -430,7 +430,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                     <button
                         onClick={() => setCurrentIndex(Math.min(shuffledQuestions.length - 1, currentIndex + 1))}
                         disabled={currentIndex === shuffledQuestions.length - 1}
-                        className="w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-2xl bg-white text-slate-400 border-2 border-slate-200 hover:border-sky-400 hover:text-sky-400 hover:bg-sky-50 transition-all disabled:opacity-30 text-2xl font-bold shadow-sm"
+                        className="w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-2xl bg-white text-sky-900 border-2 border-slate-200 hover:border-sky-400 hover:text-sky-400 hover:bg-sky-50 transition-all disabled:opacity-30 text-2xl font-bold shadow-sm"
                     >
                         ▶
                     </button>
@@ -442,7 +442,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                 <div className="max-w-5xl mx-auto">
                     <div className="bg-white rounded-3xl shadow-xl border-8 border-slate-100 min-h-[500px] p-6 md:p-12 flex flex-col items-center justify-center relative overflow-hidden">
                         {/* Decorative Tape */}
-                        <div className="absolute top-0 left-16 w-24 h-8 bg-amber-400/40 rounded-b-xl border-x-4 border-b-4 border-white"></div>
+                        <div className="absolute top-0 left-16 w-24 h-8 bg-amber-400/40 rounded-b-xl border-x-4 border border-white"></div>
 
 
                         {currentQuestion && (
@@ -576,7 +576,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                 const cleanQuestion = questionText
                                                     .replace(LISTENING_EMOJI_REGEX, '')
                                                     .replace(LISTEN_FILL_PREFIX_REGEX, '');
-                                                const inputClass = "inline-block w-40 md:w-52 px-4 py-2 text-center text-2xl md:text-3xl font-bold bg-amber-50 border-3 border-amber-300 rounded-xl text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-amber-300/50 focus:border-amber-400 mx-1";
+                                                const inputClass = "inline-block w-40 md:w-52 px-4 py-2 text-center text-2xl md:text-3xl font-bold bg-amber-50 border-3 border-amber-300 rounded-xl text-amber-950 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-amber-300/50 focus:border-amber-400 mx-1";
 
                                                 if (EXPLICIT_PLACEHOLDER_REGEX.test(cleanQuestion)) {
                                                     const interactiveQuestion = cleanQuestion.replace(EXPLICIT_PLACEHOLDER_REGEX, '[1]');
@@ -609,7 +609,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                             onChange={(event) => handleAnswerChange(currentQuestion.id, event.target.value)}
                                                             placeholder="Type your answer..."
                                                             autoFocus
-                                                            className="inline-block w-48 md:w-64 px-4 py-2 text-center text-2xl md:text-3xl font-bold bg-amber-50 border-3 border-amber-300 rounded-xl text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-amber-300/50 focus:border-amber-400 ml-2"
+                                                            className="inline-block w-48 md:w-64 px-4 py-2 text-center text-2xl md:text-3xl font-bold bg-amber-50 border-3 border-amber-300 rounded-xl text-amber-950 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-amber-300/50 focus:border-amber-400 ml-2"
                                                         />
                                                     </>
                                                 );
@@ -670,7 +670,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                             onClick={() => handleTrueFalseClick(true)}
                                                             className={`px-5 py-2 rounded-xl font-bold transition-all active:scale-95 ${val === true
                                                                 ? 'bg-emerald-500 text-white shadow-lg'
-                                                                : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-emerald-50'
+                                                                : 'bg-white border-2 border-slate-200 text-emerald-900 hover:bg-emerald-50'
                                                                 }`}
                                                         >
                                                             TRUE
@@ -679,7 +679,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                             onClick={() => handleTrueFalseClick(false)}
                                                             className={`px-5 py-2 rounded-xl font-bold transition-all active:scale-95 ${val === false
                                                                 ? 'bg-red-500 text-white shadow-lg'
-                                                                : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-red-50'
+                                                                : 'bg-white border-2 border-slate-200 text-red-900 hover:bg-red-50'
                                                                 }`}
                                                         >
                                                             FALSE
@@ -735,7 +735,7 @@ const IoeStudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                                                         disabled={isUsed}
                                                         className={`px-8 py-5 rounded-2xl border-2 font-semibold text-lg md:text-xl transition-all shadow-md ${isUsed
                                                             ? 'bg-slate-100 border-slate-200 text-slate-300 opacity-50'
-                                                            : 'bg-white border-slate-300 text-slate-700 hover:scale-105 hover:shadow-xl hover:border-amber-500 hover:bg-amber-50 cursor-pointer active:scale-95'
+                                                            : 'bg-white border-slate-300 text-amber-950 hover:scale-105 hover:shadow-xl hover:border-amber-500 hover:bg-amber-50 cursor-pointer active:scale-95'
                                                             }`}
                                                     >
                                                         {item}

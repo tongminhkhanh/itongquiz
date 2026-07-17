@@ -756,7 +756,7 @@
 }
 
 /* ===== ANIMATIONS ===== */
-@keyframes student-bounce {
+@keyframes student-float {
 
     0%,
     100% {
@@ -796,8 +796,8 @@
     }
 }
 
-.student-animate-bounce {
-    animation: student-bounce 2s ease-in-out infinite;
+.student-animate-float {
+    animation: student-float 2.4s ease-in-out infinite;
 }
 
 .student-animate-wiggle {
@@ -806,6 +806,14 @@
 
 .student-animate-pop {
     animation: student-pop 0.4s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .student-animate-float,
+    .student-animate-wiggle,
+    .student-animate-pop {
+        animation: none;
+    }
 }
 
 /* ===== RESPONSIVE ===== */

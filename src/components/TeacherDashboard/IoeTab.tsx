@@ -1261,7 +1261,7 @@ ${searchResult.content}
 
                 {/* Error */}
                 {error && (
-                    <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg shadow-sm animate-slide-down">
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800 shadow-sm animate-slide-down">
                         <div className="flex items-start gap-3">
                             <span className="text-red-500 text-xl">⚠️</span>
                             <div className="flex-1 whitespace-pre-line text-sm">{error}</div>
@@ -1276,7 +1276,7 @@ ${searchResult.content}
                         onClick={() => handleGenerate(true)}
                         loading={isGenerating && searchStatus?.includes('Perplexity')}
                         disabled={totalQuestions === 0 || isGenerating}
-                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                         size="lg"
                         variant="primary"
                         icon={<Search className="w-5 h-5" />}

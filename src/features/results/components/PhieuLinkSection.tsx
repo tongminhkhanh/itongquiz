@@ -129,7 +129,7 @@ const PhieuLinkSection: React.FC<Props> = ({ resultId, phieuInput, savedPhieu, o
             onClick={handleRevoke}
             disabled={isRevoking}
             title="Thu hồi link"
-            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 disabled:opacity-50"
+            className="p-1.5 text-red-900 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 disabled:opacity-50"
           >
             {isRevoking
               ? <Loader2 className="w-4 h-4 animate-spin" />

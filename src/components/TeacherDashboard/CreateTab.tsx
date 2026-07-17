@@ -147,8 +147,8 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                                 onClick={() => { logic.setTnSearchMode('search'); logic.handleGenerate('practice'); }}
                                 disabled={!logic.topic.trim() || questionCount === 0 || logic.isGenerating || (logic.isTeacherAccount && !logic.hasAiQuota)}
                                 className={`w-full py-3.5 px-6 rounded-xl font-bold text-white text-base flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${logic.isGenerating && logic.tnSearchMode === 'search'
-                                    ? 'bg-gradient-to-r from-purple-400 to-pink-400 animate-pulse'
-                                    : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
+                                    ? 'bg-gradient-to-r from-sky-400 to-pink-400 animate-pulse'
+                                    : 'bg-gradient-to-r from-blue-600 to-pink-600 hover:from-blue-700 hover:to-pink-700'
                                     }`}
                             >
                                 <Search className="w-5 h-5" />

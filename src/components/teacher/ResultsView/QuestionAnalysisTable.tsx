@@ -77,19 +77,19 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
 
     return (
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-5 text-white">
+            <div className="bg-blue-700 p-5 text-white">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h3 className="flex items-center gap-2 text-lg font-bold">
                             <Target className="h-5 w-5" />
                             Câu sai nhiều nhất
                         </h3>
-                        <p className="mt-1 text-sm text-violet-100">
+                        <p className="mt-1 text-sm text-blue-100">
                             Xếp hạng theo tỷ lệ sai, sau đó theo số học sinh sai để ưu tiên nội dung cần giảng lại.
                         </p>
                     </div>
                     <label className="flex items-center gap-2 text-sm">
-                        <span className="text-violet-100">Cách tính:</span>
+                        <span className="text-blue-100">Cách tính:</span>
                         <select
                             value={attemptMode}
                             onChange={event => onAttemptModeChange(event.target.value as AnalysisAttemptMode)}
@@ -111,7 +111,7 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
 
             {isLoading && rankedAnalysis.length === 0 ? (
                 <div className="flex items-center justify-center gap-3 py-12 text-slate-500">
-                    <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
                     Đang tổng hợp đáp án của cả lớp...
                 </div>
             ) : rankedAnalysis.length === 0 ? (
@@ -127,7 +127,7 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
                     <div className="grid gap-3 border-b border-slate-100 bg-slate-50/70 p-4 sm:grid-cols-3">
                         <div className="rounded-xl border border-slate-200 bg-white p-4">
                             <div className="flex items-center gap-2 text-sm text-slate-500">
-                                <Users className="h-4 w-4 text-indigo-500" /> Học sinh được tính
+                                <Users className="h-4 w-4 text-blue-600" /> Học sinh được tính
                             </div>
                             <p className="mt-1 text-2xl font-bold text-slate-800">{cohortSize}</p>
                             <p className="mt-1 text-xs text-slate-500">
@@ -145,7 +145,7 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
                             <div className="flex items-center gap-2 text-sm text-slate-500">
                                 <Target className="h-4 w-4 text-violet-500" /> Câu cần xem trước
                             </div>
-                            <p className="mt-1 text-2xl font-bold text-violet-700">
+                            <p className="mt-1 text-2xl font-bold text-cyan-800">
                                 {topQuestion ? `Câu ${topQuestion.questionNumber}` : '—'}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
@@ -163,7 +163,11 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
                             return (
                                 <article key={item.questionId} className="p-4 transition-colors hover:bg-slate-50/70 sm:p-5">
                                     <div className="flex items-start gap-3 sm:gap-4">
-                                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${rank < showTopMissed ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                                            rank < showTopMissed
+                                                ? 'bg-red-500 text-white'
+                                                : 'bg-slate-200 text-slate-700'
+                                        }`}>
                                             {rank + 1}
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -223,7 +227,7 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
                                                     <button
                                                         type="button"
                                                         onClick={() => setExpandedQuestionId(expanded ? null : item.questionId)}
-                                                        className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+                                                        className="inline-flex items-center gap-1 text-sm font-semibold text-blue-700 hover:text-blue-800"
                                                     >
                                                         {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                                         {expanded ? 'Ẩn chi tiết' : `Xem ${item.affectedStudents.length} học sinh cần hỗ trợ`}
@@ -260,7 +264,7 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
                             <button
                                 type="button"
                                 onClick={() => setShowAll(current => !current)}
-                                className="font-semibold text-indigo-600 hover:text-indigo-700"
+                                className="font-semibold text-blue-700 hover:text-blue-800"
                             >
                                 {showAll ? 'Thu gọn' : `Xem toàn bộ ${rankedAnalysis.length} câu có dữ liệu`}
                             </button>

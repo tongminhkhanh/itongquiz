@@ -85,12 +85,12 @@ export const ScoreDistributionCard: React.FC<ScoreDistributionCardProps> = ({ sc
         </div>
 
         {/* Median */}
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-3">
+        <div className="bg-gradient-to-br from-blue-50 to-purple-100 rounded-xl p-3">
           <div className="flex items-center gap-2 mb-1">
-            <Award size={16} className="text-purple-600" />
-            <span className="text-xs font-semibold text-purple-700">Trung vị</span>
+            <Award size={16} className="text-blue-700" />
+            <span className="text-xs font-semibold text-blue-800">Trung vị</span>
           </div>
-          <p className="text-2xl font-bold text-purple-900">
+          <p className="text-2xl font-bold text-blue-950">
             {median.toFixed(1)}
           </p>
         </div>

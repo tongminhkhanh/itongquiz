@@ -444,7 +444,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                         <img
                             src={`${FLUENT_CDN}/Rocket/3D/rocket_3d.png`}
                             alt="Rocket"
-                            className="w-24 h-24 object-contain animate-bounce"
+                            className="w-24 h-24 object-contain motion-safe:animate-pulse"
                         />
                     </div>
                     <h3 className="text-2xl font-bold text-gray-800 mb-2">

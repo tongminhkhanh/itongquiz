@@ -41,11 +41,11 @@ const PrivacyPolicy: React.FC<Props> = ({ onBack }) => {
                             <p className="text-xs text-blue-700">Chúng tôi luôn nói rõ loại dữ liệu nào được thu thập.</p>
                         </div>
                         <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex flex-col items-center text-center">
-                            <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg mb-3">
+                            <div className="p-2 bg-indigo-100 text-blue-700 rounded-lg mb-3">
                                 <Lock className="w-6 h-6" />
                             </div>
-                            <h3 className="text-sm font-bold text-indigo-900 mb-1">An toàn</h3>
-                            <p className="text-xs text-indigo-700">Dữ liệu được mã hóa và bảo vệ nghiêm ngặt.</p>
+                            <h3 className="text-sm font-bold text-blue-950 mb-1">An toàn</h3>
+                            <p className="text-xs text-blue-800">Dữ liệu được mã hóa và bảo vệ nghiêm ngặt.</p>
                         </div>
                         <div className="p-4 bg-green-50 rounded-2xl border border-green-100 flex flex-col items-center text-center">
                             <div className="p-2 bg-green-100 text-green-600 rounded-lg mb-3">

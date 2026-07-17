@@ -30,7 +30,7 @@ const StudentInfoForm: React.FC<StudentInfoFormProps> = ({
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-100 via-blue-50 to-purple-100 p-4 relative overflow-hidden">
             {/* Background Decorations */}
-            <span className="student-bg-decoration top-10 left-10 student-animate-bounce">🎨</span>
+            <span className="student-bg-decoration top-10 left-10 student-animate-float">🎨</span>
             <span className="student-bg-decoration bottom-20 right-10 student-animate-wiggle">🚀</span>
             <span className="student-bg-decoration top-1/3 right-20">⭐</span>
             <span className="student-bg-decoration bottom-1/3 left-20">📚</span>
@@ -38,7 +38,7 @@ const StudentInfoForm: React.FC<StudentInfoFormProps> = ({
             <div className="max-w-md w-full student-card student-animate-pop relative z-10">
                 {/* Hero Header */}
                 <div className="student-hero rounded-t-[1.5rem]">
-                    <div className="student-hero-icon student-animate-bounce">🌍</div>
+                    <div className="student-hero-icon student-animate-float">🌍</div>
                     <h2 className="student-hero-title">{SCHOOL_NAME}</h2>
                     <p className="student-hero-subtitle">{quiz.title}</p>
                 </div>

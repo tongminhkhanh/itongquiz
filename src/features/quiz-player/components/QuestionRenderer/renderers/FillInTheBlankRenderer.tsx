@@ -106,7 +106,7 @@ const FillInTheBlankRenderer: React.FC<BaseRendererProps> = ({
                 value={currentValue}
                 onChange={(event) => handleFill(blankId, event.target.value)}
                 placeholder="..."
-                className={`inline-block align-middle mx-1 px-2 py-0.5 border-b-2 outline-none min-w-[72px] w-20 text-center transition-all rounded-t-lg ${
+                className={`inline-block align-middle mx-1 px-2 py-0.5 border outline-none min-w-[72px] w-20 text-center transition-all rounded-t-lg ${
                     isDragDrop
                         ? 'border-indigo-400 bg-indigo-50/50 cursor-pointer focus:bg-indigo-100'
                         : 'border-orange-300 bg-orange-50/30 focus:border-orange-500'

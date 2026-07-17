@@ -79,7 +79,7 @@ const DashboardHero: React.FC<DashboardHeroProps> = ({
                     <button
                         type="button"
                         onClick={onViewResults}
-                        className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/85 px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition-colors duration-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                        className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/85 px-4 py-2.5 text-sm font-bold text-blue-900 shadow-sm transition-colors duration-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                     >
                         Xem kết quả
                         <ArrowRight aria-hidden="true" className="size-4" />

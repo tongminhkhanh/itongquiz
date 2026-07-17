@@ -104,7 +104,7 @@ export const TestBankModal: React.FC<TestBankModalProps> = ({ isOpen, onClose, o
                 <div className="flex-1 overflow-y-auto p-4 bg-slate-50/50">
                     {loading ? (
                         <div className="flex items-center justify-center h-48">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                            <div className="animate-spin rounded-full h-8 w-8 border border-indigo-600"></div>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -130,7 +130,7 @@ export const TestBankModal: React.FC<TestBankModalProps> = ({ isOpen, onClose, o
                                             disabled={isAdded}
                                             onClick={(e) => handleAdd(item, e)}
                                             className={'w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ' + (
-                                            isAdded ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-slate-50 text-slate-700 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200'
+                                            isAdded ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-slate-50 text-emerald-900 border border-slate-200 hover:bg-indigo-50 hover:text-blue-700 hover:border-indigo-200'
                                         )}>
                                             {isAdded ? (
                                                 <><CheckCircle2 className="w-4 h-4" /> Đã thêm vào đề</>

@@ -95,7 +95,7 @@ const LatexDropdown: React.FC<LatexDropdownProps> = React.memo(({
                             onClick={() => { onChange(opt); setIsOpen(false); }}
                             className={`w-full text-left px-3 py-2 transition-colors flex items-center gap-2 ${opt === value
                                 ? 'bg-indigo-50 text-indigo-700 font-bold'
-                                : 'hover:bg-indigo-50/50 text-gray-700'
+                                : 'hover:bg-indigo-50/50 text-blue-900'
                                 }`}
                         >
                             {opt === value && (

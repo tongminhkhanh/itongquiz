@@ -327,7 +327,7 @@ const TeacherDashboard: React.FC = () => {
                             aria-label="Mở cài đặt thông báo"
                             title="Thông báo"
                             onClick={() => setActiveTab('announcements')}
-                            className={`hidden size-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:inline-flex ${activeTab === 'announcements' ? 'bg-blue-50 text-blue-600' : ''}`}
+                            className={`hidden size-10 items-center justify-center rounded-full text-blue-900 transition-colors hover:bg-slate-100 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:inline-flex ${activeTab === 'announcements' ? 'bg-blue-50 text-blue-600' : ''}`}
                         >
                             <Bell aria-hidden="true" className="size-5" />
                         </button>

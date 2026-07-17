@@ -75,7 +75,7 @@ const RecommendationsTab: React.FC<Props> = ({ quiz, result, answers, focus }) =
     if (isLoading) {
         return (
             <div className="p-8 text-center">
-                <div className="inline-flex items-center gap-3 rounded-xl bg-indigo-50 px-6 py-4 text-indigo-700">
+                <div className="inline-flex items-center gap-3 rounded-xl bg-indigo-50 px-6 py-4 text-blue-800">
                     <Sparkles className="w-6 h-6 animate-pulse" />
                     <div>
                         <p className="font-bold">
@@ -132,7 +132,7 @@ const RecommendationsTab: React.FC<Props> = ({ quiz, result, answers, focus }) =
 
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 p-3">
+                    <div className="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 p-3">
                         <Sparkles className="w-6 h-6 text-white" />
                     </div>
                     <div>
@@ -142,7 +142,7 @@ const RecommendationsTab: React.FC<Props> = ({ quiz, result, answers, focus }) =
                 </div>
                 <button
                     onClick={fetchRecommendations}
-                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-indigo-600 transition-colors hover:bg-indigo-50"
+                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-blue-700 transition-colors hover:bg-indigo-50"
                 >
                     <RefreshCw className="w-4 h-4" />
                     Lam moi
@@ -151,13 +151,13 @@ const RecommendationsTab: React.FC<Props> = ({ quiz, result, answers, focus }) =
 
             {recommendation && (
                 <>
-                    <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
+                    <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-blue-50 to-purple-50 p-6">
                         <div className="flex items-start gap-4">
                             <div className="rounded-lg bg-indigo-100 p-2">
-                                <Target className="w-5 h-5 text-indigo-600" />
+                                <Target className="w-5 h-5 text-blue-700" />
                             </div>
                             <div>
-                                <h3 className="mb-2 font-bold text-indigo-900">Nhan xet tong quan</h3>
+                                <h3 className="mb-2 font-bold text-blue-950">Nhan xet tong quan</h3>
                                 <p className="leading-relaxed text-indigo-800">{recommendation.analysis}</p>
                             </div>
                         </div>

@@ -181,8 +181,10 @@ const GiftShop: React.FC = () => {
                                         <button
                                             onClick={() => setSelectedItem(item)}
                                             disabled={!canBuy || isLoading}
-                                            className={`mt-3 w-full py-2.5 rounded-xl text-sm font-black transition-colors ${
-                                                canBuy ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                            className={`mt-3 w-full rounded-xl py-2.5 text-sm font-black transition-colors ${
+                                                canBuy
+                                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                                    : 'cursor-not-allowed bg-slate-100 text-slate-500'
                                             }`}
                                         >
                                             {!canBuy ? 'Không đủ xu' : 'Đổi quà'}

@@ -99,10 +99,10 @@ const StatisticsTab: React.FC<Props> = ({ quiz, result, answers }) => {
                     <p className="text-sm text-blue-600">Đánh giá</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-xl p-4 border border-purple-200 text-center">
-                    <TrendingUp className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                    <p className="text-3xl font-bold text-purple-700">{result.score}</p>
-                    <p className="text-sm text-purple-600">Điểm số</p>
+                <div className="bg-gradient-to-br from-blue-50 to-violet-100 rounded-xl p-4 border border-purple-200 text-center">
+                    <TrendingUp className="w-8 h-8 mx-auto mb-2 text-blue-700" />
+                    <p className="text-3xl font-bold text-blue-800">{result.score}</p>
+                    <p className="text-sm text-blue-700">Điểm số</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-amber-50 to-orange-100 rounded-xl p-4 border border-amber-200 text-center">

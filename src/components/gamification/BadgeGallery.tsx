@@ -28,7 +28,7 @@ const RARITY_COLORS = {
     epic: {
         bg: 'bg-purple-100',
         border: 'border-purple-500',
-        text: 'text-purple-700',
+        text: 'text-blue-800',
         glow: 'shadow-purple-400',
     },
 };
@@ -89,7 +89,7 @@ export const BadgeGallery: React.FC<BadgeGalleryProps> = ({
                     className="w-full max-w-4xl max-h-[90vh] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
                 >
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 text-white">
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl">

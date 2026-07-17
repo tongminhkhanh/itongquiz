@@ -126,7 +126,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+        <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
         <p className="text-slate-500 font-medium">Đang tải danh sách bài nộp...</p>
       </div>
     );
@@ -152,7 +152,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
         <button
           onClick={() => setActiveTab('GRADING')}
           className={`px-4 py-3 font-bold text-sm tracking-wide border-b-2 transition-colors ${
-            activeTab === 'GRADING' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+            activeTab === 'GRADING' ? 'border-indigo-600 text-blue-800' : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
           DANH SÁCH BÀI NỘP
@@ -160,7 +160,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
         <button
           onClick={() => setActiveTab('ANALYTICS')}
           className={`px-4 py-3 font-bold text-sm tracking-wide border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'ANALYTICS' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+            activeTab === 'ANALYTICS' ? 'border-indigo-600 text-blue-800' : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
           <Sparkles className="w-4 h-4" /> BÁO CÁO NHANH
@@ -168,7 +168,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
         <button
           onClick={() => setActiveTab('PHIEU')}
           className={`px-4 py-3 font-bold text-sm tracking-wide border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'PHIEU' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+            activeTab === 'PHIEU' ? 'border-indigo-600 text-blue-800' : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
           <MessageSquare className="w-4 h-4" /> PHIEU KQ
@@ -190,7 +190,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
                   ['Đã chấm', analyticsData?.graded || 0],
                   ['Điểm TB', (analyticsData?.averageScore || 0).toFixed(1)],
                   ['Trung vị', (analyticsData?.medianScore || 0).toFixed(1)],
-                ].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold text-slate-400 uppercase">{label}</p><p className="text-2xl font-black text-indigo-600">{value}</p></div>)}
+                ].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold text-slate-400 uppercase">{label}</p><p className="text-2xl font-black text-blue-700">{value}</p></div>)}
               </div>
             </div>
 
@@ -231,11 +231,11 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
                   onClick={() => submission && handleSelectSubmission(submission)}
                   className={`p-4 flex items-center justify-between border-b border-slate-50 last:border-0 transition-all ${
                     submission ? 'cursor-pointer hover:bg-indigo-50/50' : 'opacity-60 grayscale'
-                  } ${isSelected ? 'bg-indigo-50 border-l-4 border-l-indigo-500' : ''}`}
+                  } ${isSelected ? 'bg-indigo-50 border-l-2 border-l-indigo-500' : ''}`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      submission ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'
+                      submission ? 'bg-indigo-100 text-blue-700' : 'bg-slate-100 text-blue-900'
                     }`}>
                       <User className="w-5 h-5" />
                     </div>
@@ -311,15 +311,15 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
                   <div className="space-y-6">
                     <div className="bg-indigo-50/50 rounded-3xl p-6 border border-indigo-100 relative overflow-hidden">
                       <div className="flex items-center justify-between mb-4">
-                        <h5 className="flex items-center gap-2 text-indigo-700 font-black text-sm uppercase tracking-wider">
-                          <Sparkles className="w-5 h-5 text-indigo-500" /> Đánh giá tự động từ AI
+                        <h5 className="flex items-center gap-2 text-blue-800 font-black text-sm uppercase tracking-wider">
+                          <Sparkles className="w-5 h-5 text-blue-600" /> Đánh giá tự động từ AI
                         </h5>
                         <Button 
                           size="sm" 
                           variant="secondary"
                           onClick={handleAIGrade}
                           disabled={isAILoading}
-                          className="bg-white hover:bg-indigo-600 hover:text-white border-indigo-200 text-indigo-600 font-black text-[10px] px-3 py-1.5 rounded-xl transition-all shadow-sm flex items-center gap-2"
+                          className="bg-white hover:bg-indigo-600 hover:text-white border-indigo-200 text-blue-700 font-black text-[10px] px-3 py-1.5 rounded-xl transition-all shadow-sm flex items-center gap-2"
                         >
                           {isAILoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                           {isAILoading ? 'ĐANG PHÂN TÍCH...' : 'GỢI Ý CHẤM ĐIỂM'}
@@ -331,7 +331,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
                       </div>
                       <div className="mt-4 flex items-center justify-between pt-4 border-t border-indigo-100">
                         <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Điểm AI đề xuất:</span>
-                        <span className="text-2xl font-black text-indigo-600">{selectedSubmission.score || '?'}/10</span>
+                        <span className="text-2xl font-black text-blue-700">{selectedSubmission.score || '?'}/10</span>
                       </div>
                     </div>
 
@@ -352,7 +352,7 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
                               className="flex-1 accent-indigo-600"
                             />
                             <div className="w-16 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center border border-indigo-100">
-                              <span className="text-xl font-black text-indigo-600">{editScore}</span>
+                              <span className="text-xl font-black text-blue-700">{editScore}</span>
                             </div>
                           </div>
                         </div>

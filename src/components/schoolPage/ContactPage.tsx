@@ -24,13 +24,13 @@ const ContactPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => navigate('/')}
-                            className="px-4 py-2 rounded-full text-sm font-semibold text-slate-600 hover:text-emerald-600 hover:bg-green-50 transition"
+                            className="px-4 py-2 rounded-full text-sm font-semibold text-green-900 hover:text-emerald-600 hover:bg-green-50 transition"
                         >
                             Trang chủ
                         </button>
                         <button
                             onClick={() => navigate('/about')}
-                            className="px-4 py-2 rounded-full text-sm font-semibold text-slate-600 hover:text-emerald-600 hover:bg-green-50 transition"
+                            className="px-4 py-2 rounded-full text-sm font-semibold text-green-900 hover:text-emerald-600 hover:bg-green-50 transition"
                         >
                             Giới thiệu
                         </button>

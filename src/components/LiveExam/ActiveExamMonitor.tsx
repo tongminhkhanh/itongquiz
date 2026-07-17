@@ -128,10 +128,10 @@ export const ActiveExamMonitor: React.FC<ActiveExamMonitorProps> = ({
 
                     <div className="bg-white rounded-xl shadow-lg p-6">
                         <div className="flex items-center gap-3 mb-2">
-                            <StopCircle className="text-purple-600" size={24} />
+                            <StopCircle className="text-blue-700" size={24} />
                             <h3 className="font-semibold text-slate-700">Đã nộp</h3>
                         </div>
-                        <div className="text-3xl font-bold text-purple-600">{submittedCount}</div>
+                        <div className="text-3xl font-bold text-blue-700">{submittedCount}</div>
                         <p className="text-sm text-slate-500">học sinh</p>
                     </div>
 
@@ -203,7 +203,7 @@ export const ActiveExamMonitor: React.FC<ActiveExamMonitorProps> = ({
                                                 </td>
                                                 <td className="py-3 px-4 text-center">
                                                     {participant.submittedAt ? (
-                                                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-blue-800 rounded-full text-sm">
                                                             <StopCircle size={14} />
                                                             Đã nộp
                                                         </span>

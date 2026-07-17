@@ -21,7 +21,7 @@ export const QUIZ_CATEGORIES = [
   { id: 'toan', name: '🧮 Toán Học', color: 'from-blue-400 to-blue-600' },
   { id: 'tieng-viet', name: '📘 Tiếng Việt', color: 'from-amber-400 to-amber-600' },
   { id: 'tu-nhien-xa-hoi', name: '🌍 Tự nhiên & Xã hội', color: 'from-emerald-400 to-emerald-600' },
-  { id: 'tieng-anh', name: '🇬🇧 Tiếng Anh', color: 'from-indigo-400 to-indigo-600' },
+  { id: 'tieng-anh', name: '🇬🇧 Tiếng Anh', color: 'from-blue-400 to-indigo-600' },
   { id: 'tin-hoc', name: '💻 Tin học', color: 'from-slate-400 to-slate-600' },
   { id: 'ioe', name: '🏆 Luyện thi IOE', color: 'from-yellow-400 to-orange-500' },
 ];

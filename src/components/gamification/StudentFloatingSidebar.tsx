@@ -90,7 +90,7 @@ export const StudentFloatingSidebar: React.FC = () => {
                             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                                 {isLoading ? (
                                     <div className="flex items-center justify-center h-40">
-                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+                                        <div className="animate-spin rounded-full h-8 w-8 border border-blue-400"></div>
                                     </div>
                                 ) : topGoldLeaderboard.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-40 text-center space-y-3">

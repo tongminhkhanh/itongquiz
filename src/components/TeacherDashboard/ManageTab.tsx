@@ -64,7 +64,7 @@ const DropdownMenu: React.FC<{
                 <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-xl z-50 py-1 animate-in fade-in slide-in-from-top-2">
                     <button
                         onClick={() => { onManageCode(quiz.id, quiz.accessCode || ''); setIsOpen(false); }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-blue-900 hover:bg-purple-50 hover:text-blue-800 transition-colors"
                     >
                         <Key className="w-4 h-4" /> Quản lý mã
                     </button>
@@ -73,19 +73,19 @@ const DropdownMenu: React.FC<{
                             window.open(`${window.location.origin}?quizId=${quiz.id}`, '_blank');
                             setIsOpen(false);
                         }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-blue-900 hover:bg-blue-50 hover:text-blue-700 transition-colors"
                     >
                         <Eye className="w-4 h-4" /> Xem trước
                     </button>
                     <button
                         onClick={() => { onEdit(quiz); setIsOpen(false); }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-colors"
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-orange-950 hover:bg-orange-50 hover:text-orange-700 transition-colors"
                     >
                         <Edit className="w-4 h-4" /> Sửa đề
                     </button>
                     <button
                         onClick={() => { onExportWorksheet(quiz); setIsOpen(false); }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-emerald-900 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
                     >
                         <BookOpen className="w-4 h-4" /> Xuất Vở Bài Tập
                     </button>

@@ -200,15 +200,15 @@ const OverviewTab: React.FC<Props> = ({ quiz, result, answers, studentUsername, 
                 </div>
 
                 {/* Accuracy */}
-                <div className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-xl p-4 border border-purple-200">
+                <div className="bg-gradient-to-br from-blue-50 to-violet-100 rounded-xl p-4 border border-purple-200">
                     <div className="flex items-center gap-2 mb-2">
                         <div className="p-2 bg-purple-500 rounded-lg">
                             <Target className="w-4 h-4 text-white" />
                         </div>
-                        <span className="text-sm text-purple-700 font-medium">Độ chính xác</span>
+                        <span className="text-sm text-blue-800 font-medium">Độ chính xác</span>
                     </div>
-                    <p className="text-3xl font-bold text-purple-700">{accuracy}%</p>
-                    <p className="text-xs text-purple-600">tỷ lệ đúng</p>
+                    <p className="text-3xl font-bold text-blue-800">{accuracy}%</p>
+                    <p className="text-xs text-blue-700">tỷ lệ đúng</p>
                 </div>
             </div>
 

@@ -225,7 +225,7 @@ const AssignmentRow: React.FC<{
             <td className="py-3 px-4 text-right">
                 <button
                     onClick={onDelete}
-                    className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-1.5 text-red-900 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     title="Xóa bài giao"
                 >
                     <Trash2 className="w-4 h-4" />
@@ -405,7 +405,7 @@ const DeadlineDisplay: React.FC<{
         </div>
         <button
             onClick={onEdit}
-            className="p-1 text-gray-300 hover:text-orange-500 hover:bg-orange-50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+            className="p-1 text-orange-950 hover:text-orange-500 hover:bg-orange-50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
             title="Sửa hạn nộp"
         >
             <Edit3 className="w-3.5 h-3.5" />

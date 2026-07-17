@@ -104,9 +104,9 @@ export const WaitingRoomStudent: React.FC<WaitingRoomStudentProps> = ({
 
                 {/* Animated Dots */}
                 <div className="flex justify-center gap-2 mb-6">
-                    <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    <div className="w-3 h-3 bg-blue-400 rounded-full motion-safe:animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-3 h-3 bg-blue-400 rounded-full motion-safe:animate-pulse" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-3 h-3 bg-blue-400 rounded-full motion-safe:animate-pulse" style={{ animationDelay: '300ms' }}></div>
                 </div>
 
                 {/* Instructions */}

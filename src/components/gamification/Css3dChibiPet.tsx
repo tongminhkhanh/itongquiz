@@ -291,7 +291,7 @@ const Css3dChibiPet: React.FC<Css3dChibiPetProps> = ({
                 }
 
                 .chibi-bounce {
-                    animation: chibiBounce 0.7s ease-out !important;
+                    animation: chibiFloat 0.7s ease-out !important;
                 }
 
                 /* === SHADOW === */
@@ -745,7 +745,7 @@ const Css3dChibiPet: React.FC<Css3dChibiPetProps> = ({
                     50% { opacity: 1; transform: scale(1.3) rotate(45deg); }
                 }
 
-                @keyframes chibiBounce {
+                @keyframes chibiFloat {
                     0% { transform: translateY(0) scale(1); }
                     15% { transform: translateY(4px) scale(1.06, 0.94); }
                     30% { transform: translateY(-22px) scale(0.94, 1.06); }

@@ -43,7 +43,7 @@ export const WaitingRoomChatTeacherCard: React.FC<WaitingRoomChatTeacherCardProp
                 <button
                     type="button"
                     onClick={() => void onToggleChat(!chatEnabled)}
-                    className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-black transition-colors ${chatEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}
+                    className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-black transition-colors ${chatEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-emerald-900'}`}
                 >
                     {chatEnabled ? 'Dang bat' : 'Dang tat'}
                 </button>

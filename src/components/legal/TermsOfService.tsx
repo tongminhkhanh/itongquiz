@@ -28,7 +28,7 @@ const TermsOfService: React.FC<Props> = ({ onBack }) => {
 
                 {/* Content */}
                 <div className="p-8 prose prose-slate max-w-none">
-                    <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-8">
+                    <div className="bg-amber-50 border-l-2 border-amber-400 p-4 mb-8">
                         <div className="flex">
                             <div className="flex-shrink-0">
                                 <AlertCircle className="h-5 w-5 text-amber-400" />

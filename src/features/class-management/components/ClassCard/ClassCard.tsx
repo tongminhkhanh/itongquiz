@@ -30,7 +30,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({ classroom, isAdmin, onClic
                                 e.stopPropagation();
                                 onTransfer();
                             }}
-                            className="p-1.5 text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg"
+                            className="p-1.5 text-blue-900 hover:text-blue-600 hover:bg-indigo-50 rounded-lg"
                             title="Chuyển giáo viên phụ trách"
                         >
                             <RefreshCw className="w-4 h-4" />
@@ -41,7 +41,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({ classroom, isAdmin, onClic
                             e.stopPropagation();
                             onDelete();
                         }}
-                        className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg"
+                        className="p-1.5 text-amber-950 hover:text-amber-600 hover:bg-amber-50 rounded-lg"
                         title="Lưu trữ lớp học"
                         aria-label={`Lưu trữ lớp ${classroom.name}`}
                     >

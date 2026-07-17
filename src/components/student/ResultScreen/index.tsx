@@ -259,13 +259,13 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
     return (
         <div
             ref={containerRef}
-            className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50"
+            className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50"
         >
             {/* Minimal Top Navigation */}
             <div className="max-w-5xl mx-auto px-4 pt-6 pb-2 flex justify-between items-center">
                 <button
                     onClick={onExit}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-white text-indigo-600 hover:bg-indigo-50 hover:shadow-md rounded-full transition-all shadow-sm border border-indigo-100 font-medium"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 hover:bg-indigo-50 hover:shadow-md rounded-full transition-all shadow-sm border border-indigo-100 font-medium"
                 >
                     <Home className="w-5 h-5" />
                     <span>Về trang chủ</span>

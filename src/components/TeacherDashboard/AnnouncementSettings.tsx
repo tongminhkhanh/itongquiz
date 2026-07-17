@@ -123,12 +123,37 @@ const AnnouncementSettings: React.FC = () => {
     };
 
     return <div className="space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-2xl font-bold text-slate-900">Thông báo hệ thống</h2><p className="text-sm text-slate-500">Soạn bản nháp, chọn đối tượng và đặt lịch theo giờ Việt Nam.</p></div><button onClick={() => setForm(emptyForm)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 font-semibold text-white"><Plus className="h-4 w-4" />Thông báo mới</button></div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h2 className="text-2xl font-bold text-slate-900">Thông báo hệ thống</h2>
+                <p className="text-sm text-slate-600">Soạn bản nháp, chọn đối tượng và đặt lịch theo giờ Việt Nam.</p>
+            </div>
+            <button onClick={() => setForm(emptyForm)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 font-semibold text-white hover:bg-blue-700">
+                <Plus className="h-4 w-4" />Thông báo mới
+            </button>
+        </div>
 
         <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
             <aside className="rounded-2xl border bg-white p-3 shadow-sm">
                 <div className="mb-2 flex items-center justify-between px-2"><span className="font-bold">Danh sách</span><button onClick={() => void loadAnnouncements()} aria-label="Làm mới"><RefreshCw className="h-4 w-4" /></button></div>
-                {loadingAnnouncements ? <div className="flex h-24 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div> : announcementError ? <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{announcementError}<button onClick={() => void loadAnnouncements()} className="ml-1 font-bold underline">Thử lại</button></div> : items.length === 0 ? <div className="p-5 text-center text-sm text-slate-500">Chưa có thông báo.</div> : <div className="space-y-1">{items.map((item) => <button key={item.id} onClick={() => selectItem(item)} className={`w-full rounded-xl p-3 text-left ${form.id === item.id ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-slate-50'}`}><div className="truncate font-semibold">{item.bannerTitle || item.content || 'Không có tiêu đề'}</div><div className="mt-1 flex justify-between text-xs text-slate-500"><span>{item.effectiveStatus}</span><span>{item.audience}</span></div></button>)}</div>}
+                {loadingAnnouncements ? (
+                    <div className="flex h-24 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                ) : announcementError ? (
+                    <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+                        {announcementError}<button onClick={() => void loadAnnouncements()} className="ml-1 font-bold underline">Thử lại</button>
+                    </div>
+                ) : items.length === 0 ? (
+                    <div className="p-5 text-center text-sm text-slate-500">Chưa có thông báo.</div>
+                ) : (
+                    <div className="space-y-1">
+                        {items.map((item) => (
+                            <button key={item.id} onClick={() => selectItem(item)} className={`w-full rounded-xl p-3 text-left ${form.id === item.id ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-slate-50'}`}>
+                                <div className="truncate font-semibold">{item.bannerTitle || item.content || 'Không có tiêu đề'}</div>
+                                <div className="mt-1 flex justify-between text-xs text-slate-500"><span>{item.effectiveStatus}</span><span>{item.audience}</span></div>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </aside>
 
             <section className="space-y-5 rounded-2xl border bg-white p-5 shadow-sm">
@@ -142,7 +167,16 @@ const AnnouncementSettings: React.FC = () => {
                 <label className="block text-sm font-semibold">Chữ chạy<textarea maxLength={1000} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} className="mt-1 min-h-20 w-full rounded-xl border p-3" /></label>
                 <div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-semibold">Liên kết HTTPS hoặc nội bộ<input value={form.bannerLink} onChange={(event) => setForm({ ...form, bannerLink: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label><label className="text-sm font-semibold">Ảnh từ media/R2<input value={form.bannerImage} onChange={(event) => setForm({ ...form, bannerImage: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label></div>
                 <div className="flex flex-wrap gap-5"><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={form.isBannerActive} onChange={(event) => setForm({ ...form, isBannerActive: event.target.checked })} />Hiện banner</label><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} />Hiện chữ chạy</label></div>
-                <div className="flex flex-wrap gap-2"><button disabled={saving} onClick={() => void save()} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 font-semibold text-white disabled:opacity-50"><Save className="h-4 w-4" />Lưu</button>{form.id && <><button disabled={saving} onClick={() => void runAction('publish_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 font-semibold text-white"><Send className="h-4 w-4" />Công bố</button><button disabled={saving} onClick={() => void runAction('cancel_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl border px-4 font-semibold"><XCircle className="h-4 w-4" />Hủy lịch</button><button disabled={saving} onClick={() => void runAction('archive_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl border px-4 font-semibold text-slate-600"><Archive className="h-4 w-4" />Lưu trữ</button></>}</div>
+                <div className="flex flex-wrap gap-2">
+                    <button disabled={saving} onClick={() => void save()} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 font-semibold text-white disabled:opacity-50"><Save className="h-4 w-4" />Lưu</button>
+                    {form.id && (
+                        <>
+                            <button disabled={saving} onClick={() => void runAction('publish_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 font-semibold text-white"><Send className="h-4 w-4" />Công bố</button>
+                            <button disabled={saving} onClick={() => void runAction('cancel_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl border px-4 font-semibold"><XCircle className="h-4 w-4" />Hủy lịch</button>
+                            <button disabled={saving} onClick={() => void runAction('archive_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl border px-4 font-semibold text-slate-700 hover:bg-slate-50"><Archive className="h-4 w-4" />Lưu trữ</button>
+                        </>
+                    )}
+                </div>
             </section>
         </div>
 

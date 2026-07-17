@@ -47,7 +47,7 @@ const RewardOverlay: React.FC<RewardOverlayProps> = ({
             >
                 {/* Coins Phase */}
                 <div className={`transition-all duration-500 ${phase === 'coins' ? 'opacity-100 scale-100' : phase === 'exp' ? 'opacity-0 -translate-y-10' : 'hidden'}`}>
-                    <div className="text-7xl mb-4" style={{ animation: 'coinBounce 0.5s ease-out' }}>💰</div>
+                    <div className="text-7xl mb-4" style={{ animation: 'coinFloat 0.5s ease-out' }}>💰</div>
                     <p className="text-4xl font-black text-yellow-400 drop-shadow-lg" style={{ animation: 'numberPop 0.3s ease-out 0.3s both' }}>
                         +{coinsEarned}
                     </p>
@@ -56,8 +56,8 @@ const RewardOverlay: React.FC<RewardOverlayProps> = ({
 
                 {/* EXP Phase */}
                 <div className={`transition-all duration-500 ${phase === 'exp' ? 'opacity-100 scale-100' : phase === 'levelup' || phase === 'done' ? 'opacity-0 -translate-y-10' : 'hidden'}`}>
-                    <div className="text-7xl mb-4" style={{ animation: 'coinBounce 0.5s ease-out' }}>⭐</div>
-                    <p className="text-4xl font-black text-purple-300 drop-shadow-lg" style={{ animation: 'numberPop 0.3s ease-out 0.3s both' }}>
+                    <div className="text-7xl mb-4" style={{ animation: 'coinFloat 0.5s ease-out' }}>⭐</div>
+                    <p className="text-4xl font-black text-blue-100 drop-shadow-lg" style={{ animation: 'numberPop 0.3s ease-out 0.3s both' }}>
                         +{expEarned}
                     </p>
                     <p className="text-lg text-white/80 mt-1 font-medium">EXP</p>
@@ -88,7 +88,7 @@ const RewardOverlay: React.FC<RewardOverlayProps> = ({
                             </div>
                             <div className="flex items-center justify-between bg-white/10 rounded-xl px-4 py-2.5">
                                 <span className="text-white/80 text-sm">⭐ EXP</span>
-                                <span className="text-purple-300 font-bold text-lg">+{expEarned}</span>
+                                <span className="text-blue-100 font-bold text-lg">+{expEarned}</span>
                             </div>
                             {leveledUp && (
                                 <div className="flex items-center justify-between bg-amber-500/20 rounded-xl px-4 py-2.5 border border-amber-400/30">
@@ -99,7 +99,7 @@ const RewardOverlay: React.FC<RewardOverlayProps> = ({
                         </div>
                         <button
                             onClick={onClose}
-                            className="mt-6 w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-95"
+                            className="mt-6 w-full py-3 bg-gradient-to-r from-blue-500 to-pink-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-95"
                         >
                             Tiếp tục xem kết quả
                         </button>
@@ -157,7 +157,7 @@ const RewardOverlay: React.FC<RewardOverlayProps> = ({
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
-                @keyframes coinBounce {
+                @keyframes coinFloat {
                     0% { transform: scale(0) translateY(30px); }
                     60% { transform: scale(1.3) translateY(-10px); }
                     100% { transform: scale(1) translateY(0); }

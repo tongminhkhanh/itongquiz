@@ -160,7 +160,7 @@ export const TeacherLiveExamDashboardContainer: React.FC = () => {
 
     if (selectedSession?.status === 'scheduled') {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-4">
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 p-4">
                 <div className="mx-auto max-w-5xl space-y-6">
                     <button type="button" onClick={handleBackToList} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-slate-700 shadow hover:shadow-md">
                         <ArrowLeft size={18} />Quay lại danh sách phiên thi

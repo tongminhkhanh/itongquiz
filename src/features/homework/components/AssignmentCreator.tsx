@@ -121,7 +121,7 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-indigo-500" /> Tên bài tập
+                <FileText className="w-4 h-4 text-blue-600" /> Tên bài tập
               </label>
               <input
                 type="text"
@@ -133,7 +133,7 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-2">
-                 <Hash className="w-4 h-4 text-indigo-500" /> Môn học
+                 <Hash className="w-4 h-4 text-blue-600" /> Môn học
               </label>
               <input
                 type="text"
@@ -148,7 +148,7 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <div>
                <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-2">
-                 <Users className="w-4 h-4 text-indigo-500" /> Chọn lớp
+                 <Users className="w-4 h-4 text-blue-600" /> Chọn lớp
                </label>
                <select
                  value={selectedClassId}
@@ -163,7 +163,7 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
              </div>
              <div>
                <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-2">
-                 <Calendar className="w-4 h-4 text-indigo-500" /> Hạn nộp
+                 <Calendar className="w-4 h-4 text-blue-600" /> Hạn nộp
                </label>
                <input
                  type="datetime-local"
@@ -177,7 +177,7 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
               <span className="flex items-center gap-2">Đáp án mẫu / Tiêu chí chấm</span>
-              {isProcessingAI && <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />}
+              {isProcessingAI && <Loader2 className="w-4 h-4 animate-spin text-blue-600" />}
             </label>
             <textarea
               value={aiContent}
@@ -208,7 +208,7 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
             {!url && !isUploading && (
               <div className="text-center space-y-3 cursor-pointer" onClick={() => document.getElementById('hw-file-input')?.click()}>
                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm group-hover:scale-110 transition-transform">
-                  <FileText className="w-8 h-8 text-slate-400 group-hover:text-indigo-500" />
+                  <FileText className="w-8 h-8 text-slate-400 group-hover:text-blue-600" />
                 </div>
                 <p className="text-slate-500 text-sm">Nhấn để tải lên hoặc kéo thả file</p>
                 <input id="hw-file-input" type="file" className="hidden" accept="image/*,application/pdf" onChange={handleFileChange} />
@@ -217,11 +217,11 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
 
             {isUploading && (
               <div className="text-center space-y-4 w-full px-8">
-                <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mx-auto" />
+                <Loader2 className="w-10 h-10 animate-spin text-blue-600 mx-auto" />
                 <div className="w-full bg-slate-200 rounded-full h-2">
                   <div className="bg-indigo-500 h-full rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
                 </div>
-                <p className="text-indigo-600 font-medium animate-pulse">Đang nén & tải lên... {progress}%</p>
+                <p className="text-blue-700 font-medium animate-pulse">Đang nén & tải lên... {progress}%</p>
               </div>
             )}
 
@@ -248,7 +248,7 @@ export const AssignmentCreator: React.FC<AssignmentCreatorProps> = ({ onSuccess 
           onClick={handleCreate} 
           disabled={!url || isUploading || isProcessingAI || isSaving}
           icon={isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          className="px-8 py-3 rounded-2xl shadow-lg shadow-indigo-200 bg-gradient-to-r from-indigo-600 to-indigo-500"
+          className="px-8 py-3 rounded-2xl shadow-lg shadow-indigo-200 bg-gradient-to-r from-blue-600 to-indigo-500"
         >
           {isSaving ? 'Đang lưu...' : 'Giao phiếu bài tập ngay'}
         </Button>

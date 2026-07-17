@@ -50,7 +50,7 @@ export const StudentTable: React.FC<StudentTableProps> = memo(({
                                         <div className="flex items-center justify-end gap-1">
                                             <button
                                                 onClick={() => onResetPassword(student.id)}
-                                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                                                className="p-1.5 text-blue-900 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
                                                 title="Đặt lại mật khẩu"
                                                 aria-label={`Đặt lại mật khẩu cho ${student.fullName}`}
                                             >
@@ -65,7 +65,7 @@ export const StudentTable: React.FC<StudentTableProps> = memo(({
                                                         onConfirm: () => onRemoveStudent(student.id, classId),
                                                     });
                                                 }}
-                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                                className="p-1.5 text-red-900 hover:text-red-600 hover:bg-red-50 rounded-lg"
                                                 title="Xóa học sinh"
                                             >
                                                 <Trash2 className="w-4 h-4" />

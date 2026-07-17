@@ -71,7 +71,7 @@ export const WaitingRoomTeacher: React.FC<WaitingRoomTeacherProps> = ({
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-pink-100 p-4">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">

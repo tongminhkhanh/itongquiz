@@ -114,7 +114,7 @@ export const MCQEditor: React.FC<MCQEditorProps> = ({
                     className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
                         isGeneratingDistractors || !draft.correctAnswer
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-md'
+                            : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 shadow-md'
                     }`}
                 >
                     {isGeneratingDistractors ? (
@@ -205,7 +205,7 @@ export const MultipleSelectEditor: React.FC<MultipleSelectEditorProps> = ({
                     className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
                         isGeneratingDistractors || draft.correctAnswers.length === 0
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-md'
+                            : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 shadow-md'
                     }`}
                 >
                     {isGeneratingDistractors ? (

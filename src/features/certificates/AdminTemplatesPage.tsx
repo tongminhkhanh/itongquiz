@@ -81,7 +81,7 @@ const AdminTemplatesPage: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow">
+                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-xl flex items-center justify-center shadow">
                         <LayoutTemplate size={20} className="text-white" />
                     </div>
                     <div>
@@ -106,7 +106,7 @@ const AdminTemplatesPage: React.FC = () => {
             {/* Create form */}
             {showCreate && (
                 <div className="bg-violet-50 border border-violet-200 rounded-2xl p-5 space-y-4">
-                    <h3 className="text-sm font-bold text-violet-800">Tạo mẫu mới</h3>
+                    <h3 className="text-sm font-bold text-cyan-900">Tạo mẫu mới</h3>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="block text-xs font-semibold text-slate-700 mb-1">Tên mẫu</label>
@@ -205,7 +205,7 @@ const AdminTemplatesPage: React.FC = () => {
                                         {/* Edit toggle */}
                                         <button
                                             onClick={() => editId === t.id ? setEditId(null) : startEdit(t)}
-                                            className="text-xs font-medium text-violet-600 hover:text-violet-700 flex items-center gap-1"
+                                            className="text-xs font-medium text-violet-600 hover:text-cyan-800 flex items-center gap-1"
                                         >
                                             {editId === t.id ? <><ChevronUp size={13} /> Đóng</> : <><ChevronDown size={13} /> Sửa</>}
                                         </button>

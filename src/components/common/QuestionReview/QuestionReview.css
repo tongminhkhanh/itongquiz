@@ -468,11 +468,11 @@
 }
 
 .category-item.correct {
-    border-left: 3px solid #10b981;
+    border-left: 2px solid #10b981;
 }
 
 .category-item.wrong {
-    border-left: 3px solid #ef4444;
+    border-left: 2px solid #ef4444;
 }
 
 .category-item.missed {

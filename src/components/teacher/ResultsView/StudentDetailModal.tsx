@@ -602,7 +602,11 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                 <button
                                                     disabled={selectedQuestionIndex >= filteredQuestions.length - 1}
                                                     onClick={() => setSelectedQuestionIndex(i => Math.min(filteredQuestions.length - 1, i + 1))}
-                                                    className="rounded-2xl border border-blue-200 bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm shadow-blue-200 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                                                    className={`rounded-2xl border px-5 py-3 text-sm font-black transition-all ${
+                                                        selectedQuestionIndex >= filteredQuestions.length - 1
+                                                            ? 'cursor-not-allowed border-slate-200 bg-slate-200 text-slate-500 shadow-none'
+                                                            : 'border-blue-200 bg-blue-600 text-white shadow-sm shadow-blue-200 hover:bg-blue-700'
+                                                    }`}
                                                 >
                                                     Câu sau →
                                                 </button>

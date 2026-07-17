@@ -114,7 +114,7 @@ export const TimeAnalysisCard: React.FC<TimeAnalysisCardProps> = ({ questions })
                   >
                     {/* Question Number */}
                     <td className="py-3 px-2">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-semibold flex items-center justify-center text-xs">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-blue-800 font-semibold flex items-center justify-center text-xs">
                         {question.questionIndex + 1}
                       </div>
                     </td>
@@ -176,10 +176,10 @@ export const TimeAnalysisCard: React.FC<TimeAnalysisCardProps> = ({ questions })
 
       {/* Summary Stats */}
       {questions.length > 0 && (
-        <div className="mt-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl">
+        <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
           <div className="flex items-center gap-2 mb-2">
-            <TrendingUp size={16} className="text-indigo-600" />
-            <span className="text-sm font-semibold text-indigo-900">Tổng quan</span>
+            <TrendingUp size={16} className="text-blue-700" />
+            <span className="text-sm font-semibold text-blue-950">Tổng quan</span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
             <div>

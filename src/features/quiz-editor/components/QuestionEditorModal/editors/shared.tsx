@@ -23,7 +23,7 @@ export const MathFieldPreview: React.FC<{ value: string; className?: string }> =
         <div className={`mt-1.5 rounded-lg border px-2.5 py-2 text-sm ${
             issues.length > 0
                 ? 'border-red-200 bg-red-50 text-red-700'
-                : 'border-blue-100 bg-blue-50/60 text-gray-700'
+                : 'border-blue-100 bg-blue-50/60 text-blue-900'
         } ${className || ''}`}>
             <div className="mb-1 text-[10px] font-bold uppercase tracking-wider opacity-70">
                 Xem trước công thức
@@ -171,7 +171,7 @@ export const MathFormulaToolbar: React.FC<MathFormulaToolbarProps> = ({ value, t
                     aria-label={button.title}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => applyTemplate(button.id)}
-                    className="min-w-8 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                    className="min-w-8 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-blue-900 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
                 >
                     {button.label}
                 </button>
@@ -183,7 +183,7 @@ export const MathFormulaToolbar: React.FC<MathFormulaToolbarProps> = ({ value, t
                     title="Hình học"
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => setShowGeometry((current) => !current)}
-                    className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                    className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-blue-900 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
                 >
                     Hình học ▾
                 </button>
@@ -200,7 +200,7 @@ export const MathFormulaToolbar: React.FC<MathFormulaToolbarProps> = ({ value, t
                                 type="button"
                                 onMouseDown={(event) => event.preventDefault()}
                                 onClick={() => applyTemplate(id as FormulaTemplateId)}
-                                className="block w-full rounded px-2 py-1.5 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+                                className="block w-full rounded px-2 py-1.5 text-left text-xs text-blue-900 hover:bg-blue-50 hover:text-blue-700"
                             >
                                 {label}
                             </button>

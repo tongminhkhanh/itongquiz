@@ -64,7 +64,7 @@ const PersonalSettingsTab: React.FC = () => {
                 <div><dt className="text-xs font-bold uppercase text-slate-400">Vai trò</dt><dd className="mt-1">{profile.role === 'admin' ? 'Quản trị viên' : 'Giáo viên'}</dd></div>
                 <div><dt className="text-xs font-bold uppercase text-slate-400">Đăng nhập cuối</dt><dd className="mt-1">{profile.lastLoginAt ? new Date(profile.lastLoginAt).toLocaleString('vi-VN') : 'Chưa có'}</dd></div>
             </dl>
-            <div className="mt-5"><div className="text-xs font-bold uppercase text-slate-400">Lớp đang phụ trách</div><div className="mt-2 flex flex-wrap gap-2">{profile.classes.length ? profile.classes.map((item) => <span key={item.id} className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">{item.name}</span>) : <span className="text-sm text-slate-500">Chưa có lớp</span>}</div></div>
+            <div className="mt-5"><div className="text-xs font-bold uppercase text-blue-900">Lớp đang phụ trách</div><div className="mt-2 flex flex-wrap gap-2">{profile.classes.length ? profile.classes.map((item) => <span key={item.id} className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">{item.name}</span>) : <span className="text-sm text-blue-900">Chưa có lớp</span>}</div></div>
         </section>
         <section className="rounded-2xl border bg-white p-5 shadow-sm">
             <h3 className="font-bold text-slate-900">Bảo mật</h3><div className="mt-4 flex flex-wrap gap-3">

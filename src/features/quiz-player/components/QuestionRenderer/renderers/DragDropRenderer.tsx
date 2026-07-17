@@ -106,7 +106,7 @@ const DragDropRenderer: React.FC<BaseRendererProps> = ({
                         </div>
                     ))}
                     {unassignedItems.length === 0 && (
-                        <div className="w-full text-center py-6 text-green-500 font-bold flex items-center justify-center gap-2 animate-bounce">
+                        <div className="w-full text-center py-6 text-green-500 font-bold flex items-center justify-center gap-2 motion-safe:animate-pulse">
                             ✨ Đã phân loại xong tất cả!
                         </div>
                     )}

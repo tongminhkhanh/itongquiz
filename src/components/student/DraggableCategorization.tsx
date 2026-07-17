@@ -68,7 +68,7 @@ function DraggableItem({ item, isSelected, onClick, color }: {
         ? 'hover:opacity-80 cursor-grab active:cursor-grabbing'
         : isSelected
             ? 'bg-indigo-500 text-white ring-2 ring-indigo-300 ring-offset-2 scale-105'
-            : 'bg-white border border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50 cursor-grab active:cursor-grabbing';
+            : 'bg-white border border-gray-200 text-blue-900 hover:border-indigo-300 hover:bg-indigo-50 cursor-grab active:cursor-grabbing';
 
     return (
         <button
