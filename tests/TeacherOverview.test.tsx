@@ -92,6 +92,22 @@ describe('TeacherDashboard OverviewTab', () => {
         expect(document.body.textContent).not.toContain('Chi');
     });
 
+    it('uses the light teacher dashboard palette for the hero', () => {
+        render(
+            <OverviewTab
+                resultsLoadState="success"
+                onRetryResults={vi.fn()}
+            />,
+        );
+
+        const heroHeading = screen.getByRole('heading', { name: 'Chào buổi sáng, Cô An!' });
+        const heroSection = heroHeading.closest('section');
+        expect(heroSection).toBeTruthy();
+        expect(heroSection?.className).toContain('from-blue-50');
+        expect(heroSection?.className).toContain('text-slate-950');
+        expect(heroSection?.className).not.toContain('bg-slate-950');
+    });
+
     it.each([
         ['Tạo đề mới', 'create'],
         ['Giao bài', 'assignments'],
