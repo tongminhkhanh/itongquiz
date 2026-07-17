@@ -108,6 +108,26 @@ describe('TeacherDashboard OverviewTab', () => {
         expect(heroSection?.className).not.toContain('bg-slate-950');
     });
 
+    it('uses polished rounded cards with stable hover elevation', () => {
+        render(
+            <OverviewTab
+                resultsLoadState="success"
+                onRetryResults={vi.fn()}
+            />,
+        );
+
+        const quickActionsHeading = screen.getByRole('heading', { name: 'Bạn muốn làm gì?' });
+        const quickActionsSection = quickActionsHeading.closest('section');
+        const createAction = within(quickActionsSection as HTMLElement).getByRole('button', { name: /Tạo đề mới/i });
+        const quizMetric = screen.getByText('Đề kiểm tra').closest('article');
+
+        expect(quickActionsSection?.className).toContain('rounded-[24px]');
+        expect(createAction.className).toContain('rounded-[20px]');
+        expect(createAction.className).toContain('motion-safe:hover:-translate-y-1');
+        expect(quizMetric?.className).toContain('rounded-[22px]');
+        expect(quizMetric?.className).toContain('motion-safe:hover:-translate-y-1');
+    });
+
     it.each([
         ['Tạo đề mới', 'create'],
         ['Giao bài', 'assignments'],
