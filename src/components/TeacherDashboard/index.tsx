@@ -286,7 +286,7 @@ const TeacherDashboard: React.FC = () => {
             />
 
             {/* Main Content wrapper */}
-            <div className="flex-1 lg:ml-64 flex flex-col min-h-screen transition-all duration-300 pb-20 lg:pb-0">
+            <div className="flex min-h-screen min-w-0 w-full flex-1 flex-col pb-20 transition-all duration-300 lg:ml-64 lg:w-[calc(100%-16rem)] lg:flex-none lg:pb-0">
 
                 {/* Top Header / Top Bar */}
                 <header className="h-16 bg-white/90 backdrop-blur border-b border-slate-200 sticky top-0 z-30 flex items-center justify-between px-4 lg:px-8">

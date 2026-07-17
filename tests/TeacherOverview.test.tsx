@@ -6,12 +6,6 @@ import { useAuthStore } from '../stores/authStore';
 import { useQuizStore } from '../stores/quizStore';
 import { useTeacherDashboardUIStore } from '../src/stores/useTeacherDashboardUIStore';
 
-vi.mock('../src/components/teacher/ResultsView/ResultsAnalytics', () => ({
-    ResultsAnalytics: ({ statistics }: { statistics: { totalResults: number } }) => (
-        <div data-testid="results-analytics">{statistics.totalResults} kết quả phân tích</div>
-    ),
-}));
-
 const makeResult = (
     id: string,
     studentName: string,
@@ -46,8 +40,22 @@ describe('TeacherDashboard OverviewTab', () => {
         useTeacherDashboardUIStore.setState({ activeTab: 'overview' });
         useQuizStore.setState({
             quizzes: [
-                { id: 'quiz-3a', title: 'Đề lớp 3A', classLevel: 'Lớp 3-A', questions: [] },
-                { id: 'quiz-13a', title: 'Đề lớp 13A', classLevel: '13A', questions: [] },
+                {
+                    id: 'quiz-3a',
+                    title: 'Đề lớp 3A',
+                    classLevel: 'Lớp 3-A',
+                    questions: [],
+                    timeLimit: 30,
+                    createdAt: new Date(2026, 6, 17, 7, 0, 0).toISOString(),
+                },
+                {
+                    id: 'quiz-13a',
+                    title: 'Đề lớp 13A',
+                    classLevel: '13A',
+                    questions: [],
+                    timeLimit: 30,
+                    createdAt: new Date(2026, 6, 16, 7, 0, 0).toISOString(),
+                },
             ] as any,
             results: [
                 makeResult('today-3a', 'An', '3A', 8, new Date(2026, 6, 17, 9, 0, 0).toISOString()),
@@ -77,9 +85,9 @@ describe('TeacherDashboard OverviewTab', () => {
         expect(quizCard && within(quizCard).getByText('1')).toBeTruthy();
         expect(resultCard && within(resultCard).getByText('2')).toBeTruthy();
         expect(studentCard && within(studentCard).getByText('2')).toBeTruthy();
-        expect(screen.getByText('2 kết quả phân tích')).toBeTruthy();
+        expect(screen.getByRole('heading', { name: 'Tình hình điểm số' })).toBeTruthy();
         const recentSubmission = screen.getByText('vừa nộp').parentElement?.textContent || '';
-        expect(recentSubmission).toContain('An');
+        expect(recentSubmission).toContain('Bài kiểm tra');
         expect(document.body.textContent).not.toContain('Bình');
         expect(document.body.textContent).not.toContain('Chi');
     });
@@ -99,8 +107,31 @@ describe('TeacherDashboard OverviewTab', () => {
             />,
         );
 
-        fireEvent.click(screen.getByRole('button', { name: new RegExp(label, 'i') }));
+        const quickActionsHeading = screen.getByRole('heading', { name: 'Bạn muốn làm gì?' });
+        const quickActionsSection = quickActionsHeading.closest('section');
+        expect(quickActionsSection).toBeTruthy();
+
+        fireEvent.click(within(quickActionsSection as HTMLElement).getByRole('button', { name: new RegExp(label, 'i') }));
         expect(useTeacherDashboardUIStore.getState().activeTab).toBe(expectedTab);
+    });
+
+    it('shows recent quizzes and opens the quiz management tab', () => {
+        render(
+            <OverviewTab
+                resultsLoadState="success"
+                onRetryResults={vi.fn()}
+            />,
+        );
+
+        expect(screen.getByRole('heading', { name: 'Đề kiểm tra gần đây' })).toBeTruthy();
+        expect(screen.getAllByText('Đề lớp 3A').length).toBeGreaterThan(0);
+
+        const recentQuizzesHeading = screen.getByRole('heading', { name: 'Đề kiểm tra gần đây' });
+        const recentQuizzesSection = recentQuizzesHeading.closest('section');
+        expect(recentQuizzesSection).toBeTruthy();
+
+        fireEvent.click(within(recentQuizzesSection as HTMLElement).getAllByRole('button', { name: /^Quản lý/i })[0]);
+        expect(useTeacherDashboardUIStore.getState().activeTab).toBe('manage');
     });
 
     it('shows a retry action when loading results fails', () => {
