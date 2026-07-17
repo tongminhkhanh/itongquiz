@@ -5,13 +5,11 @@ import { Card, Button, Modal } from '../common';
 import { X, Save, PlusCircle, FileDown, BookOpen, Library } from 'lucide-react';
 import { generateQuizDocx } from '../../utils/docxGenerator';
 import WorksheetExportModal from './WorksheetExportModal';
-import { 
-    QuestionCard, 
-    QuestionEditorModal, 
-    useQuestionEditor,
-    useSmartDistractors,
-    AnyEditorDraft,
-} from '../../features/quiz-editor';
+import QuestionCard from '../../features/quiz-editor/components/QuestionCard/QuestionCard';
+import QuestionEditorModal from '../../features/quiz-editor/components/QuestionEditorModal/QuestionEditorModal';
+import { useQuestionEditor } from '../../features/quiz-editor/hooks/useQuestionEditor';
+import { useSmartDistractors } from '../../features/quiz-editor/hooks/useSmartDistractors';
+import type { AnyEditorDraft } from '../../features/quiz-editor/types/quiz-editor.types';
 import { useAuthStore } from '../../../stores/authStore';
 import { testBankService } from '../../services/testBankService';
 import { TestBankModal } from '../../features/quiz-editor/components/TestBankModal';

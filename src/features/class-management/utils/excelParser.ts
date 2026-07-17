@@ -7,11 +7,16 @@ export interface StudentCredential {
     password: string;
 }
 
+const loadExcelJS = async () => (await import('exceljs')).default;
+
 // --- Template Download ---
 
 export const downloadStudentTemplate = async (): Promise<void> => {
-    const [{ Workbook }, { saveAs }] = await Promise.all([import('exceljs'), import('file-saver')]);
-    const workbook = new Workbook();
+    const [ExcelJS, { saveAs }] = await Promise.all([
+        loadExcelJS(),
+        import('file-saver'),
+    ]);
+    const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('HocSinh');
 
     // Column widths
@@ -66,8 +71,8 @@ export const parseStudentExcel = (file: File, classId: string): Promise<CreateSt
                     return;
                 }
 
-                const { Workbook } = await import('exceljs');
-                const workbook = new Workbook();
+                const ExcelJS = await loadExcelJS();
+                const workbook = new ExcelJS.Workbook();
                 await workbook.xlsx.load(arrayBuffer);
 
                 const sheet = workbook.worksheets[0];
