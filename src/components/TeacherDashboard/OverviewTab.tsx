@@ -3,11 +3,15 @@ import { useQuizStore } from '../../../stores/quizStore';
 import { useAuthStore } from '../../../stores/authStore';
 import {
     AlertCircle,
+    ArrowRight,
+    Award,
     CheckCircle,
     ClipboardList,
     Clock,
     FileText,
+    GraduationCap,
     PlusCircle,
+    Radio,
     RefreshCw,
     Sparkles,
     TrendingUp,
@@ -15,7 +19,10 @@ import {
 } from 'lucide-react';
 import { calculateResultsStatistics } from '../../utils/statisticsUtils';
 import { areClassNamesEqual } from '../../utils/classMatching';
-import { useTeacherDashboardUIStore } from '../../stores/useTeacherDashboardUIStore';
+import {
+    type TeacherDashboardTab,
+    useTeacherDashboardUIStore,
+} from '../../stores/useTeacherDashboardUIStore';
 import { ResultsAnalytics } from '../teacher/ResultsView/ResultsAnalytics';
 
 type ResultsLoadState = 'loading' | 'success' | 'error';
@@ -31,6 +38,17 @@ interface StatCardProps {
     value: string | number;
     icon: React.ReactElement;
     valueClassName?: string;
+}
+
+interface QuickActionCardProps {
+    tab: TeacherDashboardTab;
+    eyebrow: string;
+    title: string;
+    description: string;
+    icon: React.ReactElement;
+    iconClassName: string;
+    iconSurfaceClassName: string;
+    onSelect: (tab: TeacherDashboardTab) => void;
 }
 
 const isSameLocalDay = (first: Date, second: Date): boolean => (
@@ -50,14 +68,48 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, valueClassName 
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md sm:p-6">
         <div className="flex items-start justify-between gap-4">
             <div>
-                <p className="text-sm font-medium text-slate-500 mb-2">{title}</p>
+                <p className="mb-2 text-sm font-medium text-slate-500">{title}</p>
                 <h3 className={`text-3xl font-black sm:text-4xl ${valueClassName}`}>{value}</h3>
             </div>
-            <div className="p-3 rounded-2xl bg-slate-100 border border-slate-200">
-                {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-6 h-6 text-slate-500' })}
+            <div className="rounded-2xl border border-slate-200 bg-slate-100 p-3">
+                {React.cloneElement(icon as React.ReactElement<any>, { className: 'h-6 w-6 text-slate-500' })}
             </div>
         </div>
     </div>
+);
+
+const QuickActionCard: React.FC<QuickActionCardProps> = ({
+    tab,
+    eyebrow,
+    title,
+    description,
+    icon,
+    iconClassName,
+    iconSurfaceClassName,
+    onSelect,
+}) => (
+    <button
+        type="button"
+        onClick={() => onSelect(tab)}
+        className="group min-h-32 rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:min-h-36 sm:p-5"
+    >
+        <span className="flex h-full items-start gap-4">
+            <span className={`flex size-12 shrink-0 items-center justify-center rounded-2xl ring-1 ring-inset ring-black/5 sm:size-14 ${iconSurfaceClassName}`}>
+                {React.cloneElement(icon as React.ReactElement<any>, {
+                    className: `size-6 sm:size-7 ${iconClassName}`,
+                    'aria-hidden': true,
+                })}
+            </span>
+            <span className="min-w-0 flex-1">
+                <span className="block text-xs font-bold uppercase tracking-[0.14em] text-slate-400">{eyebrow}</span>
+                <span className="mt-1 flex items-center justify-between gap-3">
+                    <span className="text-base font-black text-slate-900 sm:text-lg">{title}</span>
+                    <ArrowRight aria-hidden="true" className="size-4 shrink-0 text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-blue-600" />
+                </span>
+                <span className="mt-1.5 block text-sm leading-5 text-slate-500">{description}</span>
+            </span>
+        </span>
+    </button>
 );
 
 const OverviewTab: React.FC<OverviewTabProps> = ({
@@ -112,33 +164,70 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
     const greeting = getGreeting(new Date());
 
+    const quickActions: Array<Omit<QuickActionCardProps, 'onSelect'>> = [
+        {
+            tab: 'create',
+            eyebrow: 'Soạn đề',
+            title: 'Tạo đề mới',
+            description: 'Tạo đề từ PDF, nội dung có sẵn hoặc công cụ AI.',
+            icon: <PlusCircle />,
+            iconClassName: 'text-blue-700',
+            iconSurfaceClassName: 'bg-blue-50',
+        },
+        {
+            tab: 'assignments',
+            eyebrow: 'Phân phối',
+            title: 'Giao bài',
+            description: 'Chọn lớp, đặt hạn nộp và gửi bài cho học sinh.',
+            icon: <ClipboardList />,
+            iconClassName: 'text-violet-700',
+            iconSurfaceClassName: 'bg-violet-50',
+        },
+        {
+            tab: 'live-exam',
+            eyebrow: 'Tổ chức',
+            title: 'Thi trực tiếp',
+            description: 'Mở phòng thi và theo dõi tiến độ theo thời gian thực.',
+            icon: <Radio />,
+            iconClassName: 'text-rose-700',
+            iconSurfaceClassName: 'bg-rose-50',
+        },
+        {
+            tab: 'results',
+            eyebrow: 'Theo dõi',
+            title: 'Xem kết quả',
+            description: 'Xem điểm, bài nộp và phân tích mức độ hoàn thành.',
+            icon: <FileText />,
+            iconClassName: 'text-emerald-700',
+            iconSurfaceClassName: 'bg-emerald-50',
+        },
+        {
+            tab: 'classes',
+            eyebrow: 'Học sinh',
+            title: 'Quản lý lớp',
+            description: 'Cập nhật danh sách lớp và thông tin học sinh.',
+            icon: <GraduationCap />,
+            iconClassName: 'text-cyan-700',
+            iconSurfaceClassName: 'bg-cyan-50',
+        },
+        {
+            tab: 'certificates',
+            eyebrow: 'Thành tích',
+            title: 'Cấp chứng nhận',
+            description: 'Tạo và cấp giấy chứng nhận từ các mẫu có sẵn.',
+            icon: <Award />,
+            iconClassName: 'text-amber-700',
+            iconSurfaceClassName: 'bg-amber-50',
+        },
+    ];
+
     return (
         <div className="space-y-5 sm:space-y-8">
-            <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
-                <div>
-                    <h2 className="text-2xl font-black text-slate-900 sm:text-3xl">Tổng quan</h2>
-                    <p className="mt-1 text-base text-slate-500 sm:mt-2 sm:text-lg">
-                        {greeting}, {authStore.teacherName || 'Cô/Thầy'}! Đây là tình hình hôm nay.
-                    </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('create')}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                    >
-                        <PlusCircle aria-hidden="true" className="size-4" />
-                        Tạo đề
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('assignments')}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                    >
-                        <ClipboardList aria-hidden="true" className="size-4" />
-                        Giao bài
-                    </button>
-                </div>
+            <div>
+                <h2 className="text-2xl font-black text-slate-900 sm:text-3xl">Tổng quan</h2>
+                <p className="mt-1 text-base text-slate-500 sm:mt-2 sm:text-lg">
+                    {greeting}, {authStore.teacherName || 'Cô/Thầy'}! Đây là tình hình hôm nay.
+                </p>
             </div>
 
             {resultsLoadState === 'error' && (
@@ -160,6 +249,18 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                     </button>
                 </div>
             )}
+
+            <section aria-labelledby="quick-actions-heading" className="rounded-3xl border border-slate-200 bg-slate-100/70 p-4 sm:p-5">
+                <div className="mb-4 flex flex-col gap-1 sm:mb-5">
+                    <h3 id="quick-actions-heading" className="text-lg font-black text-slate-900 sm:text-xl">Bạn muốn làm gì?</h3>
+                    <p className="text-sm text-slate-500">Chọn một công việc để đi thẳng đến màn hình cần thực hiện.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {quickActions.map((action) => (
+                        <QuickActionCard key={action.tab} {...action} onSelect={setActiveTab} />
+                    ))}
+                </div>
+            </section>
 
             <div className="grid grid-cols-2 gap-4 xl:grid-cols-4 xl:gap-6">
                 <StatCard
@@ -198,8 +299,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
                 <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                     <div className="mb-5 flex items-center gap-3 sm:mb-6">
-                        <div className="p-2.5 bg-slate-100 rounded-xl border border-slate-200">
-                            <Clock className="w-5 h-5 text-slate-600" />
+                        <div className="rounded-xl border border-slate-200 bg-slate-100 p-2.5">
+                            <Clock className="h-5 w-5 text-slate-600" />
                         </div>
                         <h3 className="text-xl font-black text-slate-900 sm:text-2xl">Vừa nộp hôm nay</h3>
                     </div>
@@ -224,8 +325,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
                                 return (
                                     <div key={result.id} className="flex items-start gap-4">
-                                        <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
-                                            <span className="text-blue-700 font-bold text-xs">
+                                        <div className="mt-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-blue-100 bg-blue-50">
+                                            <span className="text-xs font-bold text-blue-700">
                                                 {result.studentName.trim().charAt(0).toUpperCase() || '?'}
                                             </span>
                                         </div>
@@ -233,9 +334,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                                             <p className="text-sm font-medium text-slate-800">
                                                 {result.studentName} <span className="font-normal text-slate-500">vừa nộp</span> {result.quizTitle}
                                             </p>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${isPass ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                                    }`}>
+                                            <div className="mt-1 flex items-center gap-2">
+                                                <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${isPass ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                     {isPass ? `Đạt ${score} điểm` : `Chưa đạt ${score} điểm`}
                                                 </span>
                                                 <span className="text-xs text-slate-400">
@@ -248,8 +348,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                             })}
                         </div>
                     ) : (
-                        <div className="text-center py-8">
-                            <Sparkles className="w-9 h-9 text-slate-300 mx-auto mb-3" />
+                        <div className="py-8 text-center">
+                            <Sparkles className="mx-auto mb-3 h-9 w-9 text-slate-300" />
                             <p className="text-sm text-slate-500">
                                 {resultsLoadState === 'error'
                                     ? 'Không thể tải hoạt động nộp bài.'

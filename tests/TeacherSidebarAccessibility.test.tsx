@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Sidebar from '../src/components/TeacherDashboard/Sidebar';
 import { useAuthStore } from '../stores/authStore';
@@ -19,6 +19,7 @@ const renderSidebar = (options: {
 
 describe('Teacher dashboard sidebar accessibility', () => {
     beforeEach(() => {
+        localStorage.clear();
         useAuthStore.setState({ isAdmin: false });
     });
 
@@ -43,6 +44,21 @@ describe('Teacher dashboard sidebar accessibility', () => {
             configurable: true,
             value: originalMatchMedia,
         });
+    });
+
+    it('keeps multiple navigation groups open and exposes accordion state', () => {
+        renderSidebar();
+
+        const examGroup = screen.getByRole('button', { name: 'Đề thi' });
+        const teachingGroup = screen.getByRole('button', { name: 'Dạy và giao bài' });
+
+        expect(examGroup.getAttribute('aria-expanded')).toBe('true');
+        expect(teachingGroup.getAttribute('aria-expanded')).toBe('false');
+
+        fireEvent.click(teachingGroup);
+
+        expect(screen.getByRole('button', { name: 'Đề thi' }).getAttribute('aria-expanded')).toBe('true');
+        expect(screen.getByRole('button', { name: 'Dạy và giao bài' }).getAttribute('aria-expanded')).toBe('true');
     });
 
     it('closes an open mobile drawer when Escape is pressed', () => {

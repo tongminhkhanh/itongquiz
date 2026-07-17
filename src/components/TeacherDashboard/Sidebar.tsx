@@ -1,22 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Home,
-    FileText,
-    List,
-    Users,
-    Globe,
-    Megaphone,
-    GraduationCap,
-    ClipboardList,
-    ChevronRight,
-    PlusCircle,
-    Gift,
-    BookText,
-    Radio,
     Award,
+    BookText,
+    ChevronRight,
+    ClipboardList,
+    FileText,
+    Gift,
+    Globe,
+    GraduationCap,
+    Home,
     LayoutTemplate,
+    List,
+    LogOut,
+    Megaphone,
+    PlusCircle,
+    Radio,
     ScanSearch,
     Settings,
+    Users,
 } from 'lucide-react';
 import { SCHOOL_NAME } from '../../config/constants';
 import { useAuthStore } from '../../../stores/authStore';
@@ -31,14 +32,59 @@ export interface SidebarProps {
     setIsMobileOpen?: (open: boolean) => void;
 }
 
-type GroupKey = 'main' | 'ioe' | 'certificates' | 'account' | 'system';
+type GroupKey = 'exams' | 'teaching' | 'students' | 'utilities' | 'ioe' | 'certificates' | 'account' | 'system';
 
-const groupForTab = (tab: TeacherDashboardTab): GroupKey => {
+type NavItem = {
+    id: TeacherDashboardTab;
+    label: string;
+    icon: React.ReactNode;
+};
+
+const GROUP_KEYS: GroupKey[] = [
+    'exams',
+    'teaching',
+    'students',
+    'utilities',
+    'ioe',
+    'certificates',
+    'account',
+    'system',
+];
+
+const groupForTab = (tab: TeacherDashboardTab): GroupKey | null => {
+    if (['create', 'manage', 'live-exam'].includes(tab)) return 'exams';
+    if (['assignments', 'homework', 'results'].includes(tab)) return 'teaching';
+    if (tab === 'classes') return 'students';
+    if (tab === 'gift-shop') return 'utilities';
     if (['ioe', 'ioe-manage', 'ioe-results'].includes(tab)) return 'ioe';
     if (['certificates', 'admin-templates'].includes(tab)) return 'certificates';
     if (tab === 'personal-settings') return 'account';
     if (['announcements', 'teachers', 'math-audit'].includes(tab)) return 'system';
-    return 'main';
+    return null;
+};
+
+const getInitialOpenGroups = (activeTab: TeacherDashboardTab): Set<GroupKey> => {
+    const fallback = new Set<GroupKey>(['exams']);
+
+    if (typeof window !== 'undefined') {
+        try {
+            const storedValue = window.localStorage.getItem('itongquiz_dashboard_open_groups');
+            const storedGroups = storedValue ? JSON.parse(storedValue) : [];
+            if (Array.isArray(storedGroups)) {
+                const validGroups = storedGroups.filter((group): group is GroupKey => GROUP_KEYS.includes(group));
+                if (validGroups.length > 0) {
+                    fallback.clear();
+                    validGroups.forEach((group) => fallback.add(group));
+                }
+            }
+        } catch {
+            // Ignore malformed persisted state and use the default group.
+        }
+    }
+
+    const activeGroup = groupForTab(activeTab);
+    if (activeGroup) fallback.add(activeGroup);
+    return fallback;
 };
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -50,7 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     setIsMobileOpen = () => {},
 }) => {
     const authStore = useAuthStore();
-    const [openGroup, setOpenGroup] = useState<GroupKey>(() => groupForTab(activeTab));
+    const [openGroups, setOpenGroups] = useState<Set<GroupKey>>(() => getInitialOpenGroups(activeTab));
     const [isDesktopViewport, setIsDesktopViewport] = useState(() => {
         if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true;
         return window.matchMedia('(min-width: 1024px)').matches;
@@ -58,9 +104,26 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     useEffect(() => {
         const nextGroup = groupForTab(activeTab);
-        setOpenGroup(nextGroup);
-        localStorage.setItem('itongquiz_dashboard_open_group', nextGroup);
+        if (!nextGroup) return;
+
+        setOpenGroups((currentGroups) => {
+            if (currentGroups.has(nextGroup)) return currentGroups;
+            const nextGroups = new Set(currentGroups);
+            nextGroups.add(nextGroup);
+            return nextGroups;
+        });
     }, [activeTab]);
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(
+                'itongquiz_dashboard_open_groups',
+                JSON.stringify(Array.from(openGroups)),
+            );
+        } catch {
+            // Persisting UI preference is optional.
+        }
+    }, [openGroups]);
 
     useEffect(() => {
         if (typeof window.matchMedia !== 'function') return;
@@ -82,51 +145,83 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     const isMobileDrawerInactive = !isDesktopViewport && !isMobileOpen;
 
-    // Keep prop referenced for future user-menu action
-    void onLogout;
-
-    const navItems = useMemo(() => {
-        const baseItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
-            { id: 'overview', label: 'Tổng quan', icon: <Home className="w-5 h-5" /> },
-            { id: 'create', label: 'Tạo đề mới', icon: <PlusCircle className="w-5 h-5" /> },
-            { id: 'manage', label: 'Đề kiểm tra', icon: <List className="w-5 h-5" /> },
-            { id: 'results', label: 'Kết quả', icon: <FileText className="w-5 h-5" /> },
-            { id: 'live-exam', label: 'Thi Trực Tiếp', icon: <Radio className="w-5 h-5" /> },
-            { id: 'classes', label: 'Lớp học', icon: <GraduationCap className="w-5 h-5" /> },
-            { id: 'assignments', label: 'Giao bài', icon: <ClipboardList className="w-5 h-5" /> },
-            { id: 'homework', label: 'Bài tập tự luận', icon: <BookText className="w-5 h-5" /> },
-        ];
-
-        if (isGiftShopEnabled) {
-            baseItems.push({ id: 'gift-shop', label: 'Tiệm tạp hóa', icon: <Gift className="w-5 h-5" /> });
-        }
-
-        return baseItems;
-    }, [isGiftShopEnabled]);
-
-    const ioeItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
-        { id: 'ioe-manage', label: 'IOE Quản lý', icon: <Globe className="w-5 h-5" /> },
-        { id: 'ioe', label: 'IOE Tạo đề', icon: <Globe className="w-4 h-4 ml-1" /> },
-        { id: 'ioe-results', label: 'IOE Kết quả', icon: <Globe className="w-4 h-4 ml-1" /> },
+    const examItems: NavItem[] = [
+        { id: 'manage', label: 'Quản lý đề', icon: <List className="size-5" /> },
+        { id: 'live-exam', label: 'Thi trực tiếp', icon: <Radio className="size-5" /> },
     ];
 
-    const settingItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
-        { id: 'announcements', label: 'Thông báo', icon: <Megaphone className="w-5 h-5" /> },
-        { id: 'teachers', label: 'Giáo viên', icon: <Users className="w-5 h-5" /> },
-        { id: 'math-audit', label: 'Theo dõi lỗi công thức', icon: <ScanSearch className="w-5 h-5" /> },
+    const teachingItems: NavItem[] = [
+        { id: 'assignments', label: 'Giao bài', icon: <ClipboardList className="size-5" /> },
+        { id: 'homework', label: 'Bài tập tự luận', icon: <BookText className="size-5" /> },
+        { id: 'results', label: 'Kết quả học tập', icon: <FileText className="size-5" /> },
     ];
 
-    const accountItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
-        { id: 'personal-settings', label: 'Cài đặt cá nhân', icon: <Settings className="w-5 h-5" /> },
+    const studentItems: NavItem[] = [
+        { id: 'classes', label: 'Lớp học', icon: <GraduationCap className="size-5" /> },
     ];
 
-    const certificateItems: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }> = [
-        { id: 'certificates', label: 'Cấp Chứng nhận', icon: <Award className="w-5 h-5" /> },
-        ...(authStore.isAdmin
-            ? [{ id: 'admin-templates' as TeacherDashboardTab, label: 'Mẫu chứng nhận', icon: <LayoutTemplate className="w-5 h-5" /> }]
+    const utilityItems = useMemo<NavItem[]>(() => (
+        isGiftShopEnabled
+            ? [{ id: 'gift-shop', label: 'Tiệm tạp hóa', icon: <Gift className="size-5" /> }]
             : []
-        ),
+    ), [isGiftShopEnabled]);
+
+    const ioeItems: NavItem[] = [
+        { id: 'ioe-manage', label: 'Quản lý IOE', icon: <Globe className="size-5" /> },
+        { id: 'ioe', label: 'Tạo đề IOE', icon: <Globe className="size-5" /> },
+        { id: 'ioe-results', label: 'Kết quả IOE', icon: <Globe className="size-5" /> },
     ];
+
+    const certificateItems: NavItem[] = [
+        { id: 'certificates', label: 'Cấp chứng nhận', icon: <Award className="size-5" /> },
+        ...(authStore.isAdmin
+            ? [{ id: 'admin-templates' as TeacherDashboardTab, label: 'Mẫu chứng nhận', icon: <LayoutTemplate className="size-5" /> }]
+            : []),
+    ];
+
+    const accountItems: NavItem[] = [
+        { id: 'personal-settings', label: 'Cài đặt cá nhân', icon: <Settings className="size-5" /> },
+    ];
+
+    const settingItems: NavItem[] = [
+        { id: 'announcements', label: 'Thông báo', icon: <Megaphone className="size-5" /> },
+        { id: 'teachers', label: 'Giáo viên', icon: <Users className="size-5" /> },
+        { id: 'math-audit', label: 'Theo dõi lỗi công thức', icon: <ScanSearch className="size-5" /> },
+    ];
+
+    const navigateTo = (tab: TeacherDashboardTab) => {
+        setActiveTab(tab);
+        setIsMobileOpen(false);
+    };
+
+    const toggleGroup = (groupKey: GroupKey) => {
+        setOpenGroups((currentGroups) => {
+            const nextGroups = new Set(currentGroups);
+            if (nextGroups.has(groupKey)) nextGroups.delete(groupKey);
+            else nextGroups.add(groupKey);
+            return nextGroups;
+        });
+    };
+
+    const NavButton = ({ item }: { item: NavItem }) => {
+        const isActive = activeTab === item.id;
+
+        return (
+            <button
+                type="button"
+                onClick={() => navigateTo(item.id)}
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex min-h-10 w-full items-center gap-3 rounded-xl border-l-[3px] px-3 py-2 text-left text-sm transition-colors ${
+                    isActive
+                        ? 'border-blue-600 bg-blue-50 font-bold text-blue-700'
+                        : 'border-transparent font-medium text-slate-700 hover:bg-white hover:text-slate-950'
+                }`}
+            >
+                <span aria-hidden="true" className={isActive ? 'text-blue-600' : 'text-slate-500'}>{item.icon}</span>
+                <span>{item.label}</span>
+            </button>
+        );
+    };
 
     const NavGroup = ({
         title,
@@ -135,75 +230,60 @@ const Sidebar: React.FC<SidebarProps> = ({
         adminOnly = false,
     }: {
         title: string;
-        items: Array<{ id: TeacherDashboardTab; label: string; icon: React.ReactNode }>;
+        items: NavItem[];
         groupKey: GroupKey;
         adminOnly?: boolean;
     }) => {
-        if (adminOnly && !authStore.isAdmin) return null;
-        const isOpen = openGroup === groupKey;
+        if ((adminOnly && !authStore.isAdmin) || items.length === 0) return null;
+        const isOpen = openGroups.has(groupKey);
+        const panelId = `teacher-sidebar-${groupKey}`;
 
         return (
-            <div className="mb-3">
+            <section className="mb-1.5">
                 <button
                     type="button"
-                    onClick={() => setOpenGroup(groupKey)}
-                    className="w-full px-5 h-10 flex items-center justify-between text-left rounded-xl hover:bg-white/80 transition-colors"
+                    onClick={() => toggleGroup(groupKey)}
+                    aria-expanded={isOpen}
+                    aria-controls={panelId}
+                    className="flex h-9 w-full items-center justify-between rounded-xl px-3 text-left transition-colors hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 >
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">{title}</h3>
+                    <span className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">{title}</span>
                     <ChevronRight
-                        className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-90 text-blue-600' : 'text-slate-400'}`}
+                        aria-hidden="true"
+                        className={`size-4 transition-transform duration-200 ${isOpen ? 'rotate-90 text-blue-600' : 'text-slate-400'}`}
                     />
                 </button>
 
                 {isOpen && (
-                    <div className="space-y-1 mt-1">
-                        {items.map((item) => {
-                            const isActive = activeTab === item.id;
-                            return (
-                                <button
-                                    key={item.id}
-                                    onClick={() => {
-                                        setActiveTab(item.id);
-                                        setIsMobileOpen(false);
-                                    }}
-                                    className={`w-full flex items-center gap-3 px-5 py-3 transition-all duration-200 border-l-4 rounded-r-xl ${
-                                        isActive
-                                            ? 'bg-blue-50 text-blue-700 border-blue-600 shadow-sm'
-                                            : 'border-transparent text-slate-700 hover:bg-white hover:text-slate-900'
-                                    }`}
-                                >
-                                    {item.icon}
-                                    <span className={`font-medium ${isActive ? 'font-semibold' : ''}`}>{item.label}</span>
-                                </button>
-                            );
-                        })}
+                    <div id={panelId} className="mt-1 space-y-0.5">
+                        {items.map((item) => <NavButton key={item.id} item={item} />)}
                     </div>
                 )}
-            </div>
+            </section>
         );
     };
 
     return (
         <>
             {isMobileOpen && (
-                <div className="fixed inset-0 bg-black/30 z-40 lg:hidden" onClick={() => setIsMobileOpen(false)} />
+                <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setIsMobileOpen(false)} />
             )}
 
             <aside
                 aria-label="Điều hướng quản trị"
                 aria-hidden={isMobileDrawerInactive || undefined}
                 inert={isMobileDrawerInactive || undefined}
-                className={`fixed top-0 left-0 z-50 h-[calc(100vh-64px)] lg:h-full pb-20 lg:pb-0 w-64 bg-slate-50 border-r border-slate-200 flex flex-col transition-transform duration-300 ease-in-out overflow-y-auto ${
+                className={`fixed left-0 top-0 z-50 flex h-[calc(100vh-64px)] w-64 flex-col overflow-hidden border-r border-slate-200 bg-slate-50 pb-20 transition-transform duration-300 ease-in-out lg:h-full lg:pb-0 ${
                     isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                 }`}
             >
-                <div className="h-16 flex items-center px-5 border-b border-slate-200 shrink-0 bg-white/80 backdrop-blur">
+                <div className="flex h-16 shrink-0 items-center border-b border-slate-200 bg-white/90 px-4 backdrop-blur">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white p-1.5 flex items-center justify-center border border-slate-200 shadow-sm">
+                        <div className="flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
                             <img
                                 src="/shool-logo1-removebg.png"
                                 alt={`Logo ${SCHOOL_NAME}`}
-                                className="w-full h-full object-contain"
+                                className="size-full object-contain"
                             />
                         </div>
                         <span className="text-2xl font-black tracking-tight text-slate-900">
@@ -212,12 +292,55 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                 </div>
 
-                <div className="flex-1 py-5 px-2 custom-scrollbar">
-                    <NavGroup title="Chính" items={navItems} groupKey="main" />
-                    <NavGroup title="Tiếng Anh IOE" items={ioeItems} groupKey="ioe" adminOnly={true} />
+                <div className="shrink-0 border-b border-slate-200 bg-white/60 p-3">
+                    <button
+                        type="button"
+                        onClick={() => navigateTo('create')}
+                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    >
+                        <PlusCircle aria-hidden="true" className="size-5" />
+                        Tạo đề mới
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => navigateTo('overview')}
+                        aria-current={activeTab === 'overview' ? 'page' : undefined}
+                        className={`mt-2 flex min-h-10 w-full items-center gap-3 rounded-xl border-l-[3px] px-3 py-2 text-left text-sm transition-colors ${
+                            activeTab === 'overview'
+                                ? 'border-blue-600 bg-blue-50 font-bold text-blue-700'
+                                : 'border-transparent font-semibold text-slate-700 hover:bg-white hover:text-slate-950'
+                        }`}
+                    >
+                        <Home aria-hidden="true" className="size-5" />
+                        Tổng quan
+                    </button>
+                </div>
+
+                <nav
+                    aria-label="Các khu vực chức năng"
+                    className="flex-1 overflow-y-auto px-2 py-3"
+                    style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}
+                >
+                    <NavGroup title="Đề thi" items={examItems} groupKey="exams" />
+                    <NavGroup title="Dạy và giao bài" items={teachingItems} groupKey="teaching" />
+                    <NavGroup title="Học sinh" items={studentItems} groupKey="students" />
+                    <NavGroup title="Tiện ích" items={utilityItems} groupKey="utilities" />
+                    <NavGroup title="Tiếng Anh IOE" items={ioeItems} groupKey="ioe" adminOnly />
                     <NavGroup title="Chứng nhận" items={certificateItems} groupKey="certificates" />
                     <NavGroup title="Tài khoản" items={accountItems} groupKey="account" />
-                    <NavGroup title="Quản trị hệ thống" items={settingItems} groupKey="system" adminOnly={true} />
+                    <NavGroup title="Quản trị hệ thống" items={settingItems} groupKey="system" adminOnly />
+                </nav>
+
+                <div className="shrink-0 border-t border-slate-200 bg-white/80 p-3">
+                    <button
+                        type="button"
+                        onClick={onLogout}
+                        className="flex min-h-10 w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                    >
+                        <LogOut aria-hidden="true" className="size-5" />
+                        Đăng xuất
+                    </button>
                 </div>
             </aside>
         </>

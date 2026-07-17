@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import OverviewTab from '../src/components/TeacherDashboard/OverviewTab';
 import { useAuthStore } from '../stores/authStore';
 import { useQuizStore } from '../stores/quizStore';
+import { useTeacherDashboardUIStore } from '../src/stores/useTeacherDashboardUIStore';
 
 vi.mock('../src/components/teacher/ResultsView/ResultsAnalytics', () => ({
     ResultsAnalytics: ({ statistics }: { statistics: { totalResults: number } }) => (
@@ -42,6 +43,7 @@ describe('TeacherDashboard OverviewTab', () => {
             isAdmin: false,
             teacherClass: '3A',
         });
+        useTeacherDashboardUIStore.setState({ activeTab: 'overview' });
         useQuizStore.setState({
             quizzes: [
                 { id: 'quiz-3a', title: 'Đề lớp 3A', classLevel: 'Lớp 3-A', questions: [] },
@@ -80,6 +82,25 @@ describe('TeacherDashboard OverviewTab', () => {
         expect(recentSubmission).toContain('An');
         expect(document.body.textContent).not.toContain('Bình');
         expect(document.body.textContent).not.toContain('Chi');
+    });
+
+    it.each([
+        ['Tạo đề mới', 'create'],
+        ['Giao bài', 'assignments'],
+        ['Thi trực tiếp', 'live-exam'],
+        ['Xem kết quả', 'results'],
+        ['Quản lý lớp', 'classes'],
+        ['Cấp chứng nhận', 'certificates'],
+    ] as const)('opens %s from the quick action area', (label, expectedTab) => {
+        render(
+            <OverviewTab
+                resultsLoadState="success"
+                onRetryResults={vi.fn()}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: new RegExp(label, 'i') }));
+        expect(useTeacherDashboardUIStore.getState().activeTab).toBe(expectedTab);
     });
 
     it('shows a retry action when loading results fails', () => {
