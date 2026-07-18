@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data', 'migration');
-const OUTPUT_FILE = path.join(__dirname, '..', 'data', 'seed.sql');
+const OUTPUT_FILE = path.join(__dirname, '..', 'data', 'seed.local.sql');
 
 // Simple CSV parser (handles quoted fields with commas)
 function parseCSV(content) {

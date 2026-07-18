@@ -72,3 +72,7 @@ data/migration/*
 *.keystore
 .jwt-rotation.tmp
 .qwen/settings*.corrupted*
+
+# Local D1 exports generated from ignored migration CSV files
+workers/data/*
+!workers/data/README.md

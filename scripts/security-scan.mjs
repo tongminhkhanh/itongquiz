@@ -33,6 +33,9 @@ for (const rawFile of tracked) {
   if (lower.startsWith('data/migration/') && lower !== 'data/migration/readme.md') {
     report(file, 1, 'tracked-data-export', 'Migration exports must remain local.');
   }
+  if (lower.startsWith('workers/data/') && lower !== 'workers/data/readme.md') {
+    report(file, 1, 'tracked-data-export', 'Generated D1 seed exports must remain local.');
+  }
   if (/\.(?:pem|key|p12|pfx|keystore)$/i.test(file)) {
     report(file, 1, 'tracked-private-key-file', 'Private key/certificate material is forbidden.');
   }
