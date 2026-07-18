@@ -63,8 +63,11 @@ describe('StudentDetailModal public behavior', () => {
 
     it('loads analytics data only after the analytics tab is selected', async () => {
         renderModal();
+        const exportButton = screen.getByRole('button', { name: /Xuất PNG/i });
+        expect(exportButton).toBeDisabled();
         expect(fetchWeaknessProfileMock).not.toHaveBeenCalled();
         fireEvent.click(screen.getByRole('button', { name: /Phân tích năng lực/i }));
+        expect(exportButton).toBeEnabled();
         expect(screen.getByText('Competency Radar')).toBeInTheDocument();
         expect(screen.getByText('AI Insight Box')).toBeInTheDocument();
         await waitFor(() => {
