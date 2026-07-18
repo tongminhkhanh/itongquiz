@@ -6,10 +6,12 @@ import {
   DashboardEmptyState,
   DashboardSectionError,
   LearningProgressPanel,
+  RewardSidebar,
   StudentDashboardHeader,
   StudentDashboardHero,
   WeeklyQuestsPanel,
 } from '../src/components/HomePage/student-dashboard';
+import { BadgeGallery } from '../src/components/gamification/BadgeGallery';
 
 const renderHeader = () =>
   render(
@@ -356,5 +358,70 @@ describe('learning progress and weekly quest panels', () => {
     expect(fill).toHaveStyle({ transform: 'scaleX(0.5)' });
     expect(fill).not.toHaveStyle({ width: '50%' });
     expect(fill.className).not.toContain('transition-all');
+  });
+});
+const rewardSidebarProps = {
+  giftShopEnabled: false,
+  isProcessing: false,
+  onOpenChest: vi.fn(),
+  onOpenGiftShop: vi.fn(),
+  onOpenBadges: vi.fn(),
+};
+
+const dashboardWithChest = (available: boolean, claimed: boolean) => ({
+  ...gameLoopDashboard,
+  bonusChest: { available, claimed },
+});
+
+describe('reward sidebar and badge gallery', () => {
+  it('communicates every chest state with text', () => {
+    const { rerender } = render(
+      <RewardSidebar {...rewardSidebarProps} dashboard={dashboardWithChest(false, false)} />,
+    );
+    expect(screen.getByRole('button', { name: 'Chưa mở khóa' })).toBeDisabled();
+
+    rerender(
+      <RewardSidebar {...rewardSidebarProps} dashboard={dashboardWithChest(true, false)} />,
+    );
+    expect(screen.getByRole('button', { name: 'Mở rương thưởng' })).toBeEnabled();
+
+    rerender(
+      <RewardSidebar
+        {...rewardSidebarProps}
+        dashboard={dashboardWithChest(true, false)}
+        isProcessing
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Đang mở...' })).toBeDisabled();
+
+    rerender(
+      <RewardSidebar {...rewardSidebarProps} dashboard={dashboardWithChest(false, true)} />,
+    );
+    expect(screen.getByRole('button', { name: 'Đã mở rương' })).toBeDisabled();
+  });
+
+  it('labels weekly rhythm and hides the gift shop when disabled', () => {
+    render(<RewardSidebar {...rewardSidebarProps} dashboard={gameLoopDashboard} />);
+
+    expect(screen.getByRole('progressbar', { name: 'Nhịp học tuần này' })).toHaveAttribute(
+      'aria-valuenow',
+      '2',
+    );
+    expect(screen.queryByRole('button', { name: 'Xem mục tiêu quà thật' })).not.toBeInTheDocument();
+    expect(screen.getByText('Hoàn thành bài đầu tiên để mở huy hiệu đầu tiên nhé.')).toBeVisible();
+  });
+
+  it('adds accessible gallery controls and transform progress', () => {
+    render(<BadgeGallery isOpen onClose={vi.fn()} achievements={[]} />);
+
+    expect(screen.getByRole('dialog', { name: 'Bộ sưu tập huy hiệu' })).toHaveAttribute(
+      'aria-modal',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Đóng bộ sưu tập huy hiệu' })).toBeVisible();
+    const fill = screen.getByTestId('badge-gallery-progress-fill');
+    expect(fill).toHaveStyle({ transform: 'scaleX(0)' });
+    expect(fill).not.toHaveStyle({ width: '0%' });
+    expect(screen.getByRole('dialog')).toHaveAttribute('data-motion-duration-ms', '200');
   });
 });

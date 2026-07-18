@@ -75,6 +75,15 @@ export interface WeeklyQuestsPanelProps {
   onClaim: (questId: string) => void;
 }
 
+export interface RewardSidebarProps {
+  dashboard: GameLoopDashboard | null;
+  giftShopEnabled: boolean;
+  isProcessing: boolean;
+  onOpenChest: () => void;
+  onOpenGiftShop: () => void;
+  onOpenBadges: () => void;
+}
+
 export interface SubjectCardViewModel {
   id: string;
   title: string;

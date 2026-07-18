@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { X, Lock, Trophy, Star } from 'lucide-react';
 import type { GameLoopAchievement } from '../../types/gameLoop.types';
 import { ACHIEVEMENT_DEFINITIONS } from '../../config/achievementDefinitions';
@@ -38,6 +38,12 @@ export const BadgeGallery: React.FC<BadgeGalleryProps> = ({
     onClose,
     achievements,
 }) => {
+    const prefersReducedMotion = useReducedMotion();
+    const modalTransition = {
+        duration: prefersReducedMotion ? 0.01 : 0.2,
+        ease: 'easeOut' as const,
+    };
+
     const unlockedCodes = useMemo(() => {
         return new Set(achievements.map(a => a.code));
     }, [achievements]);
@@ -75,48 +81,62 @@ export const BadgeGallery: React.FC<BadgeGalleryProps> = ({
     return (
         <AnimatePresence>
             <motion.div
-                initial={{ opacity: 0 }}
+                initial={{ opacity: 1 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 flex items-center justify-center"
+                transition={modalTransition}
+                className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm p-4 flex items-center justify-center"
                 onClick={onClose}
             >
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    initial={{ opacity: 1, scale: 0.98, y: 12 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    exit={{ opacity: 0, scale: 0.98, y: 12 }}
+                    transition={modalTransition}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="badge-gallery-title"
+                    data-motion-duration-ms="200"
                     onClick={(e) => e.stopPropagation()}
                     className="w-full max-w-4xl max-h-[90vh] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
                 >
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                    <div className="border-b border-slate-200 bg-slate-50 p-6 text-slate-900">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl">
+                                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl">
                                     <Trophy />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-black">Bộ sưu tập huy hiệu</h2>
-                                    <p className="text-sm text-purple-100">
+                                    <h2 id="badge-gallery-title" className="text-2xl font-black">Bộ sưu tập huy hiệu</h2>
+                                    <p className="text-sm text-slate-600">
                                         {stats.unlocked}/{stats.total} huy hiệu đã mở khóa
                                     </p>
                                 </div>
                             </div>
                             <button
+                                type="button"
                                 onClick={onClose}
-                                className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
+                                aria-label="Đóng bộ sưu tập huy hiệu"
+                                className="w-11 h-11 rounded-full border border-slate-200 bg-white hover:bg-slate-100 transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         {/* Progress bar */}
-                        <div className="relative h-3 bg-white/20 rounded-full overflow-hidden">
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${(stats.unlocked / stats.total) * 100}%` }}
-                                transition={{ duration: 1, ease: 'easeOut' }}
-                                className="absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full"
+                        <div
+                            role="progressbar"
+                            aria-label="Tiến độ mở khóa huy hiệu"
+                            aria-valuemin={0}
+                            aria-valuemax={stats.total}
+                            aria-valuenow={stats.unlocked}
+                            className="relative h-3 bg-slate-200 rounded-full overflow-hidden"
+                        >
+                            <div
+                                data-testid="badge-gallery-progress-fill"
+                                className="absolute inset-y-0 left-0 right-0 origin-left bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full transition-transform duration-200 motion-reduce:transition-none"
+                                style={{ transform: `scaleX(${stats.total > 0 ? stats.unlocked / stats.total : 0})` }}
                             />
                         </div>
 
@@ -162,8 +182,9 @@ export const BadgeGallery: React.FC<BadgeGalleryProps> = ({
                                         return (
                                             <motion.div
                                                 key={badge.code}
-                                                whileHover={isUnlocked ? { scale: 1.05, y: -4 } : {}}
-                                                className={`relative rounded-2xl border-2 p-4 transition-all ${
+                                                whileHover={!prefersReducedMotion && isUnlocked ? { scale: 1.03, y: -2 } : {}}
+                                                transition={modalTransition}
+                                                className={`relative rounded-2xl border-2 p-4 transition-transform duration-200 motion-reduce:transition-none ${
                                                     isUnlocked
                                                         ? `${colors.bg} ${colors.border} shadow-lg ${colors.glow}`
                                                         : 'bg-slate-50 border-slate-200 opacity-50'

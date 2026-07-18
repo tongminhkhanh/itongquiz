@@ -1,5 +1,6 @@
 export { AssignedWorkSection } from './AssignedWorkSection';
 export { LearningProgressPanel } from './LearningProgressPanel';
+export { RewardSidebar } from './RewardSidebar';
 export { StudentDashboardHeader } from './StudentDashboardHeader';
 export { StudentDashboardHero } from './StudentDashboardHero';
 export { WeeklyQuestsPanel } from './WeeklyQuestsPanel';
@@ -17,6 +18,7 @@ export type {
   AssignedWorkSectionProps,
   AssignmentVisualState,
   LearningProgressPanelProps,
+  RewardSidebarProps,
   StudentDashboardHeaderProps,
   StudentDashboardHeroProps,
   SubjectCardViewModel,
