@@ -90,7 +90,7 @@ const RenderQuestion: React.FC<{ name: VisualQuestionName; index: number }> = ({
   </CaseCard>
 );
 
-const ioeExpression = String.raw`\(\frac{3}{4}+[1]=1\)`;
+const shortAnswerExpression = String.raw`\(\frac{3}{4}+[1]=1\)`;
 const explanation = [
   String.raw`**Bước 1.** Quy đồng: $\frac{1}{2}=\frac{2}{4}$.`,
   String.raw`**Bước 2.** Vì $\frac{2}{4}=\frac{1}{2}$ nên hai phân số bằng nhau.`,
@@ -109,19 +109,19 @@ const Harness = () => (
       <RenderQuestion name="drag-drop" index={2} />
       <RenderQuestion name="fill-blank" index={3} />
 
-      <CaseCard name="ioe">
+      <CaseCard name="short-answer">
         <div className="rounded-2xl border border-blue-100 bg-white p-5 sm:p-8">
           <div className="mb-4 inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
-            IOE · SHORT ANSWER
+            SHORT ANSWER
           </div>
           <p className="mb-4 text-lg font-bold text-slate-800">Complete the equation.</p>
           <div className="rounded-xl bg-blue-50 p-5 text-center text-xl">
             <InteractiveMathText
-              content={ioeExpression}
+              content={shortAnswerExpression}
               renderBlank={(blankId, key) => (
                 <input
                   key={key}
-                  aria-label={`IOE blank ${blankId}`}
+                  aria-label={`Short answer blank ${blankId}`}
                   className="mx-2 w-20 rounded-lg border-2 border-blue-300 bg-white px-2 py-1 text-center"
                   readOnly
                 />
@@ -141,7 +141,7 @@ const Harness = () => (
   </MathJaxContext>
 );
 
-const caseNames = ['mcq', 'matching', 'drag-drop', 'fill-blank', 'ioe', 'explanation'] as const;
+const caseNames = ['mcq', 'matching', 'drag-drop', 'fill-blank', 'short-answer', 'explanation'] as const;
 
 const assertRendered = () => {
   cy.get('[data-testid="math-regression-root"]').should('be.visible');

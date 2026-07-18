@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 
 const root = process.cwd();
 const update = process.argv.includes('--update');
-const caseNames = ['mcq', 'matching', 'drag-drop', 'fill-blank', 'ioe', 'explanation'];
+const caseNames = ['mcq', 'matching', 'drag-drop', 'fill-blank', 'short-answer', 'explanation'];
 const names = caseNames.flatMap((name) => [
   `math-${name}-desktop.png`,
   `math-${name}-mobile.png`,

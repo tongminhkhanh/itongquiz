@@ -49,12 +49,7 @@ export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color
     'tu-nhien-xa-hoi': { title: 'Tự nhiên & Xã hội', icon: 'public', color: 'from-emerald-400 to-emerald-600', desc: 'Khám phá thế giới muôn màu' },
     'tieng-anh': { title: 'Tiếng Anh', icon: 'language', color: 'from-blue-400 to-blue-700', desc: 'Mở rộng giao tiếp quốc tế' },
     'tin-hoc': { title: 'Tin học', icon: 'computer', color: 'from-slate-400 to-slate-600', desc: 'Làm chủ công nghệ tương lai' },
-    'ioe': { title: 'Luyện thi IOE', icon: 'workspace_premium', color: 'from-yellow-400 to-orange-500', desc: 'Chinh phục kỳ thi tiếng Anh quốc gia', showOnHome: true },
 };
-
-interface StudentDashboardUIProps {
-    ioeQuizzes?: Quiz[];
-}
 
 const ASSIGNMENTS_PER_PAGE = 5;
 const ATTENDANCE_REWARD = { exp: 50, coins: 50 };
@@ -208,7 +203,7 @@ const getRewardSummary = (reward: GameLoopRewardResult | null) => {
     };
 };
 
-const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = [] }) => {
+const StudentDashboardUI: React.FC = () => {
     // --- Stores ---
     const classroomStore = useClassroomStore();
     const assignmentStore = useAssignmentStore();
@@ -416,7 +411,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const myAssignmentQuizzes = useMemo(() => {
         if (!studentSession) return [];
         const mappedAssignments = assignmentStore.assignments.map(assignment => {
-            const realQuiz = quizStore.quizzes.find(q => q.id === assignment.quizId) || ioeQuizzes.find(q => q.id === assignment.quizId);
+            const realQuiz = quizStore.quizzes.find(q => q.id === assignment.quizId);
             if (realQuiz) {
                 return { ...realQuiz, _assignmentData: assignment } as Quiz & { _assignmentData?: Assignment };
             }
@@ -466,17 +461,14 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
             return String(a.title || '').localeCompare(String(b.title || ''), 'vi');
         });
-    }, [assignmentStore.assignments, studentSession, quizStore.quizzes, ioeQuizzes]);
+    }, [assignmentStore.assignments, studentSession, quizStore.quizzes]);
 
     const publicCategories = useMemo(() => {
         const categories = Object.keys(SUBJECT_CONFIG).filter(cat => SUBJECT_CONFIG[cat].showOnHome !== false);
         return categories.map((cat, index) => {
-            let total = 0;
-            if (cat === 'ioe') {
-                total = ioeQuizzes.length;
-            } else {
-                total = quizStore.quizzes.filter(q => (q.category || 'class') === cat && q.showOnHome !== false).length;
-            }
+            const total = quizStore.quizzes.filter(
+                q => (q.category || 'class') === cat && q.showOnHome !== false
+            ).length;
             const config = SUBJECT_CONFIG[cat];
             const cardStyle = SUBJECT_CARD_STYLES[index % SUBJECT_CARD_STYLES.length];
             return {
@@ -488,12 +480,12 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 ...cardStyle,
             };
         });
-    }, [quizStore.quizzes, ioeQuizzes]);
+    }, [quizStore.quizzes]);
 
     const attendanceTodayKey = useMemo(() => getLocalDateKey(), [studentSession?.username]);
 
     const attendanceQuestionPool = useMemo<AttendanceQuestion[]>(() => {
-        const allQuizzes = [...quizStore.quizzes, ...ioeQuizzes];
+        const allQuizzes = quizStore.quizzes;
         const prioritizedQuizzes = allQuizzes.filter((quiz) => {
             const normalizedCategory = normalizeLearningCategory((quiz as any).category || (quiz as any).topic || '');
             return normalizedCategory === 'toan' || normalizedCategory === 'tieng-viet';
@@ -519,7 +511,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 })
                 .filter(Boolean) as AttendanceQuestion[];
         });
-    }, [quizStore.quizzes, ioeQuizzes]);
+    }, [quizStore.quizzes]);
 
     const totalAssignmentPages = Math.max(1, Math.ceil(myAssignmentQuizzes.length / ASSIGNMENTS_PER_PAGE));
 

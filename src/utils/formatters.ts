@@ -71,7 +71,7 @@ const formatPlainHtml = (value: string): string => {
             .replace(new RegExp(`&lt;/${tag}&gt;`, 'gi'), `</${tag}>`);
     }
 
-    // IOE underline notation is interpreted only outside TeX math.
+    // Plain-text underline notation is interpreted only outside TeX math.
     if (!output.includes('$') && !output.includes('\\')) {
         output = output
             .replace(/_([^_\s]+)_/g, '<u>$1</u>')

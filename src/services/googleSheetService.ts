@@ -2,7 +2,7 @@ import toast from 'react-hot-toast';
 import { Quiz, Question, QuestionType, MCQQuestion, TrueFalseQuestion, ShortAnswerQuestion, Teacher, StudentResult } from '../types';
 import { cacheService, CacheKeys, CacheTTL } from './CacheService';
 // Legacy service name retained for compatibility; all calls use the Worker API
-import { USE_D1 } from '../config/constants';
+import { isArchivedQuizCategory } from '../domain/quiz/quizCategoryPolicy';
 import { callApi } from './apiAdapter';
 
 // Helper to call API (routes through apiAdapter for both GAS and D1 backends)
@@ -510,7 +510,7 @@ export const fetchQuizzesFromSheets = async (sheetId: string, quizGid: string, q
 
             // Map Quizzes
             const quizzes: Quiz[] = normalizedQuizData
-                .filter((row: any) => !USE_D1 || row.category !== 'ioe')
+                .filter((row: any) => !isArchivedQuizCategory(row.category))
                 .map((row: any) => ({
                     id: row.id,
                     title: row.title,

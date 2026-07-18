@@ -98,7 +98,7 @@ const ChatBot: React.FC = () => {
                                     <div className="chatbot-suggestions">
                                         <span className="chatbot-suggestion-label">Gợi ý:</span>
                                         {[
-                                            'Cách tạo đề IOE?',
+                                            'Cách tạo đề bằng AI?',
                                             'Hướng dẫn làm bài quiz',
                                             'Cách phân quyền giáo viên',
                                         ].map((suggestion) => (

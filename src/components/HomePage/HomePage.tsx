@@ -28,13 +28,6 @@ import {
     SUBJECT_CONFIG 
 } from './constants/dashboard.constants';
 
-// --- Types ---
-interface HomePageProps {
-    ioeQuizzes: Quiz[];
-    ioeLoading: boolean;
-    onRefreshIoe: () => void;
-}
-
 const isAssignmentClosed = (assignment?: Assignment): boolean => {
     if (!assignment) return false;
     if (assignment.status === 'CLOSED') return true;
@@ -42,7 +35,7 @@ const isAssignmentClosed = (assignment?: Assignment): boolean => {
     return Number.isFinite(deadline) && deadline < Date.now();
 };
 
-const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIoe }) => {
+const HomePage: React.FC = () => {
     // --- State ---
     const [view, setView] = useState<'home' | 'quiz-list'>('home');
     const [activeTab, setActiveTab] = useState<string>('all');
@@ -150,8 +143,6 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
 
         if (activeTab === 'all') {
             quizzes = [...quizStore.quizzes];
-        } else if (activeTab === 'ioe') {
-            quizzes = ioeQuizzes;
         } else if (activeTab === 'game') {
             return [];
         } else if (activeTab === 'class') {
@@ -164,7 +155,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
             quizzes = quizStore.quizzes.filter(q => (q.category || 'class') === activeTab);
         }
 
-        if (activeTab !== 'class' && activeTab !== 'ioe') {
+        if (activeTab !== 'class') {
             quizzes = quizzes.filter(q => q.showOnHome !== false);
 
             if (isStudentLoggedIn) {
@@ -181,7 +172,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
             quizzes = quizzes.filter(q => q.classLevel === quizStore.selectedClassLevel);
         }
         return quizzes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }, [activeTab, quizStore.quizzes, ioeQuizzes, myAssignmentQuizzes, assignments, searchTerm, quizStore.selectedClassLevel, isTeacherLoggedIn]);
+    }, [activeTab, quizStore.quizzes, myAssignmentQuizzes, assignments, searchTerm, quizStore.selectedClassLevel, isTeacherLoggedIn]);
 
     // --- Handlers ---
     const openLogin = (tab: 'student' | 'teacher') => {
@@ -258,7 +249,6 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
         }
         setActiveTab(catId);
         setView('quiz-list');
-        if (catId === 'ioe') onRefreshIoe();
     };
 
     const handleBackHome = () => {
@@ -275,14 +265,12 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
 
     // --- Subject Stats (for cards) ---
     const subjectCards = useMemo(() => {
-        const allQuizzes = [...quizStore.quizzes, ...ioeQuizzes];
-        const categories = ['all', 'class', 'ioe'];
+        const allQuizzes = quizStore.quizzes;
+        const categories = ['all', 'class'];
         return categories.map(cat => {
             let catQuizzes = [];
             if (cat === 'all') {
                 catQuizzes = allQuizzes.filter(q => q.showOnHome !== false);
-            } else if (cat === 'ioe') {
-                catQuizzes = ioeQuizzes;
             } else if (cat === 'class') {
                 catQuizzes = isStudentLoggedIn ? myAssignmentQuizzes : assignmentQuizzes;
             } else {
@@ -294,7 +282,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
                 total: catQuizzes.length,
             };
         });
-    }, [quizStore.quizzes, ioeQuizzes, myAssignmentQuizzes, assignmentQuizzes, isStudentLoggedIn]);
+    }, [quizStore.quizzes, myAssignmentQuizzes, assignmentQuizzes, isStudentLoggedIn]);
 
     // =====================================================
     // RENDER
@@ -305,7 +293,7 @@ const HomePage: React.FC<HomePageProps> = ({ ioeQuizzes, ioeLoading, onRefreshIo
     }
 
     if (isStudentLoggedIn && view === 'home') {
-        return <StudentDashboardUI ioeQuizzes={ioeQuizzes} />;
+        return <StudentDashboardUI />;
     }
 
     // Nếu là giáo viên/admin đã đăng nhập và đang ở view 'home', trả về null để chờ App.tsx hoặc useEffect nội bộ chuyển hướng

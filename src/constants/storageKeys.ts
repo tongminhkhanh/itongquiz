@@ -11,7 +11,6 @@ export const StorageKeys = {
 
     // Testing & Caching
     CACHE_TEST: '__cache_test__',
-    IOE_QUESTION_HISTORY: 'ioe_question_history',
 
     // Gift Shop
     GIFT_SHOP_MOCK_STATE: 'itongquiz_gift_shop_mock_state',

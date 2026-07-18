@@ -30,7 +30,7 @@ describe('formatHtmlText security guard', () => {
         expect(html).toContain('Choose <u>a</u>');
         expect(html).toContain('&lt;span&gt;span&lt;/span&gt;');
     });
-    it('does not turn TeX subscripts into IOE underline HTML', () => {
+    it('does not turn TeX subscripts into underline HTML', () => {
         expect(formatHtmlText('$a_b_c$')).toBe('$a_b_c$');
         expect(formatHtmlText('$x_{12}$')).toBe('$x_{12}$');
     });
