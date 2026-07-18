@@ -8,34 +8,21 @@
  */
 
 import { Question } from '../types';
+import { requestWorkerAiText } from './ai/workerAiClient';
 
-// Get LLM-Mux configuration
-const getLLMConfig = () => {
-    // We now use our Worker Proxy instead of direct CLIProxy to avoid CORS
-    // No apiKey needed on frontend anymore
-    return { baseUrl: '/api/ai/chat' };
-};
-
-// Call AI via Worker Proxy (handles CORS and protects API Key)
+// Call AI via the JWT-authenticated Worker proxy.
 async function callLLM(prompt: string): Promise<string> {
-    const { callApi } = await import('./apiAdapter');
-
-    const data = await callApi('ai_chat', {
-        model: 'gemini-2.0-flash',
+    return requestWorkerAiText({
+        model: 'gemini-2.5-flash',
         messages: [
             {
                 role: 'system',
-                content: 'Bạn là một gia sư AI thân thiện cho học sinh tiểu học Việt Nam. Trả lời bằng tiếng Việt, dùng emoji để sinh động.'
+                content: 'B?n l? m?t gia s? AI th?n thi?n cho h?c sinh ti?u h?c Vi?t Nam. Tr? l?i b?ng ti?ng Vi?t, d?ng emoji ?? sinh ??ng.',
             },
-            {
-                role: 'user',
-                content: prompt
-            }
+            { role: 'user', content: prompt },
         ],
         temperature: 0.7,
     });
-
-    return data.choices?.[0]?.message?.content || '';
 }
 
 export interface ExplanationResult {

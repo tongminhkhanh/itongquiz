@@ -60,4 +60,18 @@ describe('system security password storage', () => {
         expect(verifyToken(request('/api/admin/announcements'), {} as any)).toBeNull();
     });
 
+    it('does not accept the removed shared API token on unclassified routes', () => {
+        const request = new Request('https://quiz-api.thitong.site/api/unclassified', {
+            headers: { 'X-API-Token': 'old-shared-token' },
+        });
+        const result = verifyToken(request, {} as any);
+        expect(result).toBeInstanceOf(Response);
+        expect((result as Response).status).toBe(401);
+    });
+
+    it('allows AI routes to reach their JWT-validating handlers', () => {
+        const request = new Request('https://quiz-api.thitong.site/api/ai/chat', { method: 'POST' });
+        expect(verifyToken(request, {} as any)).toBeNull();
+    });
+
 });

@@ -1,6 +1,7 @@
 import { Env } from '../types';
 import { parseBody, hashSHA256 } from '../utils/helpers';
 import { errorResponse, jsonResponse } from '../utils/response';
+import { verifyJWTMiddleware } from '../middleware/jwtAuth';
 
 const MAX_RETRIEVAL = 6;
 const MIN_CONFIDENCE = 0.45;
@@ -209,6 +210,9 @@ const logQuery = async (
 
 export async function handleHelpRagRoutes(request: Request, env: Env, path: string, method: string): Promise<Response | null> {
     if (path !== '/api/help/ask' || method !== 'POST') return null;
+
+    const authResult = await verifyJWTMiddleware(request, env);
+    if (authResult instanceof Response) return authResult;
 
     if (!env.CLIPROXY_API || !env.CLIPROXY_TOKEN) {
         return errorResponse('RAG service is not configured (missing CLIPROXY_API or CLIPROXY_TOKEN)', 500);

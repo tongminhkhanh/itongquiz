@@ -160,8 +160,12 @@ const applyAuditRepairs = async (request: Request, env: Env): Promise<Response> 
     if (auth instanceof Response) return auth;
 
     const body = await parseBody(request);
-    const questionIds = Array.isArray(body?.questionIds)
-        ? [...new Set(body.questionIds.map((value: unknown) => boundedString(value, 100)).filter(Boolean))].slice(0, 100)
+    const questionIds: string[] = Array.isArray(body?.questionIds)
+        ? Array.from(new Set<string>(
+            body.questionIds
+                .map((value: unknown) => boundedString(value, 100))
+                .filter((value: string) => value.length > 0),
+        )).slice(0, 100)
         : [];
     if (questionIds.length === 0) return errorResponse('questionIds is required', 400);
 

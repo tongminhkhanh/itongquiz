@@ -63,11 +63,6 @@ describe('buildAuthHeaders', () => {
         expect(headers['X-API-Token']).toBeUndefined();
     });
 
-    it('returns no auth header for legacyToken policy (shared secret removed)', () => {
-        const headers = buildAuthHeaders('legacyToken', '/api/announcements');
-        expect(headers['Authorization']).toBeUndefined();
-        expect(headers['X-API-Token']).toBeUndefined();
-    });
 
     it('returns no auth header for session with no token', () => {
         const headers = buildAuthHeaders('session', '/api/quizzes');

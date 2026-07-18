@@ -1,6 +1,5 @@
 import { WORKERS_API_URL } from '../../config/constants';
 
-export const API_SECRET_TOKEN = import.meta.env.VITE_API_SECRET_TOKEN || '';
 export const REMOTE_WORKERS_API_URL = 'https://phieu.thitong.site';
 
 export function getWorkersApiBaseUrl(): string {

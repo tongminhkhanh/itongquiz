@@ -71,7 +71,6 @@ export function buildAuthHeaders(
     }
 
     // 'public': không gửi bất kỳ auth header nào
-    // 'legacyToken': không gửi X-API-Token nữa (đã bỏ shared secret)
     // Chỉ giữ lại để tương thích ngược tạm thời
 
     return headers;

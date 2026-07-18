@@ -1,33 +1,51 @@
 /**
- * Perplexity AI Provider
- * 
- * Implementation for Perplexity API.
- * Follows Single Responsibility - only handles Perplexity-specific logic.
+ * Perplexity (Sonar) provider routed through the authenticated Cloudflare Worker.
+ * Provider credentials never enter browser code or localStorage.
  */
 
 import { SYSTEM_INSTRUCTION } from '../../../config/constants';
 import type { IAIProvider, AIProviderType, QuizGenerationOptions, QuizGenerationResult } from '../ai.types';
-import { buildPrompt } from '../shared/prompt-builder';
-import { parseAndRepairJSON } from '../shared/json-repair';
+import { buildPrompt, buildFileAttachmentPrompt } from '../shared/prompt-builder';
+import { parseAndRepairJSON, formatMathSymbols } from '../shared/json-repair';
+import { fileToBase64 } from '../shared/file-utils';
+import { requestWorkerAiText } from '../../../services/ai/workerAiClient';
 
-const API_URL = 'https://api.perplexity.ai/chat/completions';
-const MODEL_NAME = 'sonar';
 
-/**
- * Perplexity AI Provider
- */
+const buildMessages = async (
+    promptText: string,
+    file?: File | null,
+): Promise<Array<{ role: string; content: unknown }>> => {
+    const userContent: Array<Record<string, unknown>> = [{ type: 'text', text: promptText }];
+    if (file) {
+        const base64Data = await fileToBase64(file);
+        userContent.unshift({ type: 'text', text: buildFileAttachmentPrompt() });
+        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+            userContent.splice(1, 0, {
+                type: 'input_file',
+                file_data: `data:${file.type || 'application/pdf'};base64,${base64Data}`,
+                filename: file.name,
+            });
+        } else {
+            userContent.splice(1, 0, {
+                type: 'image_url',
+                image_url: { url: `data:${file.type};base64,${base64Data}` },
+            });
+        }
+    }
+    return [
+        { role: 'system', content: SYSTEM_INSTRUCTION },
+        { role: 'user', content: userContent },
+    ];
+};
+
 export class PerplexityProvider implements IAIProvider {
     readonly type: AIProviderType = 'perplexity';
     readonly displayName = 'Perplexity (Sonar)';
 
-    private apiKey: string;
+    constructor(_apiKey: string = '', ) {}
 
-    constructor(apiKey: string) {
-        this.apiKey = apiKey;
-    }
-
-    validateApiKey(apiKey: string): boolean {
-        return apiKey.startsWith('pplx-') && apiKey.length > 20;
+    validateApiKey(_apiKey: string): boolean {
+        return true;
     }
 
     async generate(
@@ -35,64 +53,15 @@ export class PerplexityProvider implements IAIProvider {
         classLevel: string,
         content: string,
         options?: QuizGenerationOptions,
-        file?: File | null
+        file?: File | null,
     ): Promise<QuizGenerationResult> {
         const promptText = buildPrompt(topic, classLevel, content, options);
-
-        const requestBody = {
-            model: MODEL_NAME,
-            messages: [
-                {
-                    role: 'system',
-                    content: SYSTEM_INSTRUCTION
-                },
-                {
-                    role: 'user',
-                    content: promptText
-                }
-            ],
+        const text = await requestWorkerAiText({
+            model: 'sonar',
+            messages: await buildMessages(promptText, file),
             temperature: 0.4,
-            max_tokens: 8192
-        };
-
-        let response: Response;
-        try {
-            response = await fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody)
-            });
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            throw new Error(`Lỗi kết nối đến Perplexity API: ${msg}`);
-        }
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error("Perplexity API Error:", errorData);
-
-            if (response.status === 401) {
-                throw new Error("API Key không hợp lệ. Vui lòng kiểm tra lại Perplexity API Key của bạn.");
-            }
-            if (response.status === 429) {
-                throw new Error("Đã vượt quá giới hạn request. Vui lòng đợi một chút rồi thử lại.");
-            }
-
-            throw new Error(`Lỗi Perplexity API (${response.status}): ${errorData.error?.message || response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        if (!data.choices || data.choices.length === 0) {
-            throw new Error("AI không trả về kết quả nào.");
-        }
-
-        const text = data.choices[0].message.content;
-        if (!text) throw new Error("AI trả về dữ liệu rỗng.");
-
-        return parseAndRepairJSON(text);
+            response_format: { type: 'json_object' },
+        });
+        return parseAndRepairJSON(formatMathSymbols(text)) as QuizGenerationResult;
     }
 }

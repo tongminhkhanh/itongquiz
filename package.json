@@ -19,7 +19,9 @@
     "audit:dependencies:production": "node scripts/dependency-audit-report.mjs --production",
     "audit:dependencies:enforce": "node scripts/dependency-audit-report.mjs --production --enforce",
     "learn:sonlaedu": "node scripts/auto_learn_sonla.mjs",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "security:scan": "node scripts/security-scan.mjs",
+    "security:check": "npm run security:scan && npm run audit:dependencies:production"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -61,3 +61,14 @@ artifacts/math-screenshots/
 
 # Generated dependency audit reports
 reports/dependency-audit*.json
+
+# Sensitive local exports and credentials
+data/migration/*
+!data/migration/README.md
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+.jwt-rotation.tmp
+.qwen/settings*.corrupted*

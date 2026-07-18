@@ -1,6 +1,6 @@
 import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
-import { parseBody } from '../utils/helpers';
+import { requireTeacher, verifyJWTMiddleware } from '../middleware/jwtAuth';
 
 const TEACHER_DAILY_AI_LIMIT = 5;
 
@@ -84,12 +84,14 @@ const buildQuotaPayload = (
 };
 
 export async function handleTeacherAiQuotaRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
+    const authResult = await verifyJWTMiddleware(request, env);
+    if (authResult instanceof Response) return authResult;
+    if (!requireTeacher(authResult.user)) return errorResponse('Forbidden', 403);
+
     const db = env.DB;
-    const url = new URL(request.url);
+    const username = authResult.user.username;
 
     if (path === '/api/teacher-ai-quota' && method === 'GET') {
-        const username = String(url.searchParams.get('username') || '').trim();
-        if (!username) return errorResponse('Missing username');
 
         const role = await getTeacherRole(db, username);
         if (!role) return errorResponse('Teacher account not found', 404);
@@ -109,11 +111,6 @@ export async function handleTeacherAiQuotaRoutes(request: Request, env: Env, pat
     }
 
     if (path === '/api/teacher-ai-quota/consume' && method === 'POST') {
-        const body = await parseBody(request);
-        if (!body) return errorResponse('Invalid JSON body');
-
-        const username = String(body.username || '').trim();
-        if (!username) return errorResponse('Missing username');
 
         const role = await getTeacherRole(db, username);
         if (!role) return errorResponse('Teacher account not found', 404);

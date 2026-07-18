@@ -20,7 +20,7 @@ import { OpenAIProvider } from './providers/openai.provider';
  */
 export interface CreateProviderConfig {
     type: AIProviderType;
-    apiKey: string;
+    apiKey?: string;
     baseUrl?: string; // For LLM-Mux
     model?: string;   // Override default model
 }
@@ -33,11 +33,11 @@ export interface CreateProviderConfig {
  * @throws Error if provider type is unknown
  * 
  * @example
- * const provider = createProvider({ type: 'gemini', apiKey: 'xxx' });
+ * const provider = createProvider({ type: 'gemini' });
  * const quiz = await provider.generate(...);
  */
 export const createProvider = (config: CreateProviderConfig): IAIProvider => {
-    const { type, apiKey, baseUrl, model } = config;
+    const { type, apiKey = '', baseUrl, model } = config;
 
     switch (type) {
         case 'gemini':
@@ -47,11 +47,10 @@ export const createProvider = (config: CreateProviderConfig): IAIProvider => {
             return new PerplexityProvider(apiKey);
 
         case 'openai':
-            return new OpenAIProvider(apiKey, 'openai', import.meta.env.VITE_OPENAI_BASE_URL || 'https://api.openai.com/v1', model);
+            return new OpenAIProvider(apiKey, 'openai', baseUrl || '', model);
 
         case 'llm-mux':
-            const muxBaseUrl = baseUrl || import.meta.env.VITE_LLM_MUX_BASE_URL || 'http://localhost:3000/v1';
-            if (!apiKey) throw new Error('LLM-Mux API Key is required. Please configure VITE_LLM_MUX_API_KEY or VITE_CLIPROXY_TOKEN.');
+            const muxBaseUrl = baseUrl || 'https://api.thitong.site/v1';
             return new OpenAIProvider(apiKey, 'llm-mux', muxBaseUrl, model);
 
         default:

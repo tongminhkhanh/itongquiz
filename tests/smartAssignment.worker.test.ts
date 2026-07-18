@@ -185,7 +185,6 @@ function createFakeDb(
 function createEnv(db: D1Database): Env {
     return {
         DB: db,
-        API_SECRET_TOKEN: 'token',
         CLIPROXY_API: '',
         CLIPROXY_TOKEN: '',
         JWT_SECRET: TEST_JWT_SECRET,

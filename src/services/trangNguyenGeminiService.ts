@@ -4,6 +4,7 @@
  */
 
 import { QuestionType } from '../types';
+import { requestWorkerAiText } from './ai/workerAiClient';
 
 // ============ MASTER SYSTEM PROMPT ============
 const TRANG_NGUYEN_SYSTEM_PROMPT = `### ROLE
@@ -367,60 +368,17 @@ export const generateTrangNguyenQuiz = async (
         }
     }
 
-    // Use LLM-Mux or Gemini API
-    const geminiApiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
-
-    let responseText: string;
-
-    if (aiProvider === 'llm-mux') {
-        const { callApi } = await import('./apiAdapter');
-
-        const data = await callApi('ai_chat', {
-            model: 'gemini-2.0-flash',
-            messages: [
-                { role: 'system', content: TRANG_NGUYEN_SYSTEM_PROMPT },
-                { role: 'user', content: userPrompt }
-            ],
-            temperature: 0.4,
-            max_tokens: 8192
-        });
-
-        responseText = data.choices?.[0]?.message?.content || '';
-    } else {
-        // Direct Gemini API call
-        if (!geminiApiKey) {
-            throw new Error('Gemini API key not configured');
-        }
-
-        let response: Response;
-        try {
-            response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: userPrompt }] }],
-                        system_instruction: { parts: [{ text: TRANG_NGUYEN_SYSTEM_PROMPT }] },
-                        generation_config: {
-                            temperature: 0.4,
-                            response_mime_type: 'application/json'
-                        }
-                    })
-                }
-            );
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            throw new Error(`Lỗi kết nối đến Gemini API: ${msg}`);
-        }
-
-        if (!response.ok) {
-            throw new Error(`Gemini API error: ${response.status}`);
-        }
-
-        const data = await response.json() as { candidates?: { content: { parts: { text?: string }[] } }[] };
-        responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';;
-    }
+    // All AI traffic is authenticated by the Worker; no provider key reaches the browser.
+    const responseText = await requestWorkerAiText({
+        model: 'gemini-2.5-flash',
+        messages: [
+            { role: 'system', content: TRANG_NGUYEN_SYSTEM_PROMPT },
+            { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.4,
+        max_tokens: 8192,
+        response_format: { type: 'json_object' },
+    });
 
     // Parse AI response
     const tnResult = parseAIResponse(responseText);

@@ -1,12 +1,12 @@
 /**
  * @module geminiProvider
- * Generates quiz JSON via the Gemini model accessed through a localhost OpenAI-compatible proxy.
+ * Generates quiz JSON through the authenticated Worker AI proxy.
  */
 
 import { SYSTEM_INSTRUCTION } from '../../../config/constants';
-import { extractAIContent } from '../utils/aiResponseParser';
 import { parseAndRepairJSON, validateAndFixQuiz } from '../utils/jsonRepair';
 import { fileToBase64, urlToBase64 } from '../utils/networkHelpers';
+import { requestWorkerAiText } from '../workerAiClient';
 import { validateQuizWithAI } from '../../geminiService';
 
 type ImageLibraryItem = { id: string; name: string; data?: string };
@@ -21,57 +21,50 @@ const formatMathSigns = (text: string): string =>
 
 const resolveImageLibrary = (
   quiz: Record<string, unknown>,
-  imageLibrary: ImageLibraryItem[]
+  imageLibrary: ImageLibraryItem[],
 ): Record<string, unknown> => {
   if (!imageLibrary.length || !quiz.questions) return quiz;
-  const questions = (quiz.questions as Record<string, unknown>[]).map((q) => {
-    if (q.type === 'IMAGE_QUESTION' && q.image) {
-      const item = imageLibrary.find((img) => img.id === q.image || img.name === q.image);
-      if (item?.data) return { ...q, image: item.data };
+  const questions = (quiz.questions as Record<string, unknown>[]).map((question) => {
+    if (question.type === 'IMAGE_QUESTION' && question.image) {
+      const item = imageLibrary.find((image) => image.id === question.image || image.name === question.image);
+      if (item?.data) return { ...question, image: item.data };
     }
-    return q;
+    return question;
   });
   return { ...quiz, questions };
 };
 
-/**
- * Generate a quiz via the Gemini-compatible localhost proxy (OpenAI chat endpoint).
- */
 export const generateWithGemini = async (
   promptText: string,
-  apiKey: string,
+  _apiKey: string,
   file?: File | null,
   imageLibrary?: ImageLibraryItem[],
-  onStepChange?: (step: 'generating' | 'reviewing' | 'completed') => void
+  onStepChange?: (step: 'generating' | 'reviewing' | 'completed') => void,
 ): Promise<unknown> => {
-  const MODEL_NAME = 'gemini-2.0-flash';
-  const VITE_LOCALHOST_AI_URL = (import.meta as any).env.VITE_LOCALHOST_AI_URL || 'http://localhost:3000/v1';
-  const API_URL = `${VITE_LOCALHOST_AI_URL}/chat/completions`;
-
   const userContent: Record<string, unknown>[] = [{ type: 'text', text: promptText }];
 
   if (file) {
     const base64Data = await fileToBase64(file);
-    const isPDF = file.type === 'application/pdf';
-
-    userContent.unshift({ type: 'text', text: `⛔⛔⛔ TÀI LIỆU ĐÍNH KÈM - ƯU TIÊN TUYỆT ĐỐI ⛔⛔⛔\n📄 LOẠI FILE: ${isPDF ? 'PDF' : 'HÌNH ẢNH'}\n📁 TÊN FILE: ${file.name}\n\nĐỌC KỸ nội dung, trích xuất câu hỏi NGUYÊN VĂN, TỰ XÁC ĐỊNH đáp án.` });
-    userContent.splice(1, 0, {
-      type: 'image_url',
-      image_url: { url: `data:${file.type};base64,${base64Data}` },
+    const isPdf = file.type === 'application/pdf';
+    userContent.unshift({
+      type: 'text',
+      text: `T?I LI?U ??NH K?M - ?u ti?n n?i dung trong ${isPdf ? 'PDF' : 'h?nh ?nh'} ${file.name}.`,
     });
-    userContent.push({ type: 'text', text: '⏫⏫⏫ KẾT THÚC TÀI LIỆU ⏫⏫⏫' });
+    userContent.splice(1, 0, isPdf
+      ? { type: 'input_file', file_data: `data:${file.type};base64,${base64Data}`, filename: file.name }
+      : { type: 'image_url', image_url: { url: `data:${file.type};base64,${base64Data}` } });
   }
 
   if (imageLibrary?.length) {
-    userContent.push({ type: 'text', text: 'THƯ VIỆN HÌNH ẢNH (Image Library):' });
-    for (const img of imageLibrary) {
-      if (img.data?.startsWith('http')) {
+    userContent.push({ type: 'text', text: 'TH? VI?N H?NH ?NH:' });
+    for (const image of imageLibrary) {
+      if (image.data?.startsWith('http')) {
         try {
-          const { data, mimeType } = await urlToBase64(img.data);
-          userContent.push({ type: 'text', text: `Image ID: ${img.id} (Name: ${img.name})` });
+          const { data, mimeType } = await urlToBase64(image.data);
+          userContent.push({ type: 'text', text: `Image ID: ${image.id} (${image.name})` });
           userContent.push({ type: 'image_url', image_url: { url: `data:${mimeType};base64,${data}` } });
-        } catch (err) {
-          console.error(`Failed to fetch image ${img.id}:`, err);
+        } catch (error) {
+          console.warn(`Kh?ng t?i ???c h?nh ${image.id}:`, error);
         }
       }
     }
@@ -82,43 +75,32 @@ export const generateWithGemini = async (
     { role: 'user', content: userContent },
   ];
 
-  const requestBody = { model: MODEL_NAME, messages, temperature: 0.4, response_format: { type: 'json_object' } };
-
-  const maxRetries = 5;
-  let attempt = 0;
-
-  while (attempt < maxRetries) {
+  const maxRetries = 3;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify(requestBody),
+      const text = await requestWorkerAiText({
+        model: 'gemini-2.5-flash',
+        messages,
+        temperature: 0.4,
+        response_format: { type: 'json_object' },
       });
-
-      if (!response.ok) throw new Error(`AI request failed with status: ${response.status}`);
-
-      const data = await response.json();
-      const text = extractAIContent(data);
-      if (!text) throw new Error('AI không trả về kết quả nào.');
-
       const quizData = validateAndFixQuiz(parseAndRepairJSON(formatMathSigns(text))) as Record<string, unknown>;
 
       let finalQuiz = quizData;
       if (onStepChange) {
         onStepChange('reviewing');
         try {
-          const reviewedJson = await validateQuizWithAI(quizData, apiKey);
-          finalQuiz = validateAndFixQuiz(reviewedJson) as Record<string, unknown>;
+          finalQuiz = validateAndFixQuiz(await validateQuizWithAI(quizData, '')) as Record<string, unknown>;
         } catch (reviewError) {
-          console.warn('[generateWithGemini] ⚠️ Reviewer failed, using generator draft:', reviewError);
+          console.warn('[generateWithGemini] Reviewer failed, using generator draft.', reviewError);
         }
       }
-
       return resolveImageLibrary(finalQuiz, imageLibrary || []);
     } catch (error) {
-      attempt++;
-      if (attempt >= maxRetries) { console.error('Generate Quiz Error (Gemini Proxy):', error); throw error; }
-      await new Promise((resolve) => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      lastError = error;
+      if (attempt < maxRetries) await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** attempt));
     }
   }
+  throw lastError instanceof Error ? lastError : new Error('Kh?ng th? t?o ?? b?ng AI.');
 };

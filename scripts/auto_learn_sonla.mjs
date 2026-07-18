@@ -7,11 +7,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const EMAIL = '[REDACTED-COMPROMISED-VALUE]';
-const PASS = '[REDACTED-COMPROMISED-VALUE]';
+const EMAIL = process.env.SONLA_EMAIL || '';
+const PASS = process.env.SONLA_PASSWORD || '';
 
-const MUX_URL = process.env.VITE_LLM_MUX_BASE_URL || 'https://api.thitong.site/v1';
-const MUX_KEY = process.env.VITE_LLM_MUX_API_KEY;
+const MUX_URL = process.env.LLM_MUX_BASE_URL || 'https://api.thitong.site/v1';
+const MUX_KEY = process.env.LLM_MUX_API_KEY || '';
+
+if (!EMAIL || !PASS) {
+  console.error('SONLA_EMAIL and SONLA_PASSWORD must be configured in a local .env file.');
+  process.exit(1);
+}
 
 async function autoLogin(page) {
   try {

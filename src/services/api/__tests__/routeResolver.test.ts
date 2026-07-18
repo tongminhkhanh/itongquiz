@@ -104,6 +104,15 @@ describe('resolveApiRoute', () => {
         expect(r.auth).toBe('session');
     });
 
+    it('resolves AI quota routes with JWT session policy', () => {
+        const getQuota = resolveApiRoute('get_teacher_ai_quota');
+        const consumeQuota = resolveApiRoute('consume_teacher_ai_quota');
+        expect(getQuota).toMatchObject({ method: 'GET', auth: 'session' });
+        expect(getQuota.path({})).toBe('/api/teacher-ai-quota');
+        expect(consumeQuota).toMatchObject({ method: 'POST', auth: 'session' });
+        expect(consumeQuota.path({})).toBe('/api/teacher-ai-quota/consume');
+    });
+
     it('resolves get_announcement with the public policy', () => {
         const r = resolveApiRoute('get_announcement');
         expect(r.auth).toBe('public');

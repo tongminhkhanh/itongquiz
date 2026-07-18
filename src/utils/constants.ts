@@ -64,10 +64,6 @@ export const STORAGE_KEYS = {
     RESULTS: 'quiz_results',
     TEACHER_SESSION: 'teacher_session',
     IMAGE_LIBRARY: 'quiz_image_library',
-    API_KEY: 'quiz_api_key',
-    PERPLEXITY_KEY: 'quiz_perplexity_api_key',
-    OPENAI_KEY: 'quiz_openai_api_key',
-    LLM_MUX_KEY: 'quiz_llm_mux_api_key',
     AI_PROVIDER: 'quiz_ai_provider',
 } as const;
 
@@ -75,13 +71,6 @@ export const STORAGE_KEYS = {
 export const SCHOOL_INFO = {
     NAME: 'Trường Tiểu Học Ít Ong',
     SHORT_NAME: 'ITONG QUIZ',
-} as const;
-
-// ===== API Endpoints =====
-export const API_ENDPOINTS = {
-    GEMINI: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-    PERPLEXITY: 'https://api.perplexity.ai/chat/completions',
-    OPENAI: 'https://api.openai.com/v1/chat/completions',
 } as const;
 
 // ===== Pagination =====

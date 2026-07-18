@@ -1,71 +1,38 @@
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { cloudflare } from '@cloudflare/vite-plugin';
 
-import { cloudflare } from "@cloudflare/vite-plugin";
-
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '');
-  return {
-    server: {
-      port: 3001,
-      host: '0.0.0.0',
-      proxy: {
-        '/api/game-loop': {
-          target: 'https://phieu.thitong.site',
-          changeOrigin: true,
-          rewrite: (path) => path,
-        },
-        '/api/cliproxy': {
-          target: env.VITE_CLIPROXY_API || process.env.VITE_CLIPROXY_API || 'https://api.thitong.site/v1',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api\/cliproxy/, ''),
-        },
-        '/api/deepseek': {
-          target: 'https://api.deepseek.com',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api\/deepseek/, ''),
-        },
-        '/api': {
-          target: 'https://phieu.thitong.site',
-          changeOrigin: true,
-          rewrite: (path) => path,
+export default defineConfig(({ mode }) => ({
+  server: {
+    port: 3001,
+    host: '0.0.0.0',
+    proxy: {
+      '/api': {
+        target: 'https://phieu.thitong.site',
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath,
+      },
+    },
+  },
+  plugins: [react(), cloudflare()],
+  resolve: {
+    alias: { '@': path.resolve(__dirname, '.') },
+  },
+  build: {
+    esbuild: {
+      drop: mode === 'production' ? ['console'] : [],
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-state': ['zustand'],
+          'vendor-motion': ['framer-motion'],
         },
       },
     },
-    plugins: [react(), cloudflare()],
-    define: {
-      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.VITE_API_KEY || env.API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-    },
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      }
-    },
-    // Code Splitting Configuration
-    build: {
-      // Strip console.log and debugger in production builds
-      esbuild: {
-        drop: mode === 'production' ? ['console', 'debugger'] : [],
-      },
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            // Vendor chunks - rarely change, cache well
-            'vendor-react': ['react', 'react-dom'],
-            'vendor-icons': ['lucide-react'],
-
-            // State management
-            'vendor-state': ['zustand'],
-
-            // Heavy animation library (if used)
-            'vendor-motion': ['framer-motion'],
-          },
-        },
-      },
-      // Increase chunk size warning limit (optional)
-      chunkSizeWarningLimit: 500,
-    },
-  };
-});
+    chunkSizeWarningLimit: 500,
+  },
+}));

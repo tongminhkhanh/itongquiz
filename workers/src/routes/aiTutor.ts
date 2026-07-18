@@ -3,6 +3,7 @@
 
 import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
+import { verifyJWTMiddleware } from '../middleware/jwtAuth';
 
 // Prompt template for Gemini AI
 const buildPrompt = (wrongQuestions: any[]): string => {
@@ -55,6 +56,9 @@ export async function handleAiTutorRoutes(
 
     // POST /api/ai-tutor/diagnose
     if (path === '/api/ai-tutor/diagnose' && method === 'POST') {
+        const authResult = await verifyJWTMiddleware(request, env);
+        if (authResult instanceof Response) return authResult;
+
         try {
             const body = await request.json() as any;
             const { quizId, wrongQuestionIds } = body;

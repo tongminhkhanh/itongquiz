@@ -332,7 +332,6 @@ describe('weakness profile analytics', () => {
         const db = createFakeDb([result, additionalResult, differentClassResult], questions);
         const env: Env = {
             DB: db,
-            API_SECRET_TOKEN: 'token',
             CLIPROXY_API: '',
             CLIPROXY_TOKEN: '',
             JWT_SECRET: TEST_JWT_SECRET,

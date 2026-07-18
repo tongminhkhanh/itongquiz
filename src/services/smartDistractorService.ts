@@ -7,33 +7,22 @@
  * Uses LLM-Mux (OpenAI-compatible API) for AI calls.
  */
 
-// Get LLM-Mux configuration
-const getLLMConfig = () => {
-    // We now use our Worker Proxy instead of direct CLIProxy to avoid CORS
-    return { baseUrl: '/api/ai/chat' };
-};
+import { requestWorkerAiText } from './ai/workerAiClient';
 
-// Call AI via Worker Proxy (handles CORS and protects API Key)
+// Call AI via the JWT-authenticated Worker proxy.
 async function callLLM(prompt: string): Promise<string> {
-    const { callApi } = await import('./apiAdapter');
-
-    const data = await callApi('ai_chat', {
-        model: 'gemini-2.0-flash',
+    return requestWorkerAiText({
+        model: 'gemini-2.5-flash',
         messages: [
             {
                 role: 'system',
-                content: 'Bạn là một chuyên gia giáo dục tiểu học Việt Nam. Nhiệm vụ của bạn là tạo các đáp án nhiễu (distractors) chất lượng cao cho câu hỏi trắc nghiệm. Trả lời bằng JSON array thuần túy, KHÔNG dùng markdown code block.'
+                content: 'B?n l? chuy?n gia gi?o d?c ti?u h?c Vi?t Nam. T?o ??p ?n nhi?u ch?t l??ng cao v? ch? tr? v? JSON.',
             },
-            {
-                role: 'user',
-                content: prompt
-            }
+            { role: 'user', content: prompt },
         ],
         temperature: 0.7,
         max_tokens: 1024,
     });
-
-    return data.choices?.[0]?.message?.content || '';
 }
 
 // Parse JSON from LLM response (handles markdown code blocks)

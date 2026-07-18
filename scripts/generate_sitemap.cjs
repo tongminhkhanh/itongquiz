@@ -79,14 +79,11 @@ function renderSitemap(entries) {
   return `${lines.join('\n')}\n`;
 }
 
-async function fetchPublicQuizzes(apiUrl, token) {
+async function fetchPublicQuizzes(apiUrl) {
   const url = new URL('/api/quizzes', apiUrl).toString();
   const response = await fetch(url, {
     method: 'GET',
-    headers: {
-      'X-API-Token': token,
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
   });
   if (!response.ok) {
     const text = await response.text().catch(() => '');
@@ -103,17 +100,13 @@ async function main() {
 
   const siteUrl = (process.env.SITEMAP_SITE_URL || DEFAULT_SITE_URL).trim();
   const apiUrl = (process.env.SITEMAP_API_URL || process.env.WORKERS_API_URL || process.env.VITE_WORKERS_API_URL || '').trim();
-  const apiToken = (process.env.SITEMAP_API_TOKEN || process.env.API_SECRET_TOKEN || process.env.VITE_API_SECRET_TOKEN || '').trim();
 
   if (!apiUrl) {
     throw new Error('Missing API URL. Set SITEMAP_API_URL or WORKERS_API_URL or VITE_WORKERS_API_URL.');
   }
-  if (!apiToken) {
-    throw new Error('Missing API token. Set SITEMAP_API_TOKEN (recommended) or API_SECRET_TOKEN.');
-  }
 
   const today = new Date().toISOString().slice(0, 10);
-  const quizzes = await fetchPublicQuizzes(apiUrl, apiToken);
+  const quizzes = await fetchPublicQuizzes(apiUrl);
 
   const categories = new Set(DEFAULT_CATEGORIES);
   quizzes.forEach((q) => {

@@ -1,6 +1,5 @@
 # iTongQuiz Workers API Configuration
-# Secrets defined in 'wrangler secret put':
-# - API_SECRET_TOKEN: Shared secret for API auth
+# Secrets are provisioned with `wrangler secret put` and never stored here.
 
 name = "itongquiz-api"
 main = "src/index.ts"

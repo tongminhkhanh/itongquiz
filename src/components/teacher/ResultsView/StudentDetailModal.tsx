@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Student Detail Modal Component
  * 
  * Shows detailed answers for a specific student result
@@ -333,9 +333,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
         setIsAnalyzing(true);
         setAnalysisError(null);
         try {
-            const apiKey = (import.meta as any).env.VITE_CLIPROXY_TOKEN || (import.meta as any).env.VITE_GEMINI_API_KEY || '';
-            if (!apiKey) throw new Error('Không tìm thấy AI API Key.');
-            const insight = await analyzeStudentPerformance(result, competencyData, apiKey);
+            const insight = await analyzeStudentPerformance(result, competencyData);
             setAiInsight(insight);
         } catch (err: unknown) {
             const normalizedError = err instanceof Error ? err : new Error(String(err));
