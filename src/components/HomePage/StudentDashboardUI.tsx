@@ -11,7 +11,7 @@ import { getAvatarUrl } from '../../config/avatars';
 import { callApi } from '../../services/apiAdapter';
 import { Assignment } from '../../types/classroom.types';
 import { Question, Quiz } from '../../types';
-import { Loader2, Rocket, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import { JoinLiveExamModal } from '../LiveExam/JoinLiveExamModal';
@@ -37,6 +37,7 @@ import {
     RewardSidebar,
     StudentDashboardHeader,
     StudentDashboardHero,
+    SubjectPracticeGrid,
     WeeklyQuestsPanel,
     type WeeklyQuestViewModel,
 } from './student-dashboard';
@@ -57,6 +58,14 @@ interface StudentDashboardUIProps {
 
 const ASSIGNMENTS_PER_PAGE = 5;
 const ATTENDANCE_REWARD = { exp: 50, coins: 50 };
+const SUBJECT_CARD_STYLES = [
+    { surfaceClass: 'border-blue-100 bg-blue-50', accentClass: 'bg-blue-100 text-blue-700' },
+    { surfaceClass: 'border-amber-100 bg-amber-50', accentClass: 'bg-amber-100 text-amber-700' },
+    { surfaceClass: 'border-emerald-100 bg-emerald-50', accentClass: 'bg-emerald-100 text-emerald-700' },
+    { surfaceClass: 'border-indigo-100 bg-indigo-50', accentClass: 'bg-indigo-100 text-indigo-700' },
+    { surfaceClass: 'border-slate-200 bg-slate-50', accentClass: 'bg-slate-200 text-slate-700' },
+    { surfaceClass: 'border-orange-100 bg-orange-50', accentClass: 'bg-orange-100 text-orange-700' },
+] as const;
 
 interface AttendanceQuestion {
     id: string;
@@ -461,17 +470,22 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
 
     const publicCategories = useMemo(() => {
         const categories = Object.keys(SUBJECT_CONFIG).filter(cat => SUBJECT_CONFIG[cat].showOnHome !== false);
-        return categories.map(cat => {
+        return categories.map((cat, index) => {
             let total = 0;
             if (cat === 'ioe') {
                 total = ioeQuizzes.length;
             } else {
                 total = quizStore.quizzes.filter(q => (q.category || 'class') === cat && q.showOnHome !== false).length;
             }
+            const config = SUBJECT_CONFIG[cat];
+            const cardStyle = SUBJECT_CARD_STYLES[index % SUBJECT_CARD_STYLES.length];
             return {
                 id: cat,
-                ...SUBJECT_CONFIG[cat],
-                total
+                title: config.title,
+                description: config.desc,
+                icon: config.icon,
+                total,
+                ...cardStyle,
             };
         });
     }, [quizStore.quizzes, ioeQuizzes]);
@@ -935,7 +949,8 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                             onOpenChest={handleClaimChest}
                             onOpenGiftShop={handleOpenGiftShop}
                             onOpenBadges={() => setIsBadgeGalleryOpen(true)}
-                        />                    </section>
+                        />
+                    </section>
                 </section>
 
 
@@ -947,27 +962,10 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 />
 
 
-                <section id="practice-library" className="scroll-mt-24">
-                    <div className="mb-6 flex items-center gap-3">
-                        <div className="rounded-xl bg-teal-100 p-2 text-teal-600">
-                            <Rocket className="h-6 w-6" />
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-900">Thư viện luyện tập</h2>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {publicCategories.map((cat, i) => (
-                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} key={cat.id} onClick={() => setSelectedSubject(cat.id)} className={`bg-gradient-to-br ${cat.color} p-6 rounded-3xl text-white cursor-pointer transform hover:-translate-y-1 hover:shadow-xl transition-all relative overflow-hidden group`}>
-                                <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full group-hover:scale-110"></div>
-                                <div className="absolute -right-12 -bottom-12 w-40 h-40 bg-white/10 rounded-full group-hover:scale-110"></div>
-                                <div className="relative z-10 flex flex-col h-full">
-                                    <div className="flex items-center justify-between mb-4"><span className="material-symbols-rounded text-4xl">{cat.icon}</span><span className="bg-white/20 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">{cat.total} Bài tập</span></div>
-                                    <h3 className="text-xl font-bold mb-1">{cat.title}</h3>
-                                    <p className="text-white/80 text-xs font-medium">{cat.desc}</p>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </section>
+                <SubjectPracticeGrid
+                    subjects={publicCategories}
+                    onSelectSubject={setSelectedSubject}
+                />
                 <div className="pb-12 text-center hidden md:block"><p className="text-slate-400 font-medium text-sm">ÍtOngQuiz © 2026 - Môi trường học tập tích cực</p></div>
                     </>
                 )}

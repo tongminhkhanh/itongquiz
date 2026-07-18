@@ -1,8 +1,13 @@
 import React, { useEffect } from 'react';
+import { BookOpen } from 'lucide-react';
+import {
+  AssignedWorkSkeleton,
+  DashboardEmptyState,
+  DashboardSectionError,
+} from '../../../components/HomePage/student-dashboard';
 import { useHomeworkStore } from '../stores/useHomeworkStore';
+import type { HomeworkAssignment } from '../types';
 import { StudentHomeworkCard } from './StudentHomeworkCard';
-import { BookOpen, Sparkles, Loader2 } from 'lucide-react';
-import { HomeworkAssignment } from '../types';
 
 interface StudentHomeworkSectionProps {
   studentId: string;
@@ -10,12 +15,19 @@ interface StudentHomeworkSectionProps {
   onSelectAssignment: (assignment: HomeworkAssignment) => void;
 }
 
-export const StudentHomeworkSection: React.FC<StudentHomeworkSectionProps> = ({ 
-  studentId, 
+export const StudentHomeworkSection: React.FC<StudentHomeworkSectionProps> = ({
+  studentId,
   classId,
-  onSelectAssignment
+  onSelectAssignment,
 }) => {
-  const { assignments, submissions, isLoading, error, fetchClassAssignments, fetchStudentSubmissions } = useHomeworkStore();
+  const {
+    assignments,
+    submissions,
+    isLoading,
+    error,
+    fetchClassAssignments,
+    fetchStudentSubmissions,
+  } = useHomeworkStore();
 
   const loadData = async () => {
     await fetchClassAssignments(classId);
@@ -28,60 +40,50 @@ export const StudentHomeworkSection: React.FC<StudentHomeworkSectionProps> = ({
     }
   }, [classId, studentId, fetchClassAssignments, fetchStudentSubmissions]);
 
-  if (isLoading && assignments.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
-        <p className="text-slate-500 font-medium italic">Đang chuẩn bị bài tập AI cho em...</p>
-      </div>
-    );
-  }
-
   return (
-    <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-200">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Trung tâm Bài tập Tự luận</h2>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              Luyện tập & Tự động chấm điểm
-              <span className="inline-block w-1 h-1 bg-slate-300 rounded-full"></span>
-              {assignments.length} bài tập
-            </p>
-          </div>
+    <section aria-labelledby="student-homework-title" className="space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-indigo-200 bg-indigo-100 text-indigo-700">
+          <BookOpen className="h-5 w-5" aria-hidden="true" />
         </div>
-        
-        {/* <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-100 shadow-sm">
-          <Sparkles className="w-4 h-4 text-amber-500" />
-          <span className="text-[11px] font-black text-amber-700 uppercase tracking-wider">Công nghệ AI mới</span>
-        </div> */}
+        <div>
+          <h2 id="student-homework-title" className="text-2xl font-black tracking-tight text-slate-900">
+            Bài tập tự luận
+          </h2>
+          <p className="mt-1 text-sm font-medium text-slate-600">
+            Luyện viết, nộp bài và xem phản hồi từ giáo viên.
+            {assignments.length > 0 ? ` · ${assignments.length} bài tập` : ''}
+          </p>
+        </div>
       </div>
 
-      {error && <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700"><span>{error}</span><button onClick={loadData} className="font-black whitespace-nowrap">Thử lại</button></div>}
+      {isLoading && assignments.length === 0 ? <AssignedWorkSkeleton count={3} /> : null}
 
-      {assignments.length === 0 ? (
-        <div className="bg-white/50 backdrop-blur-sm rounded-3xl p-12 text-center border-2 border-dashed border-slate-200">
-          <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-slate-50">
-            <BookOpen className="w-10 h-10 text-slate-200" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-700 mb-2">Hiện chưa có bài tập nào</h3>
-          <p className="text-slate-400 text-sm max-w-sm mx-auto leading-relaxed"> Thầy cô sẽ sớm giao bài tập AI cho em tại đây. Hãy chăm chỉ luyện tập nhé!</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {assignments.map(assignment => (
-            <StudentHomeworkCard 
+      {!isLoading && error ? (
+        <DashboardSectionError message={error} onRetry={() => void loadData()} />
+      ) : null}
+
+      {!isLoading && !error && assignments.length === 0 ? (
+        <DashboardEmptyState
+          title="Hiện chưa có bài tập tự luận nào."
+          description="Thầy cô sẽ giao bài tại đây khi có nhiệm vụ mới cho lớp."
+        />
+      ) : null}
+
+      {assignments.length > 0 ? (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {assignments.map((assignment) => (
+            <StudentHomeworkCard
               key={assignment.id}
               assignment={assignment}
-              submission={submissions.find(s => s.assignment_id === assignment.id)}
+              submission={submissions.find(
+                (submission) => submission.assignment_id === assignment.id,
+              )}
               onClick={onSelectAssignment}
             />
           ))}
         </div>
-      )}
+      ) : null}
     </section>
   );
 };

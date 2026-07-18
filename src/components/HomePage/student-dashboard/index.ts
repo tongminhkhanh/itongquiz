@@ -3,6 +3,7 @@ export { LearningProgressPanel } from './LearningProgressPanel';
 export { RewardSidebar } from './RewardSidebar';
 export { StudentDashboardHeader } from './StudentDashboardHeader';
 export { StudentDashboardHero } from './StudentDashboardHero';
+export { SubjectPracticeGrid } from './SubjectPracticeGrid';
 export { WeeklyQuestsPanel } from './WeeklyQuestsPanel';
 
 export {
@@ -21,6 +22,7 @@ export type {
   RewardSidebarProps,
   StudentDashboardHeaderProps,
   StudentDashboardHeroProps,
+  SubjectPracticeGridProps,
   SubjectCardViewModel,
   WeeklyQuestsPanelProps,
   WeeklyQuestViewModel,

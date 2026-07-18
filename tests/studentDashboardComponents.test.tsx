@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   AssignedWorkSection,
   AssignedWorkSkeleton,
@@ -9,9 +9,34 @@ import {
   RewardSidebar,
   StudentDashboardHeader,
   StudentDashboardHero,
+  SubjectPracticeGrid,
   WeeklyQuestsPanel,
 } from '../src/components/HomePage/student-dashboard';
 import { BadgeGallery } from '../src/components/gamification/BadgeGallery';
+import { StudentHomeworkCard } from '../src/features/homework/components/StudentHomeworkCard';
+import { StudentHomeworkSection } from '../src/features/homework/components/StudentHomeworkSection';
+
+const homeworkStoreMock = vi.hoisted(() => ({
+  assignments: [] as any[],
+  submissions: [] as any[],
+  isLoading: false,
+  error: null as string | null,
+  fetchClassAssignments: vi.fn(async () => undefined),
+  fetchStudentSubmissions: vi.fn(async () => undefined),
+}));
+
+vi.mock('../src/features/homework/stores/useHomeworkStore', () => ({
+  useHomeworkStore: () => homeworkStoreMock,
+}));
+
+beforeEach(() => {
+  homeworkStoreMock.assignments = [];
+  homeworkStoreMock.submissions = [];
+  homeworkStoreMock.isLoading = false;
+  homeworkStoreMock.error = null;
+  homeworkStoreMock.fetchClassAssignments.mockClear();
+  homeworkStoreMock.fetchStudentSubmissions.mockClear();
+});
 
 const renderHeader = () =>
   render(
@@ -423,5 +448,118 @@ describe('reward sidebar and badge gallery', () => {
     expect(fill).toHaveStyle({ transform: 'scaleX(0)' });
     expect(fill).not.toHaveStyle({ width: '0%' });
     expect(screen.getByRole('dialog')).toHaveAttribute('data-motion-duration-ms', '200');
+  });
+});
+const homeworkAssignment = {
+  id: 'homework-1',
+  title: 'Viết đoạn văn về gia đình',
+  description: 'Viết từ 5 đến 7 câu.',
+  subject: 'Tiếng Việt',
+  deadline: '2099-07-20T00:00:00.000Z',
+  class_id: 'class-1',
+  teacher_id: 'teacher-1',
+  file_url: '',
+  ai_content: '',
+  created_at: '2026-07-18T00:00:00.000Z',
+  status: 'OPEN',
+  effectiveStatus: 'OPEN',
+} as any;
+
+const practiceSubjects = [
+  {
+    id: 'toan',
+    title: 'Toán Học',
+    description: 'Rèn luyện tư duy logic',
+    icon: 'calculate',
+    total: 12,
+    accentClass: 'text-blue-700 bg-blue-100',
+    surfaceClass: 'border-blue-100 bg-blue-50',
+  },
+  {
+    id: 'tieng-viet',
+    title: 'Tiếng Việt',
+    description: 'Vun đắp ngôn ngữ tiếng mẹ đẻ',
+    icon: 'menu_book',
+    total: 8,
+    accentClass: 'text-amber-700 bg-amber-100',
+    surfaceClass: 'border-amber-100 bg-amber-50',
+  },
+];
+
+describe('semantic practice and homework cards', () => {
+  it('renders subject cards as responsive native buttons', () => {
+    const onSelectSubject = vi.fn();
+    render(
+      <SubjectPracticeGrid subjects={practiceSubjects} onSelectSubject={onSelectSubject} />,
+    );
+
+    const grid = screen.getByTestId('subject-practice-grid');
+    expect(grid.className).toContain('grid-cols-1');
+    expect(grid.className).toContain('sm:grid-cols-2');
+    expect(grid.className).toContain('lg:grid-cols-3');
+    expect(grid.className).toContain('2xl:grid-cols-4');
+
+    const mathButton = screen.getByRole('button', { name: /Toán Học/i });
+    expect(mathButton).toHaveAttribute('type', 'button');
+    fireEvent.click(mathButton);
+    expect(onSelectSubject).toHaveBeenCalledWith('toan');
+  });
+
+  it('explains when no practice subjects are available', () => {
+    render(<SubjectPracticeGrid subjects={[]} onSelectSubject={vi.fn()} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Hiện chưa có môn luyện tập nào dành cho em.',
+    );
+  });
+
+  it('uses an article with one native homework action', () => {
+    const onClick = vi.fn();
+    const { container } = render(
+      <StudentHomeworkCard assignment={homeworkAssignment} onClick={onClick} />,
+    );
+
+    expect(container.querySelector('article')).toBeTruthy();
+    expect(container.querySelectorAll('button')).toHaveLength(1);
+    const action = screen.getByRole('button', { name: 'Làm bài ngay' });
+    expect(action).toHaveAttribute('type', 'button');
+    fireEvent.click(action);
+    expect(onClick).toHaveBeenCalledWith(homeworkAssignment);
+  });
+
+  it('uses shared skeletons instead of a loading spinner', () => {
+    homeworkStoreMock.isLoading = true;
+    render(
+      <StudentHomeworkSection
+        studentId="student-1"
+        classId="class-1"
+        onSelectAssignment={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByTestId('assigned-work-skeleton')).toHaveLength(3);
+    expect(screen.queryByText('Đang chuẩn bị bài tập AI cho em...')).not.toBeInTheDocument();
+  });
+
+  it('keeps the local homework retry action', async () => {
+    homeworkStoreMock.error = 'Không thể tải bài tự luận';
+    render(
+      <StudentHomeworkSection
+        studentId="student-1"
+        classId="class-1"
+        onSelectAssignment={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(homeworkStoreMock.fetchClassAssignments).toHaveBeenCalled());
+    homeworkStoreMock.fetchClassAssignments.mockClear();
+    homeworkStoreMock.fetchStudentSubmissions.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
+
+    await waitFor(() => {
+      expect(homeworkStoreMock.fetchClassAssignments).toHaveBeenCalledWith('class-1');
+      expect(homeworkStoreMock.fetchStudentSubmissions).toHaveBeenCalledWith('student-1');
+    });
   });
 });

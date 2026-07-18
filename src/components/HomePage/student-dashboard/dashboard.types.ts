@@ -84,6 +84,11 @@ export interface RewardSidebarProps {
   onOpenBadges: () => void;
 }
 
+export interface SubjectPracticeGridProps {
+  subjects: SubjectCardViewModel[];
+  onSelectSubject: (subjectId: string) => void;
+}
+
 export interface SubjectCardViewModel {
   id: string;
   title: string;
