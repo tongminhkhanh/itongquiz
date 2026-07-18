@@ -217,6 +217,41 @@ describe('live exam P0 authorization and integrity', () => {
     expect(closedDb.executed.some((statement) => statement.sql.includes('SET archived_at'))).toBe(true);
     expect(closedDb.executed.some((statement) => statement.sql.includes('DELETE FROM live_exam'))).toBe(false);
   });
+
+  it('starts a waiting session with server-controlled timestamps', async () => {
+    const db = new FakeDB();
+    db.first = (sql) => sql.includes('FROM live_exam_sessions s')
+      ? activeSessionRow({ status: 'waiting', started_at: null, ends_at: null })
+      : null;
+
+    await LiveExamService.startExam(db as any, 'live-1', 'teacher-a');
+
+    const transition = db.executed.find((statement) => statement.sql.includes("SET status = 'active'"));
+    expect(transition).toBeDefined();
+    expect(transition?.bindings[0]).toEqual(expect.any(String));
+    expect(transition?.bindings[1]).toEqual(expect.any(String));
+    expect(Date.parse(String(transition?.bindings[1]))).toBeGreaterThan(Date.parse(String(transition?.bindings[0])));
+  });
+
+  it('upserts activity only for an active unsubmitted participant', async () => {
+    const db = new FakeDB();
+    db.first = (sql) => {
+      if (sql.includes('FROM live_exam_sessions s')) return activeSessionRow();
+      if (sql.includes('SELECT submitted_at FROM live_exam_participants')) return { submitted_at: null };
+      return null;
+    };
+
+    await LiveExamService.updateActivity(db as any, {
+      liveExamId: 'live-1',
+      studentId: 'student-a',
+      currentQuestion: 2,
+      answeredCount: 1,
+    });
+
+    const upsert = db.executed.find((statement) => statement.sql.includes('ON CONFLICT(live_exam_id, student_id)'));
+    expect(upsert).toBeDefined();
+    expect(upsert?.bindings.slice(0, 4)).toEqual(['live-1', 'student-a', 2, 1]);
+  });
 });
 
 describe('live exam analytics route', () => {
