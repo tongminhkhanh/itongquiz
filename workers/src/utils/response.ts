@@ -1,5 +1,7 @@
 ﻿// Response helpers for Workers API
 
+import { toArrayBuffer } from './bytes';
+
 export function jsonResponse<T>(data: T, status = 200, cacheSeconds = 0): Response {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (cacheSeconds > 0) headers['Cache-Control'] = `public, max-age=${cacheSeconds}`;
@@ -43,7 +45,7 @@ const constantTimeEqual = (left: Uint8Array, right: Uint8Array): boolean => {
 const derivePbkdf2 = async (password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> => {
     const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
     const bits = await crypto.subtle.deriveBits(
-        { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
+        { name: 'PBKDF2', hash: 'SHA-256', salt: toArrayBuffer(salt), iterations },
         key,
         PASSWORD_KEY_BYTES * 8,
     );

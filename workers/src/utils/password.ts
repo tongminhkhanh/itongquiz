@@ -6,6 +6,8 @@ const PBKDF2_ITERATIONS = 100_000;
 const SALT_BYTES = 16;
 const HASH_BYTES = 32;
 
+import { toArrayBuffer } from './bytes';
+
 const encoder = new TextEncoder();
 
 function bytesToBase64Url(bytes: Uint8Array): string {
@@ -47,7 +49,7 @@ function constantTimeEqual(actual: Uint8Array, expected: Uint8Array): boolean {
 async function derivePassword(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
     const material = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']);
     const bits = await crypto.subtle.deriveBits(
-        { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
+        { name: 'PBKDF2', hash: 'SHA-256', salt: toArrayBuffer(salt), iterations },
         material,
         HASH_BYTES * 8,
     );
