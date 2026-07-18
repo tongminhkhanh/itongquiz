@@ -7,7 +7,7 @@
 
 ### 1. Hệ thống sinh đề AI (AI Quiz Generator)
 *   **Đa dạng môn học:** Toán học, Tiếng Việt, Tự nhiên & Xã hội, Tiếng Anh, Tin học.
-*   **Hỗ trợ luyện thi:** Chuyên mục riêng cho luyện thi **IOE** và **Trạng nguyên Tiếng Việt**.
+*   **Hỗ trợ luyện thi:** Chuyên mục riêng cho **Trạng nguyên Tiếng Việt**, VioEdu và các bộ đề ôn tập theo lớp.
 *   **Đa dạng loại câu hỏi:**
     *   Trắc nghiệm (MCQ), Đúng/Sai, Nối cột (Matching).
     *   Kéo thả điền khuyết (Drag & Drop), Phân loại (Categorization).

@@ -3,6 +3,7 @@ import { renderOgPng, PhieuRecord } from '../utils/ogImage';
 import { Env } from '../types';
 import { parseBody } from '../utils/helpers';
 import { verifyJWTMiddleware, requireTeacher } from '../middleware/jwtAuth';
+import { toArrayBuffer } from '../utils/bytes';
 
 const PUBLIC_PHIEU_HOST = 'phieu.thitong.site';
 const PUBLIC_APP_ORIGIN = 'https://thitong.site';
@@ -45,7 +46,7 @@ export async function handlePhieuSubdomain(request: Request, env: Env): Promise<
         env.OG_IMAGES.put(r2Key, png, {
             httpMetadata: { contentType: 'image/png', cacheControl: 'public, max-age=604800' },
         });
-        return new Response(png, {
+        return new Response(toArrayBuffer(png), {
             headers: {
                 'Content-Type': 'image/png',
                 'Cache-Control': 'public, max-age=604800',

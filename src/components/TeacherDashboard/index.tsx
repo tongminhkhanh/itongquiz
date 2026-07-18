@@ -43,9 +43,6 @@ const OverviewTab = React.lazy(() => import('./OverviewTab'));
 const ResultsTab = React.lazy(() => import('./ResultsTab'));
 const ManageTab = React.lazy(() => import('./ManageTab'));
 const CreateTab = React.lazy(() => import('./CreateTab'));
-const IoeTab = React.lazy(() => import('./IoeTab'));
-const IoeManageTab = React.lazy(() => import('./IoeManageTab'));
-const IoeResultsTab = React.lazy(() => import('./IoeResultsTab'));
 const AnnouncementSettings = React.lazy(() => import('./AnnouncementSettings'));
 const ClassManagementTab = React.lazy(() => import('./ClassManagementTab'));
 const AssignmentTab = React.lazy(() => import('./AssignmentTab'));
@@ -183,9 +180,6 @@ const TeacherDashboard: React.FC = () => {
             case 'classes': return 'Quản lý Lớp học';
             case 'assignments': return 'Giao bài tập';
             case 'create': return 'Tạo đề mới';
-            case 'ioe': return 'Tạo đề IOE';
-            case 'ioe-manage': return 'Quản lý IOE';
-            case 'ioe-results': return 'Kết quả IOE';
             case 'announcements': return 'Cài đặt & Thông báo';
             case 'teachers': return 'Quản lý Giáo viên';
             case 'personal-settings': return 'Cài đặt cá nhân';
@@ -420,23 +414,6 @@ const TeacherDashboard: React.FC = () => {
                                         setActiveTab('manage');
                                     }}
                                 />
-                            )}
-
-                            {activeTab === 'ioe' && (
-                                <IoeTab
-                                    onSaveQuiz={quizStore.createQuiz}
-                                    onSuccess={() => {
-                                        setActiveTab('ioe-manage');
-                                    }}
-                                />
-                            )}
-
-                            {activeTab === 'ioe-manage' && (
-                                <IoeManageTab />
-                            )}
-
-                            {activeTab === 'ioe-results' && (
-                                <IoeResultsTab />
                             )}
 
                             {activeTab === 'announcements' && authStore.isAdmin && (

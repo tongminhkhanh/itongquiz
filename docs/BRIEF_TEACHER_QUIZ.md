@@ -7,7 +7,7 @@
 ---
 
 ## 1. VẤN ĐỀ CẦN GIẢI QUYẾT
-- Màn hình Học sinh hiện tại đã chia thành **6 thẻ môn học cố định** (Toán, Tiếng Việt, Tự nhiên Xã hội, Tiếng Anh, Tin học, Luyện IOE).
+- Màn hình Học sinh chia theo các môn học chính (Toán, Tiếng Việt, Tự nhiên Xã hội, Tiếng Anh và Tin học).
 - Thầy cô giáo khi tạo đề cần một cơ chế để phân loại đề thi vào đúng các thẻ này, để học sinh dễ dàng tìm kiếm làm bài.
 - Nếu chỉ ép chọn 1 trong 6 môn thì đôi khi hơi cứng nhắc, giáo viên khó quản lý chuyên sâu (VD: Cùng là môn Toán nhưng muốn phân biệt Toán Hình và Toán Đại, đề Thi Học Kỳ và đề Cuối Tuần).
 
@@ -34,7 +34,7 @@
 ## 5. TÍNH NĂNG CHI TIẾT
 
 ### 🚀 MVP (Bắt buộc có cho tính năng này):
-- [ ] UI Quản lý Đề (Teacher Dashboard) có hàng Tab ngang: `[ Tất cả ] [ 🧮 Toán ] [ 📘 Tiếng Việt ] ... [ 🏆 IOE ]` để lọc nhanh đề thi theo môn.
+- [ ] UI Quản lý Đề (Teacher Dashboard) có hàng Tab ngang theo các môn học đang hoạt động để lọc nhanh đề thi.
 - [ ] Modal / Màn hình Tạo Đề Mới bắt buộc có trường **Select (Dropdown)** để chọn "Môn học".
 - [ ] Dưới phần chọn Môn có input để nhập **Nhãn (Tags)** (Ví dụ: ô input khi gõ phím Enter/Phẩy sẽ tạo ra một block nhãn).
 - [ ] Giao diện danh sách đề của Giáo viên có hiển thị các Tags (ví dụ dạng pill nhỏ) bên dưới Tên Đề Thi.

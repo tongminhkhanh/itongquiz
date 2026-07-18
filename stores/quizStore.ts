@@ -4,6 +4,7 @@ import { Quiz, StudentResult } from '../src/types';
 import { callApi } from '../src/services/apiAdapter';
 import { prepareQuizForSave } from '../src/services/googleSheetService';
 import { cacheService } from '../src/services/CacheService';
+import { filterActiveQuizzes, isArchivedQuizCategory } from '../src/domain/quiz/quizCategoryPolicy';
 
 type ViewType = 'home' | 'student' | 'teacher_login' | 'teacher_dash' | 'student_portal' | 'shop';
 
@@ -184,24 +185,30 @@ export const useQuizStore = create<QuizState>()(
             }),
 
             // Quiz actions
-            setQuizzes: (quizzes) => set({ quizzes }),
-            addQuiz: (quiz) => set((state) => ({
-                quizzes: [...state.quizzes, quiz]
-            })),
+            setQuizzes: (quizzes) => set({ quizzes: filterActiveQuizzes(quizzes) }),
+            addQuiz: (quiz) => {
+                if (isArchivedQuizCategory(quiz.category)) return;
+                set((state) => ({ quizzes: [...state.quizzes, quiz] }));
+            },
             updateQuiz: (quiz) => set((state) => ({
-                quizzes: state.quizzes.map(q => q.id === quiz.id ? quiz : q)
+                quizzes: isArchivedQuizCategory(quiz.category)
+                    ? state.quizzes.filter((item) => item.id !== quiz.id)
+                    : state.quizzes.map(q => q.id === quiz.id ? quiz : q)
             })),
             deleteQuiz: (id) => set((state) => ({
                 quizzes: state.quizzes.filter(q => q.id !== id)
             })),
             selectQuiz: (quiz) => {
-                set({ selectedQuiz: quiz });
-                if (quiz && quiz.category !== 'ioe' && (!Array.isArray(quiz.questions) || quiz.questions.length === 0)) {
-                    void get().loadQuizQuestions(quiz.id);
+                const activeQuiz = quiz && !isArchivedQuizCategory(quiz.category) ? quiz : null;
+                set({ selectedQuiz: activeQuiz });
+                if (activeQuiz && (!Array.isArray(activeQuiz.questions) || activeQuiz.questions.length === 0)) {
+                    void get().loadQuizQuestions(activeQuiz.id);
                 }
             },
             setClassLevel: (level) => set({ selectedClassLevel: level, selectedCategory: null }),
-            setCategory: (category) => set({ selectedCategory: category }),
+            setCategory: (category) => set({
+                selectedCategory: isArchivedQuizCategory(category) ? null : category,
+            }),
 
             // Results actions
             setResults: (results) => set({ results }),
@@ -259,7 +266,7 @@ export const useQuizStore = create<QuizState>()(
                     }
 
                     // Build Quiz objects
-                    const quizzes: Quiz[] = quizData.map((row: any) => ({
+                    const quizzes: Quiz[] = filterActiveQuizzes(quizData).map((row: any) => ({
                         id: row.id,
                         title: row.title || '',
                         classLevel: row.classLevel || row.class_level || '',
@@ -369,6 +376,9 @@ export const useQuizStore = create<QuizState>()(
             },
 
             createQuiz: async (quiz) => {
+                if (isArchivedQuizCategory(quiz.category)) {
+                    throw new Error('Danh mục đề thi này đã được lưu trữ và không còn được hỗ trợ.');
+                }
                 set({ isLoading: true, error: null });
                 try {
                     const prepared = prepareQuizForSave(quiz);
@@ -389,6 +399,9 @@ export const useQuizStore = create<QuizState>()(
             },
 
             modifyQuiz: async (quiz) => {
+                if (isArchivedQuizCategory(quiz.category)) {
+                    throw new Error('Danh mục đề thi này đã được lưu trữ và không còn được hỗ trợ.');
+                }
                 set({ isLoading: true, error: null });
                 try {
                     const prepared = prepareQuizForSave(quiz);
@@ -473,11 +486,19 @@ export const useQuizStore = create<QuizState>()(
         {
             name: 'itongquiz-store',
             storage: createJSONStorage(() => localStorage),
+            merge: (persistedState, currentState) => {
+                const state = (persistedState || {}) as Partial<QuizState>;
+                return {
+                    ...currentState,
+                    ...state,
+                    quizzes: filterActiveQuizzes(state.quizzes || currentState.quizzes),
+                };
+            },
             // Only persist selected fields to avoid stale data
             // NOTE: Do NOT persist selectedClassLevel - it should reset when returning home
             partialize: (state) => ({
                 // Persist quizzes locally for offline access
-                quizzes: state.quizzes,
+                quizzes: filterActiveQuizzes(state.quizzes),
                 // Persist view state so teacher dashboard stays after F5 refresh
                 view: state.view,
             }),

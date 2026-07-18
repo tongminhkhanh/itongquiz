@@ -4,8 +4,6 @@ import { Loader2 } from 'lucide-react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
-import { Quiz } from './src/types';
-import { fetchIoeQuizzes, saveIoeResult } from './src/services/ioeSheetService';
 import { getSystemSettings } from './src/services/systemSettingsService';
 import { useAuthStore } from './stores/authStore';
 import { useQuizStore } from './stores/quizStore';
@@ -15,7 +13,6 @@ import { useSeo } from './src/hooks/useSeo';
 
 // Lazy load main views
 const StudentView = React.lazy(() => import('./src/components/StudentView'));
-const IoeStudentView = React.lazy(() => import('./src/components/IoeStudentView'));
 const TeacherDashboard = React.lazy(() => import('./src/components/TeacherDashboard'));
 const TeacherResultDetailPage = React.lazy(() => import('./src/components/TeacherDashboard/TeacherResultDetailPage'));
 const GiftShop = React.lazy(() => import('./src/components/gamification/GiftShop'));
@@ -45,35 +42,13 @@ const App: React.FC = () => {
     // Feature flags
     const isGiftShopFeatureEnabled = String(import.meta.env.VITE_FEATURE_GIFT_SHOP_V2 || 'false').toLowerCase() === 'true';
 
-    const [ioeQuizzes, setIoeQuizzes] = useState<Quiz[]>([]);
-    const [ioeLoading, setIoeLoading] = useState(false);
     const [aiAssistantEnabled, setAiAssistantEnabled] = useState(true);
 
     // Call custom SEO hook
     useSeo(location.pathname, quizStore.view, quizStore.selectedQuiz, isGiftShopFeatureEnabled);
 
-    const loadIoeData = async (forceRefresh = false) => {
-        if (ioeLoading) return;
-        setIoeLoading(true);
-        try {
-            const quizzes = await fetchIoeQuizzes(forceRefresh);
-            setIoeQuizzes(quizzes);
-            console.log('[IOE] Loaded', quizzes.length, 'quizzes', forceRefresh ? '(refreshed)' : '');
-        } catch (err) {
-            console.error('[IOE] Load error:', err);
-        } finally {
-            setIoeLoading(false);
-        }
-    };
-
     useEffect(() => {
         quizStore.loadQuizzes();
-
-        const params = new URLSearchParams(window.location.search);
-        const quizId = params.get('quizId') || params.get('quiz');
-        if (quizId && quizId.startsWith('ioe-')) {
-            loadIoeData(false);
-        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -164,16 +139,13 @@ const App: React.FC = () => {
         const quizId = params.get('quizId') || params.get('quiz');
         if (!quizId || quizStore.selectedQuiz) return;
 
-        let foundQuiz = quizStore.quizzes.find((q) => q.id === quizId);
-        if (!foundQuiz && ioeQuizzes.length > 0) {
-            foundQuiz = ioeQuizzes.find((q) => q.id === quizId);
-        }
+        const foundQuiz = quizStore.quizzes.find((q) => q.id === quizId);
 
         if (foundQuiz) {
             quizStore.selectQuiz(foundQuiz);
             quizStore.setView('student');
         }
-    }, [location.pathname, location.search, quizStore, ioeQuizzes]);
+    }, [location.pathname, location.search, quizStore]);
 
     const handleRouteNavigate = (path: RoutePath) => {
         navigate(path);
@@ -210,9 +182,8 @@ const App: React.FC = () => {
         }
 
         if (quizStore.view === 'student' && quizStore.selectedQuiz) {
-            const isIoeQuiz = quizStore.selectedQuiz.category === 'ioe';
             const hasLoadedQuestions = Array.isArray(quizStore.selectedQuiz.questions) && quizStore.selectedQuiz.questions.length > 0;
-            if (!isIoeQuiz && !hasLoadedQuestions) {
+            if (!hasLoadedQuestions) {
                 if (quizStore.isLoading) {
                     return <PageLoading />;
                 }
@@ -250,19 +221,11 @@ const App: React.FC = () => {
 
             return (
                 <Suspense fallback={<PageLoading />}>
-                    {isIoeQuiz ? (
-                        <IoeStudentView
-                            quiz={quizStore.selectedQuiz}
-                            onExit={() => quizStore.goHome()}
-                            onSaveResult={saveIoeResult}
-                        />
-                    ) : (
-                        <StudentView
-                            quiz={quizStore.selectedQuiz}
-                            onExit={() => quizStore.goHome()}
-                            onSaveResult={quizStore.submitResult}
-                        />
-                    )}
+                    <StudentView
+                        quiz={quizStore.selectedQuiz}
+                        onExit={() => quizStore.goHome()}
+                        onSaveResult={quizStore.submitResult}
+                    />
                 </Suspense>
             );
         }
@@ -271,11 +234,7 @@ const App: React.FC = () => {
             <Suspense fallback={<PageLoading />}>
                 <div className="flex flex-col min-h-screen">
                     <main className="flex-1">
-                        <HomePage
-                            ioeQuizzes={ioeQuizzes}
-                            ioeLoading={ioeLoading}
-                            onRefreshIoe={() => loadIoeData(true)}
-                        />
+                        <HomePage />
                     </main>
                     <Footer onNavigate={handleRouteNavigate} showPublicLinks={showPublicFooterLinks} />
                 </div>

@@ -46,6 +46,12 @@ describe('Teacher dashboard sidebar accessibility', () => {
         });
     });
 
+    it('does not expose navigation for removed legacy features', () => {
+        renderSidebar();
+
+        expect(screen.queryByText(/IOE/i)).not.toBeInTheDocument();
+    });
+
     it('keeps multiple navigation groups open and exposes accordion state', () => {
         renderSidebar();
 

@@ -5,25 +5,33 @@ import type {
     SmartAssignmentWarning,
 } from '../types/classroom.types';
 
-export type TeacherDashboardTab =
-    | 'overview'
-    | 'results'
-    | 'manage'
-    | 'create'
-    | 'ioe'
-    | 'ioe-manage'
-    | 'ioe-results'
-    | 'announcements'
-    | 'classes'
-    | 'assignments'
-    | 'teachers'
-    | 'gift-shop'
-    | 'homework'
-    | 'live-exam'
-    | 'certificates'
-    | 'admin-templates'
-    | 'math-audit'
-    | 'personal-settings';
+const TEACHER_DASHBOARD_TABS = [
+    'overview',
+    'results',
+    'manage',
+    'create',
+    'announcements',
+    'classes',
+    'assignments',
+    'teachers',
+    'gift-shop',
+    'homework',
+    'live-exam',
+    'certificates',
+    'admin-templates',
+    'math-audit',
+    'personal-settings',
+] as const;
+
+export type TeacherDashboardTab = typeof TEACHER_DASHBOARD_TABS[number];
+
+const teacherDashboardTabSet = new Set<string>(TEACHER_DASHBOARD_TABS);
+
+export const normalizeTeacherDashboardTab = (value: unknown): TeacherDashboardTab => (
+    typeof value === 'string' && teacherDashboardTabSet.has(value)
+        ? value as TeacherDashboardTab
+        : 'overview'
+);
 
 export type AssignmentComposerDraft = {
     source: 'smart-preview' | 'manual';
@@ -69,5 +77,21 @@ export const useTeacherDashboardUIStore = create<TeacherDashboardUIState>()(pers
     clearAssignmentComposerDraft: () => set({ assignmentComposerDraft: null }),
 }), {
     name: 'itongquiz_teacher_dashboard_ui',
+    version: 2,
+    migrate: (persistedState) => {
+        const state = (persistedState || {}) as Partial<TeacherDashboardUIState>;
+        return {
+            ...state,
+            activeTab: normalizeTeacherDashboardTab(state.activeTab),
+        };
+    },
+    merge: (persistedState, currentState) => {
+        const state = (persistedState || {}) as Partial<TeacherDashboardUIState>;
+        return {
+            ...currentState,
+            ...state,
+            activeTab: normalizeTeacherDashboardTab(state.activeTab),
+        };
+    },
     partialize: (state) => ({ activeTab: state.activeTab }),
 }));

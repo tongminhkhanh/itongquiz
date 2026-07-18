@@ -6,7 +6,8 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const OUTPUT_FILE = path.join(ROOT_DIR, 'public', 'sitemap.xml');
 const DEFAULT_SITE_URL = 'https://www.thitong.site';
 const DEFAULT_API_URL = 'https://phieu.thitong.site';
-const DEFAULT_CATEGORIES = ['vioedu', 'trang-nguyen', 'ioe', 'on-tap'];
+const DEFAULT_CATEGORIES = ['vioedu', 'trang-nguyen', 'on-tap'];
+const ARCHIVED_CATEGORIES = new Set(['ioe']);
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -42,9 +43,10 @@ function toBoolLike(value, defaultValue = false) {
 }
 
 function isQuizPublic(quiz) {
+  const category = String(quiz.category ?? quiz.category_name ?? '').trim().toLowerCase();
   const requireCode = toBoolLike(quiz.require_code ?? quiz.requireCode, false);
   const showOnHome = toBoolLike(quiz.show_on_home ?? quiz.showOnHome, true);
-  return showOnHome && !requireCode;
+  return !ARCHIVED_CATEGORIES.has(category) && showOnHome && !requireCode;
 }
 
 function safeDate(value, fallbackDate) {
@@ -178,4 +180,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { resolveApiUrl };
+module.exports = { isQuizPublic, resolveApiUrl };

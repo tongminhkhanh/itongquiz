@@ -4,7 +4,7 @@ import { Quiz } from '../types';
 const DEFAULT_TITLE = 'ItOng Quiz - Nền tảng tạo đề và ôn thi cho học sinh Tiểu học Ít Ong';
 const DEFAULT_DESCRIPTION = 'ItOng Quiz giúp giáo viên tạo đề trắc nghiệm nhanh, hỗ trợ học sinh ôn thi chương trình GDPT 2018.';
 const DEFAULT_KEYWORDS = 'Ít Ong, ItOng Quiz, luyện thi tiểu học, trắc nghiệm tiểu học, GDPT 2018, ôn thi online';
-const SEO_CATEGORY_WHITELIST = new Set(['all', 'vioedu', 'trang-nguyen', 'ioe', 'on-tap', 'toan', 'tieng-viet']);
+const SEO_CATEGORY_WHITELIST = new Set(['all', 'vioedu', 'trang-nguyen', 'on-tap', 'toan', 'tieng-viet']);
 
 // SEO Utility Functions
 const upsertMetaByName = (name: string, content: string) => {

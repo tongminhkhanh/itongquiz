@@ -6,7 +6,6 @@ import {
     ClipboardList,
     FileText,
     Gift,
-    Globe,
     GraduationCap,
     Home,
     LayoutTemplate,
@@ -32,7 +31,7 @@ export interface SidebarProps {
     setIsMobileOpen?: (open: boolean) => void;
 }
 
-type GroupKey = 'exams' | 'teaching' | 'students' | 'utilities' | 'ioe' | 'certificates' | 'account' | 'system';
+type GroupKey = 'exams' | 'teaching' | 'students' | 'utilities' | 'certificates' | 'account' | 'system';
 
 type NavItem = {
     id: TeacherDashboardTab;
@@ -45,7 +44,6 @@ const GROUP_KEYS: GroupKey[] = [
     'teaching',
     'students',
     'utilities',
-    'ioe',
     'certificates',
     'account',
     'system',
@@ -56,7 +54,6 @@ const groupForTab = (tab: TeacherDashboardTab): GroupKey | null => {
     if (['assignments', 'homework', 'results'].includes(tab)) return 'teaching';
     if (tab === 'classes') return 'students';
     if (tab === 'gift-shop') return 'utilities';
-    if (['ioe', 'ioe-manage', 'ioe-results'].includes(tab)) return 'ioe';
     if (['certificates', 'admin-templates'].includes(tab)) return 'certificates';
     if (tab === 'personal-settings') return 'account';
     if (['announcements', 'teachers', 'math-audit'].includes(tab)) return 'system';
@@ -165,12 +162,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             ? [{ id: 'gift-shop', label: 'Tiệm tạp hóa', icon: <Gift className="size-5" /> }]
             : []
     ), [isGiftShopEnabled]);
-
-    const ioeItems: NavItem[] = [
-        { id: 'ioe-manage', label: 'Quản lý IOE', icon: <Globe className="size-5" /> },
-        { id: 'ioe', label: 'Tạo đề IOE', icon: <Globe className="size-5" /> },
-        { id: 'ioe-results', label: 'Kết quả IOE', icon: <Globe className="size-5" /> },
-    ];
 
     const certificateItems: NavItem[] = [
         { id: 'certificates', label: 'Cấp chứng nhận', icon: <Award className="size-5" /> },
@@ -326,7 +317,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <NavGroup title="Dạy và giao bài" items={teachingItems} groupKey="teaching" />
                     <NavGroup title="Học sinh" items={studentItems} groupKey="students" />
                     <NavGroup title="Tiện ích" items={utilityItems} groupKey="utilities" />
-                    <NavGroup title="Tiếng Anh IOE" items={ioeItems} groupKey="ioe" adminOnly />
                     <NavGroup title="Chứng nhận" items={certificateItems} groupKey="certificates" />
                     <NavGroup title="Tài khoản" items={accountItems} groupKey="account" />
                     <NavGroup title="Quản trị hệ thống" items={settingItems} groupKey="system" adminOnly />
