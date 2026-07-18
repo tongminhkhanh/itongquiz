@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JWTPayload } from '../workers/src/utils/jwt';
 
 let currentUser: JWTPayload | null = null;
+let currentAuthErrorStatus = 401;
 vi.mock('../workers/src/middleware/jwtAuth', () => ({
   verifyJWTMiddleware: vi.fn(async () => currentUser
     ? { user: currentUser }
-    : new Response(JSON.stringify({ status: 'error' }), { status: 401 })),
+    : new Response(JSON.stringify({ status: 'error' }), { status: currentAuthErrorStatus })),
   requireAdmin: vi.fn((user: JWTPayload) => user.role === 'admin'),
   requireTeacher: vi.fn((user: JWTPayload) => user.role === 'teacher' || user.role === 'admin'),
   isStudent: vi.fn((user: JWTPayload) => user.role === 'student'),
@@ -59,11 +60,25 @@ const authRequest = (url: string, init: RequestInit = {}) => new Request(url, {
 });
 
 describe('quiz answer confidentiality and ownership', () => {
-  beforeEach(() => { currentUser = null; });
+  beforeEach(() => {
+    currentUser = null;
+    currentAuthErrorStatus = 401;
+  });
 
   it('returns only sanitized public question data to anonymous callers', async () => {
     const db = new Database();
     const response = await handleQuizRoutes(new Request('https://test/api/questions?quizId=quiz-a'), env(db), '/api/questions', 'GET');
+    const rows = await response.json() as any[];
+    expect(response.status).toBe(200);
+    expect(rows[0]).not.toHaveProperty('correct_answer');
+    expect(JSON.parse(rows[0].items)[0]).not.toHaveProperty('isCorrect');
+    expect(db.executed.some((statement) => statement.sql.includes('show_on_home'))).toBe(true);
+  });
+
+  it('falls back to sanitized public questions when authentication is unavailable', async () => {
+    currentAuthErrorStatus = 503;
+    const db = new Database();
+    const response = await handleQuizRoutes(authRequest('https://test/api/questions?quizId=quiz-a'), env(db), '/api/questions', 'GET');
     const rows = await response.json() as any[];
     expect(response.status).toBe(200);
     expect(rows[0]).not.toHaveProperty('correct_answer');

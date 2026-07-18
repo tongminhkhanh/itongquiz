@@ -171,7 +171,6 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
     if (path === '/api/questions' && method === 'GET') {
         const authResult = await verifyJWTMiddleware(request, env);
         const user: JWTPayload | null = authResult instanceof Response ? null : authResult.user;
-        if (authResult instanceof Response && authResult.status !== 401) return authResult;
 
         const url = new URL(request.url);
         const quizId = url.searchParams.get('quizId');
