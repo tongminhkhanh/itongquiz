@@ -63,6 +63,7 @@ artifacts/math-screenshots/
 
 # Generated dependency audit reports
 reports/dependency-audit*.json
+artifacts/dependency-audit/
 
 # Sensitive local exports and credentials
 data/migration/*
