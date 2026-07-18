@@ -47,7 +47,7 @@ This project is indexed by GitNexus as **itongquiz** (12209 symbols, 32229 relat
 
 ### Issue tracker
 
-Issues live in GitHub (`sample_user_baf53feb/itongquiz`). See `docs/agents/issue-tracker.md`.
+Issues live in GitHub (`OWNER/itongquiz`). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

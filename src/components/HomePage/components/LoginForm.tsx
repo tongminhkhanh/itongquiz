@@ -113,7 +113,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
                 {/* Support */}
                 <p className="text-center text-[0.9rem] text-[#6b7280] mt-6 font-medium relative z-10">
                     Cần hỗ trợ?{' '}
-                    <a href="mailto:sample_user_baf53feb@gmail.com" className="text-[#16a34a] font-bold hover:underline">
+                    <a href="mailto:support@thitong.site" className="text-[#16a34a] font-bold hover:underline">
                         Liên hệ Quản trị viên
                     </a>
                 </p>

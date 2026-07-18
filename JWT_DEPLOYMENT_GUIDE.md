@@ -85,7 +85,7 @@ cd workers
 wrangler deploy
 
 # Verify deployment
-curl https://itongquiz-api.sample_user_baf53feb.workers.dev/api/health
+curl https://phieu.thitong.site/api/health
 # Should return: {"status":"ok","timestamp":"..."}
 ```
 

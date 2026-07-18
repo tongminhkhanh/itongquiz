@@ -61,7 +61,7 @@ export const ManualTab: React.FC<ManualTabProps> = ({ classId, onClose, onSubmit
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="H?c sinh m?u 299c47"
+                    placeholder="Hoc Sinh Mau"
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                     autoFocus
                 />

@@ -51,7 +51,7 @@ const Footer: React.FC<Props> = ({ onNavigate, showPublicLinks = true }) => {
                         <div className="flex gap-4">
                             {[
                                 { icon: Globe, href: "#", label: "Website" },
-                                { icon: Mail, href: "mailto:sample_user_baf53feb@gmail.com", label: "Email" },
+                                { icon: Mail, href: "mailto:support@thitong.site", label: "Email" },
                                 { icon: Phone, href: "tel:0989999999", label: "Phone" }
                             ].map((social, idx) => (
                                 <a 

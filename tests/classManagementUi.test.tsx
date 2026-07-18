@@ -6,7 +6,7 @@ import { ClassListView } from '../src/features/class-management/views/ClassListV
 import { StudentTable } from '../src/features/class-management/components/StudentTable/StudentTable';
 
 const classroom = {
-    id: 'c1', name: '5A', teacherUsername: 'teacher1', teacherFullName: 'H?c sinh m?u 137c72', createdAt: '2026-01-01T00:00:00.000Z', studentCount: 32, assignmentCount: 4,
+    id: 'c1', name: '5A', teacherUsername: 'teacher1', teacherFullName: 'Giao Vien Mau', createdAt: '2026-01-01T00:00:00.000Z', studentCount: 32, assignmentCount: 4,
 };
 
 describe('class management UI permissions and states', () => {
@@ -32,8 +32,8 @@ describe('class management UI permissions and states', () => {
 
     it('allows the class-owning teacher UI to open password reset', () => {
         const onResetPassword = vi.fn();
-        render(<StudentTable students={[{ id: 's1', fullName: 'H?c sinh m?u 299c47', username: 'an.nv', classId: 'c1' }]} classId="c1" onResetPassword={onResetPassword} onRemoveStudent={vi.fn()} />);
-        fireEvent.click(screen.getAllByLabelText('Đặt lại mật khẩu cho H?c sinh m?u 299c47')[0]);
+        render(<StudentTable students={[{ id: 's1', fullName: 'Hoc Sinh Mau', username: 'an.nv', classId: 'c1' }]} classId="c1" onResetPassword={onResetPassword} onRemoveStudent={vi.fn()} />);
+        fireEvent.click(screen.getAllByLabelText('Đặt lại mật khẩu cho Hoc Sinh Mau')[0]);
         expect(onResetPassword).toHaveBeenCalledWith('s1');
     });
 });

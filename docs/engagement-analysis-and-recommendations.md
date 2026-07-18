@@ -618,4 +618,4 @@ CREATE TABLE leaderboard_rewards_history (
 ---
 
 **Người phân tích:** Kiro AI  
-**Liên hệ:** sample_user_baf53feb/itongquiz
+**Liên hệ:** OWNER/itongquiz

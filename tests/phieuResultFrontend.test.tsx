@@ -23,7 +23,7 @@ const result: StudentResult = {
   submissionId: 'legacy-submission-alias',
   quizId: 'quiz-1',
   quizTitle: 'Phân số',
-  studentName: 'H?c sinh m?u 299c47',
+  studentName: 'Hoc Sinh Mau',
   studentClass: '5A',
   score: 0,
   correctCount: 0,
@@ -37,7 +37,7 @@ const savedPhieu: PhieuNhanXet = {
   id: 'phieu-42',
   submission_id: 'result:42',
   student_id: 'student-42',
-  student_name: 'H?c sinh m?u 299c47',
+  student_name: 'Hoc Sinh Mau',
   class_id: 'class-5a',
   mon_hoc: 'Toán',
   ten_bai_tap: 'Phân số',
@@ -62,7 +62,7 @@ const savedPhieu: PhieuNhanXet = {
 
 const publicLink: PhieuPublicLink = {
   phieuId: 'phieu-42',
-  studentName: 'H?c sinh m?u 299c47',
+  studentName: 'Hoc Sinh Mau',
   publicToken: 'existing-token',
   url: 'https://phieu.thitong.site/p/existing-token',
 };
@@ -162,7 +162,7 @@ describe('batch result phieu generation', () => {
       <PhieuFromResultsPanel
         results={[{
           id: '42',
-          student_name: 'H?c sinh m?u 299c47',
+          student_name: 'Hoc Sinh Mau',
           class_name: '5A',
           quiz_id: 'quiz-1',
           quiz_title: 'Phân số',

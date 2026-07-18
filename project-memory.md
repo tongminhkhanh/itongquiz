@@ -14,7 +14,7 @@ Tai lieu nay ghi nho boi canh lam viec giua user va Codex cho du an `itongquiz`,
 - Backend production da deploy rieng qua Cloudflare Workers:
   - worker `itongquiz-api`
   - version `970e1171-5f67-4996-a579-064b79b77e03`
-  - verify `GET https://itongquiz-api.sample_user_baf53feb.workers.dev/api/health` tra `200`
+  - verify `GET https://phieu.thitong.site/api/health` tra `200`
 - Worktree da duoc don sach sau deploy:
   - da xoa report artifacts Phase 2 moi sinh
   - da restore local Wrangler state

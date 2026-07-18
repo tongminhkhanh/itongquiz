@@ -62,4 +62,4 @@ src/
 4.  **Cá nhân hóa sâu:** Sử dụng AI để gợi ý bài tập dựa trên các lỗ hổng kiến thức của từng học sinh.
 
 ---
-*Dự án được phát triển bởi **sample_user_baf53feb/itongquiz**.*
+*Dự án được phát triển bởi **OWNER/itongquiz**.*

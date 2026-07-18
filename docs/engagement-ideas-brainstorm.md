@@ -481,4 +481,4 @@ Các ý tưởng trên được thiết kế để:
 ---
 
 **Người tạo:** Kiro AI  
-**Liên hệ:** sample_user_baf53feb/itongquiz
+**Liên hệ:** OWNER/itongquiz

@@ -1,7 +1,7 @@
 async function testPracticeLibrary() {
     console.log("🧪 BẮT ĐẦU KIỂM TRA NHANH: PRACTICE LIBRARY (API)");
 
-    const baseUrl = "https://itongquiz-api.sample_user_baf53feb.workers.dev";
+    const baseUrl = "https://phieu.thitong.site";
     console.log(`\n🔗 Server: ${baseUrl}`);
 
     try {

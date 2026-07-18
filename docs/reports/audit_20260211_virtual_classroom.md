@@ -29,10 +29,10 @@
 
 ### 1. Username Collision (Trùng tên đăng nhập)
 - **Vị trí:** `implementation_plan.md` > Section 1.B
-- **Mô tả:** `username` dựa trên tên + lớp (VD: `an.nguyen.5a`).
+- **Mô tả:** `username` dựa trên tên + lớp (VD: `student.demo.5a`).
 - **Rủi ro:**
-  - Năm sau lên lớp 6A, username `an.nguyen.5a` thành vô nghĩa hoặc trùng với em lớp 5 mới lên.
-  - Lớp 5A có 2 em "H?c sinh m?u 299c47" -> `an.nguyen.5a` bị trùng.
+  - Năm sau lên lớp 6A, username `student.demo.5a` thành vô nghĩa hoặc trùng với em lớp 5 mới lên.
+  - Lớp 5A có 2 em "Hoc Sinh Mau" -> `student.demo.5a` bị trùng.
 - **✅ Giải pháp:**
   - Thêm suffix số tự động: `an.nguyen.123`.
   - Hoặc dùng Mã học sinh (Student ID) làm username nếu trường có sẵn.
