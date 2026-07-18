@@ -85,12 +85,14 @@ describe('Game Loop route contracts', () => {
         });
     });
 
-    it('keeps unsupported methods on the 404 fallback', async () => {
+    it('keeps unsupported paths and methods on the 404 fallback', async () => {
         asStudent();
-        const response = await callRoute('/api/game-loop/dashboard', 'POST');
-        expect(response.status).toBe(404);
-        await expect(response.json()).resolves.toMatchObject({
+        const wrongMethod = await callRoute('/api/game-loop/dashboard', 'POST');
+        expect(wrongMethod.status).toBe(404);
+        await expect(wrongMethod.json()).resolves.toMatchObject({
             message: 'Not found: /api/game-loop/dashboard',
         });
+        const unknownPath = await callRoute('/api/game-loop/unknown', 'GET');
+        expect(unknownPath.status).toBe(404);
     });
 });

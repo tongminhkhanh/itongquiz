@@ -9,6 +9,7 @@ export class GameLoopStatement {
 
 export class GameLoopDatabase {
     executed: GameLoopStatement[] = [];
+    constructor(private readonly existingActivity = false) {}
     prepare(sql: string) { return new GameLoopStatement(sql, this); }
     async batch(statements: GameLoopStatement[]) {
         this.executed.push(...statements);
@@ -16,6 +17,9 @@ export class GameLoopDatabase {
     }
 
     first(sql: string) {
+        if (sql.includes('FROM student_game_activity_events')) {
+            return this.existingActivity ? { activity_id: 'activity-1' } : null;
+        }
         if (sql.includes('FROM student_game_profiles')) return {
             username: 'student-a', daily_streak: 2, last_mission_completion_date: '',
             hint_tokens: 1, streak_shields: 0, collection_json: '[]',
