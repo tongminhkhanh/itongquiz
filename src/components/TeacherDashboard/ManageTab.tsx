@@ -7,7 +7,7 @@ import { useQuizStore } from '../../../stores/quizStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useAssignmentStore } from '../../stores/useAssignmentStore';
 import { useClassStore } from '../../stores/useClassStore';
-import { SUBJECT_CONFIG } from '../HomePage/StudentDashboardUI';
+import { SUBJECT_CONFIG } from '../../features/student-dashboard/model/dashboardConstants';
 import { showError, showConfirm, showSuccess } from '../../utils/toast';
 import WorksheetExportModal from './WorksheetExportModal';
 

@@ -13,7 +13,7 @@ import QuizListPage from './QuizListPage';
 import { getAllAssignments } from '../../services/classroomService';
 import { Assignment } from '../../types/classroom.types';
 import LoginLandingPage from './LoginLandingPage';
-import StudentDashboardUI from './StudentDashboardUI';
+const StudentDashboardUI = React.lazy(() => import('./StudentDashboardUI'));
 
 // --- Sub-components ---
 import { DashboardNavbar } from './components/DashboardNavbar';
@@ -293,7 +293,15 @@ const HomePage: React.FC = () => {
     }
 
     if (isStudentLoggedIn && view === 'home') {
-        return <StudentDashboardUI />;
+        return (
+            <React.Suspense fallback={(
+                <div className="min-h-dvh bg-[#F4F7FC] flex items-center justify-center text-slate-500 font-semibold">
+                    ?ang t?i kh?ng gian h?c t?p...
+                </div>
+            )}>
+                <StudentDashboardUI />
+            </React.Suspense>
+        );
     }
 
     // Nếu là giáo viên/admin đã đăng nhập và đang ở view 'home', trả về null để chờ App.tsx hoặc useEffect nội bộ chuyển hướng

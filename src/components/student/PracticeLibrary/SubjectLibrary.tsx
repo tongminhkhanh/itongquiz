@@ -4,7 +4,7 @@ import { ArrowLeft, Loader2, Search, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { practiceService } from '../../../services/practiceService';
 import TopicCard from './TopicCard';
-import { SUBJECT_CONFIG } from '../../HomePage/StudentDashboardUI';
+import { SUBJECT_CONFIG } from '../../../features/student-dashboard/model/dashboardConstants';
 import { useQuizStore } from '../../../../stores/quizStore';
 
 interface SubjectLibraryProps {
