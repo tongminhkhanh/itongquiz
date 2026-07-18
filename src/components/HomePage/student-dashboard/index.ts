@@ -1,3 +1,5 @@
+export { StudentDashboardHeader } from './StudentDashboardHeader';
+
 export {
   AssignedWorkSkeleton,
   DashboardEmptyState,
@@ -9,6 +11,7 @@ export {
 export type {
   AssignedQuiz,
   AssignmentVisualState,
+  StudentDashboardHeaderProps,
   SubjectCardViewModel,
 } from './dashboard.types';
 

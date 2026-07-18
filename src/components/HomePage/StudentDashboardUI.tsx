@@ -11,7 +11,7 @@ import { getAvatarUrl } from '../../config/avatars';
 import { callApi } from '../../services/apiAdapter';
 import { Assignment } from '../../types/classroom.types';
 import { Question, Quiz } from '../../types';
-import { Loader2, Play, Trophy, Star, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Camera, Gift, KeyRound, Sparkles, CheckCircle2, Lock, Flame, Medal, Radio, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, Play, Trophy, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Gift, Sparkles, CheckCircle2, Lock, Flame, Medal, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import { JoinLiveExamModal } from '../LiveExam/JoinLiveExamModal';
@@ -30,8 +30,8 @@ import { useHomeworkStore } from '../../features/homework/stores/useHomeworkStor
 import type { GameLoopMission, GameLoopRewardResult } from '../../types/gameLoop.types';
 import type { LiveExamSubmissionResponse } from '../../types/liveExam.types';
 import { getAchievementBadgeAlt, getAchievementBadgeImage } from '../../config/achievementBadges';
-import NotificationBell from '../common/NotificationBell';
 import CurrentAnnouncementBanner from '../common/CurrentAnnouncementBanner';
+import { StudentDashboardHeader } from './student-dashboard';
 
 // --- Subject Config (Reused from HomePage) ---
 export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color: string; desc: string; showOnHome?: boolean }> = {
@@ -869,113 +869,22 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     return (
         <div className="min-h-dvh bg-[#F4F7FC] font-sans text-slate-800 flex flex-col items-center">
             <CurrentAnnouncementBanner role="student" />
-            {/* --- NAVBAR --- */}
-            <header className="w-full bg-white shadow-sm border-b border-slate-100 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-3 md:px-8 h-16 md:h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <img src="/school-logo.png" alt="School logo iTong Quiz" className="w-10 h-10 object-contain drop-shadow-md" />
-                        <span className="text-xl md:text-2xl font-black tracking-tight text-slate-800">
-                            ÍtOng<span className="text-orange-500">Quiz</span>
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 md:gap-8">
-                        <div className="flex items-center gap-2 md:gap-4">
-                            <div className="flex items-center gap-1.5 bg-amber-50 px-2 md:px-3 py-1.5 rounded-full border border-amber-200">
-                                <span className="text-amber-500 font-bold flex items-center gap-1 text-sm md:text-base">
-                                    <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" /> {pet?.level || 1}
-                                </span>
-                                <span className="hidden md:inline text-xs uppercase font-bold text-amber-600">Cấp bậc</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 bg-yellow-50 px-2 md:px-3 py-1.5 rounded-full border border-yellow-200">
-                                <span className="text-yellow-600 font-bold flex items-center gap-1 text-sm md:text-base">
-                                    <Star className="w-3.5 h-3.5 md:w-4 md:h-4 fill-yellow-500" /> {coins}
-                                </span>
-                                <span className="hidden md:inline text-xs uppercase font-bold text-yellow-700">Xu</span>
-                            </div>
-                        </div>
-
-                        <div className="hidden lg:flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setActiveSection('dashboard')}
-                                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black transition-colors md:text-sm ${
-                                    activeSection === 'dashboard'
-                                        ? 'border-sky-200 bg-sky-50 text-sky-700'
-                                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                                }`}
-                            >
-                                <BookOpen className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                Trang chủ
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setActiveSection('achievements')}
-                                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black transition-colors md:text-sm ${
-                                    activeSection === 'achievements'
-                                        ? 'border-amber-200 bg-amber-50 text-amber-700'
-                                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                                }`}
-                            >
-                                <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                Thành tích
-                            </button>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={() => setActiveSection('achievements')}
-                            className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-black transition-colors md:px-3 md:text-sm lg:hidden ${
-                                activeSection === 'achievements'
-                                    ? 'border-amber-200 bg-amber-50 text-amber-700'
-                                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                            }`}
-                        >
-                            <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                            <span className="hidden sm:inline">Thành tích</span>
-                        </button>
-
-                        {giftShopEnabled && (
-                            <button type="button" onClick={handleOpenGiftShop} className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-blue-800 text-xs md:text-sm font-black hover:bg-indigo-100 transition-colors">
-                                <Gift className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                <span className="hidden md:inline">Tiệm Tạp Hóa</span>
-                            </button>
-                        )}
-
-                        <button type="button" onClick={() => setIsJoinLiveExamModalOpen(true)} className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1.5 rounded-full border border-red-200 bg-red-50 text-red-700 text-xs md:text-sm font-black hover:bg-red-100 transition-colors animate-pulse">
-                            <Radio className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                            <span className="hidden md:inline">Thi Trực Tiếp</span>
-                        </button>
-
-                        <div className="flex items-center gap-3 border-l pl-3 md:pl-4 border-slate-200">
-                            <NotificationBell userId={studentSession.studentId} onOpenCertificate={() => setActiveSection('achievements')} />
-                            <button onClick={handleLogout} className="sm:hidden h-9 px-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 bg-white">Đăng xuất</button>
-                            <div className="flex flex-col items-end hidden sm:flex">
-                                <span className="font-bold text-sm leading-tight text-slate-700">{studentSession.fullName}</span>
-                                <span className="text-xs text-slate-500 font-medium">{studentSession.className || 'Học sinh'}</span>
-                            </div>
-                            <div className="relative group cursor-pointer" onClick={() => setIsAvatarModalOpen(true)}>
-                                <div className="relative overflow-hidden rounded-full border-2 border-indigo-100 group-hover:border-indigo-400 transition-all shadow-sm">
-                                    <img src={studentSession.avatar ? getAvatarUrl(studentSession.avatar) : getAvatarUrl('default')} className="w-9 h-9 md:w-10 md:h-10 object-cover group-hover:scale-110 transition-transform" alt="Avatar" />
-                                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Camera className="w-4 h-4 text-white" />
-                                    </div>
-                                </div>
-                                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right scale-95 group-hover:scale-100 pt-2 pb-2 z-50" onClick={(e) => e.stopPropagation()}>
-                                    <div className="px-4 py-2 border-b border-slate-50 mb-1">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tài khoản</p>
-                                        <p className="text-sm font-bold text-slate-700 block sm:hidden truncate">{studentSession.fullName}</p>
-                                    </div>
-                                    <button onClick={openChangePasswordModal} className="w-full text-left px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2">
-                                        <KeyRound className="w-4 h-4 text-slate-500" /> Đổi mật khẩu
-                                    </button>
-                                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">Đăng xuất</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <StudentDashboardHeader
+                studentName={studentSession.fullName}
+                className={studentSession.className}
+                avatarUrl={studentSession.avatar ? getAvatarUrl(studentSession.avatar) : getAvatarUrl('default')}
+                level={pet?.level || 1}
+                coins={coins}
+                activeSection={activeSection}
+                giftShopEnabled={giftShopEnabled}
+                studentId={studentSession.studentId}
+                onSelectSection={setActiveSection}
+                onOpenGiftShop={handleOpenGiftShop}
+                onOpenLiveExam={() => setIsJoinLiveExamModalOpen(true)}
+                onOpenAvatar={() => setIsAvatarModalOpen(true)}
+                onOpenChangePassword={openChangePasswordModal}
+                onLogout={handleLogout}
+            />
 
             <main className="w-full max-w-7xl mx-auto px-3 md:px-8 py-5 md:py-12 flex-1 flex flex-col gap-7 md:gap-10">
                 {activeSection === 'achievements' ? (
