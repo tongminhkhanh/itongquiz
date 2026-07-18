@@ -46,8 +46,10 @@ workers/.wrangler/
 
 # AI Agent configs
 .agents/
+.agent/skills/
 .claude/
 itongquiz/
+llm-mux/
 skills-lock.json
 
 # wrangler files

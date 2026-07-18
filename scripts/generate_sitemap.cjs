@@ -5,6 +5,7 @@ const path = require('path');
 const ROOT_DIR = path.resolve(__dirname, '..');
 const OUTPUT_FILE = path.join(ROOT_DIR, 'public', 'sitemap.xml');
 const DEFAULT_SITE_URL = 'https://www.thitong.site';
+const DEFAULT_API_URL = 'https://phieu.thitong.site';
 const DEFAULT_CATEGORIES = ['vioedu', 'trang-nguyen', 'ioe', 'on-tap'];
 
 function loadEnvFile(filePath) {
@@ -21,6 +22,15 @@ function loadEnvFile(filePath) {
       process.env[key] = value;
     }
   });
+}
+
+function resolveApiUrl(env = process.env) {
+  return (
+    env.SITEMAP_API_URL
+    || env.WORKERS_API_URL
+    || env.VITE_WORKERS_API_URL
+    || DEFAULT_API_URL
+  ).trim();
 }
 
 function toBoolLike(value, defaultValue = false) {
@@ -99,11 +109,7 @@ async function main() {
   loadEnvFile(path.join(ROOT_DIR, '.env.local'));
 
   const siteUrl = (process.env.SITEMAP_SITE_URL || DEFAULT_SITE_URL).trim();
-  const apiUrl = (process.env.SITEMAP_API_URL || process.env.WORKERS_API_URL || process.env.VITE_WORKERS_API_URL || '').trim();
-
-  if (!apiUrl) {
-    throw new Error('Missing API URL. Set SITEMAP_API_URL or WORKERS_API_URL or VITE_WORKERS_API_URL.');
-  }
+  const apiUrl = resolveApiUrl();
 
   const today = new Date().toISOString().slice(0, 10);
   const quizzes = await fetchPublicQuizzes(apiUrl);
@@ -165,7 +171,11 @@ async function main() {
   console.log(`[sitemap] generated ${entries.length} URLs (${quizzes.length} public quizzes) -> ${OUTPUT_FILE}`);
 }
 
-main().catch((error) => {
-  console.error('[sitemap] generation failed:', error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error('[sitemap] generation failed:', error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { resolveApiUrl };
