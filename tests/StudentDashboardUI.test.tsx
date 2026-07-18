@@ -6,6 +6,10 @@ const dashboardShellSource = readFileSync(
   resolve(process.cwd(), 'src/components/HomePage/StudentDashboardUI.tsx'),
   'utf8',
 );
+const dashboardControllerSource = readFileSync(
+  resolve(process.cwd(), 'src/features/student-dashboard/hooks/useStudentDashboardController.ts'),
+  'utf8',
+);
 const dashboardContentSource = readFileSync(
   resolve(process.cwd(), 'src/features/student-dashboard/components/StudentDashboardContent.tsx'),
   'utf8',
@@ -16,6 +20,7 @@ const dashboardBodySource = readFileSync(
 );
 const dashboardSource = [
   dashboardShellSource,
+  dashboardControllerSource,
   dashboardContentSource,
   dashboardBodySource,
 ].join('\n');
@@ -30,6 +35,14 @@ describe('StudentDashboardUI responsive composition', () => {
   it('loads the authenticated student dashboard behind a lazy boundary', () => {
     expect(homePageSource).toContain("React.lazy(() => import('./StudentDashboardUI'))");
     expect(homePageSource).toContain('<React.Suspense');
+  });
+
+  it('keeps the page shell declarative and delegates orchestration to a controller', () => {
+    expect(dashboardShellSource).toContain('useStudentDashboardController()');
+    expect(dashboardShellSource).not.toContain('useClassroomStore');
+    expect(dashboardShellSource).not.toContain('useHomeworkStore');
+    expect(dashboardControllerSource).toContain('const studentSession = useClassroomStore');
+    expect(dashboardControllerSource).toContain('const homeworkSubmission = selectedHomework');
   });
 
   it('uses the scoped Learning Adventure shell and desktop grid', () => {
