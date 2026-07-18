@@ -43,6 +43,12 @@ describe('Classroom route contracts', () => {
         expect(verifyJWTMiddleware).toHaveBeenCalledOnce();
     });
 
+    it('keeps non-POST student-login requests behind JWT authentication', async () => {
+        const response = await callRoute('/api/student-login', 'GET');
+        expect(response.status).toBe(401);
+        expect(verifyJWTMiddleware).toHaveBeenCalledOnce();
+    });
+
     it('hides roster contact metadata from students', async () => {
         asStudent();
         const db = new ClassroomDatabase({
