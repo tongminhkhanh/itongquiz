@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "sitemap:generate": "node scripts/generate_sitemap.cjs",
-    "build": "npm run sitemap:generate && vite build",
+    "build": "node scripts/cloudflare-build-router.mjs",
+    "build:frontend": "npm run sitemap:generate && vite build",
     "preview": "npm run build && wrangler dev",
     "test": "vitest",
     "test:run": "vitest run",
