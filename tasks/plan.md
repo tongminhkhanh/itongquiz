@@ -19,45 +19,45 @@ Tái cấu trúc dashboard học sinh thành giao diện Learning Adventure, gi�
 
 ### Phase 1: Foundation and Learning Priority
 
-- [ ] Task 1: Tạo presentation types và pure UI helpers.
-- [ ] Task 2: Tạo skeleton, empty state và section error primitives.
-- [ ] Task 3: Tách header và account menu có keyboard support.
-- [ ] Task 4: Tạo hero nhẹ và khu vực bài được giao ưu tiên.
+- [x] Task 1: Tạo presentation types và pure UI helpers.
+- [x] Task 2: Tạo skeleton, empty state và section error primitives.
+- [x] Task 3: Tách header và account menu có keyboard support.
+- [x] Task 4: Tạo hero nhẹ và khu vực bài được giao ưu tiên.
 
 ### Checkpoint A
 
-- [ ] Full test suite đạt.
-- [ ] Assigned work nằm ngay sau hero trong DOM.
-- [ ] Không thay đổi API/store contract.
-- [ ] Review 375px và 1440px.
+- [x] Full test suite đạt.
+- [x] Assigned work nằm ngay sau hero trong DOM.
+- [x] Không thay đổi API/store contract.
+- [ ] Review 375px và 1440px — chuyển sang authenticated Cypress ở Task 9; hiện bị chặn bởi thiếu credential.
 
 ### Phase 2: Progress, Rewards, and Practice
 
-- [ ] Task 5: Tách tiến độ ngày và nhiệm vụ tuần.
-- [ ] Task 6: Tách reward sidebar và chỉnh accessibility cho BadgeGallery.
-- [ ] Task 7: Tạo semantic practice grid và sửa semantics homework cards.
+- [x] Task 5: Tách tiến độ ngày và nhiệm vụ tuần.
+- [x] Task 6: Tách reward sidebar và chỉnh accessibility cho BadgeGallery.
+- [x] Task 7: Tạo semantic practice grid và sửa semantics homework cards.
 
 ### Checkpoint B
 
-- [ ] Main column và sidebar đúng kiến trúc.
-- [ ] Mobile đặt bài học trước gamification.
-- [ ] Mọi secondary flow hiện có vẫn hoạt động.
+- [x] Main column và sidebar đúng kiến trúc.
+- [x] Mobile đặt bài học trước gamification.
+- [x] Mọi secondary flow hiện có vẫn được giữ trong container và integration tests.
 
 ### Phase 3: Composition and Verification
 
-- [ ] Task 8: Compose responsive shell, reduced motion và modal accessibility.
-- [ ] Task 9: Thêm Cypress responsive regression và chạy final quality gate.
+- [x] Task 8: Compose responsive shell, reduced motion và modal accessibility.
+- [ ] Task 9: Cypress spec đã thêm; authenticated viewport run và Impeccable gate đang bị chặn.
 
 ### Checkpoint C
 
-- [ ] `npm run test:run` đạt.
-- [ ] `npm run build` đạt.
-- [ ] Cypress đạt tại 375/768/1024/1440.
-- [ ] Không horizontal overflow.
-- [ ] Keyboard, touch, mouse hoạt động.
-- [ ] Reduced motion hoạt động.
-- [ ] Impeccable detect = 0.
-- [ ] GitNexus không phát hiện thay đổi API/Worker/nghiệp vụ.
+- [x] Final `npm run test:run` đạt: 67 files, 371/371 tests.
+- [x] Frontend production bundle đạt bằng `npx vite build`; root `npm run build` còn yêu cầu biến sitemap deployment.
+- [ ] Cypress đạt tại 375/768/1024/1440 — thiếu `studentUsername` và `studentPassword`.
+- [ ] Không horizontal overflow — Cypress assertion đã có nhưng chưa chạy authenticated.
+- [ ] Keyboard, touch, mouse hoạt động — component keyboard tests đạt; browser flow chưa chạy authenticated.
+- [ ] Reduced motion hoạt động — scoped CSS/component tests đạt; browser emulation chưa chạy authenticated.
+- [ ] Impeccable detect = 0 — tool không có trong môi trường hiện tại.
+- [x] GitNexus compare `main` đánh giá low risk, không có affected execution flow hoặc thay đổi API/Worker/nghiệp vụ.
 
 ## Detailed Plan
 
@@ -70,4 +70,4 @@ Xem: `docs/superpowers/plans/2026-07-18-learning-adventure-dashboard.md`.
 | Dashboard monolith lớn | High | Tách JSX nhỏ, không chuyển orchestration. |
 | Regression assignment/live exam | High | Integration tests và giữ nguyên early returns/handlers. |
 | UI loading độc lập gây nhấp nháy | Medium | Section skeleton và local errors. |
-| Auth Cypress thiếu dữ liệu | Medium | Dùng env test credentials hoặc browser evidence có ghi nhận blocker. |
+| Auth Cypress thiếu dữ liệu | Medium | Spec dùng `cy.env(['studentUsername', 'studentPassword'])`; lần chạy 2026-07-18 bị chặn vì cả hai giá trị vắng mặt. |

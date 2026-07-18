@@ -1,6 +1,6 @@
 # Spec: Learning Adventure — Student Dashboard Phase 1
 
-**Status:** Approved for specification
+**Status:** Implemented; final authenticated browser and Impeccable gates blocked
 
 **Date:** 2026-07-18
 
@@ -594,3 +594,50 @@ Phase 1 được coi là đạt khi tất cả điều kiện sau đúng:
 ## 16. Open Questions
 
 Không có câu hỏi chặn việc lập kế hoạch triển khai. Các quyết định kỹ thuật chi tiết như ranh giới component, thứ tự tách file và phạm vi visual regression sẽ được trình bày trong implementation plan, nhưng không được làm thay đổi các yêu cầu đã duyệt trong đặc tả này.
+
+---
+
+## 17. Implementation Verification — 2026-07-18
+
+### Đã xác minh
+
+- Tasks 1–8 được triển khai theo TDD và commit riêng từ `afc2726` đến `715faa1`.
+- `StudentDashboardUI.tsx` tiếp tục sở hữu store, fetch, handler, live exam, early returns và modal orchestration; các file mới chỉ là presentation components và pure helpers.
+- Bài được giao đứng trước các khu vực gamification trong DOM; desktop dùng `minmax(0, 2fr) minmax(300px, 1fr)` và max width 1280px.
+- Component/integration tests khóa các trạng thái loading, empty, error/retry, button, progressbar, account menu, modal avatar, reduced-motion scope và semantic cards.
+- Final full Vitest đạt 67 test files và 371/371 tests.
+- Frontend production bundle đạt bằng `npx vite build`.
+- Root `npm run build` không thể hoàn tất trong worktree thiếu biến sitemap deployment: `SITEMAP_API_URL`, `WORKERS_API_URL` hoặc `VITE_WORKERS_API_URL`. Đây không phải lỗi TypeScript/Vite của dashboard.
+- GitNexus `detect_changes` với `scope: compare`, `base_ref: main` đánh giá **LOW**: 25 changed symbols, không có affected execution flow và không phát hiện thay đổi API/Worker/store business behavior.
+
+### Cypress responsive regression
+
+Đã thêm `cypress/e2e/student-dashboard-responsive.cy.ts` cho 375×812, 768×1024, 1024×768 và 1440×900. Spec bao gồm assertion cho horizontal overflow, khu vực chính, thứ tự mobile, vùng bấm 44px, account menu + Escape, pulse, console error và reduced-motion emulation.
+
+Lệnh đã chạy:
+
+```bash
+npm run cypress:run -- --spec cypress/e2e/student-dashboard-responsive.cy.ts
+```
+
+Cypress compile và khởi chạy thành công, sau đó dừng ở `before all` với blocker chính xác:
+
+```text
+studentUsername is required. Run with --env studentUsername=...,studentPassword=...
+```
+
+Kết quả lần chạy: 5 tests discovered, 0 passing, 1 failing tại credential gate, 4 skipped. Repository và các file `.env*.example` hiện không có test-student credentials, vì vậy chưa có bằng chứng để đánh dấu bốn viewport, browser console, browser accessibility tree, touch/mouse hoặc reduced-motion emulation là đạt.
+
+Lệnh tái chạy khi có tài khoản test:
+
+```bash
+npm run cypress:run -- --spec cypress/e2e/student-dashboard-responsive.cy.ts --env studentUsername=<TEST_USER>,studentPassword=<TEST_PASSWORD>
+```
+
+### Impeccable blocker
+
+Local Coding Agent hiện không cung cấp executable Impeccable command, skill hoặc connected Impeccable tool. Vì đặc tả yêu cầu kết quả tool thật và cấm tự khẳng định thay thế, `Impeccable detect = 0` vẫn chưa được xác minh.
+
+### Trạng thái Phase 1
+
+Mã giao diện, unit/integration test và frontend bundle đã hoàn tất. Phase 1 chưa được đánh dấu “Ready for merge review” cho tới khi authenticated Cypress pass ở cả bốn viewport và Impeccable trả về 0 findings.
