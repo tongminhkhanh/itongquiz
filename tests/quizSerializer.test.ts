@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { prepareQuizForSave } from '../src/services/googleSheetService';
+import { serializeQuizForSave } from '../src/domain/quiz/quizSerializer';
 import { createQuizSerializationFixture } from './fixtures/quizSerializerFixture';
 
 describe('quiz save serialization contract', () => {
@@ -7,7 +7,7 @@ describe('quiz save serialization contract', () => {
         const quiz = createQuizSerializationFixture();
         const original = structuredClone(quiz);
 
-        const serialized = prepareQuizForSave(quiz) as any;
+        const serialized = serializeQuizForSave(quiz) as any;
         const byId = Object.fromEntries(serialized.questions.map((question: any) => [question.id, question]));
 
         expect(serialized).not.toBe(quiz);

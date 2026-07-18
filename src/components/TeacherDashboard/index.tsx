@@ -9,7 +9,6 @@ import {
     type TeacherDashboardTab,
     useTeacherDashboardUIStore,
 } from '../../stores/useTeacherDashboardUIStore';
-import { setStripAnswersEnabled } from '../../services/googleSheetService';
 import { cacheService } from '../../services/CacheService';
 import Sidebar from './Sidebar';
 import BottomNavigation from './BottomNavigation';
@@ -116,11 +115,8 @@ const TeacherDashboard: React.FC = () => {
         setResultsLoadState('success');
     }, []);
 
-    // 🔐 ANTI-CHEAT: Disable answer stripping for teacher views
-    // Also force reload quizzes from server to get fresh data with answers
+    // Reload quizzes from the server so the teacher view uses fresh answer data.
     useEffect(() => {
-        setStripAnswersEnabled(false);
-
         // Force reload quizzes from server to ensure we have answers
         // This prevents stale data with stripped answers from being used
         cacheService.invalidatePrefix('quizzes:');
@@ -138,7 +134,6 @@ const TeacherDashboard: React.FC = () => {
         }, 5 * 60 * 1000);
 
         return () => {
-            setStripAnswersEnabled(true);
             clearInterval(expiryCheckInterval);
         };
     }, [loadTeacherResults]);

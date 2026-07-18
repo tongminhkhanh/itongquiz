@@ -3,7 +3,7 @@ import { callApi } from '../src/services/apiAdapter';
 import {
     fetchResultAnswers,
     fetchResultAnswersBulk,
-} from '../src/services/googleSheetService';
+} from '../src/services/results/resultAnswersService';
 
 vi.mock('../src/services/apiAdapter', () => ({
     callApi: vi.fn(),

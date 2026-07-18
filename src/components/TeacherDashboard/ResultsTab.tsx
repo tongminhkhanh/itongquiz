@@ -18,7 +18,7 @@ import {
 } from '../teacher/ResultsView';
 import { useResults } from '../../hooks';
 import { useQuizStore } from '../../../stores/quizStore';
-import { fetchResultAnswers, fetchResultAnswersBulk } from '../../services/googleSheetService';
+import { fetchResultAnswers, fetchResultAnswersBulk } from '../../services/results/resultAnswersService';
 import { RefreshCw, Download, ChevronDown, Search, FileText, Users, BarChart, ClipboardList } from 'lucide-react';
 import ResultRowPhieuModal from '../../features/results/components/ResultRowPhieuModal';
 import { PhieuFromResultsPanel } from '../../features/results/components/PhieuFromResultsPanel';
