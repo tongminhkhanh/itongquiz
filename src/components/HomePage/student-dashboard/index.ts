@@ -1,4 +1,6 @@
+export { AssignedWorkSection } from './AssignedWorkSection';
 export { StudentDashboardHeader } from './StudentDashboardHeader';
+export { StudentDashboardHero } from './StudentDashboardHero';
 
 export {
   AssignedWorkSkeleton,
@@ -10,8 +12,10 @@ export {
 
 export type {
   AssignedQuiz,
+  AssignedWorkSectionProps,
   AssignmentVisualState,
   StudentDashboardHeaderProps,
+  StudentDashboardHeroProps,
   SubjectCardViewModel,
 } from './dashboard.types';
 

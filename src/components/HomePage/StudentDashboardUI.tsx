@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import StudentAchievementsPage from '../../features/certificates/StudentAchievementsPage';
 import { useAuthStore } from '../../../stores/authStore';
@@ -11,7 +11,7 @@ import { getAvatarUrl } from '../../config/avatars';
 import { callApi } from '../../services/apiAdapter';
 import { Assignment } from '../../types/classroom.types';
 import { Question, Quiz } from '../../types';
-import { Loader2, Play, Trophy, BookOpen, Clock, Target, CalendarDays, Rocket, ShieldCheck, Gift, Sparkles, CheckCircle2, Lock, Flame, Medal, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, Trophy, CalendarDays, Rocket, Gift, Sparkles, CheckCircle2, Lock, Flame, Medal, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import { JoinLiveExamModal } from '../LiveExam/JoinLiveExamModal';
@@ -31,7 +31,12 @@ import type { GameLoopMission, GameLoopRewardResult } from '../../types/gameLoop
 import type { LiveExamSubmissionResponse } from '../../types/liveExam.types';
 import { getAchievementBadgeAlt, getAchievementBadgeImage } from '../../config/achievementBadges';
 import CurrentAnnouncementBanner from '../common/CurrentAnnouncementBanner';
-import { StudentDashboardHeader } from './student-dashboard';
+import {
+    AssignedWorkSection,
+    getAssignmentVisualState,
+    StudentDashboardHeader,
+    StudentDashboardHero,
+} from './student-dashboard';
 
 // --- Subject Config (Reused from HomePage) ---
 export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color: string; desc: string; showOnHome?: boolean }> = {
@@ -42,8 +47,6 @@ export const SUBJECT_CONFIG: Record<string, { title: string; icon: string; color
     'tin-hoc': { title: 'Tin học', icon: 'computer', color: 'from-slate-400 to-slate-600', desc: 'Làm chủ công nghệ tương lai' },
     'ioe': { title: 'Luyện thi IOE', icon: 'workspace_premium', color: 'from-yellow-400 to-orange-500', desc: 'Chinh phục kỳ thi tiếng Anh quốc gia', showOnHome: true },
 };
-
-const FLUENT_CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
 
 interface StudentDashboardUIProps {
     ioeQuizzes?: Quiz[];
@@ -168,12 +171,6 @@ const getMissionProgressPercent = (mission: GameLoopMission) => {
     return Math.min(100, Math.round((mission.progress / mission.target) * 100));
 };
 
-const isAssignmentClosed = (assignment?: Assignment): boolean => {
-    if (!assignment) return false;
-    if (assignment.status === 'CLOSED') return true;
-    const deadline = Date.parse(assignment.deadline || '');
-    return Number.isFinite(deadline) && deadline < Date.now();
-};
 
 const getRewardSummary = (reward: GameLoopRewardResult | null) => {
     if (!reward) return null;
@@ -209,6 +206,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     // --- Stores ---
     const classroomStore = useClassroomStore();
     const assignmentStore = useAssignmentStore();
+    const fetchStudentAssignments = assignmentStore.fetchStudentAssignments;
     const quizStore = useQuizStore();
     const { pet, coins } = useGamificationStore();
     const {
@@ -228,6 +226,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const [activeSection, setActiveSection] = useState<'dashboard' | 'achievements'>('dashboard');
     const [isJourneyExpanded, setIsJourneyExpanded] = useState(false);
     const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+    const [assignmentError, setAssignmentError] = useState<string | null>(null);
     const [selectedHw, setSelectedHw] = useState<HomeworkAssignment | null>(null);
     const hwStore = useHomeworkStore();
     const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
@@ -341,7 +340,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
         };
     }, [joinedLiveExam, liveExamStage, joinedSessionQuiz, quizStore]);
 
-    
+
     // Weekly quests state
     const [weeklyQuests, setWeeklyQuests] = useState<Array<{
         id: string;
@@ -359,21 +358,26 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     const [isClaimingWeeklyQuest, setIsClaimingWeeklyQuest] = useState<string | null>(null);
 
     // --- Fetch Data ---
-    useEffect(() => {
-        const fetchAssignments = async () => {
-            setIsLoadingTasks(true);
-            try {
-                if (studentSession?.studentId) {
-                    await assignmentStore.fetchStudentAssignments(studentSession.studentId);
-                }
-            } catch (error) {
-                console.error('Failed to fetch assignments:', error);
-            } finally {
-                setIsLoadingTasks(false);
+    const fetchAssignments = useCallback(async () => {
+        setIsLoadingTasks(true);
+        setAssignmentError(null);
+        try {
+            if (studentSession?.studentId) {
+                await fetchStudentAssignments(studentSession.studentId);
+                const storeError = useAssignmentStore.getState().error;
+                if (storeError) throw new Error(storeError);
             }
-        };
-        fetchAssignments();
-    }, [studentSession?.studentId]);
+        } catch (error) {
+            console.error('Failed to fetch assignments:', error);
+            setAssignmentError('Chưa tải được bài giáo viên giao. Em hãy thử lại.');
+        } finally {
+            setIsLoadingTasks(false);
+        }
+    }, [fetchStudentAssignments, studentSession?.studentId]);
+
+    useEffect(() => {
+        void fetchAssignments();
+    }, [fetchAssignments]);
 
     useEffect(() => {
         if (studentSession?.username && !pet) {
@@ -390,7 +394,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     // Fetch weekly quests
     useEffect(() => {
         if (!studentSession?.username) return;
-        
+
         const fetchWeeklyQuests = async () => {
             setIsWeeklyQuestsLoading(true);
             setWeeklyQuestsError(null);
@@ -408,7 +412,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 setIsWeeklyQuestsLoading(false);
             }
         };
-        
+
         fetchWeeklyQuests();
     }, [studentSession?.username]);
 
@@ -534,6 +538,16 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     useEffect(() => {
         if (assignmentPage > totalAssignmentPages) setAssignmentPage(totalAssignmentPages);
     }, [assignmentPage, totalAssignmentPages]);
+
+    const hasReadyAssignment = useMemo(
+        () => myAssignmentQuizzes.some((quiz) => getAssignmentVisualState(quiz) === 'ready'),
+        [myAssignmentQuizzes]
+    );
+
+    const handleHeroPrimaryAction = useCallback(() => {
+        const targetId = hasReadyAssignment ? 'assigned-work' : 'practice-library';
+        document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, [hasReadyAssignment]);
 
     useEffect(() => {
         const loadAttendanceStatus = async () => {
@@ -891,31 +905,26 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     <StudentAchievementsPage />
                 ) : (
                     <>
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 rounded-[24px] md:rounded-[32px] p-5 sm:p-6 md:p-12 relative overflow-hidden shadow-lg shadow-indigo-200">
-                    <div className="absolute right-0 top-0 w-1/2 h-full opacity-10 pointer-events-none">
-                        <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                            <defs><pattern id="circles" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="4" fill="currentColor" /></pattern></defs>
-                            <rect width="100%" height="100%" fill="url(#circles)" />
-                        </svg>
-                    </div>
-                    <div className="relative z-10 max-w-2xl flex flex-col md:flex-row items-center gap-5 md:gap-8">
-                        <div className="w-20 h-20 md:w-32 md:h-32 bg-white/20 backdrop-blur-md rounded-full shadow-inner flex items-center justify-center flex-shrink-0"><img src={`${FLUENT_CDN}/Graduation%20cap/3D/graduation_cap_3d.png`} alt="Logo" className="w-16 md:w-28 filter drop-shadow-md" /></div>
-                        <div className="text-center md:text-left text-white">
-                            <h1 className="text-2xl md:text-4xl font-black mb-2">Chào ngày mới, {studentSession.fullName.split(' ').pop()}!</h1>
-                            <p className="text-indigo-100 text-sm md:text-lg font-medium mb-4 md:mb-6">Hôm nay em muốn chinh phục thử thách nào? Hãy chọn một bài tập và bắt đầu nhé!</p>
-                            <div className="flex items-center justify-center md:justify-start gap-2 md:gap-4">
-                                <div role="button" tabIndex={0} onClick={openAttendanceModal}
-                                    className={`backdrop-blur-sm rounded-2xl px-4 md:px-5 py-2.5 text-xs md:text-sm font-black flex items-center gap-2 cursor-pointer transition-all duration-200 ${attendanceClaimed
-                                        ? 'bg-gradient-to-r from-emerald-400/70 to-teal-300/70 text-white ring-2 ring-emerald-200/70'
-                                        : 'bg-gradient-to-r from-amber-300 via-yellow-300 to-lime-300 text-slate-900 animate-pulse'}`}>
-                                    <ShieldCheck className={`w-4 h-4 ${attendanceClaimed ? 'text-white' : 'text-blue-800'}`} />
-                                    <span>{attendanceBadgeText}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
+                <StudentDashboardHero
+                    firstName={studentSession.fullName.split(' ').pop() || studentSession.fullName}
+                    hasReadyAssignment={hasReadyAssignment}
+                    attendanceClaimed={attendanceClaimed}
+                    attendanceLabel={attendanceBadgeText}
+                    attendanceAvailable={attendanceClaimed || attendanceQuestionPool.length > 0}
+                    onPrimaryAction={handleHeroPrimaryAction}
+                    onAttendance={openAttendanceModal}
+                />
 
+                <AssignedWorkSection
+                    quizzes={pagedAssignmentQuizzes}
+                    isLoading={isLoadingTasks}
+                    errorMessage={assignmentError}
+                    page={assignmentPage}
+                    totalPages={totalAssignmentPages}
+                    onRetry={() => void fetchAssignments()}
+                    onPageChange={setAssignmentPage}
+                    onStartQuiz={handleStartQuiz}
+                />
                 <section className="space-y-6">
                     <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 md:p-6 self-start">
                         <button
@@ -1291,76 +1300,16 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                     </section>
                 </section>
 
-                <section>
-                    <div className="mb-6 flex items-center gap-3">
-                        <div className="rounded-xl bg-orange-100 p-2 text-orange-600">
-                            <Target className="h-6 w-6" />
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-900">Nhiệm vụ của em</h2>
-                    </div>
-                    {isLoadingTasks ? <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 text-indigo-400 animate-spin" /></div> : myAssignmentQuizzes.length > 0 ? (
-                        <div className="flex flex-col gap-4 md:gap-6">
-                            <AnimatePresence mode="popLayout">
-                                {pagedAssignmentQuizzes.map((quiz, i) => {
-                                    const assignment = quiz._assignmentData;
-                                    const isCompleted = (assignment?.attemptCount || 0) >= (assignment?.maxAttempts || 1);
-                                    const isClosed = isAssignmentClosed(assignment);
-                                    return (
-                                        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} key={quiz._assignmentData?.id || quiz.id} className={`bg-white rounded-[24px] p-4 md:p-6 border-2 flex flex-col sm:flex-row sm:items-center gap-4 md:gap-6 ${isCompleted ? 'border-emerald-100 opacity-80' : 'border-slate-100'}`}>
-                                            <div className="flex sm:flex-col justify-between items-center w-full sm:w-20 gap-3 shrink-0">
-                                                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center ${isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-indigo-50 text-blue-600'}`}><BookOpen className="w-6 h-6 md:w-7 md:h-7" /></div>
-                                                {isCompleted ? (
-                                                    <span className="rounded-lg bg-emerald-100 px-2 py-1 text-[10px] font-black uppercase text-emerald-600">Đã xong</span>
-                                                ) : isClosed ? (
-                                                    <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[10px] font-black uppercase text-slate-600">Đã đóng</span>
-                                                ) : (
-                                                    <span className="rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-black uppercase text-red-600">Bắt buộc</span>
-                                                )}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <h3 className="mb-2 line-clamp-2 text-lg font-bold text-slate-800 md:text-xl">{quiz.title}</h3>
-                                                <div className="flex items-center gap-3">
-                                                    <p className="flex items-center gap-1 text-xs font-bold text-slate-500">
-                                                        <Clock className="h-3.5 w-3.5" /> {quiz.timeLimit}'
-                                                    </p>
-                                                    <p className={`rounded-md px-2 py-0.5 text-xs font-black ${
-                                                        isCompleted
-                                                            ? 'bg-emerald-50 text-emerald-600'
-                                                            : 'bg-slate-100 text-slate-600'
-                                                    }`}>
-                                                        Lượt làm: {assignment?.attemptCount || 0}/{assignment?.maxAttempts || 1}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => !isCompleted && !isClosed && handleStartQuiz(quiz)}
-                                                disabled={isCompleted || isClosed}
-                                                className={`w-full rounded-xl px-4 py-3 font-extrabold transition-all sm:w-auto sm:min-w-[160px] md:rounded-2xl md:py-3.5 ${
-                                                    isCompleted
-                                                        ? 'bg-emerald-50 text-emerald-600'
-                                                        : isClosed
-                                                            ? 'cursor-not-allowed bg-slate-200 text-slate-500'
-                                                            : 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
-                                                }`}
-                                            >
-                                                {isCompleted ? 'Xem kết quả' : isClosed ? 'Đã đóng' : <><Play className="mr-2 inline h-4 w-4 fill-current" /> Làm bài ngay</>}
-                                            </button>
-                                        </motion.div>
-                                    );
-                                })}
-                            </AnimatePresence>
-                        </div>
-                    ) : <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center items-center flex flex-col"><img src={`${FLUENT_CDN}/Party%20popper/3D/party_popper_3d.png`} className="w-20 h-20 mb-4 opacity-80" alt="Done" /><h3 className="text-xl font-bold text-slate-700">Tuyệt vời!</h3><p className="text-slate-500 font-medium">Em đã làm hết tất cả bài tập giáo viên giao.</p></div>}
-                </section>
 
-                <StudentHomeworkSection 
-                    studentId={studentSession.studentId} 
-                    classId={studentSession.classId} 
+
+                <StudentHomeworkSection
+                    studentId={studentSession.studentId}
+                    classId={studentSession.classId}
                     onSelectAssignment={setSelectedHw}
                 />
 
 
-                <section>
+                <section id="practice-library" className="scroll-mt-24">
                     <div className="mb-6 flex items-center gap-3">
                         <div className="rounded-xl bg-teal-100 p-2 text-teal-600">
                             <Rocket className="h-6 w-6" />
@@ -1440,7 +1389,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
             </AnimatePresence>
             <AnimatePresence>
                 {selectedHw && (
-                    <HomeworkSubmissionModal 
+                    <HomeworkSubmissionModal
                         assignment={selectedHw}
                         submission={hwStore.submissions.find(s => s.assignment_id === selectedHw.id)}
                         studentId={studentSession.studentId}
@@ -1464,7 +1413,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 )}
             </AnimatePresence>
             <AvatarSelectorModal isOpen={isAvatarModalOpen} onClose={() => setIsAvatarModalOpen(false)} currentAvatar={studentSession.avatar} />
-            <BadgeGallery 
+            <BadgeGallery
                 isOpen={isBadgeGalleryOpen}
                 onClose={() => setIsBadgeGalleryOpen(false)}
                 achievements={dashboard?.achievements || []}

@@ -21,6 +21,27 @@ export interface StudentDashboardHeaderProps {
   onLogout: () => void;
 }
 
+export interface StudentDashboardHeroProps {
+  firstName: string;
+  hasReadyAssignment: boolean;
+  attendanceClaimed: boolean;
+  attendanceLabel: string;
+  attendanceAvailable: boolean;
+  onPrimaryAction: () => void;
+  onAttendance: () => void;
+}
+
+export interface AssignedWorkSectionProps {
+  quizzes: AssignedQuiz[];
+  isLoading: boolean;
+  errorMessage?: string | null;
+  page: number;
+  totalPages: number;
+  onRetry: () => void;
+  onPageChange: (page: number) => void;
+  onStartQuiz: (quiz: AssignedQuiz) => void;
+}
+
 export interface SubjectCardViewModel {
   id: string;
   title: string;
