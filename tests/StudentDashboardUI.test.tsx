@@ -2,15 +2,38 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const dashboardSource = readFileSync(
+const dashboardShellSource = readFileSync(
   resolve(process.cwd(), 'src/components/HomePage/StudentDashboardUI.tsx'),
   'utf8',
 );
+const dashboardContentSource = readFileSync(
+  resolve(process.cwd(), 'src/features/student-dashboard/components/StudentDashboardContent.tsx'),
+  'utf8',
+);
+const dashboardBodySource = readFileSync(
+  resolve(process.cwd(), 'src/features/student-dashboard/components/StudentDashboardBody.tsx'),
+  'utf8',
+);
+const dashboardSource = [
+  dashboardShellSource,
+  dashboardContentSource,
+  dashboardBodySource,
+].join('\n');
 
+const homePageSource = readFileSync(
+  resolve(process.cwd(), 'src/components/HomePage/HomePage.tsx'),
+  'utf8',
+);
 const stylesSource = readFileSync(resolve(process.cwd(), 'styles.css'), 'utf8');
 
 describe('StudentDashboardUI responsive composition', () => {
+  it('loads the authenticated student dashboard behind a lazy boundary', () => {
+    expect(homePageSource).toContain("React.lazy(() => import('./StudentDashboardUI'))");
+    expect(homePageSource).toContain('<React.Suspense');
+  });
+
   it('uses the scoped Learning Adventure shell and desktop grid', () => {
+    expect(dashboardShellSource).toContain('<StudentDashboardContent');
     expect(dashboardSource).toContain('student-dashboard');
     expect(dashboardSource).toContain('max-w-[1280px]');
     expect(dashboardSource).toContain('xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]');
