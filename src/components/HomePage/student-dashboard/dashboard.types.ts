@@ -1,4 +1,5 @@
 import type { Assignment, Quiz } from '../../../types';
+import type { GameLoopDashboard, GameLoopMission } from '../../../types/gameLoop.types';
 
 export type AssignedQuiz = Quiz & { _assignmentData?: Assignment };
 
@@ -40,6 +41,38 @@ export interface AssignedWorkSectionProps {
   onRetry: () => void;
   onPageChange: (page: number) => void;
   onStartQuiz: (quiz: AssignedQuiz) => void;
+}
+
+export interface LearningProgressPanelProps {
+  dashboard: GameLoopDashboard | null;
+  isLoading: boolean;
+  errorMessage?: string | null;
+  expanded: boolean;
+  claimingMissionId?: GameLoopMission['id'] | null;
+  onToggle: () => void;
+  onRetry: () => void;
+  onClaimMission: (missionId: GameLoopMission['id']) => void;
+}
+
+export interface WeeklyQuestViewModel {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  progress: number;
+  target: number;
+  completed: boolean;
+  claimed: boolean;
+  reward: { coins: number; exp: number; items: string[]; itemCount: number };
+}
+
+export interface WeeklyQuestsPanelProps {
+  quests: WeeklyQuestViewModel[];
+  isLoading: boolean;
+  errorMessage?: string | null;
+  claimingQuestId?: string | null;
+  onRetry: () => void;
+  onClaim: (questId: string) => void;
 }
 
 export interface SubjectCardViewModel {

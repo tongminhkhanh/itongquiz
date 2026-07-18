@@ -5,8 +5,10 @@ import {
   AssignedWorkSkeleton,
   DashboardEmptyState,
   DashboardSectionError,
+  LearningProgressPanel,
   StudentDashboardHeader,
   StudentDashboardHero,
+  WeeklyQuestsPanel,
 } from '../src/components/HomePage/student-dashboard';
 
 const renderHeader = () =>
@@ -195,5 +197,164 @@ describe('student dashboard hero and assigned work', () => {
     expect(screen.getByRole('button', { name: 'Đã đóng' })).toBeDisabled();
     expect(onStartQuiz).toHaveBeenCalledTimes(1);
     expect(onStartQuiz).toHaveBeenCalledWith(ready);
+  });
+});
+
+const gameLoopDashboard = {
+  todayDateKey: '2026-07-18',
+  wallet: { coins: 100 },
+  missions: [
+    {
+      id: 'daily_questions',
+      title: 'Làm 10 câu hỏi',
+      description: 'Hoàn thành câu hỏi hôm nay.',
+      target: 10,
+      progress: 4,
+      completed: false,
+      claimed: false,
+      rewardCoins: 20,
+      unit: 'câu',
+    },
+  ],
+  bonusChest: { available: false, claimed: false },
+  weekly: { completedDays: 2, targetDays: 5 },
+  profile: { dailyStreak: 3, hintTokens: 0, streakShields: 0, collection: [] },
+  achievements: [],
+  recentRewards: [],
+} as any;
+
+const quest = (
+  id: string,
+  overrides: Partial<{
+    progress: number;
+    target: number;
+    completed: boolean;
+    claimed: boolean;
+  }> = {},
+) => ({
+  id,
+  title: `Quest ${id}`,
+  description: 'Hoàn thành thử thách tuần.',
+  icon: '📘',
+  progress: 2,
+  target: 4,
+  completed: false,
+  claimed: false,
+  reward: { coins: 20, exp: 10, items: [], itemCount: 0 },
+  ...overrides,
+});
+
+describe('learning progress and weekly quest panels', () => {
+  it('exposes expansion state and accessible mission progress values', () => {
+    render(
+      <LearningProgressPanel
+        dashboard={gameLoopDashboard}
+        isLoading={false}
+        expanded
+        onToggle={vi.fn()}
+        onRetry={vi.fn()}
+        onClaimMission={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /Hành trình hôm nay/i })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(screen.getByRole('progressbar', { name: 'Tiến độ Làm 10 câu hỏi' })).toHaveAttribute(
+      'aria-valuenow',
+      '4',
+    );
+    expect(screen.getByRole('progressbar', { name: 'Tiến độ Làm 10 câu hỏi' })).toHaveAttribute(
+      'aria-valuemin',
+      '0',
+    );
+    expect(screen.getByRole('progressbar', { name: 'Tiến độ Làm 10 câu hỏi' })).toHaveAttribute(
+      'aria-valuemax',
+      '10',
+    );
+  });
+
+  it('keeps loading and retry feedback local to the progress panel', () => {
+    const retry = vi.fn();
+    const { rerender } = render(
+      <LearningProgressPanel
+        dashboard={null}
+        isLoading
+        expanded
+        onToggle={vi.fn()}
+        onRetry={retry}
+        onClaimMission={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('learning-progress-panel')).toContainElement(
+      screen.getByLabelText('Đang tải tiến độ học tập'),
+    );
+
+    rerender(
+      <LearningProgressPanel
+        dashboard={null}
+        isLoading={false}
+        errorMessage="Không thể tải hành trình"
+        expanded
+        onToggle={vi.fn()}
+        onRetry={retry}
+        onClaimMission={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the approved empty weekly copy', () => {
+    render(
+      <WeeklyQuestsPanel
+        quests={[]}
+        isLoading={false}
+        onRetry={vi.fn()}
+        onClaim={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('Nhiệm vụ mới sẽ sớm xuất hiện.');
+  });
+
+  it('renders all weekly claim states as text', () => {
+    render(
+      <WeeklyQuestsPanel
+        quests={[
+          quest('claiming', { completed: true }),
+          quest('claimed', { completed: true, claimed: true }),
+          quest('ready', { completed: true }),
+          quest('pending'),
+        ]}
+        isLoading={false}
+        claimingQuestId="claiming"
+        onRetry={vi.fn()}
+        onClaim={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Đang nhận...' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Đã nhận' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Nhận ngay' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Chưa xong' })).toBeDisabled();
+  });
+
+  it('animates weekly progress with scaleX instead of width', () => {
+    render(
+      <WeeklyQuestsPanel
+        quests={[quest('ready')]}
+        isLoading={false}
+        onRetry={vi.fn()}
+        onClaim={vi.fn()}
+      />,
+    );
+
+    const fill = screen.getByTestId('weekly-quest-progress-fill-ready');
+    expect(fill).toHaveStyle({ transform: 'scaleX(0.5)' });
+    expect(fill).not.toHaveStyle({ width: '50%' });
+    expect(fill.className).not.toContain('transition-all');
   });
 });

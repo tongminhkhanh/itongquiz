@@ -1,6 +1,8 @@
 export { AssignedWorkSection } from './AssignedWorkSection';
+export { LearningProgressPanel } from './LearningProgressPanel';
 export { StudentDashboardHeader } from './StudentDashboardHeader';
 export { StudentDashboardHero } from './StudentDashboardHero';
+export { WeeklyQuestsPanel } from './WeeklyQuestsPanel';
 
 export {
   AssignedWorkSkeleton,
@@ -14,9 +16,12 @@ export type {
   AssignedQuiz,
   AssignedWorkSectionProps,
   AssignmentVisualState,
+  LearningProgressPanelProps,
   StudentDashboardHeaderProps,
   StudentDashboardHeroProps,
   SubjectCardViewModel,
+  WeeklyQuestsPanelProps,
+  WeeklyQuestViewModel,
 } from './dashboard.types';
 
 export {
