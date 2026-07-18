@@ -46,6 +46,7 @@ workers/.wrangler/
 
 # AI Agent configs
 .agents/
+.agent/skills/
 .claude/
 itongquiz/
 skills-lock.json
