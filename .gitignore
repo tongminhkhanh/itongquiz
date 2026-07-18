@@ -49,6 +49,7 @@ workers/.wrangler/
 .agent/skills/
 .claude/
 itongquiz/
+llm-mux/
 skills-lock.json
 
 # wrangler files
