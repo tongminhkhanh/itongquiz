@@ -1,0 +1,45 @@
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import {
+  createRootApiWranglerToml,
+  isApiWorkersBuild,
+  prepareRootApiConfig,
+} from '../scripts/cloudflare-build-router.mjs';
+
+describe('Cloudflare build router', () => {
+  it('only selects the API build for the connected API Worker', () => {
+    expect(isApiWorkersBuild({ WORKERS_CI: '1', WRANGLER_CI_OVERRIDE_NAME: 'itongquiz-api' })).toBe(true);
+    expect(isApiWorkersBuild({ WORKERS_CI: '1', WRANGLER_CI_OVERRIDE_NAME: 'it-ong-primary-school-quiz-app' })).toBe(false);
+    expect(isApiWorkersBuild({ WRANGLER_CI_OVERRIDE_NAME: 'itongquiz-api' })).toBe(false);
+  });
+
+  it('moves the API entry point from workers-relative to repository-relative', () => {
+    const source = 'name = "itongquiz-api"\nmain = "src/index.ts"\n';
+    expect(createRootApiWranglerToml(source)).toContain('main = "workers/src/index.ts"');
+  });
+
+  it('replaces the root frontend config with the API config in an ephemeral build workspace', () => {
+    const root = mkdtempSync(join(tmpdir(), 'itongquiz-build-router-'));
+    const workersDirectory = join(root, 'workers');
+    mkdirSync(workersDirectory);
+    mkdirSync(join(root, '.wrangler', 'deploy'), { recursive: true });
+    writeFileSync(join(root, '.wrangler', 'deploy', 'config.json'), '{}', 'utf8');
+    writeFileSync(join(root, 'wrangler.jsonc'), '{"name":"frontend"}\n', 'utf8');
+    writeFileSync(
+      join(workersDirectory, 'wrangler.toml'),
+      'name = "itongquiz-api"\nmain = "src/index.ts"\n[[routes]]\npattern = "phieu.thitong.site/*"\n',
+      'utf8',
+    );
+
+    const result = prepareRootApiConfig(root);
+
+    expect(readFileSync(result.frontendBackupPath, 'utf8')).toContain('frontend');
+    expect(existsSync(join(root, '.wrangler', 'deploy'))).toBe(false);
+    const generated = readFileSync(result.rootApiConfigPath, 'utf8');
+    expect(generated).toContain('name = "itongquiz-api"');
+    expect(generated).toContain('main = "workers/src/index.ts"');
+    expect(generated).toContain('phieu.thitong.site/*');
+  });
+});
