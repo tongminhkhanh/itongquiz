@@ -4,7 +4,7 @@ import { normalizeStudentInput, validateStudentInput } from '../workers/src/rout
 describe('classroom student validation', () => {
     it('normalizes names and usernames before persistence', () => {
         expect(normalizeStudentInput({
-            fullName: '  hoc   sinh mau  ',
+            fullName: '  Hoc   Sinh Mau  ',
             username: '  AN.NVA_01 ',
             password: ' abc123 ',
             classId: ' c1 ',
