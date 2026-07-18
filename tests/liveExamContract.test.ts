@@ -8,6 +8,7 @@ vi.mock('../workers/src/middleware/jwtAuth', () => ({
   isStudent: vi.fn((user: JWTPayload) => user.role === 'student'),
 }));
 
+import { verifyJWTMiddleware } from '../workers/src/middleware/jwtAuth';
 import * as LiveExamService from '../workers/src/services/liveExamService';
 import { handleLiveExamRoutes } from '../workers/src/routes/liveExam';
 
@@ -64,6 +65,54 @@ describe('live exam public contracts', () => {
     const payload = await response.json() as { message?: string };
 
     expect(payload.message).not.toBe('Live Exam endpoint not found');
+  });
+
+  it('authenticates a chat read exactly once before session lookup', async () => {
+    currentUser = { id: 'teacher-a', username: 'teacher-a', role: 'teacher' };
+    vi.mocked(verifyJWTMiddleware).mockClear();
+    const response = await handleLiveExamRoutes(
+      new Request('https://test/api/live-exam/live-1/chat'),
+      { DB: contractDb, JWT_SECRET: 'test' } as any,
+      '/api/live-exam/live-1/chat',
+      'GET',
+    );
+
+    expect(response.status).toBe(404);
+    expect(verifyJWTMiddleware).toHaveBeenCalledTimes(1);
+  });
+
+  it('resolves a legacy student token through the username before reading chat', async () => {
+    currentUser = { username: 'student-a', role: 'student' };
+    const db = {
+      prepare: (sql: string) => ({
+        bind: () => ({
+          first: async () => {
+            if (sql.includes('SELECT id FROM students')) return { id: 'student-id' };
+            if (sql.includes('FROM live_exam_sessions s')) {
+              return {
+                id: 'live-1', title: 'Exam', quiz_id: 'quiz-1', teacher_id: 'teacher-a',
+                class_id: 'class-a', duration: 30, settings: '{}', status: 'waiting',
+                access_code: 'ABC123', created_at: '', updated_at: '', chat_enabled: 1,
+              };
+            }
+            if (sql.includes('live_exam_participants')) return { id: 'participant-a' };
+            if (sql.includes('chat_enabled')) return { chat_enabled: 1 };
+            return null;
+          },
+          all: async () => ({ results: [] }),
+        }),
+      }),
+      batch: async () => [],
+    };
+
+    const response = await handleLiveExamRoutes(
+      new Request('https://test/api/live-exam/live-1/chat'),
+      { DB: db, JWT_SECRET: 'test' } as any,
+      '/api/live-exam/live-1/chat',
+      'GET',
+    );
+
+    expect(response.status).toBe(200);
   });
 
   it('keeps the service barrel runtime API stable', () => {
