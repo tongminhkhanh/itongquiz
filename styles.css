@@ -2918,3 +2918,15 @@ canvas {
     overflow-wrap: anywhere;
     word-break: break-word;
 }
+
+/* Student Learning Adventure: respect system motion preferences without affecting other pages. */
+@media (prefers-reduced-motion: reduce) {
+  .student-dashboard *,
+  .student-dashboard *::before,
+  .student-dashboard *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

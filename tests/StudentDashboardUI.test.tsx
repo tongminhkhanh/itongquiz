@@ -1,0 +1,60 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+const dashboardSource = readFileSync(
+  resolve(process.cwd(), 'src/components/HomePage/StudentDashboardUI.tsx'),
+  'utf8',
+);
+
+const stylesSource = readFileSync(resolve(process.cwd(), 'styles.css'), 'utf8');
+
+describe('StudentDashboardUI responsive composition', () => {
+  it('uses the scoped Learning Adventure shell and desktop grid', () => {
+    expect(dashboardSource).toContain('student-dashboard');
+    expect(dashboardSource).toContain('max-w-[1280px]');
+    expect(dashboardSource).toContain('xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]');
+  });
+
+  it('keeps assigned work before all gamification in mobile DOM order', () => {
+    const assigned = dashboardSource.indexOf('<AssignedWorkSection');
+    const weekly = dashboardSource.indexOf('<WeeklyQuestsPanel');
+    const progress = dashboardSource.indexOf('<LearningProgressPanel');
+    const rewards = dashboardSource.indexOf('<RewardSidebar');
+
+    expect(assigned).toBeGreaterThan(-1);
+    expect(assigned).toBeLessThan(weekly);
+    expect(assigned).toBeLessThan(progress);
+    expect(assigned).toBeLessThan(rewards);
+  });
+
+  it('composes the expected main and sidebar regions', () => {
+    const mainColumn = dashboardSource.indexOf('data-testid="student-dashboard-main-column"');
+    const sideColumn = dashboardSource.indexOf('data-testid="student-dashboard-side-column"');
+
+    expect(mainColumn).toBeGreaterThan(-1);
+    expect(sideColumn).toBeGreaterThan(mainColumn);
+
+    for (const component of [
+      '<AssignedWorkSection',
+      '<StudentHomeworkSection',
+      '<WeeklyQuestsPanel',
+      '<SubjectPracticeGrid',
+    ]) {
+      const index = dashboardSource.indexOf(component);
+      expect(index).toBeGreaterThan(mainColumn);
+      expect(index).toBeLessThan(sideColumn);
+    }
+
+    for (const component of ['<LearningProgressPanel', '<RewardSidebar']) {
+      expect(dashboardSource.indexOf(component)).toBeGreaterThan(sideColumn);
+    }
+  });
+
+  it('scopes reduced-motion rules to the student dashboard', () => {
+    expect(stylesSource).toContain('@media (prefers-reduced-motion: reduce)');
+    expect(stylesSource).toContain('.student-dashboard *');
+    expect(stylesSource).toContain('animation-duration: 0.01ms !important');
+    expect(stylesSource).toContain('transition-duration: 0.01ms !important');
+  });
+});

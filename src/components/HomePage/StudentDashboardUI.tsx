@@ -876,7 +876,7 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
     };
 
     return (
-        <div className="min-h-dvh bg-[#F4F7FC] font-sans text-slate-800 flex flex-col items-center">
+        <div className="student-dashboard min-h-dvh bg-[#F4F7FC] font-sans text-slate-800 flex flex-col items-center">
             <CurrentAnnouncementBanner role="student" />
             <StudentDashboardHeader
                 studentName={studentSession.fullName}
@@ -895,79 +895,84 @@ const StudentDashboardUI: React.FC<StudentDashboardUIProps> = ({ ioeQuizzes = []
                 onLogout={handleLogout}
             />
 
-            <main className="w-full max-w-7xl mx-auto px-3 md:px-8 py-5 md:py-12 flex-1 flex flex-col gap-7 md:gap-10">
+            <main className="w-full max-w-[1280px] mx-auto px-3 py-5 md:px-8 md:py-10 flex-1">
                 {activeSection === 'achievements' ? (
                     <StudentAchievementsPage />
                 ) : (
-                    <>
-                <StudentDashboardHero
-                    firstName={studentSession.fullName.split(' ').pop() || studentSession.fullName}
-                    hasReadyAssignment={hasReadyAssignment}
-                    attendanceClaimed={attendanceClaimed}
-                    attendanceLabel={attendanceBadgeText}
-                    attendanceAvailable={attendanceClaimed || attendanceQuestionPool.length > 0}
-                    onPrimaryAction={handleHeroPrimaryAction}
-                    onAttendance={openAttendanceModal}
-                />
-
-                <AssignedWorkSection
-                    quizzes={pagedAssignmentQuizzes}
-                    isLoading={isLoadingTasks}
-                    errorMessage={assignmentError}
-                    page={assignmentPage}
-                    totalPages={totalAssignmentPages}
-                    onRetry={() => void fetchAssignments()}
-                    onPageChange={setAssignmentPage}
-                    onStartQuiz={handleStartQuiz}
-                />
-                <section className="space-y-6">
-                    <LearningProgressPanel
-                        dashboard={dashboard}
-                        isLoading={isGameLoopLoading}
-                        errorMessage={gameLoopError}
-                        expanded={isJourneyExpanded}
-                        claimingMissionId={claimingMissionId}
-                        onToggle={() => setIsJourneyExpanded((current) => !current)}
-                        onRetry={() => {
-                            if (studentSession.username) void loadDashboard(studentSession.username);
-                        }}
-                        onClaimMission={handleClaimMission}
-                    />
-                    <section className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-6 items-start">
-                        <WeeklyQuestsPanel
-                            quests={weeklyQuests}
-                            isLoading={isWeeklyQuestsLoading}
-                            errorMessage={weeklyQuestsError}
-                            claimingQuestId={isClaimingWeeklyQuest}
-                            onRetry={() => void fetchWeeklyQuests()}
-                            onClaim={handleClaimWeeklyQuest}
+                    <div className="flex flex-col gap-7 md:gap-10">
+                        <StudentDashboardHero
+                            firstName={studentSession.fullName.split(' ').pop() || studentSession.fullName}
+                            hasReadyAssignment={hasReadyAssignment}
+                            attendanceClaimed={attendanceClaimed}
+                            attendanceLabel={attendanceBadgeText}
+                            attendanceAvailable={attendanceClaimed || attendanceQuestionPool.length > 0}
+                            onPrimaryAction={handleHeroPrimaryAction}
+                            onAttendance={openAttendanceModal}
                         />
-                        <RewardSidebar
-                            dashboard={dashboard}
-                            giftShopEnabled={giftShopEnabled}
-                            isProcessing={isGameLoopLoading}
-                            onOpenChest={handleClaimChest}
-                            onOpenGiftShop={handleOpenGiftShop}
-                            onOpenBadges={() => setIsBadgeGalleryOpen(true)}
-                        />
-                    </section>
-                </section>
 
+                        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)] xl:items-start">
+                            <div data-testid="student-dashboard-main-column" className="min-w-0 space-y-8">
+                                <AssignedWorkSection
+                                    quizzes={pagedAssignmentQuizzes}
+                                    isLoading={isLoadingTasks}
+                                    errorMessage={assignmentError}
+                                    page={assignmentPage}
+                                    totalPages={totalAssignmentPages}
+                                    onRetry={() => void fetchAssignments()}
+                                    onPageChange={setAssignmentPage}
+                                    onStartQuiz={handleStartQuiz}
+                                />
 
+                                <StudentHomeworkSection
+                                    studentId={studentSession.studentId}
+                                    classId={studentSession.classId}
+                                    onSelectAssignment={setSelectedHw}
+                                />
 
-                <StudentHomeworkSection
-                    studentId={studentSession.studentId}
-                    classId={studentSession.classId}
-                    onSelectAssignment={setSelectedHw}
-                />
+                                <WeeklyQuestsPanel
+                                    quests={weeklyQuests}
+                                    isLoading={isWeeklyQuestsLoading}
+                                    errorMessage={weeklyQuestsError}
+                                    claimingQuestId={isClaimingWeeklyQuest}
+                                    onRetry={() => void fetchWeeklyQuests()}
+                                    onClaim={handleClaimWeeklyQuest}
+                                />
 
+                                <SubjectPracticeGrid
+                                    subjects={publicCategories}
+                                    onSelectSubject={setSelectedSubject}
+                                />
+                            </div>
 
-                <SubjectPracticeGrid
-                    subjects={publicCategories}
-                    onSelectSubject={setSelectedSubject}
-                />
-                <div className="pb-12 text-center hidden md:block"><p className="text-slate-400 font-medium text-sm">ÍtOngQuiz © 2026 - Môi trường học tập tích cực</p></div>
-                    </>
+                            <aside data-testid="student-dashboard-side-column" className="min-w-0 space-y-6 xl:sticky xl:top-24">
+                                <LearningProgressPanel
+                                    dashboard={dashboard}
+                                    isLoading={isGameLoopLoading}
+                                    errorMessage={gameLoopError}
+                                    expanded={isJourneyExpanded}
+                                    claimingMissionId={claimingMissionId}
+                                    onToggle={() => setIsJourneyExpanded((current) => !current)}
+                                    onRetry={() => {
+                                        if (studentSession.username) void loadDashboard(studentSession.username);
+                                    }}
+                                    onClaimMission={handleClaimMission}
+                                />
+
+                                <RewardSidebar
+                                    dashboard={dashboard}
+                                    giftShopEnabled={giftShopEnabled}
+                                    isProcessing={isGameLoopLoading}
+                                    onOpenChest={handleClaimChest}
+                                    onOpenGiftShop={handleOpenGiftShop}
+                                    onOpenBadges={() => setIsBadgeGalleryOpen(true)}
+                                />
+                            </aside>
+                        </div>
+
+                        <div className="hidden pb-12 text-center md:block">
+                            <p className="text-sm font-medium text-slate-400">ÍtOngQuiz © 2026 - Môi trường học tập tích cực</p>
+                        </div>
+                    </div>
                 )}
             </main>
 

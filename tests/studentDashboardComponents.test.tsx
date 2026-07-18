@@ -13,8 +13,22 @@ import {
   WeeklyQuestsPanel,
 } from '../src/components/HomePage/student-dashboard';
 import { BadgeGallery } from '../src/components/gamification/BadgeGallery';
+import AvatarSelectorModal from '../src/components/common/AvatarSelectorModal';
 import { StudentHomeworkCard } from '../src/features/homework/components/StudentHomeworkCard';
 import { StudentHomeworkSection } from '../src/features/homework/components/StudentHomeworkSection';
+
+const classroomModalStoreMock = vi.hoisted(() => ({
+  studentSession: {
+    studentId: 'student-1',
+    username: 'student-one',
+  },
+  updateAvatar: vi.fn(async () => true),
+}));
+
+vi.mock('../src/stores/useClassroomStore', () => ({
+  useClassroomStore: (selector?: (state: typeof classroomModalStoreMock) => unknown) =>
+    selector ? selector(classroomModalStoreMock) : classroomModalStoreMock,
+}));
 
 const homeworkStoreMock = vi.hoisted(() => ({
   assignments: [] as any[],
@@ -561,5 +575,26 @@ describe('semantic practice and homework cards', () => {
       expect(homeworkStoreMock.fetchClassAssignments).toHaveBeenCalledWith('class-1');
       expect(homeworkStoreMock.fetchStudentSubmissions).toHaveBeenCalledWith('student-1');
     });
+  });
+});
+describe('avatar selector modal accessibility', () => {
+  it('uses dialog semantics, an accessible close button, and closes on Escape', () => {
+    const onClose = vi.fn();
+    render(
+      <AvatarSelectorModal
+        isOpen
+        onClose={onClose}
+        currentAvatar="girl_01"
+      />,
+    );
+
+    expect(screen.getByRole('dialog', { name: 'Chọn Avatar của em!' })).toHaveAttribute(
+      'aria-modal',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Đóng hộp chọn avatar' })).toBeVisible();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
