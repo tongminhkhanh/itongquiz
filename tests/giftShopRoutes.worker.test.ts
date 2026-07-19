@@ -107,6 +107,11 @@ beforeEach(() => {
 });
 
 describe('Gift Shop worker route contracts', () => {
+    it('preserves the legacy route import through a one-line compatibility barrel', async () => {
+        const source = await import('../workers/src/routes/giftShop?raw');
+        expect(source.default.trim()).toBe("export { handleGiftShopRoutes } from './gift-shop';");
+    });
+
     it('seeds an empty catalog and maps active catalog rows without authentication', async () => {
         const db = new FakeDatabase(
             (sql) => sql.includes('SELECT COUNT(*) AS cnt') ? { cnt: 0 } : null,
