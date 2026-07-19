@@ -1,14 +1,26 @@
-const token = '9a_jRmmFwdeEUaa02deoRPssICuyYtper26INxlmAiQ.9_Zt3vARSf5H07LNTHZiW6Pgb5BSrjXejXVHeEEvjWU';
-const accountId = 'ed9d66ab88b8acb297031b4d22520c92';
+const token = process.env.CLOUDFLARE_API_TOKEN;
+const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+
+if (!token || !accountId) {
+    throw new Error('Set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID before running this script.');
+}
 
 fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/subdomain`, {
     method: 'PUT',
     headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ subdomain: 'itongquiz-master' })
+    body: JSON.stringify({ subdomain: 'itongquiz-master' }),
 })
-    .then(res => res.json())
-    .then(data => console.log(JSON.stringify(data, null, 2)))
-    .catch(err => console.error(err));
+    .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(`Cloudflare subdomain update failed with status ${response.status}.`);
+        }
+        process.stdout.write('Cloudflare Workers subdomain updated successfully.\n');
+    })
+    .catch((error) => {
+        console.error(error instanceof Error ? error.message : error);
+        process.exitCode = 1;
+    });

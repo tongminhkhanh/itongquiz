@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Quiz, StudentResult } from '../src/types';
 import { callApi } from '../src/services/apiAdapter';
-import { prepareQuizForSave } from '../src/services/googleSheetService';
+import { serializeQuizForSave } from '../src/domain/quiz/quizSerializer';
 import { cacheService } from '../src/services/CacheService';
 import { filterActiveQuizzes, isArchivedQuizCategory } from '../src/domain/quiz/quizCategoryPolicy';
 
@@ -381,7 +381,7 @@ export const useQuizStore = create<QuizState>()(
                 }
                 set({ isLoading: true, error: null });
                 try {
-                    const prepared = prepareQuizForSave(quiz);
+                    const prepared = serializeQuizForSave(quiz);
                     const result = await callApi('create_quiz', prepared);
                     if (result && result.status === 'success') {
                         cacheService.invalidatePrefix('quizzes:');
@@ -404,7 +404,7 @@ export const useQuizStore = create<QuizState>()(
                 }
                 set({ isLoading: true, error: null });
                 try {
-                    const prepared = prepareQuizForSave(quiz);
+                    const prepared = serializeQuizForSave(quiz);
                     const result = await callApi('update_quiz', { ...prepared, id: quiz.id });
                     if (result && result.status === 'success') {
                         cacheService.invalidatePrefix('quizzes:');

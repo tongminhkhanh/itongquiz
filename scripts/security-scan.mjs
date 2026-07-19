@@ -59,6 +59,23 @@ for (const rawFile of tracked) {
     ['credential-in-url', /https?:\/\/[^\s/@:]+:[^\s/@]+@[^\s/]+/g],
   ];
 
+  const isTestOrFixture = /(?:^|\/)(?:tests?|__tests__|fixtures)(?:\/|$)/.test(file)
+    || /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file);
+  const labeledCredential = isTestOrFixture
+    ? /$a/g
+    : /\b(?:api[_ -]?(?:key|secret)|secret|token)\b[^\r\nA-Za-z0-9]{0,12}([A-Za-z0-9_.-]{24,})/gi;
+  for (const match of text.matchAll(labeledCredential)) {
+    const value = match[1].trim();
+    if (/^(?:example|placeholder|changeme|your_|test|dummy|redacted|<|\$\{|process\.env)/i.test(value)) continue;
+    report(file, lineNumber(text, match.index ?? 0), 'labeled-credential-literal', 'Credential-like literal follows a secret/token/key label. Value hidden.');
+  }
+
+  if (/\.(?:md|txt)$/i.test(file) && /(?:deployment|guide|checklist)/i.test(name)) {
+    for (const match of text.matchAll(/^\s*#?\s*[A-Fa-f0-9]{60,80}\s*$/gm)) {
+      report(file, lineNumber(text, match.index ?? 0), 'long-hex-credential-literal', 'Long hexadecimal credential-like literal in deployment documentation. Value hidden.');
+    }
+  }
+
   for (const [rule, pattern] of patterns) {
     for (const match of text.matchAll(pattern)) {
       report(file, lineNumber(text, match.index ?? 0), rule, 'High-confidence secret literal. Value hidden.');
@@ -79,11 +96,13 @@ for (const rawFile of tracked) {
     && !/(?:^|\/)(?:tests?|__tests__|fixtures)(?:\/|$)/.test(file)
     && !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file);
   if (isExecutableSource) {
-    const assignment = /\b(email|username|user|pass|password|passwd|pwd)\s*=\s*(['"])([^'"\r\n]{4,})\2/gi;
+    const assignment = /(?:^|[^\w])\$?(email|username|user|pass|password|passwd|pwd|api[_-]?key|api[_-]?secret|secret|token)\s*=\s*(['"])([^'"\r\n]{4,})\2/gim;
     for (const match of text.matchAll(assignment)) {
+      const field = match[1];
       const value = match[3].trim();
-      if (/^(?:example|placeholder|changeme|your_|test|dummy|<|\$\{|process\.env)/i.test(value)) continue;
-      report(file, lineNumber(text, match.index ?? 0), 'hardcoded-credential', `Hardcoded ${match[1]} literal. Value hidden.`);
+      if (/^(?:example|placeholder|changeme|your_|test|dummy|redacted|<|\$\{|process\.env|env:)/i.test(value)) continue;
+      if (/^(?:api[_-]?(?:key|secret)|secret|token)$/i.test(field) && value.length < 20) continue;
+      report(file, lineNumber(text, match.index ?? 0), 'hardcoded-credential', `Hardcoded ${field} literal. Value hidden.`);
     }
   }
 

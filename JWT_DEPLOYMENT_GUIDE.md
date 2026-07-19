@@ -32,7 +32,7 @@ This guide covers the deployment of JWT authentication for iTongQuiz, which fixe
 openssl rand -hex 32
 
 # Example output:
-# 4f8a3b2c1d9e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b
+# Store the generated value in the password manager; do not paste it into documentation.
 ```
 
 ### 2. Set JWT Secret in Cloudflare Workers
@@ -42,7 +42,7 @@ cd workers
 
 # Set JWT_SECRET (use the generated secret from step 1)
 wrangler secret put JWT_SECRET
-# When prompted, paste the secret: 4f8a3b2c1d9e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b
+# When prompted, paste the generated secret from the password manager. Never commit it.
 ```
 
 ### 3. Install Dependencies

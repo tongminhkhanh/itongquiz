@@ -1,7 +1,14 @@
 # Upload avatars to Cloudinary
-$cloudName = "dwv7hot9x"
-$apiKey = "481519793223636"
-$apiSecret = "UBU2BJPKOSIh9RcUE3UjotKtt-o"
+$cloudName = $env:CLOUDINARY_CLOUD_NAME
+$apiKey = $env:CLOUDINARY_API_KEY
+$apiSecret = $env:CLOUDINARY_API_SECRET
+$missingVariables = @()
+if ([string]::IsNullOrWhiteSpace($cloudName)) { $missingVariables += 'CLOUDINARY_CLOUD_NAME' }
+if ([string]::IsNullOrWhiteSpace($apiKey)) { $missingVariables += 'CLOUDINARY_API_KEY' }
+if ([string]::IsNullOrWhiteSpace($apiSecret)) { $missingVariables += 'CLOUDINARY_API_SECRET' }
+if ($missingVariables.Count -gt 0) {
+    throw "Missing required environment variables: $($missingVariables -join ', ')"
+}
 $uploadUrl = "https://api.cloudinary.com/v1_1/$cloudName/image/upload"
 
 $avatarDir = "$env:USERPROFILE\.gemini\antigravity\brain\630d20b7-09e2-40de-a3e8-eda04f7d0eb3"
