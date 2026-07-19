@@ -27,6 +27,7 @@ import {
   handleGetTemplates,
   handleMarkNotificationRead,
   handleRenderCertificatePreview,
+  handleRetryBatch,
   handleUploadTemplate,
   markNotificationRead,
   preview,
@@ -403,6 +404,8 @@ describe('certificate worker authorization and integrity', () => {
     expect(getMyCertificates).toBe(handleGetMyCertificates);
     expect(getNotifications).toBe(handleGetNotifications);
     expect(markNotificationRead).toBe(handleMarkNotificationRead);
+    expect(typeof handleRetryBatch).toBe('function');
+    expect(typeof handleCertificateRoutes).toBe('function');
   });
 
   it('preserves every certificate dispatcher route and method boundary', async () => {
