@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TeacherDashboard from '../src/components/TeacherDashboard';
+import TeacherDashboardModule from '../src/components/TeacherDashboard/teacher-dashboard-shell';
 import { ApiError } from '../src/services/api/errors';
 import { useAuthStore } from '../stores/authStore';
 import { useQuizStore } from '../stores/quizStore';
@@ -166,6 +167,10 @@ const resetStores = () => {
 };
 
 describe('TeacherDashboard shell contracts', () => {
+  it('keeps the dashboard compatibility export stable', () => {
+    expect(TeacherDashboard).toBe(TeacherDashboardModule);
+  });
+
   beforeEach(() => {
     resetStores();
     mocks.navigate.mockReset();

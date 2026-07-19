@@ -36,7 +36,7 @@ describe('system management UI safety', () => {
     });
 
     it('logs out a stale teacher session when the account profile returns 401', async () => {
-        const source = await import('../src/components/TeacherDashboard/index?raw');
+        const source = await import('../src/components/TeacherDashboard/teacher-dashboard-shell/useTeacherAccountGate?raw');
         expect(source.default).toContain('error instanceof ApiError && error.status === 401');
         expect(source.default).toContain('authStore.logout()');
         expect(source.default).toContain("navigate('/', { replace: true })");
