@@ -9,7 +9,7 @@
 ### 1. JWT Secret Generated
 - [x] Generated 64-character hex secret
 - [x] Saved to `workers/.jwt-secret.txt`
-- **Secret:** `a7f3e9d2c8b4f1a6e5d9c3b7f2a8e4d1c9f6b3a7e2d8f4c1b9a6e3d7f5c2b8a4e1`
+- **Secret:** generated at deployment time and stored only in the password manager / Cloudflare secret store.
 
 ### 2. Dependencies
 - [ ] Run `npm install` in workers directory
