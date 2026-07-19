@@ -86,6 +86,7 @@ describe('phieu route contracts', () => {
 
   it('keeps all public route and mutation exports available', () => {
     expect(typeof handlePhieuRoutes).toBe('function');
+    expect(handlePhieuRoutes.length).toBe(4);
     expect(typeof handlePhieuSubdomain).toBe('function');
     expect(typeof handlePublicPhieuApi).toBe('function');
     expect(typeof handleUpsertPhieu).toBe('function');
