@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Play } from 'lucide-react';
 
 interface TopicCardProps {
@@ -18,11 +17,8 @@ const TopicCard: React.FC<TopicCardProps> = ({ topic, count, isStarting, onClick
   const formattedTopic = formatTopic(topic);
 
   return (
-    <motion.button
+    <button
       type="button"
-      whileHover={isStarting ? undefined : { y: -2 }}
-      whileTap={isStarting ? undefined : { scale: 0.99 }}
-      transition={{ duration: 0.2 }}
       onClick={() => onClick(topic)}
       disabled={isStarting}
       aria-busy={isStarting}
@@ -37,7 +33,7 @@ const TopicCard: React.FC<TopicCardProps> = ({ topic, count, isStarting, onClick
         {isStarting ? 'Đang chuẩn bị...' : 'Luyện 10 câu'}
         {!isStarting ? <Play className="h-4 w-4" aria-hidden="true" /> : null}
       </span>
-    </motion.button>
+    </button>
   );
 };
 
