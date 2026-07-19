@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AssignmentTab from '../src/components/TeacherDashboard/AssignmentTab';
+import AssignmentTabModule from '../src/components/TeacherDashboard/assignment-tab';
 import { useAuthStore } from '../stores/authStore';
 import { useQuizStore } from '../stores/quizStore';
 import { useAssignmentStore } from '../src/stores/useAssignmentStore';
@@ -93,6 +94,10 @@ const resetStores = (options: { isAdmin?: boolean; classError?: string | null; a
 };
 
 describe('AssignmentTab shell contracts', () => {
+  it('keeps the dashboard compatibility export stable', () => {
+    expect(AssignmentTab).toBe(AssignmentTabModule);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     resetStores();
