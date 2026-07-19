@@ -482,8 +482,8 @@ const homeworkAssignment = {
 const practiceSubjects = [
   {
     id: 'toan',
-    title: 'To?n h?c',
-    description: 'R?n luy?n t? duy v? t?nh to?n',
+    title: 'Toán học',
+    description: 'Rèn luyện tư duy và tính toán',
     icon: 'calculator',
     topicCount: 8,
     questionCount: 126,
@@ -493,8 +493,8 @@ const practiceSubjects = [
   },
   {
     id: 'tieng-viet',
-    title: 'Ti?ng Vi?t',
-    description: 'Vun ??p ng?n ng? ti?ng m? ??',
+    title: 'Tiếng Việt',
+    description: 'Vun đắp ngôn ngữ tiếng mẹ đẻ',
     icon: 'book-open',
     topicCount: 4,
     questionCount: 62,
@@ -507,8 +507,8 @@ const practiceSubjects = [
 const comingSoonSubjects = [
   {
     id: 'tieng-anh',
-    title: 'Ti?ng Anh',
-    description: 'M? r?ng giao ti?p qu?c t?',
+    title: 'Tiếng Anh',
+    description: 'Mở rộng giao tiếp quốc tế',
     icon: 'languages',
     topicCount: 0,
     questionCount: 0,
@@ -537,10 +537,10 @@ describe('semantic practice and homework cards', () => {
     expect(grid.className).toContain('sm:grid-cols-2');
     expect(grid.className).toContain('lg:grid-cols-3');
     expect(grid.className).not.toContain('2xl:grid-cols-4');
-    expect(screen.getByText('8 chuy?n ?? ? 126 c?u h?i')).toBeVisible();
+    expect(screen.getByText('8 chuyên đề · 126 câu hỏi')).toBeVisible();
     expect(screen.queryByText('calculate')).not.toBeInTheDocument();
 
-    const mathButton = screen.getByRole('button', { name: /To?n h?c/i });
+    const mathButton = screen.getByRole('button', { name: /Toán học/i });
     expect(mathButton).toHaveAttribute('type', 'button');
     fireEvent.click(mathButton);
     expect(onSelectSubject).toHaveBeenCalledWith('toan');
@@ -549,8 +549,8 @@ describe('semantic practice and homework cards', () => {
   it('renders coming-soon subjects as non-actionable items', () => {
     render(<SubjectPracticeGrid {...practiceGridProps} />);
 
-    expect(screen.getByText('?ang chu?n b?')).toBeVisible();
-    expect(screen.queryByRole('button', { name: /Ti?ng Anh/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Đang chuẩn bị')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /Tiếng Anh/i })).not.toBeInTheDocument();
   });
 
   it('keeps loading, retry, and empty feedback local to the practice section', () => {
@@ -559,17 +559,17 @@ describe('semantic practice and homework cards', () => {
       <SubjectPracticeGrid {...practiceGridProps} isLoading onRetry={retry} />,
     );
     expect(screen.getAllByTestId('practice-card-skeleton')).toHaveLength(3);
-    expect(screen.getByLabelText('?ang t?i th? vi?n luy?n t?p')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByLabelText('Đang tải thư viện luyện tập')).toHaveAttribute('aria-busy', 'true');
 
     rerender(
       <SubjectPracticeGrid
         {...practiceGridProps}
         isLoading={false}
-        errorMessage="Ch?a t?i ???c th? vi?n luy?n t?p."
+        errorMessage="Chưa tải được thư viện luyện tập."
         onRetry={retry}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Th? l?i' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
     expect(retry).toHaveBeenCalledTimes(1);
 
     rerender(
@@ -580,7 +580,7 @@ describe('semantic practice and homework cards', () => {
       />,
     );
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Hi?n ch?a c? m?n luy?n t?p n?o d?nh cho em.',
+      'Hiện chưa có môn luyện tập nào dành cho em.',
     );
   });
 
