@@ -10,9 +10,9 @@ import {
 describe('student dashboard assignment model', () => {
   it('keeps ready work before completed work and sorts ready work by deadline', () => {
     const assignments = [
-      { id: 'completed-assignment', quizId: 'completed', quizTitle: '?? ho?n th?nh', attemptCount: 1, maxAttempts: 1, deadline: '2026-07-20T00:00:00.000Z', createdAt: '2026-07-18T00:00:00.000Z' },
-      { id: 'later-assignment', quizId: 'later', quizTitle: 'N?p sau', attemptCount: 0, maxAttempts: 1, deadline: '2026-07-22T00:00:00.000Z', createdAt: '2026-07-18T00:00:00.000Z' },
-      { id: 'earlier-assignment', quizId: 'earlier', quizTitle: 'N?p tr??c', attemptCount: 0, maxAttempts: 1, deadline: '2026-07-19T00:00:00.000Z', createdAt: '2026-07-18T00:00:00.000Z' },
+      { id: 'completed-assignment', quizId: 'completed', quizTitle: 'Đã hoàn thành', attemptCount: 1, maxAttempts: 1, deadline: '2026-07-20T00:00:00.000Z', createdAt: '2026-07-18T00:00:00.000Z' },
+      { id: 'later-assignment', quizId: 'later', quizTitle: 'Nộp sau', attemptCount: 0, maxAttempts: 1, deadline: '2026-07-22T00:00:00.000Z', createdAt: '2026-07-18T00:00:00.000Z' },
+      { id: 'earlier-assignment', quizId: 'earlier', quizTitle: 'Nộp trước', attemptCount: 0, maxAttempts: 1, deadline: '2026-07-19T00:00:00.000Z', createdAt: '2026-07-18T00:00:00.000Z' },
     ] as any;
 
     const result = buildAssignedQuizzes(assignments, []);
@@ -54,12 +54,12 @@ describe('student dashboard practice model', () => {
 describe('student dashboard attendance model', () => {
   it('prefers math and Vietnamese MCQ questions and normalizes answer labels', () => {
     const pool = buildAttendanceQuestionPool([
-      { id: 'science', title: 'Khoa h?c', category: 'tu-nhien-xa-hoi', questions: [{ id: 's1', type: 'MCQ', question: 'Science?', options: ['A. One', 'B. Two'], correctAnswer: 'A' }] },
-      { id: 'math', title: 'To?n', category: 'toan', questions: [{ id: 'm1', type: 'MCQ', question: '1 + 1?', options: ['A. 1', 'B. 2'], correctAnswer: '2' }] },
+      { id: 'science', title: 'Khoa học', category: 'tu-nhien-xa-hoi', questions: [{ id: 's1', type: 'MCQ', question: 'Science?', options: ['A. One', 'B. Two'], correctAnswer: 'A' }] },
+      { id: 'math', title: 'Toán', category: 'toan', questions: [{ id: 'm1', type: 'MCQ', question: '1 + 1?', options: ['A. 1', 'B. 2'], correctAnswer: '2' }] },
     ] as any);
 
     expect(pool).toHaveLength(1);
-    expect(pool[0]).toMatchObject({ id: 'math-m1', quizTitle: 'To?n', correctLabel: 'B' });
+    expect(pool[0]).toMatchObject({ id: 'math-m1', quizTitle: 'Toán', correctLabel: 'B' });
     expect(getAttendanceMultiplier(3)).toBe(2);
     expect(getAttendanceMultiplier(5)).toBe(3);
     expect(getAttendanceMultiplier(7)).toBe(5);
