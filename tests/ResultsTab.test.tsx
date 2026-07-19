@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ResultsTab from '../src/components/TeacherDashboard/ResultsTab';
+import ResultsTabModule from '../src/components/TeacherDashboard/results-tab';
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -134,6 +135,10 @@ const results = [
 ] as any;
 
 describe('TeacherDashboard ResultsTab contracts', () => {
+  it('keeps the dashboard compatibility export stable', () => {
+    expect(ResultsTab).toBe(ResultsTabModule);
+  });
+
   beforeEach(() => {
     mocks.navigate.mockReset();
     mocks.fetchResultAnswers.mockReset().mockResolvedValue({});
