@@ -179,6 +179,11 @@ describe('QuizPreview contracts', () => {
         vi.clearAllMocks();
     });
 
+    it('keeps the legacy QuizPreview import path as a compatibility barrel', async () => {
+        const source = await import('../src/components/TeacherDashboard/QuizPreview?raw');
+        expect(source.default.trim()).toBe("export { default } from './quiz-preview';");
+    });
+
     it('shows the empty/manual-start state when no quiz exists', () => {
         const onStartManual = vi.fn();
         render(<QuizPreview quiz={null} onSave={vi.fn()} onStartManual={onStartManual} />);
