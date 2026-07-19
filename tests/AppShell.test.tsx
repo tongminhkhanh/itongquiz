@@ -207,4 +207,9 @@ describe('App shell routing contracts', () => {
 
         expect(await screen.findByText('chatbot')).toBeInTheDocument();
     });
+
+    it('keeps the legacy App import path as a one-line compatibility barrel', async () => {
+        const source = await import('../App?raw');
+        expect(source.default.trim()).toBe("export { default } from './src/app';");
+    });
 });
