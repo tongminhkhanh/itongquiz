@@ -90,6 +90,8 @@ describe('practice topic cards', () => {
       name: /Phep nhan.*32 câu có sẵn.*Luyện 10 câu/i,
     });
     expect(button).toHaveAttribute('type', 'button');
+    expect(button.className).toContain('motion-reduce:transition-none');
+    expect(button).not.toHaveAttribute('style');
     expect(button).not.toBeDisabled();
   });
 
