@@ -146,6 +146,11 @@ describe('giftShopService API contracts', () => {
 
         await expect(giftShopService.getCatalog()).resolves.toEqual([]);
     });
+
+    it('keeps the legacy service path as a compatibility barrel', async () => {
+        const source = await import('../src/services/giftShop.service?raw');
+        expect(source.default.trim()).toBe("export * from './gift-shop';");
+    });
 });
 
 describe('giftShopService mock catalog and query contracts', () => {
