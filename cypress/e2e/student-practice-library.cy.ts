@@ -66,7 +66,16 @@ describe('Authenticated student practice library flow', () => {
     loadStudentCredentials();
   });
 
-  it('keeps a canonical subject route across reload and browser Back', () => {
+  it('returns to the dashboard with browser Back from a canonical subject route', () => {
+    loginAsStudent();
+    openFirstAvailableSubject();
+
+    cy.go('back');
+    cy.location('pathname').should('equal', '/');
+    cy.get('#practice-library').should('be.visible');
+  });
+
+  it('keeps a canonical direct subject route across reload', () => {
     loginAsStudent();
     openFirstAvailableSubject();
 
@@ -75,14 +84,12 @@ describe('Authenticated student practice library flow', () => {
       cy.reload();
       cy.location('pathname').should('equal', subjectPath);
       cy.get('h1').should('be.visible');
+
+      cy.visit('/');
       cy.visit(subjectPath);
       cy.location('pathname').should('equal', subjectPath);
       cy.get('h1').should('be.visible');
     });
-
-    cy.go('back');
-    cy.location('pathname').should('equal', '/');
-    cy.get('#practice-library').should('be.visible');
   });
 
   it('filters topics and distinguishes a search-empty state', () => {
