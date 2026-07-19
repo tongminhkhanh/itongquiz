@@ -118,7 +118,7 @@ describe('practice subject library page', () => {
     const { onBack } = renderSubjectLibrary();
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Toán học' })).toBeVisible();
-    expect(screen.getByText('2 chuyên đề · 50 câu hỏi')).toBeVisible();
+    expect(await screen.findByText('2 chuyên đề · 50 câu hỏi')).toBeVisible();
     expect(screen.queryByText('calculate')).not.toBeInTheDocument();
 
     const backButton = screen.getByRole('button', { name: 'Trở về thư viện' });
@@ -153,12 +153,11 @@ describe('practice subject library page', () => {
   });
 
   it('distinguishes an empty subject from an empty search result', async () => {
-    const { rerender } = renderSubjectLibrary({ topics: [] });
+    const firstRender = renderSubjectLibrary({ topics: [] });
     expect(await screen.findByText('Môn này đang được chuẩn bị.')).toBeVisible();
+    firstRender.unmount();
 
-    libraryMocks.getTopics.mockResolvedValueOnce(defaultTopics);
-    rerender(<SubjectLibrary subjectId="toan" isValidSubject onBack={vi.fn()} />);
-
+    renderSubjectLibrary();
     const search = await screen.findByRole('searchbox', { name: 'Tìm chuyên đề' });
     fireEvent.change(search, { target: { value: 'không tồn tại' } });
     expect(screen.getByText('Không tìm thấy chuyên đề phù hợp.')).toBeVisible();
