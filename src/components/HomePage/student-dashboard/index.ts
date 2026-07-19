@@ -1,4 +1,4 @@
-export { AssignedWorkSection } from './AssignedWorkSection';
+﻿export { AssignedWorkSection } from './AssignedWorkSection';
 export { LearningProgressPanel } from './LearningProgressPanel';
 export { RewardSidebar } from './RewardSidebar';
 export { StudentDashboardHeader } from './StudentDashboardHeader';
@@ -19,6 +19,10 @@ export type {
   AssignedWorkSectionProps,
   AssignmentVisualState,
   LearningProgressPanelProps,
+  PracticeSubjectDefinition,
+  PracticeSubjectIcon,
+  PracticeSubjectId,
+  PracticeTopicSummary,
   RewardSidebarProps,
   StudentDashboardHeaderProps,
   StudentDashboardHeroProps,
@@ -34,3 +38,4 @@ export {
   getMissionProgressPercent,
   getWeeklyProgressPercent,
 } from './dashboard.utils';
+
