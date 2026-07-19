@@ -9,12 +9,29 @@ vi.mock('../workers/src/middleware/jwtAuth', () => ({
 }));
 
 import {
+  createBatch,
+  getBatchDetail,
+  getBatches,
+  getCertificateImage,
+  getMyCertificates,
+  getNotifications,
+  getTemplates,
   handleCertificatePreview,
+  handleCertificateRoutes,
   handleCreateBatch,
+  handleGetBatchDetail,
+  handleGetBatches,
   handleGetCertificateImage,
+  handleGetMyCertificates,
   handleGetNotifications,
+  handleGetTemplates,
   handleMarkNotificationRead,
   handleRenderCertificatePreview,
+  handleRetryBatch,
+  handleUploadTemplate,
+  markNotificationRead,
+  preview,
+  uploadTemplate,
 } from '../workers/src/routes/certificates';
 
 class FakeStatement {
@@ -375,4 +392,59 @@ describe('certificate worker authorization and integrity', () => {
     expect(response.status).toBe(404);
     expect(db.runs).toHaveLength(0);
   });
+
+  it('keeps the certificate public aliases stable', () => {
+    expect(createBatch).toBe(handleCreateBatch);
+    expect(getBatches).toBe(handleGetBatches);
+    expect(getBatchDetail).toBe(handleGetBatchDetail);
+    expect(preview).toBe(handleCertificatePreview);
+    expect(getCertificateImage).toBe(handleGetCertificateImage);
+    expect(uploadTemplate).toBe(handleUploadTemplate);
+    expect(getTemplates).toBe(handleGetTemplates);
+    expect(getMyCertificates).toBe(handleGetMyCertificates);
+    expect(getNotifications).toBe(handleGetNotifications);
+    expect(markNotificationRead).toBe(handleMarkNotificationRead);
+    expect(typeof handleRetryBatch).toBe('function');
+    expect(typeof handleCertificateRoutes).toBe('function');
+  });
+
+  it('preserves every certificate dispatcher route and method boundary', async () => {
+    const db = new FakeDB();
+    const env = createEnv(db);
+    const cases = [
+      ['/api/certificates/notifications', 'GET', 200],
+      ['/api/certificates/notifications/n-1/read', 'PATCH', 404],
+      ['/api/certificate-batches', 'POST', 400],
+      ['/api/certificate-batches', 'GET', 200],
+      ['/api/certificates/render-preview', 'POST', 400],
+      ['/api/certificate-batches/b-1/retry', 'POST', 404],
+      ['/api/certificate-batches/b-1', 'GET', 404],
+      ['/api/certificates/preview/c-1', 'GET', 404],
+      ['/api/certificates/c-1/image', 'GET', 404],
+      ['/api/certificates/templates', 'GET', 200],
+      ['/api/certificates/templates', 'POST', 405],
+      ['/api/certificates/my', 'GET', 403],
+      ['/api/my-certificates', 'GET', 403],
+      ['/api/certificates/unknown', 'DELETE', 404],
+    ] as const;
+
+    for (const [path, method, status] of cases) {
+      const init: RequestInit = { method };
+      if (method === 'POST' && (
+        path === '/api/certificate-batches'
+        || path === '/api/certificates/render-preview'
+      )) {
+        init.headers = { 'Content-Type': 'application/json' };
+        init.body = '{';
+      }
+      const response = await handleCertificateRoutes(
+        new Request(`https://example.test${path}`, init),
+        env,
+        path,
+        method,
+      );
+      expect(response.status, `${method} ${path}`).toBe(status);
+    }
+  });
+
 });
