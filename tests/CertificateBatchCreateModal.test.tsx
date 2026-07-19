@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BatchCreateModal from '../src/features/certificates/BatchCreateModal';
+import BatchCreateModalModule from '../src/features/certificates/certificate-batch-modal';
 
 const mocks = vi.hoisted(() => ({
   fetchTemplateOptions: vi.fn(),
@@ -91,6 +92,10 @@ const waitForInitialLoad = async () => {
 };
 
 describe('Certificate BatchCreateModal contracts', () => {
+  it('keeps the certificate feature compatibility export stable', () => {
+    expect(BatchCreateModal).toBe(BatchCreateModalModule);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
