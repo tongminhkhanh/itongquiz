@@ -105,7 +105,47 @@ WITH checks(migration, check_name, ok) AS (
     ('0028_harden_teacher_accounts.sql', 'admin audit log table/indexes', EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='admin_audit_logs') AND (SELECT COUNT(*)=2 FROM sqlite_master WHERE type='index' AND name IN ('idx_admin_audit_actor_created','idx_admin_audit_target_created'))),
 
     ('0029_canonicalize_system_announcements.sql', 'announcement delivery columns', (SELECT COUNT(*)=7 FROM pragma_table_info('announcements') WHERE name IN ('status','audience','starts_at','ends_at','created_by','updated_by','created_at'))),
-    ('0029_canonicalize_system_announcements.sql', 'announcement delivery index', EXISTS(SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_announcements_delivery'))
+    ('0029_canonicalize_system_announcements.sql', 'announcement delivery index', EXISTS(SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_announcements_delivery')),
+
+    ('0030_backfill_result_scores.sql', 'fully graded result metrics reconciled', NOT EXISTS(
+      SELECT 1
+      FROM results
+      WHERE json_valid(answers) = 1
+        AND total_questions > 0
+        AND (
+          SELECT COUNT(*)
+          FROM json_each(results.answers) AS answer
+          WHERE substr(answer.key, 1, 1) <> '_'
+            AND CASE WHEN json_valid(answer.value) = 1
+              THEN json_type(answer.value, '$.isCorrect')
+              ELSE NULL
+            END IN ('true', 'false')
+        ) = total_questions
+        AND (
+          correct_count <> (
+            SELECT SUM(
+              CASE WHEN json_valid(answer.value) = 1
+                THEN CASE WHEN json_extract(answer.value, '$.isCorrect') = 1 THEN 1 ELSE 0 END
+                ELSE 0
+              END
+            )
+            FROM json_each(results.answers) AS answer
+            WHERE substr(answer.key, 1, 1) <> '_'
+          )
+          OR ABS(
+            score - ROUND((
+              SELECT SUM(
+                CASE WHEN json_valid(answer.value) = 1
+                  THEN CASE WHEN json_extract(answer.value, '$.isCorrect') = 1 THEN 1 ELSE 0 END
+                  ELSE 0
+                END
+              )
+              FROM json_each(results.answers) AS answer
+              WHERE substr(answer.key, 1, 1) <> '_'
+            ) * 10.0 / total_questions, 1)
+          ) > 0.001
+        )
+    ))
 ), summary AS (
   SELECT
     migration,

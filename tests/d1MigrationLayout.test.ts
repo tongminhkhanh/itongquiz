@@ -34,6 +34,6 @@ describe('D1 migration layout', () => {
     expect(registered).toHaveLength(25);
     const numericPrefixes = migrations.map((name) => name.slice(0, 4));
     expect(new Set(numericPrefixes).size).toBe(numericPrefixes.length);
-    expect(migrations.at(-1)).toBe('0029_canonicalize_system_announcements.sql');
+    expect(migrations.at(-1)).toBe('0030_backfill_result_scores.sql');
   });
 });

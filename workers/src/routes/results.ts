@@ -19,6 +19,33 @@ import {
 
 const normalizeName = (value: string | null | undefined): string => String(value || '').trim().toLowerCase();
 
+export const deriveResultMetricsFromAnswers = (
+    answers: unknown,
+    submittedTotalQuestions: unknown,
+): { score: number; correctCount: number; totalQuestions: number } | null => {
+    if (!answers || typeof answers !== 'object') return null;
+
+    const answerEntries = Object.entries(answers as Record<string, unknown>)
+        .filter(([key]) => !key.startsWith('_'));
+    const totalQuestions = Number(submittedTotalQuestions);
+    if (!Number.isInteger(totalQuestions) || totalQuestions <= 0 || answerEntries.length !== totalQuestions) {
+        return null;
+    }
+
+    const everyAnswerIsGraded = answerEntries.every(([, answer]) => (
+        !!answer
+        && typeof answer === 'object'
+        && typeof (answer as { isCorrect?: unknown }).isCorrect === 'boolean'
+    ));
+    if (!everyAnswerIsGraded) return null;
+
+    const correctCount = answerEntries.reduce((count, [, answer]) => (
+        (answer as { isCorrect: boolean }).isCorrect ? count + 1 : count
+    ), 0);
+    const score = Math.round((correctCount / totalQuestions) * 100) / 10;
+    return { score, correctCount, totalQuestions };
+};
+
 const getStudentForUser = async (db: D1Database, user: JWTPayload): Promise<any | null> => {
     if (!isStudent(user)) return null;
     return await db.prepare(
@@ -247,13 +274,24 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
             }
         }
 
+        const derivedMetrics = deriveResultMetricsFromAnswers(body.answers, body.totalQuestions);
+        const submittedScore = Number(body.score);
+        const submittedCorrectCount = Number(body.correctCount);
+        const submittedTotalQuestions = Number(body.totalQuestions);
+        const score = derivedMetrics?.score
+            ?? (Number.isFinite(submittedScore) ? submittedScore : 0);
+        const correctCount = derivedMetrics?.correctCount
+            ?? (Number.isFinite(submittedCorrectCount) ? submittedCorrectCount : 0);
+        const totalQuestions = derivedMetrics?.totalQuestions
+            ?? (Number.isFinite(submittedTotalQuestions) ? submittedTotalQuestions : 0);
+
         const insertResult = await db.prepare(
             `INSERT INTO results (student_name, class_name, quiz_id, quiz_title, score, correct_count, total_questions, time_taken, submitted_at, answers)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             studentName, className, quizId,
-            body.quizTitle || '', body.score || 0, body.correctCount || 0,
-            body.totalQuestions || 0, body.timeTaken || 0,
+            body.quizTitle || '', score, correctCount,
+            totalQuestions, body.timeTaken || 0,
             new Date().toISOString(),
             JSON.stringify(body.answers || {})
         ).run();

@@ -15,7 +15,7 @@ import { ResultsOverlays } from './ResultsOverlays';
 const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) => {
   const { isMobile } = useResponsiveLayout();
   const filters = useResultsTabFilters(results, quizzes, onRefresh);
-  const resultOverrides = useResultOverrides(filters.paginatedResults);
+  const resultOverrides = useResultOverrides(filters.paginatedResults, quizzes);
   const questionAnalysis = useQuestionAnalysis(
     quizzes,
     filters.resultsHook.filteredResults,
