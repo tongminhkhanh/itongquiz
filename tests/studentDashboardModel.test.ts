@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildAssignedQuizzes,
   buildAttendanceQuestionPool,
-  buildSubjectCards,
+  buildPracticeCatalog,
   getAttendanceMultiplier,
   getRewardSummary,
 } from '../src/features/student-dashboard/model';
@@ -23,16 +23,31 @@ describe('student dashboard assignment model', () => {
 });
 
 describe('student dashboard practice model', () => {
-  it('counts visible quizzes by subject and keeps the configured order', () => {
-    const cards = buildSubjectCards([
-      { id: 'math-1', category: 'toan', showOnHome: true } as any,
-      { id: 'math-hidden', category: 'toan', showOnHome: false } as any,
-      { id: 'english-1', category: 'tieng-anh' } as any,
+  it('groups canonical topic data by subject and keeps the configured order', () => {
+    const catalog = buildPracticeCatalog([
+      { name: '#phep_nhan', count: 30 },
+      { name: '#phan_so', count: 20 },
+      { name: '#english', count: 15 },
     ]);
 
-    expect(cards.map((card) => card.id)).toEqual(['toan', 'tieng-viet', 'tu-nhien-xa-hoi', 'tieng-anh', 'tin-hoc']);
-    expect(cards.find((card) => card.id === 'toan')?.total).toBe(1);
-    expect(cards.find((card) => card.id === 'tieng-anh')?.total).toBe(1);
+    expect(catalog.subjects.map((subject) => subject.id)).toEqual([
+      'toan',
+      'tieng-viet',
+      'tu-nhien-xa-hoi',
+      'tieng-anh',
+      'tin-hoc',
+    ]);
+    expect(catalog.subjects.find((subject) => subject.id === 'toan')).toMatchObject({
+      topicCount: 2,
+      questionCount: 50,
+      status: 'available',
+    });
+    expect(catalog.subjects.find((subject) => subject.id === 'tieng-anh')).toMatchObject({
+      topicCount: 1,
+      questionCount: 15,
+      status: 'available',
+    });
+    expect(catalog.comingSoonSubjects.map((subject) => subject.id)).toContain('tieng-viet');
   });
 });
 
@@ -54,8 +69,8 @@ describe('student dashboard attendance model', () => {
 describe('student dashboard reward model', () => {
   it('maps each reward type to student-facing copy', () => {
     expect(getRewardSummary({ type: 'COINS', coins: 25 } as any)?.description).toContain('+25 Xu');
-    expect(getRewardSummary({ type: 'COLLECTIBLE' } as any)?.title).toBe('V\u1eadt ph\u1ea9m s\u01b0u t\u1ea7m');
-    expect(getRewardSummary({ type: 'HINT_TOKEN', amount: 2 } as any)?.description).toContain('2 v\u00e9 g\u1ee3i \u00fd');
-    expect(getRewardSummary({ type: 'STREAK_SHIELD', amount: 1 } as any)?.title).toBe('Khi\u00ean gi\u1eef chu\u1ed7i');
+    expect(getRewardSummary({ type: 'COLLECTIBLE' } as any)?.title).toBe('Vật phẩm sưu tầm');
+    expect(getRewardSummary({ type: 'HINT_TOKEN', amount: 2 } as any)?.description).toContain('2 vé gợi ý');
+    expect(getRewardSummary({ type: 'STREAK_SHIELD', amount: 1 } as any)?.title).toBe('Khiên giữ chuỗi');
   });
 });
