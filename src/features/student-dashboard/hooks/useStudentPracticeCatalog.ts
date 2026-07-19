@@ -1,18 +1,29 @@
-import { useMemo, useState } from 'react';
-import { useQuizStore } from '@/stores/quizStore';
-import { buildSubjectCards } from '../model';
+﻿import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type { PracticeSubjectId } from '../../../components/HomePage/student-dashboard/dashboard.types';
+import { buildPracticeCatalog } from '../model';
+import { usePracticeTopics } from './usePracticeTopics';
 
 export const useStudentPracticeCatalog = () => {
-  const quizzes = useQuizStore((state) => state.quizzes);
-  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const subjects = useMemo(() => buildSubjectCards(quizzes), [quizzes]);
+  const navigate = useNavigate();
+  const topicState = usePracticeTopics();
+  const catalog = useMemo(
+    () => buildPracticeCatalog(topicState.topics),
+    [topicState.topics],
+  );
 
   return {
-    quizzes,
-    subjects,
-    selectedSubject,
-    selectSubject: setSelectedSubject,
-    closeSubject: () => setSelectedSubject(null),
+    ...catalog,
+    isLoading: topicState.isLoading,
+    errorMessage: topicState.errorMessage,
+    retry: topicState.retry,
+    selectSubject: (subjectId: PracticeSubjectId) => {
+      const subject = catalog.availableSubjects.find(item => item.id === subjectId);
+      if (subject) {
+        navigate(`/student/practice/${subject.id}`);
+      }
+    },
+    closeSubject: () => navigate('/'),
   };
 };
 
