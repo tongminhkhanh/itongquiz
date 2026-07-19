@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   callApi: vi.fn(),
   getStoredJWTToken: vi.fn(),
   getJWTPurpose: vi.fn(),
-  setStripAnswersEnabled: vi.fn(),
+
   invalidatePrefix: vi.fn(),
   checkJwtExpiry: vi.fn(),
   showSuccess: vi.fn(),
@@ -30,9 +30,6 @@ vi.mock('../src/services/apiAdapter', () => ({ callApi: mocks.callApi }));
 vi.mock('../src/services/api/auth', () => ({
   getStoredJWTToken: mocks.getStoredJWTToken,
   getJWTPurpose: mocks.getJWTPurpose,
-}));
-vi.mock('../src/services/googleSheetService', () => ({
-  setStripAnswersEnabled: mocks.setStripAnswersEnabled,
 }));
 vi.mock('../src/services/CacheService', () => ({
   cacheService: { invalidatePrefix: mocks.invalidatePrefix },
@@ -177,7 +174,7 @@ describe('TeacherDashboard shell contracts', () => {
     mocks.callApi.mockReset().mockResolvedValue({ data: { mustChangePassword: false } });
     mocks.getStoredJWTToken.mockReset().mockReturnValue('jwt-token');
     mocks.getJWTPurpose.mockReset().mockReturnValue('session');
-    mocks.setStripAnswersEnabled.mockReset();
+
     mocks.invalidatePrefix.mockReset();
     mocks.checkJwtExpiry.mockReset();
     mocks.showSuccess.mockReset();
@@ -188,17 +185,17 @@ describe('TeacherDashboard shell contracts', () => {
     vi.restoreAllMocks();
   });
 
-  it('bootstraps teacher data, disables answer stripping, and restores it on unmount', async () => {
+  it('bootstraps teacher data and schedules JWT checks', async () => {
     const view = render(<TeacherDashboard />);
 
     await waitFor(() => expect(useQuizStore.getState().loadQuizzes).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(useQuizStore.getState().loadResults).toHaveBeenCalledTimes(1));
-    expect(mocks.setStripAnswersEnabled).toHaveBeenCalledWith(false);
+
     expect(mocks.invalidatePrefix).toHaveBeenCalledWith('quizzes:');
     expect(mocks.checkJwtExpiry).toHaveBeenCalled();
 
     view.unmount();
-    expect(mocks.setStripAnswersEnabled).toHaveBeenLastCalledWith(true);
+
   });
 
   it('searches dashboard destinations and reports an unknown function', async () => {

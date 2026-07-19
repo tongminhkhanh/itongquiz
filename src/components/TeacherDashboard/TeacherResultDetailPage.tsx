@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { StudentDetailModal } from '../teacher/ResultsView';
-import { fetchResultAnswers } from '../../services/googleSheetService';
+import { fetchResultAnswers } from '../../services/results/resultAnswersService';
 import { useQuizStore } from '../../../stores/quizStore';
 import { useTeacherDashboardUIStore } from '../../stores/useTeacherDashboardUIStore';
 import type { Question, StudentResult } from '../../types';

@@ -22,7 +22,7 @@ vi.mock('../src/hooks/useResponsiveLayout', () => ({
   useResponsiveLayout: () => ({ isMobile: false }),
 }));
 
-vi.mock('../src/services/googleSheetService', () => ({
+vi.mock('../src/services/results/resultAnswersService', () => ({
   fetchResultAnswers: mocks.fetchResultAnswers,
   fetchResultAnswersBulk: mocks.fetchResultAnswersBulk,
 }));

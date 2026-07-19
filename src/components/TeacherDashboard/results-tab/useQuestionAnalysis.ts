@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Quiz, StudentResult } from '../../../types';
 import type { DateRange } from '../../teacher/ResultsView';
-import { fetchResultAnswersBulk } from '../../../services/googleSheetService';
+import { fetchResultAnswersBulk } from '../../../services/results/resultAnswersService';
 import {
   analyzeQuestionDifficulty,
   type AnalysisAttemptMode,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { StudentResult } from '../../../types';
-import { fetchResultAnswers } from '../../../services/googleSheetService';
+import { fetchResultAnswers } from '../../../services/results/resultAnswersService';
 import { calculateOverrideFromAnswers } from './resultAnswerOverride';
 import type { ResultDisplayOverride } from './types';
 

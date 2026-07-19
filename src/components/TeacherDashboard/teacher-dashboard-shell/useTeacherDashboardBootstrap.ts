@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQuizStore } from '../../../../stores/quizStore';
-import { setStripAnswersEnabled } from '../../../services/googleSheetService';
+
 import { cacheService } from '../../../services/CacheService';
 import { checkAndWarnJWTExpiry } from '../../../utils/jwtInterceptor';
 import type { ResultsLoadState } from './types';
@@ -25,14 +25,14 @@ export const useTeacherDashboardBootstrap = () => {
   }, []);
 
   useEffect(() => {
-    setStripAnswersEnabled(false);
+
     cacheService.invalidatePrefix('quizzes:');
     quizStore.loadQuizzes();
     void loadTeacherResults();
     checkAndWarnJWTExpiry();
     const expiryCheckInterval = setInterval(checkAndWarnJWTExpiry, 5 * 60 * 1000);
     return () => {
-      setStripAnswersEnabled(true);
+
       clearInterval(expiryCheckInterval);
     };
   }, [loadTeacherResults]);
