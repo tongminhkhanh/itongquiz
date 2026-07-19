@@ -1,4 +1,4 @@
-﻿import { callApi } from './apiAdapter';
+import { callApi } from './apiAdapter';
 import { Quiz } from '../types';
 
 export const practiceService = {

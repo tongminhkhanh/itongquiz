@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PracticeTopicSummary } from '../../../components/HomePage/student-dashboard/dashboard.types';
 import { practiceService } from '../../../services/practiceService';
 

@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { SUBJECT_CONFIG, SUBJECT_ORDER } from '../src/features/student-dashboard/model/dashboardConstants';
 import {
   buildPracticeCatalog,

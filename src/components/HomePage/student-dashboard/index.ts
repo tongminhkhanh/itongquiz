@@ -1,4 +1,4 @@
-﻿export { AssignedWorkSection } from './AssignedWorkSection';
+export { AssignedWorkSection } from './AssignedWorkSection';
 export { LearningProgressPanel } from './LearningProgressPanel';
 export { RewardSidebar } from './RewardSidebar';
 export { StudentDashboardHeader } from './StudentDashboardHeader';

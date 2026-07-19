@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { callApi } from '../src/services/apiAdapter';
 import { practiceService } from '../src/services/practiceService';
 

@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   PracticeSubjectDefinition,
   PracticeSubjectId,
 } from '@/src/components/HomePage/student-dashboard/dashboard.types';

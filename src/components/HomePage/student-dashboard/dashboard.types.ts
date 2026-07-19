@@ -1,4 +1,4 @@
-﻿import type { Assignment, Quiz } from '../../../types';
+import type { Assignment, Quiz } from '../../../types';
 import type { GameLoopDashboard, GameLoopMission } from '../../../types/gameLoop.types';
 
 export type AssignedQuiz = Quiz & { _assignmentData?: Assignment };

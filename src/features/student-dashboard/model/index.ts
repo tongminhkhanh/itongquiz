@@ -1,4 +1,4 @@
-﻿export * from './assignmentModel';
+export * from './assignmentModel';
 export * from './attendanceQuestions';
 export * from './attendanceRewards';
 export * from './attendanceTypes';

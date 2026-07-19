@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useClassroomStore } from '@/src/stores/useClassroomStore';
 import { useHomeworkStore } from '@/src/features/homework/stores/useHomeworkStore';
 import type { HomeworkAssignment } from '@/src/features/homework/types';
