@@ -40,6 +40,7 @@ export const PracticeSubjectHeader = ({
       <div className="mx-auto flex min-h-20 w-full max-w-[1280px] items-center gap-4 px-4 py-3 md:px-8">
         <button
           type="button"
+          aria-label="Trở về thư viện"
           onClick={onBack}
           className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2"
         >
