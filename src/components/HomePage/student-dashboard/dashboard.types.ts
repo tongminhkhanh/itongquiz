@@ -115,7 +115,11 @@ export interface PracticeSubjectDefinition {
 }
 
 export interface SubjectPracticeGridProps {
-  subjects: SubjectCardViewModel[];
+  availableSubjects: SubjectCardViewModel[];
+  comingSoonSubjects: SubjectCardViewModel[];
+  isLoading: boolean;
+  errorMessage?: string | null;
+  onRetry: () => void;
   onSelectSubject: (subjectId: PracticeSubjectId) => void;
 }
 
