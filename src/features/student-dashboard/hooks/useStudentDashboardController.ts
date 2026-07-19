@@ -15,6 +15,7 @@ export const useStudentDashboardController = () => {
   const studentSession = useClassroomStore((state) => state.studentSession);
   const homeworkSubmissions = useHomeworkStore((state) => state.submissions);
   const setView = useQuizStore((state) => state.setView);
+  const quizzes = useQuizStore((state) => state.quizzes);
   const [activeSection, setActiveSection] = useState<StudentDashboardSection>('dashboard');
   const [selectedHomework, setSelectedHomework] = useState<HomeworkAssignment | null>(null);
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
@@ -24,7 +25,7 @@ export const useStudentDashboardController = () => {
     .toLowerCase() === 'true';
   const practice = useStudentPracticeCatalog();
   const assignments = useStudentAssignments(studentSession?.studentId);
-  const attendance = useStudentAttendance(studentSession?.username, practice.quizzes);
+  const attendance = useStudentAttendance(studentSession?.username, quizzes);
   const rewards = useStudentRewards(studentSession?.username);
   const account = useStudentAccount(studentSession);
   const liveExam = useStudentLiveExam();
@@ -59,3 +60,4 @@ export const useStudentDashboardController = () => {
 };
 
 export type StudentDashboardController = ReturnType<typeof useStudentDashboardController>;
+

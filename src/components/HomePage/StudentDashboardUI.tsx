@@ -1,3 +1,4 @@
+import { useParams } from 'react-router-dom';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import { StudentFloatingSidebar } from '../gamification/StudentFloatingSidebar';
 import {
@@ -6,8 +7,10 @@ import {
   StudentLiveExamScreen,
   useStudentDashboardController,
 } from '../../features/student-dashboard';
+import { isPracticeSubjectId } from '../../features/student-dashboard/model';
 
 const StudentDashboardUI = () => {
+  const { subjectId } = useParams<{ subjectId?: string }>();
   const controller = useStudentDashboardController();
   const {
     studentSession, liveExam, practice, activeSection, giftShopEnabled,
@@ -16,8 +19,15 @@ const StudentDashboardUI = () => {
 
   if (liveExam.shouldRenderScreen) return <StudentLiveExamScreen controller={liveExam} />;
   if (!studentSession) return null;
-  if (practice.selectedSubject) return <SubjectLibrary subjectId={practice.selectedSubject}
-    onBack={practice.closeSubject} />;
+  if (subjectId) {
+    return (
+      <SubjectLibrary
+        subjectId={subjectId}
+        isValidSubject={isPracticeSubjectId(subjectId)}
+        onBack={practice.closeSubject}
+      />
+    );
+  }
 
   return (
     <div className="student-dashboard min-h-dvh bg-[#F4F7FC] font-sans text-slate-800 flex flex-col items-center">

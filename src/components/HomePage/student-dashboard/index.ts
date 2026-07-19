@@ -19,6 +19,10 @@ export type {
   AssignedWorkSectionProps,
   AssignmentVisualState,
   LearningProgressPanelProps,
+  PracticeSubjectDefinition,
+  PracticeSubjectIcon,
+  PracticeSubjectId,
+  PracticeTopicSummary,
   RewardSidebarProps,
   StudentDashboardHeaderProps,
   StudentDashboardHeroProps,
@@ -34,3 +38,4 @@ export {
   getMissionProgressPercent,
   getWeeklyProgressPercent,
 } from './dashboard.utils';
+

@@ -60,6 +60,30 @@ const assertDashboardRegions = () => {
   cy.contains('h2', 'Thư viện luyện tập').should('be.visible');
 };
 
+const assertPracticeLibrary = () => {
+  cy.get('#practice-library').scrollIntoView().should('be.visible').within(() => {
+    cy.root().should('not.contain.text', 'calculate');
+    cy.root().should('not.contain.text', 'menu_book');
+    cy.root().should('not.contain.text', 'public');
+    cy.root().should('not.contain.text', 'language');
+    cy.root().should('not.contain.text', 'computer');
+    cy.contains('Môn đang có').should('be.visible');
+    cy.get('[data-testid="subject-practice-grid"]').then(($grid) => {
+      const columns = getComputedStyle($grid[0]).gridTemplateColumns.split(' ').length;
+      expect(columns, 'practice subject column count').to.be.at.most(3);
+    });
+  });
+
+  cy.get('#practice-library').then(($section) => {
+    if ($section.text().includes('Đang chuẩn bị')) {
+      cy.contains('#practice-library', 'Đang chuẩn bị')
+        .should('not.match', 'button')
+        .parents('button')
+        .should('not.exist');
+    }
+  });
+};
+
 const assertPrimaryTargets = () => {
   const selectors = [
     'header button',
@@ -106,6 +130,7 @@ describe('Authenticated student dashboard responsive regression', () => {
       loginAsStudent();
       assertNoHorizontalOverflow();
       assertDashboardRegions();
+      assertPracticeLibrary();
       assertPrimaryTargets();
       assertAccountMenuKeyboardFlow();
       assertNoDistractingPulse();

@@ -84,17 +84,53 @@ export interface RewardSidebarProps {
   onOpenBadges: () => void;
 }
 
+export type PracticeSubjectId =
+  | 'toan'
+  | 'tieng-viet'
+  | 'tu-nhien-xa-hoi'
+  | 'tieng-anh'
+  | 'tin-hoc';
+
+export type PracticeSubjectIcon =
+  | 'calculator'
+  | 'book-open'
+  | 'earth'
+  | 'languages'
+  | 'monitor';
+
+export interface PracticeTopicSummary {
+  name: string;
+  count: number;
+}
+
+export interface PracticeSubjectDefinition {
+  id: PracticeSubjectId;
+  title: string;
+  description: string;
+  icon: PracticeSubjectIcon;
+  aliases: readonly string[];
+  accentClass: string;
+  iconSurfaceClass: string;
+  showOnHome: boolean;
+}
+
 export interface SubjectPracticeGridProps {
-  subjects: SubjectCardViewModel[];
-  onSelectSubject: (subjectId: string) => void;
+  availableSubjects: SubjectCardViewModel[];
+  comingSoonSubjects: SubjectCardViewModel[];
+  isLoading: boolean;
+  errorMessage?: string | null;
+  onRetry: () => void;
+  onSelectSubject: (subjectId: PracticeSubjectId) => void;
 }
 
 export interface SubjectCardViewModel {
-  id: string;
+  id: PracticeSubjectId;
   title: string;
   description: string;
-  icon: string;
-  total: number;
+  icon: PracticeSubjectIcon;
+  topicCount: number;
+  questionCount: number;
+  status: 'available' | 'coming-soon';
   accentClass: string;
-  surfaceClass: string;
+  iconSurfaceClass: string;
 }

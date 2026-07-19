@@ -20,6 +20,7 @@ export const AppRoutes: React.FC<{ giftShopEnabled: boolean }> = ({ giftShopEnab
     return (
         <Routes>
             <Route path="/" element={<RootView giftShopEnabled={giftShopEnabled} />} />
+            <Route path="/student/practice/:subjectId" element={<RootView giftShopEnabled={giftShopEnabled} />} />
             <Route path="/teacher/results/:resultId" element={suspended(<TeacherResultDetailPage />)} />
             <Route path="/about" element={suspended(<PublicPageLayout onNavigate={onNavigate}><AboutPage /></PublicPageLayout>)} />
             <Route path="/contact" element={suspended(<PublicPageLayout onNavigate={onNavigate}><ContactPage /></PublicPageLayout>)} />
@@ -30,3 +31,4 @@ export const AppRoutes: React.FC<{ giftShopEnabled: boolean }> = ({ giftShopEnab
         </Routes>
     );
 };
+

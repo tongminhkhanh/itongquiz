@@ -482,46 +482,103 @@ const homeworkAssignment = {
 const practiceSubjects = [
   {
     id: 'toan',
-    title: 'Toán Học',
-    description: 'Rèn luyện tư duy logic',
-    icon: 'calculate',
-    total: 12,
-    accentClass: 'text-blue-700 bg-blue-100',
-    surfaceClass: 'border-blue-100 bg-blue-50',
+    title: 'Toán học',
+    description: 'Rèn luyện tư duy và tính toán',
+    icon: 'calculator',
+    topicCount: 8,
+    questionCount: 126,
+    status: 'available',
+    accentClass: 'text-blue-700',
+    iconSurfaceClass: 'bg-blue-100',
   },
   {
     id: 'tieng-viet',
     title: 'Tiếng Việt',
     description: 'Vun đắp ngôn ngữ tiếng mẹ đẻ',
-    icon: 'menu_book',
-    total: 8,
-    accentClass: 'text-amber-700 bg-amber-100',
-    surfaceClass: 'border-amber-100 bg-amber-50',
+    icon: 'book-open',
+    topicCount: 4,
+    questionCount: 62,
+    status: 'available',
+    accentClass: 'text-amber-700',
+    iconSurfaceClass: 'bg-amber-100',
   },
-];
+] as const;
+
+const comingSoonSubjects = [
+  {
+    id: 'tieng-anh',
+    title: 'Tiếng Anh',
+    description: 'Mở rộng giao tiếp quốc tế',
+    icon: 'languages',
+    topicCount: 0,
+    questionCount: 0,
+    status: 'coming-soon',
+    accentClass: 'text-indigo-700',
+    iconSurfaceClass: 'bg-indigo-100',
+  },
+] as const;
+
+const practiceGridProps = {
+  availableSubjects: [...practiceSubjects],
+  comingSoonSubjects: [...comingSoonSubjects],
+  isLoading: false,
+  errorMessage: null,
+  onRetry: vi.fn(),
+  onSelectSubject: vi.fn(),
+};
 
 describe('semantic practice and homework cards', () => {
-  it('renders subject cards as responsive native buttons', () => {
+  it('renders available subjects as responsive native buttons', () => {
     const onSelectSubject = vi.fn();
-    render(
-      <SubjectPracticeGrid subjects={practiceSubjects} onSelectSubject={onSelectSubject} />,
-    );
+    render(<SubjectPracticeGrid {...practiceGridProps} onSelectSubject={onSelectSubject} />);
 
     const grid = screen.getByTestId('subject-practice-grid');
     expect(grid.className).toContain('grid-cols-1');
     expect(grid.className).toContain('sm:grid-cols-2');
     expect(grid.className).toContain('lg:grid-cols-3');
-    expect(grid.className).toContain('2xl:grid-cols-4');
+    expect(grid.className).not.toContain('2xl:grid-cols-4');
+    expect(screen.getByText('8 chuyên đề · 126 câu hỏi')).toBeVisible();
+    expect(screen.queryByText('calculate')).not.toBeInTheDocument();
 
-    const mathButton = screen.getByRole('button', { name: /Toán Học/i });
+    const mathButton = screen.getByRole('button', { name: /Toán học/i });
     expect(mathButton).toHaveAttribute('type', 'button');
     fireEvent.click(mathButton);
     expect(onSelectSubject).toHaveBeenCalledWith('toan');
   });
 
-  it('explains when no practice subjects are available', () => {
-    render(<SubjectPracticeGrid subjects={[]} onSelectSubject={vi.fn()} />);
+  it('renders coming-soon subjects as non-actionable items', () => {
+    render(<SubjectPracticeGrid {...practiceGridProps} />);
 
+    expect(screen.getByText('Đang chuẩn bị')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /Tiếng Anh/i })).not.toBeInTheDocument();
+  });
+
+  it('keeps loading, retry, and empty feedback local to the practice section', () => {
+    const retry = vi.fn();
+    const { rerender } = render(
+      <SubjectPracticeGrid {...practiceGridProps} isLoading onRetry={retry} />,
+    );
+    expect(screen.getAllByTestId('practice-card-skeleton')).toHaveLength(3);
+    expect(screen.getByLabelText('Đang tải thư viện luyện tập')).toHaveAttribute('aria-busy', 'true');
+
+    rerender(
+      <SubjectPracticeGrid
+        {...practiceGridProps}
+        isLoading={false}
+        errorMessage="Chưa tải được thư viện luyện tập."
+        onRetry={retry}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <SubjectPracticeGrid
+        {...practiceGridProps}
+        availableSubjects={[]}
+        comingSoonSubjects={[]}
+      />,
+    );
     expect(screen.getByRole('status')).toHaveTextContent(
       'Hiện chưa có môn luyện tập nào dành cho em.',
     );

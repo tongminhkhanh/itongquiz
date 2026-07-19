@@ -1,77 +1,40 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Play } from 'lucide-react';
 
 interface TopicCardProps {
-    topic: string; // e.g., "#Phép_Nhân"
-    count: number;
-    onClick: (topic: string) => void;
-    index?: number;
+  topic: string;
+  count: number;
+  isStarting: boolean;
+  onClick: (topic: string) => void;
 }
 
-// Function to generate a deterministic pastel color based on the topic string
-const getBackgroundColor = (str: string) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = Math.abs(hash % 360);
-    return `hsl(${hue}, 70%, 90%)`;
+const formatTopic = (topic: string) => {
+  const value = topic.replace(/^#/, '').replace(/_/g, ' ').trim();
+  return value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : 'Chuyên đề';
 };
 
-const getTextColor = (str: string) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = Math.abs(hash % 360);
-    return `hsl(${hue}, 80%, 30%)`;
-};
+const TopicCard: React.FC<TopicCardProps> = ({ topic, count, isStarting, onClick }) => {
+  const formattedTopic = formatTopic(topic);
 
-const TopicCard: React.FC<TopicCardProps> = ({ topic, count, onClick, index = 0 }) => {
-    const formattedTopic = topic.replace('#', '').replace(/_/g, ' ');
-    const bgColor = getBackgroundColor(topic);
-    const textColor = getTextColor(topic);
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.05 }}
-            onClick={() => onClick(topic)}
-            className="group cursor-pointer relative overflow-hidden rounded-3xl p-6 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:-translate-y-1"
-            style={{ backgroundColor: bgColor }}
-        >
-            <div className="flex flex-col h-full justify-between items-start z-10 relative">
-                <div
-                    className="px-3 py-1 bg-white/50 backdrop-blur-sm rounded-full mb-4 text-sm font-bold shadow-sm"
-                    style={{ color: textColor }}
-                >
-                    Chuyên đề
-                </div>
-
-                <h3
-                    className="text-xl md:text-2xl font-black mb-8 leading-tight"
-                    style={{ color: textColor }}
-                >
-                    {formattedTopic}
-                </h3>
-
-                <div
-                    className="flex mt-auto items-center justify-between w-full font-bold opacity-80 group-hover:opacity-100 transition-opacity"
-                    style={{ color: textColor }}
-                >
-                    <span>{count} câu hỏi ngẫu nhiên</span>
-                    <div className="bg-white/40 p-2 rounded-full group-hover:bg-white transition-colors duration-300">
-                        <Play className="w-5 h-5 ml-0.5" />
-                    </div>
-                </div>
-            </div>
-
-            {/* Decorative background circle */}
-            <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/20 rounded-full group-hover:scale-150 transition-transform duration-500 pointer-events-none"></div>
-        </motion.div>
-    );
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(topic)}
+      disabled={isStarting}
+      aria-busy={isStarting}
+      className="group flex min-h-44 w-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:border-slate-200 disabled:bg-slate-50 motion-reduce:transform-none motion-reduce:transition-none"
+    >
+      <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+        Chuyên đề
+      </span>
+      <span className="mt-3 text-xl font-black text-slate-900">{formattedTopic}</span>
+      <span className="mt-2 text-sm font-semibold text-slate-600">{count} câu có sẵn</span>
+      <span className="mt-auto inline-flex min-h-11 items-center gap-2 pt-5 text-sm font-black text-teal-700">
+        {isStarting ? 'Đang chuẩn bị...' : 'Luyện 10 câu'}
+        {!isStarting ? <Play className="h-4 w-4" aria-hidden="true" /> : null}
+      </span>
+    </button>
+  );
 };
 
 export default TopicCard;

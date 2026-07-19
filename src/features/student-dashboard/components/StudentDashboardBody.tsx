@@ -41,8 +41,14 @@ export const StudentDashboardBody = ({
           onRetry={() => void rewards.retryWeeklyQuests()}
           onClaim={rewards.claimWeeklyQuest}
         />
-        <SubjectPracticeGrid subjects={practice.subjects}
-          onSelectSubject={practice.selectSubject} />
+        <SubjectPracticeGrid
+          availableSubjects={practice.availableSubjects}
+          comingSoonSubjects={practice.comingSoonSubjects}
+          isLoading={practice.isLoading}
+          errorMessage={practice.errorMessage}
+          onRetry={() => void practice.retry()}
+          onSelectSubject={practice.selectSubject}
+        />
       </div>
       <aside data-testid="student-dashboard-side-column"
         className="min-w-0 space-y-6 xl:sticky xl:top-24">
