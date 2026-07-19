@@ -1,37 +1,79 @@
+﻿import type {
+  PracticeSubjectDefinition,
+  PracticeSubjectId,
+} from '@/src/components/HomePage/student-dashboard/dashboard.types';
+
 export const ASSIGNMENTS_PER_PAGE = 5;
 export const ATTENDANCE_REWARD = { exp: 50, coins: 50 } as const;
 
-export const SUBJECT_CONFIG: Record<
-  string,
-  { title: string; icon: string; color: string; desc: string; showOnHome?: boolean }
-> = {
+export const SUBJECT_ORDER: readonly PracticeSubjectId[] = [
+  'toan',
+  'tieng-viet',
+  'tu-nhien-xa-hoi',
+  'tieng-anh',
+  'tin-hoc',
+];
+
+export const SUBJECT_CONFIG: Record<PracticeSubjectId, PracticeSubjectDefinition> = {
   toan: {
-    title: 'Toán Học', icon: 'calculate', color: 'from-blue-400 to-blue-600',
-    desc: 'Rèn luyện tư duy logic',
+    id: 'toan',
+    title: 'Toán học',
+    description: 'Rèn luyện tư duy và tính toán',
+    icon: 'calculator',
+    aliases: [
+      '#toan', '#toán', '#phep_nhan', '#phan_so', '#hinh_hoc', '#gia_tri',
+      '#biu_thức', '#quy_dong', '#rut_gon_phan_so', '#so_sanh_phan_so',
+      '#lam_tron_so', '#hinh_binh_hanh', '#phep_chia', '#phep_cong', '#phep_tru',
+    ],
+    accentClass: 'text-blue-700',
+    iconSurfaceClass: 'bg-blue-100',
+    showOnHome: true,
   },
   'tieng-viet': {
-    title: 'Tiếng Việt', icon: 'menu_book', color: 'from-amber-400 to-amber-600',
-    desc: 'Vun đắp ngôn ngữ tiếng mẹ đẻ',
+    id: 'tieng-viet',
+    title: 'Tiếng Việt',
+    description: 'Vun đắp ngôn ngữ tiếng mẹ đẻ',
+    icon: 'book-open',
+    aliases: [
+      '#tieng_viet', '#tiếng_việt', '#trạng_nguyên', '#vi_ngữ', '#chủ_ngữ',
+      '#luyện_từ_và_câu', '#từ_đơn', '#từ_phức', '#ngu_phap', '#gia_dinh',
+      '#tu_vung', '#tap_doc', '#chinh_ta',
+    ],
+    accentClass: 'text-amber-700',
+    iconSurfaceClass: 'bg-amber-100',
+    showOnHome: true,
   },
   'tu-nhien-xa-hoi': {
-    title: 'Tự nhiên & Xã hội', icon: 'public', color: 'from-emerald-400 to-emerald-600',
-    desc: 'Khám phá thế giới muôn màu',
+    id: 'tu-nhien-xa-hoi',
+    title: 'Tự nhiên & Xã hội',
+    description: 'Khám phá thế giới quanh em',
+    icon: 'earth',
+    aliases: [
+      '#khoa_hoc', '#tu_nhien', '#xa_hoi', '#tn_xh', '#tự_nhiên_xã_hội',
+      '#lịch_sử', '#địa_lý',
+    ],
+    accentClass: 'text-emerald-700',
+    iconSurfaceClass: 'bg-emerald-100',
+    showOnHome: true,
   },
   'tieng-anh': {
-    title: 'Tiếng Anh', icon: 'language', color: 'from-blue-400 to-blue-700',
-    desc: 'Mở rộng giao tiếp quốc tế',
+    id: 'tieng-anh',
+    title: 'Tiếng Anh',
+    description: 'Mở rộng giao tiếp quốc tế',
+    icon: 'languages',
+    aliases: ['#tieng_anh', '#anh_van', '#english', '#grammar', '#vocabulary'],
+    accentClass: 'text-indigo-700',
+    iconSurfaceClass: 'bg-indigo-100',
+    showOnHome: true,
   },
   'tin-hoc': {
-    title: 'Tin học', icon: 'computer', color: 'from-slate-400 to-slate-600',
-    desc: 'Làm chủ công nghệ tương lai',
+    id: 'tin-hoc',
+    title: 'Tin học',
+    description: 'Làm chủ công nghệ tương lai',
+    icon: 'monitor',
+    aliases: ['#tin_hoc', '#coding', '#scratch', '#may_tinh'],
+    accentClass: 'text-slate-700',
+    iconSurfaceClass: 'bg-slate-200',
+    showOnHome: true,
   },
 };
-
-export const SUBJECT_CARD_STYLES = [
-  { surfaceClass: 'border-blue-100 bg-blue-50', accentClass: 'bg-blue-100 text-blue-700' },
-  { surfaceClass: 'border-amber-100 bg-amber-50', accentClass: 'bg-amber-100 text-amber-700' },
-  { surfaceClass: 'border-emerald-100 bg-emerald-50', accentClass: 'bg-emerald-100 text-emerald-700' },
-  { surfaceClass: 'border-indigo-100 bg-indigo-50', accentClass: 'bg-indigo-100 text-indigo-700' },
-  { surfaceClass: 'border-slate-200 bg-slate-50', accentClass: 'bg-slate-200 text-slate-700' },
-  { surfaceClass: 'border-orange-100 bg-orange-50', accentClass: 'bg-orange-100 text-orange-700' },
-] as const;
