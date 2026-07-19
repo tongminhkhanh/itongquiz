@@ -1,4 +1,4 @@
-import { callApi } from './apiAdapter';
+﻿import { callApi } from './apiAdapter';
 import { Quiz } from '../types';
 
 export const practiceService = {
@@ -6,13 +6,10 @@ export const practiceService = {
      * Fetches the list of all unique topic tags available in the database with their counts
      */
     getTopics: async (): Promise<{ name: string; count: number }[]> => {
-        try {
-            const response = await callApi<{ topics: { name: string; count: number }[] }>('get_practice_topics');
-            return response.topics || [];
-        } catch (error) {
-            console.error('Error fetching practice topics:', error);
-            return [];
-        }
+        const response = await callApi<{ topics: { name: string; count: number }[] }>(
+            'get_practice_topics',
+        );
+        return response.topics || [];
     },
 
     /**
@@ -28,3 +25,4 @@ export const practiceService = {
         }
     }
 };
+
