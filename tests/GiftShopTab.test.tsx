@@ -94,6 +94,11 @@ function resetStores(options: {
 }
 
 describe('TeacherDashboard GiftShopTab contracts', () => {
+  it('keeps the legacy import path as a compatibility barrel', async () => {
+    const source = await import('../src/components/TeacherDashboard/GiftShopTab?raw');
+    expect(source.default.trim()).toBe("export { default } from './gift-shop-tab';");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     resetStores();
