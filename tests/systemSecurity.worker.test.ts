@@ -65,6 +65,11 @@ describe('system security password storage', () => {
         expect(verifyToken(request('/api/admin/announcements'), {} as any)).toBeNull();
     });
 
+    it('allows student session restore to reach JWT authorization', () => {
+        const request = new Request('https://quiz-api.thitong.site/api/student-profile');
+        expect(verifyToken(request, {} as any)).toBeNull();
+    });
+
     it('does not accept the removed shared API token on unclassified routes', () => {
         const request = new Request('https://quiz-api.thitong.site/api/unclassified', {
             headers: { 'X-API-Token': 'old-shared-token' },
