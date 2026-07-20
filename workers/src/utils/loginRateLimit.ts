@@ -6,9 +6,22 @@ const ACCOUNT_LIMIT = 10;
 const IP_LIMIT = 100;
 
 function clientIp(request: Request): string {
-    return request.headers.get('CF-Connecting-IP')
-        || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
-        || 'unknown';
+    const cloudflareIp = request.headers.get('CF-Connecting-IP')?.trim();
+    if (cloudflareIp) return cloudflareIp;
+
+    const hostname = new URL(request.url).hostname;
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname === '::1';
+    return isLocal
+        ? request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || 'local'
+        : 'unknown';
+}
+
+function unavailableResponse(): Response {
+    const response = errorResponse('Authentication rate limit service temporarily unavailable. Please try again later.', 503);
+    const headers = new Headers(response.headers);
+    headers.set('Retry-After', '60');
+    headers.set('Cache-Control', 'no-store');
+    return new Response(response.body, { status: response.status, headers });
 }
 
 function keys(request: Request, username: string): { account: string; ip: string } {
@@ -49,13 +62,14 @@ export async function checkLoginLimit(request: Request, env: Env, username: stri
         if (accountCount >= ACCOUNT_LIMIT || ipCount >= IP_LIMIT) {
             return errorResponse('Quá nhiều lần đăng nhập không thành công. Vui lòng thử lại sau.', 429);
         }
+        return null;
     } catch (error) {
         console.error('[LoginRateLimit] Check failed:', error);
+        return unavailableResponse();
     }
-    return null;
 }
 
-export async function recordLoginFailure(request: Request, env: Env, username: string): Promise<void> {
+export async function recordLoginFailure(request: Request, env: Env, username: string): Promise<Response | null> {
     const key = keys(request, username);
     const now = new Date();
     const nowIso = now.toISOString();
@@ -65,16 +79,20 @@ export async function recordLoginFailure(request: Request, env: Env, username: s
             incrementStatement(env.DB, key.account, nowIso, cutoffIso),
             incrementStatement(env.DB, key.ip, nowIso, cutoffIso),
         ]);
+        return null;
     } catch (error) {
         console.error('[LoginRateLimit] Record failed:', error);
+        return unavailableResponse();
     }
 }
 
-export async function clearLoginFailures(request: Request, env: Env, username: string): Promise<void> {
+export async function clearLoginFailures(request: Request, env: Env, username: string): Promise<Response | null> {
     const key = keys(request, username);
     try {
         await env.DB.prepare('DELETE FROM rate_limits WHERE key = ?').bind(key.account).run();
+        return null;
     } catch (error) {
         console.error('[LoginRateLimit] Clear failed:', error);
+        return unavailableResponse();
     }
 }

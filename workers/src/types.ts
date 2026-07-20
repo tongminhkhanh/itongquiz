@@ -5,6 +5,7 @@ export interface Env {
     JWT_SECRET: string;
     AUTH_MIGRATION_MODE?: 'compat' | 'enforce';
     AUTH_TOKEN_TRANSPORT_MODE?: 'compat' | 'cookie';
+    ENVIRONMENT?: 'production' | 'development' | 'test';
     ANNOUNCEMENT_IMAGE_HOSTS?: string;
     OG_IMAGES: R2Bucket;             // R2 bucket binding (phieu-og-images)
     R2_PUBLIC_URL: string;           // https://r2.thitong.site

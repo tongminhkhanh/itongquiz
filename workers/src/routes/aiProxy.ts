@@ -65,7 +65,7 @@ export async function handleAiProxy(
                 'Content-Type': isSse ? 'text/event-stream' : (upstreamType || 'application/json'),
                 'Cache-Control': 'no-store',
                 ...(isSse ? { Connection: 'keep-alive' } : {}),
-                ...corsHeaders(request),
+                ...corsHeaders(request, env),
             },
         });
     } catch (error) {

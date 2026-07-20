@@ -3,10 +3,11 @@
 import { Env } from '../types';
 import { errorResponse } from '../utils/response';
 
-interface RateLimitOptions {
+export interface RateLimitOptions {
   windowMs: number;
   maxRequests: number;
   keyGenerator?: (request: Request) => string;
+  failureMode: 'open' | 'closed';
 }
 
 interface RateLimitRow {
@@ -17,12 +18,23 @@ interface RateLimitRow {
 const DEFAULT_OPTIONS: RateLimitOptions = {
   windowMs: 60 * 1000,
   maxRequests: 60,
+  failureMode: 'open',
 };
 
+function isLocalHostname(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname === '::1';
+}
+
 function getClientIp(request: Request): string {
-  return request.headers.get('CF-Connecting-IP')
-    || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
-    || 'unknown';
+  const cloudflareIp = request.headers.get('CF-Connecting-IP')?.trim();
+  if (cloudflareIp) return cloudflareIp;
+
+  // X-Forwarded-For is accepted only for local development/tests. On production
+  // Cloudflare requests, CF-Connecting-IP is the trusted source and wins above.
+  if (isLocalHostname(new URL(request.url).hostname)) {
+    return request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || 'local';
+  }
+  return 'unknown';
 }
 
 function getRateLimitKey(request: Request, options: RateLimitOptions): string {
@@ -31,11 +43,15 @@ function getRateLimitKey(request: Request, options: RateLimitOptions): string {
   return `ratelimit:${request.method}:${url.pathname}:${getClientIp(request)}`;
 }
 
-/**
- * Counts the current request atomically in a fixed window.
- * The production schema stores one aggregate row per key:
- * key, count, window_start, updated_at.
- */
+function limiterUnavailableResponse(): Response {
+  const response = errorResponse('Rate limit service temporarily unavailable. Please try again later.', 503);
+  const headers = new Headers(response.headers);
+  headers.set('Retry-After', '60');
+  headers.set('Cache-Control', 'no-store');
+  return new Response(response.body, { status: response.status, headers });
+}
+
+/** Counts the current request atomically in a fixed window. */
 export async function rateLimit(
   request: Request,
   env: Env,
@@ -67,12 +83,10 @@ export async function rateLimit(
     if (Number(row?.count || 0) > opts.maxRequests) {
       return errorResponse('Too many requests. Please try again later.', 429);
     }
-
     return null;
   } catch (error) {
     console.error('[RateLimit] Error:', error);
-    // Fail open so an unavailable limiter does not take down authentication or public APIs.
-    return null;
+    return opts.failureMode === 'closed' ? limiterUnavailableResponse() : null;
   }
 }
 

@@ -114,39 +114,39 @@ Detailed plan: `docs/plans/2026-07-20-security-hardening.md`
 
 ## Phase 3 — CORS, CSRF và rate limit
 
-- [ ] Task 16 — Environment CORS + Origin guard
-  - [ ] Production HTTPS allowlist
-  - [ ] Dev-only localhost/IP
-  - [ ] Unsafe methods reject origin lạ
-  - [ ] Preflight allow/deny tests đạt
+- [x] Task 16 — Environment CORS + Origin guard
+  - [x] Production HTTPS allowlist
+  - [x] Dev-only localhost/IP
+  - [x] Unsafe methods reject origin lạ
+  - [x] Preflight allow/deny tests đạt
 
-- [ ] Task 17 — Rate-limit failure policy
-  - [ ] Core `open|closed` option
-  - [ ] Login fail closed
-  - [ ] AI fail closed
-  - [ ] Admin-sensitive fail closed
-  - [ ] Public/read route behavior giữ ổn định
+- [x] Task 17 — Rate-limit failure policy
+  - [x] Core `open|closed` option
+  - [x] Login fail closed
+  - [x] AI fail closed
+  - [x] Admin-sensitive fail closed
+  - [x] Public/read route behavior giữ ổn định
 
 ### Checkpoint C
 
-- [ ] Cross-origin mutation bị chặn
-- [ ] Sensitive limiter failure tests đạt
-- [ ] Public routes không regression
+- [x] Cross-origin mutation bị chặn
+- [x] Sensitive limiter failure tests đạt
+- [x] Public routes không regression
 
 ## Phase 4 — Verification và release gate
 
 - [ ] Task 18 — Full verification
-  - [ ] `npm run security:check`
-  - [ ] Frontend `npm audit`
-  - [ ] Backend `npm audit`
-  - [ ] Full Vitest
-  - [ ] Root TypeScript check
-  - [ ] Worker TypeScript check
-  - [ ] Vite production build
-  - [ ] API Worker dry-run bundle
-  - [ ] Certificate consumer dry-run bundle
-  - [ ] Git diff review
-  - [ ] GitNexus impact review
+  - [x] `npm run security:check`
+  - [x] Frontend `npm audit`
+  - [x] Backend `npm audit`
+  - [x] Full Vitest
+  - [x] Root TypeScript check
+  - [x] Worker TypeScript check
+  - [x] Vite production build
+  - [x] API Worker dry-run bundle
+  - [x] Certificate consumer dry-run bundle
+  - [x] Git diff review
+  - [x] GitNexus impact review
   - [ ] Production-like browser smoke
   - [ ] Vercel Preview browser smoke
   - [ ] Rollback steps verified

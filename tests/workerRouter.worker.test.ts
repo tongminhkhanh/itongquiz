@@ -1,4 +1,6 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const rateLimitMock = vi.hoisted(() => vi.fn(async () => null as Response | null));
 
 vi.mock('../workers/src/routes/certificates', () => ({
   createBatch: vi.fn(),
@@ -22,7 +24,7 @@ vi.mock('../workers/src/routes/phieu', () => ({
 }));
 
 vi.mock('../workers/src/middleware/rateLimit', () => ({
-  rateLimit: vi.fn(async () => null),
+  rateLimit: rateLimitMock,
 }));
 
 let worker: typeof import('../workers/src/index').default;
@@ -31,7 +33,13 @@ beforeAll(async () => {
   worker = (await import('../workers/src/index')).default;
 });
 
+beforeEach(() => {
+  rateLimitMock.mockReset();
+  rateLimitMock.mockResolvedValue(null);
+});
+
 const env = {
+  ENVIRONMENT: 'production',
   JWT_SECRET: 'test-secret',
   DB: {
     prepare() {
@@ -40,10 +48,22 @@ const env = {
   },
 } as any;
 
-const request = (path: string, method: 'GET' | 'POST' = 'GET') => new Request(`https://phieu.thitong.site${path}`, {
+const request = (
+  path: string,
+  method: 'GET' | 'POST' = 'GET',
+  origin = method === 'POST' ? 'https://www.thitong.site' : undefined,
+) => new Request(`https://phieu.thitong.site${path}`, {
   method,
-  headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
+  headers: method === 'POST' ? {
+    'Content-Type': 'application/json',
+    ...(origin ? { Origin: origin } : {}),
+  } : undefined,
   body: method === 'POST' ? '{}' : undefined,
+});
+
+const unavailable = () => new Response(JSON.stringify({ status: 'error', message: 'unavailable' }), {
+  status: 503,
+  headers: { 'Content-Type': 'application/json' },
 });
 
 describe('Worker root route dispatch', () => {
@@ -60,5 +80,57 @@ describe('Worker root route dispatch', () => {
   it('still routes gamification mutations to JWT authentication', async () => {
     const response = await worker.fetch(request('/api/game-state', 'POST'), env);
     expect(response.status).toBe(401);
+  });
+
+  it('blocks an unsafe request from an untrusted origin before auth and routing', async () => {
+    const response = await worker.fetch(request('/api/game-state', 'POST', 'https://evil.example'), env);
+    expect(response.status).toBe(403);
+    expect(rateLimitMock).not.toHaveBeenCalled();
+  });
+
+  it('fails closed for AI endpoints when limiter storage is unavailable', async () => {
+    rateLimitMock.mockResolvedValueOnce(unavailable());
+    const response = await worker.fetch(request('/api/ai/chat', 'POST'), env);
+
+    expect(response.status).toBe(503);
+    expect(rateLimitMock).toHaveBeenCalledWith(
+      expect.any(Request),
+      env,
+      expect.objectContaining({ failureMode: 'closed', maxRequests: 10 }),
+    );
+  });
+
+  it('fails closed for student login when limiter storage is unavailable', async () => {
+    rateLimitMock.mockResolvedValueOnce(unavailable());
+    const response = await worker.fetch(request('/api/student-login', 'POST'), env);
+
+    expect(response.status).toBe(503);
+    expect(rateLimitMock).toHaveBeenCalledWith(
+      expect.any(Request),
+      env,
+      expect.objectContaining({ failureMode: 'closed', maxRequests: 20 }),
+    );
+  });
+
+  it('fails closed for legacy admin teacher mutations', async () => {
+    rateLimitMock.mockResolvedValueOnce(unavailable());
+    const response = await worker.fetch(request('/api/teachers', 'POST'), env);
+
+    expect(response.status).toBe(503);
+    expect(rateLimitMock).toHaveBeenCalledWith(
+      expect.any(Request),
+      env,
+      expect.objectContaining({ failureMode: 'closed', maxRequests: 30 }),
+    );
+  });
+
+  it('keeps public read rate limiting fail open by default', async () => {
+    const response = await worker.fetch(request('/api/phieu/public/sample'), env);
+    expect(response.status).toBe(404);
+    expect(rateLimitMock).toHaveBeenCalledWith(
+      expect.any(Request),
+      env,
+      expect.not.objectContaining({ failureMode: 'closed' }),
+    );
   });
 });

@@ -2,6 +2,7 @@
 // Cloudflare Workers API entry point
 
 import { handleCors, corsHeaders } from './middleware/cors';
+import { enforceOriginGuard } from './middleware/originGuard';
 import { verifyToken } from './middleware/auth';
 import { jsonResponse, errorResponse } from './utils/response';
 import { internalErrorResponse } from './utils/internalError';
@@ -45,16 +46,48 @@ import { checkAndAutoCloseExpiredExams } from './services/liveExamService';
 export default {
     async fetch(request: Request, env: Env): Promise<Response> {
         const url = new URL(request.url);
-        if (url.pathname === '/api/health') {
-            return addCors(jsonResponse({ status: 'ok', timestamp: new Date().toISOString() }), request);
-        }
-
-        // Handle CORS preflight
-        const corsResponse = handleCors(request);
-        if (corsResponse) return corsResponse;
-
         const path = url.pathname;
         const method = request.method;
+
+        // Handle CORS preflight before every route, including health.
+        const corsResponse = handleCors(request, env);
+        if (corsResponse) return corsResponse;
+
+        if (path === '/api/health') {
+            return addCors(jsonResponse({ status: 'ok', timestamp: new Date().toISOString() }), request, env);
+        }
+
+        const originError = enforceOriginGuard(request, env);
+        if (originError) return addCors(originError, request, env);
+
+        const isUnsafeMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+        const isLoginAttempt = method === 'POST' && (path === '/api/login' || path === '/api/student-login');
+        if (isLoginAttempt) {
+            const rateLimitRes = await rateLimit(request, env, {
+                windowMs: 60 * 1000,
+                maxRequests: 20,
+                failureMode: 'closed',
+            });
+            if (rateLimitRes) return addCors(rateLimitRes, request, env);
+        }
+
+        const isAdminMutation = isUnsafeMethod && (
+            path.startsWith('/api/admin/')
+            || path === '/api/teachers'
+            || path.startsWith('/api/teachers/')
+            || path === '/api/system-settings'
+            || path === '/api/announcements'
+            || path.startsWith('/api/classes')
+            || path.startsWith('/api/gift-shop/catalog')
+        );
+        if (isAdminMutation) {
+            const rateLimitRes = await rateLimit(request, env, {
+                windowMs: 60 * 1000,
+                maxRequests: 30,
+                failureMode: 'closed',
+            });
+            if (rateLimitRes) return addCors(rateLimitRes, request, env);
+        }
 
         // Math observability is self-contained and must not be shadowed by legacy/public handlers.
         // Dispatch it before the phieu subdomain and shared-token middleware.
@@ -65,28 +98,28 @@ export default {
         ) {
             if (path === '/api/math/telemetry' && method === 'POST') {
                 const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 30 });
-                if (rateLimitRes) return addCors(rateLimitRes, request);
+                if (rateLimitRes) return addCors(rateLimitRes, request, env);
             }
 
             const mathResponse = await handleMathObservabilityRoutes(request, env, path, method);
-            if (mathResponse) return addCors(mathResponse, request);
+            if (mathResponse) return addCors(mathResponse, request, env);
         }
 
         const phieuSubdomainResponse = await handlePhieuSubdomain(request, env);
-        if (phieuSubdomainResponse) return addCors(phieuSubdomainResponse, request);
+        if (phieuSubdomainResponse) return addCors(phieuSubdomainResponse, request, env);
 
         // Rate limit for public phieu
         if (path.startsWith('/api/phieu/public')) {
             const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 30 });
-            if (rateLimitRes) return addCors(rateLimitRes, request);
+            if (rateLimitRes) return addCors(rateLimitRes, request, env);
         }
 
         const publicPhieuResponse = await handlePublicPhieuApi(env.DB, path, method);
-        if (publicPhieuResponse) return addCors(publicPhieuResponse, request);
+        if (publicPhieuResponse) return addCors(publicPhieuResponse, request, env);
 
         // Auth check from header
         const authError = verifyToken(request, env);
-        if (authError) return addCors(authError, request);
+        if (authError) return addCors(authError, request, env);
 
         try {
             // ============ RESTful API ROUTES ============
@@ -107,12 +140,12 @@ export default {
             } else if (path.startsWith('/api/announcements') || path.startsWith('/api/admin/announcements')) {
                 response = await handleAnnouncementRoutes(request, env, path, method);
             } else if (path.startsWith('/api/ai-tutor')) {
-                const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 10 });
-                if (rateLimitRes) return addCors(rateLimitRes, request);
+                const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 10, failureMode: 'closed' });
+                if (rateLimitRes) return addCors(rateLimitRes, request, env);
                 response = await handleAiTutorRoutes(request, env, path, method);
             } else if (path.startsWith('/api/ai/')) {
-                const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 10 });
-                if (rateLimitRes) return addCors(rateLimitRes, request);
+                const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 10, failureMode: 'closed' });
+                if (rateLimitRes) return addCors(rateLimitRes, request, env);
                 response = await handleAiProxy(request, env, path, method);
             } else if (path.startsWith('/api/practice')) {
                 response = await handlePracticeRoutes(request, env, path, method);
@@ -128,7 +161,7 @@ export default {
                 response = await handlePhieuRoutes(request, env, path, method);
             } else if (path.startsWith('/api/homework')) {
                 const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 60 });
-                if (rateLimitRes) return addCors(rateLimitRes, request);
+                if (rateLimitRes) return addCors(rateLimitRes, request, env);
                 response = await handleHomeworkRoutes(request, env, path, method);
             } else if (path.startsWith('/api/analytics')) {
                 response = await handleAnalyticsRoutes(request, env, path, method);
@@ -144,13 +177,13 @@ export default {
                 response = await handleAdminCertificateRoutes(request, env, path, method);
             }
 
-            if (response) return addCors(response, request);
+            if (response) return addCors(response, request, env);
 
-            return addCors(errorResponse('Not found: ' + path, 404), request);
+            return addCors(errorResponse('Not found: ' + path, 404), request, env);
         } catch (error: unknown) {
             return addCors(internalErrorResponse(error, request, {
                 context: `${method} ${path}`,
-            }), request);
+            }), request, env);
         }
     },
 
@@ -255,9 +288,9 @@ function getWeekNumber(date: Date): number {
 }
 
 // Add CORS headers to any response
-function addCors(response: Response, request: Request): Response {
+function addCors(response: Response, request: Request, env: Env): Response {
     const headers = new Headers(response.headers);
-    for (const [key, value] of Object.entries(corsHeaders(request))) {
+    for (const [key, value] of Object.entries(corsHeaders(request, env))) {
         headers.set(key, value);
     }
     return new Response(response.body, {

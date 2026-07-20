@@ -9,6 +9,8 @@ import {
 import { verifyToken } from '../workers/src/middleware/auth';
 import { internalErrorResponse } from '../workers/src/utils/internalError';
 import { errorResponse } from '../workers/src/utils/response';
+import { corsHeaders, handleCors } from '../workers/src/middleware/cors';
+import { enforceOriginGuard } from '../workers/src/middleware/originGuard';
 import { vi } from 'vitest';
 
 describe('system security password storage', () => {
@@ -108,6 +110,84 @@ describe('system security password storage', () => {
             status: 'error',
             message: 'Forbidden: Teacher access required',
         });
+    });
+
+    it('allows only official HTTPS and configured Vercel preview origins in production', () => {
+        const production = { ENVIRONMENT: 'production' } as any;
+        const official = new Request('https://phieu.thitong.site/api/health', {
+            headers: { Origin: 'https://www.thitong.site' },
+        });
+        const preview = new Request('https://phieu.thitong.site/api/health', {
+            headers: { Origin: 'https://itongquiz1-abc123-khanhs-projects-e97e400d.vercel.app' },
+        });
+        const productionAlias = new Request('https://phieu.thitong.site/api/health', {
+            headers: { Origin: 'https://itongquiz1-khanhs-projects-e97e400d.vercel.app' },
+        });
+        const apiOrigin = new Request('https://phieu.thitong.site/api/health', {
+            headers: { Origin: 'https://phieu.thitong.site' },
+        });
+        const fakePreview = new Request('https://phieu.thitong.site/api/health', {
+            headers: { Origin: 'https://itongquiz1-abc123-attacker.vercel.app' },
+        });
+        const localhost = new Request('https://phieu.thitong.site/api/health', {
+            headers: { Origin: 'http://localhost:5173' },
+        });
+
+        expect(corsHeaders(official, production)['Access-Control-Allow-Origin']).toBe('https://www.thitong.site');
+        expect(corsHeaders(preview, production)['Access-Control-Allow-Origin']).toBe(preview.headers.get('Origin'));
+        expect(corsHeaders(productionAlias, production)['Access-Control-Allow-Origin']).toBe(productionAlias.headers.get('Origin'));
+        expect(corsHeaders(apiOrigin, production)['Access-Control-Allow-Origin']).toBe('https://phieu.thitong.site');
+        expect(corsHeaders(fakePreview, production)['Access-Control-Allow-Origin']).toBeUndefined();
+        expect(corsHeaders(localhost, production)['Access-Control-Allow-Origin']).toBeUndefined();
+    });
+
+    it('allows localhost only in development or on a local Worker host', () => {
+        const remoteRequest = new Request('https://phieu.thitong.site/api/health', {
+            headers: { Origin: 'http://localhost:5173' },
+        });
+        const localWorkerRequest = new Request('http://127.0.0.1:8787/api/health', {
+            headers: { Origin: 'http://localhost:5173' },
+        });
+
+        expect(corsHeaders(remoteRequest, { ENVIRONMENT: 'development' } as any)['Access-Control-Allow-Origin'])
+            .toBe('http://localhost:5173');
+        expect(corsHeaders(localWorkerRequest, { ENVIRONMENT: 'production' } as any)['Access-Control-Allow-Origin'])
+            .toBe('http://localhost:5173');
+    });
+
+    it('rejects invalid preflight origins without reflecting them', async () => {
+        const request = new Request('https://phieu.thitong.site/api/account/me', {
+            method: 'OPTIONS',
+            headers: {
+                Origin: 'https://evil.example',
+                'Access-Control-Request-Method': 'POST',
+            },
+        });
+        const response = handleCors(request, { ENVIRONMENT: 'production' } as any);
+
+        expect(response?.status).toBe(403);
+        expect(response?.headers.get('Access-Control-Allow-Origin')).toBeNull();
+    });
+
+    it('blocks unsafe cookie-authenticated requests from an untrusted origin', async () => {
+        const blocked = enforceOriginGuard(new Request('https://phieu.thitong.site/api/account/change-password', {
+            method: 'POST',
+            headers: {
+                Origin: 'https://evil.example',
+                Cookie: 'auth_token=secret',
+            },
+        }), { ENVIRONMENT: 'production' } as any);
+        const allowed = enforceOriginGuard(new Request('https://phieu.thitong.site/api/account/change-password', {
+            method: 'POST',
+            headers: {
+                Origin: 'https://www.thitong.site',
+                Cookie: 'auth_token=secret',
+            },
+        }), { ENVIRONMENT: 'production' } as any);
+
+        expect(blocked?.status).toBe(403);
+        await expect(blocked?.json()).resolves.toMatchObject({ message: expect.stringMatching(/origin/i) });
+        expect(allowed).toBeNull();
     });
 
 });

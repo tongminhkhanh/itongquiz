@@ -79,13 +79,45 @@ describe('D1 rate limiter', () => {
     expect(statements[0].bindings[0]).toBe('custom:user-1');
   });
 
-  it('fails open when D1 is unavailable', async () => {
+  it('fails open when D1 is unavailable by default', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { env } = createEnv(null, true);
 
-    await expect(rateLimit(new Request('https://example.com/api/login'), env)).resolves.toBeNull();
+    await expect(rateLimit(new Request('https://example.com/api/public'), env)).resolves.toBeNull();
     expect(consoleSpy).toHaveBeenCalled();
     consoleSpy.mockRestore();
+  });
+
+  it('fails closed with a retryable 503 for sensitive routes', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { env } = createEnv(null, true);
+
+    const response = await rateLimit(
+      new Request('https://example.com/api/ai/chat', { method: 'POST' }),
+      env,
+      { failureMode: 'closed' },
+    );
+
+    expect(response?.status).toBe(503);
+    expect(response?.headers.get('Retry-After')).toBe('60');
+    await expect(response?.json()).resolves.toMatchObject({
+      status: 'error',
+      message: expect.stringMatching(/temporarily unavailable/i),
+    });
+    consoleSpy.mockRestore();
+  });
+
+  it('prefers the Cloudflare client IP over spoofable forwarding headers', async () => {
+    const { env, statements } = createEnv({ count: 1, window_start: new Date().toISOString() });
+    await rateLimit(new Request('https://example.com/api/login', {
+      method: 'POST',
+      headers: {
+        'CF-Connecting-IP': '1.2.3.4',
+        'X-Forwarded-For': '9.9.9.9',
+      },
+    }), env);
+
+    expect(statements[0].bindings[0]).toBe('ratelimit:POST:/api/login:1.2.3.4');
   });
 
   it('creates the same aggregate table shape used by production', async () => {

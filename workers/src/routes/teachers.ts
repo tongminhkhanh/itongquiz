@@ -94,12 +94,14 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
             .bind(username).first<TeacherRow>();
         const match = teacher ? await passwordMatches(password, teacher.password) : { valid: false, legacy: false };
         if (!teacher || teacher.status === 'DISABLED' || !match.valid) {
-            await recordLoginFailure(request, env, username);
+            const limiterError = await recordLoginFailure(request, env, username);
+            if (limiterError) return limiterError;
             return errorResponse('Sai tên đăng nhập hoặc mật khẩu.', 401);
         }
         if (!env.JWT_SECRET) return errorResponse('Authentication service unavailable', 503);
 
-        await clearLoginFailures(request, env, username);
+        const limiterError = await clearLoginFailures(request, env, username);
+        if (limiterError) return limiterError;
         const requiresPasswordChange = match.legacy || Number(teacher.must_change_password) === 1;
         const purpose = requiresPasswordChange ? 'password_change' : 'session';
         const jwtToken = await createSessionToken(teacher, env, purpose);
