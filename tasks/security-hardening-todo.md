@@ -159,14 +159,15 @@ Detailed plan: `docs/plans/2026-07-20-security-hardening.md`
 ### Release evidence — 2026-07-20
 
 - Commit production: `9c81107`
-- API Worker version hiện tại: `d0c41781-0e7c-4aa3-aca0-a089ffc2b9fe`
-- API Worker version rollback gần nhất: `b8e5ce6a-3786-4b3d-b124-95077ff16d9e`
-- Vercel production deployment: `dpl_2P3TJycrTS8VkP141oA8k9sZcXut`
-- Vercel preview deployment: `dpl_DcqRjfq7mpNERGFb5getDqEnkE2t`
+- API Worker manual deploy version: `d0c41781-0e7c-4aa3-aca0-a089ffc2b9fe`
+- API Worker rollback baseline trước Phase 3: `b8e5ce6a-3786-4b3d-b124-95077ff16d9e`
+- Vercel production deployment dùng cho initial smoke: `dpl_2P3TJycrTS8VkP141oA8k9sZcXut`
+- Vercel preview deployment dùng cho Phase 3 smoke: `dpl_DcqRjfq7mpNERGFb5getDqEnkE2t`
 - Production frontend `/` và same-origin `/api/health`: đạt
 - Preview frontend `/` và same-origin `/api/health` qua `vercel curl`: đạt
 - Origin lạ: preflight và mutation đều bị chặn `403`
 - Teacher/student invalid-login routes: reachable, không `503`
+
 ## Final Definition of Done
 
 - [x] Không auth JWT trong persistent browser storage
