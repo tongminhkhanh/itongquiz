@@ -1,19 +1,48 @@
 {
-  "goal": "Hoàn thiện Certificate Feature: viết đủ 7 API handlers còn thiếu trong routes/certificates.ts, fix bug batchTitle, và thêm tests cơ bản",
+  "goal": "Thực hiện đầy đủ plan redesign Thư viện luyện tập học sinh theo TDD trong worktree riêng, commit tách nhỏ, kiểm tra test/build/Cypress và review trước khi tích hợp.",
   "steps": [
     {
-      "text": "Đọc workers/src/routes/adminCertificates.ts để biết handler nào đã tồn tại ở đó",
-      "done": false
+      "text": "Thiết lập worktree và chạy baseline",
+      "done": true
     },
     {
-      "text": "Viết plan document ra file docs/superpowers/plans/",
-      "done": false
+      "text": "Chuẩn hóa metadata môn học và icon",
+      "done": true
     },
     {
-      "text": "Thực thi plan",
-      "done": false
+      "text": "Xây canonical practice catalog model",
+      "done": true
+    },
+    {
+      "text": "Giữ lỗi API và thêm hook usePracticeTopics",
+      "done": true
+    },
+    {
+      "text": "Chuyển điều hướng môn học sang React Router",
+      "done": true
+    },
+    {
+      "text": "Thiết kế lại SubjectPracticeGrid dashboard",
+      "done": true
+    },
+    {
+      "text": "Chuyển TopicCard sang native button",
+      "done": true
+    },
+    {
+      "text": "Tách và thiết kế lại SubjectLibrary",
+      "done": true
+    },
+    {
+      "text": "Bổ sung Cypress responsive và E2E",
+      "done": true
+    },
+    {
+      "text": "Chạy full verification, review và hoàn tất branch",
+      "done": true
     }
   ],
-  "created": "2026-07-14T10:02:31.980Z",
-  "updated": "2026-07-14T10:02:31.980Z"
+  "created": "2026-07-19T16:51:05.492Z",
+  "updated": "2026-07-19T18:24:40.445Z",
+  "status": "Implementation hoàn tất trên branch riêng. Full Vitest 106/106 file, 590/590 test đạt với maxWorkers=1; root build và security scan đạt; Cypress compile đạt nhưng authenticated run bị chặn bởi thiếu test credentials; review không có P1/P2; GitNexus chỉ ghi nhận 3 luồng frontend bị ảnh hưởng."
 }

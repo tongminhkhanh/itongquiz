@@ -47,6 +47,10 @@ workers/.wrangler/
 # AI Agent configs
 .agents/
 .agent/skills/
+.agent/rules/
+.agent/workflows/
+.agent/AGENTS.md
+.agent/ecc-install-state.json
 .claude/
 itongquiz/
 llm-mux/
