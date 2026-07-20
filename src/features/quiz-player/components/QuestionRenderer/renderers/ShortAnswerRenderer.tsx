@@ -1,33 +1,23 @@
 import React from 'react';
 import { BaseRendererProps } from '../types';
 
-/**
- * ShortAnswerRenderer: Renders a simple text input for short answers.
- */
 const ShortAnswerRenderer: React.FC<BaseRendererProps> = ({
-    question: q,
-    answers,
-    onAnswerChange,
-}) => {
-    return (
-        <div className="space-y-4">
-            <div className="relative group">
-                <input
-                    type="text"
-                    value={answers[q.id] || ''}
-                    onChange={(e) => onAnswerChange(q.id, e.target.value)}
-                    placeholder="Nhập câu trả lời của bạn vào đây..."
-                    className="w-full p-4 text-[16px] md:text-lg border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-100 transition-all outline-none bg-gray-50/50 hover:bg-white"
-                />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    ⌨️
-                </div>
-            </div>
-            <p className="text-xs text-gray-500 italic pl-1">
-                * Lưu ý: Kiểm tra kỹ chính tả trước khi chuyển câu tiếp theo.
-            </p>
-        </div>
-    );
-};
+  question: question,
+  answers,
+  onAnswerChange,
+}) => (
+  <div className="space-y-3">
+    <input
+      type="text"
+      value={answers[question.id] || ''}
+      onChange={(event) => onAnswerChange(question.id, event.target.value)}
+      placeholder="Nhập câu trả lời của em..."
+      className="w-full rounded-[10px] border border-slate-300 bg-white p-4 text-base text-slate-800 outline-none transition-colors placeholder:text-slate-400 hover:border-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 md:text-lg"
+    />
+    <p className="text-xs leading-5 text-slate-500">
+      Kiểm tra lại chính tả trước khi chuyển sang câu tiếp theo.
+    </p>
+  </div>
+);
 
 export default React.memo(ShortAnswerRenderer);

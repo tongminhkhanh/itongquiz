@@ -2,168 +2,155 @@ import React, { useMemo } from 'react';
 import { BaseRendererProps } from '../types';
 import MathSpan from '../atoms/MathSpan';
 
-const pairColors = [
-    { bg: 'bg-indigo-100', dot: 'bg-indigo-500', text: 'text-indigo-900', border: 'border-indigo-400' },
-    { bg: 'bg-emerald-100', dot: 'bg-emerald-500', text: 'text-emerald-900', border: 'border-emerald-400' },
-    { bg: 'bg-amber-100', dot: 'bg-amber-500', text: 'text-amber-900', border: 'border-amber-400' },
-    { bg: 'bg-rose-100', dot: 'bg-rose-500', text: 'text-rose-900', border: 'border-rose-400' },
-    { bg: 'bg-sky-100', dot: 'bg-sky-500', text: 'text-sky-900', border: 'border-sky-400' },
-    { bg: 'bg-purple-100', dot: 'bg-purple-500', text: 'text-purple-900', border: 'border-purple-400' },
-    { bg: 'bg-orange-100', dot: 'bg-orange-500', text: 'text-orange-900', border: 'border-orange-400' },
-];
-
-/**
- * MatchingRenderer: Renders a matching (col A vs col B) question with color-coded pairing.
- */
 const MatchingRenderer: React.FC<BaseRendererProps> = ({
-    question: q,
-    answers,
-    onAnswerChange,
-    onMatchingClick,
+  question: question,
+  answers,
+  onAnswerChange,
+  onMatchingClick,
 }) => {
-    const currentAnswers = (answers[q.id] as Record<string, any>) || {};
-    const selectedLeft = currentAnswers.selectedLeft;
-    // Helper to get only the matched pairs (filtering out internal state like selectedLeft)
-    const currentPairs = useMemo(() => {
-        const pairs: Record<string, string> = {};
-        Object.entries(currentAnswers).forEach(([key, val]) => {
-            if (key !== 'selectedLeft' && typeof val === 'string') {
-                pairs[key] = val;
-            }
-        });
-        return pairs;
-    }, [currentAnswers]);
-    
-    // Advanced Data Detection
-    let rawPairs = (q as any).pairs || [];
-    let rawLeftItems = (q as any).leftItems || [];
-    let rawRightItems = (q as any).rightItems || [];
+  const currentAnswers = (answers[question.id] as Record<string, any>) || {};
+  const selectedLeft = currentAnswers.selectedLeft;
 
-    // Fallback cho QuestionSnapshot hoặc các cấu trúc khác
-    if (rawLeftItems.length === 0 && rawPairs.length === 0 && Array.isArray((q as any).items)) {
-        const totalItems = (q as any).items;
-        if (totalItems.length > 0 && totalItems[0].left) {
-            rawPairs = totalItems;
-        } else {
-            const half = Math.ceil(totalItems.length / 2);
-            rawLeftItems = totalItems.slice(0, half).map((text: any, idx: number) => 
-                typeof text === 'string' ? { id: `l-${idx}`, content: text } : text
-            );
-            rawRightItems = totalItems.slice(half).map((text: any, idx: number) => 
-                typeof text === 'string' ? { id: `r-${idx}`, content: text } : text
-            );
-        }
+  const currentPairs = useMemo(() => {
+    const pairs: Record<string, string> = {};
+    Object.entries(currentAnswers).forEach(([key, value]) => {
+      if (key !== 'selectedLeft' && key !== '__shuffledIds' && typeof value === 'string') {
+        pairs[key] = value;
+      }
+    });
+    return pairs;
+  }, [currentAnswers]);
+
+  let rawPairs = (question as any).pairs || [];
+  let rawLeftItems = (question as any).leftItems || [];
+  let rawRightItems = (question as any).rightItems || [];
+
+  if (rawLeftItems.length === 0 && rawPairs.length === 0 && Array.isArray((question as any).items)) {
+    const totalItems = (question as any).items;
+    if (totalItems.length > 0 && totalItems[0].left) {
+      rawPairs = totalItems;
+    } else {
+      const half = Math.ceil(totalItems.length / 2);
+      rawLeftItems = totalItems.slice(0, half).map((text: any, index: number) => (
+        typeof text === 'string' ? { id: `l-${index}`, content: text } : text
+      ));
+      rawRightItems = totalItems.slice(half).map((text: any, index: number) => (
+        typeof text === 'string' ? { id: `r-${index}`, content: text } : text
+      ));
     }
-    
-    // Normalize Items A
-    const itemsLeft = React.useMemo(() => {
-        if (rawLeftItems.length > 0) return rawLeftItems;
-        if (rawPairs.length > 0) return rawPairs.map((p: any, i: number) => ({ id: `l-${i}`, content: p.left }));
-        return [];
-    }, [rawLeftItems, rawPairs]);
+  }
 
-    // Stable SHUFFLE logic using session state
-    // We store the shuffled IDs in the answer state so they don't change when switching questions
-    const itemsRight = React.useMemo(() => {
-        const rawItems = rawRightItems.length > 0 
-            ? [...rawRightItems] 
-            : rawPairs.map((p: any, i: number) => ({ id: `r-${i}`, content: p.right }));
+  const itemsLeft = useMemo(() => {
+    if (rawLeftItems.length > 0) return rawLeftItems;
+    if (rawPairs.length > 0) {
+      return rawPairs.map((pair: any, index: number) => ({ id: `l-${index}`, content: pair.left }));
+    }
+    return [];
+  }, [rawLeftItems, rawPairs]);
 
-        const savedOrder = currentAnswers.__shuffledIds;
-        
-        if (savedOrder && Array.isArray(savedOrder)) {
-            // Restore from saved order
-            return savedOrder
-                .map(id => rawItems.find(item => item.id === id))
-                .filter(Boolean);
-        }
+  const itemsRight = useMemo(() => {
+    const rawItems = rawRightItems.length > 0
+      ? [...rawRightItems]
+      : rawPairs.map((pair: any, index: number) => ({ id: `r-${index}`, content: pair.right }));
 
-        // Fallback or Initial Shuffle (will be saved by useEffect)
-        const shuffled = [...rawItems];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    }, [rawRightItems, rawPairs, q.id, currentAnswers.__shuffledIds]);
+    const savedOrder = currentAnswers.__shuffledIds;
+    if (savedOrder && Array.isArray(savedOrder)) {
+      return savedOrder
+        .map((id) => rawItems.find((item: any) => item.id === id))
+        .filter(Boolean);
+    }
 
-    // PERSIST the shuffle order for the current session
-    React.useEffect(() => {
-        if (!currentAnswers.__shuffledIds && itemsRight.length > 0) {
-            const ids = itemsRight.map(item => item.id);
-            onAnswerChange(q.id, { ...currentAnswers, __shuffledIds: ids });
-        }
-    }, [q.id, itemsRight, currentAnswers.__shuffledIds, onAnswerChange]);
+    const shuffled = [...rawItems];
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+    }
+    return shuffled;
+  }, [rawRightItems, rawPairs, currentAnswers.__shuffledIds]);
 
-    // Correct mapping for getPairColor if we used generated IDs
-    const getPairId = (itemId: string, side: 'left' | 'right') => {
-        // If it's a complex object with ID, use it. If it's our generated ID, we need special handling.
-        // Actually, for MatchingRenderer, we better use the CONTENT as ID if no real ID exists
-        // as the student is matching content to content.
-        return itemId;
-    };
+  React.useEffect(() => {
+    if (!currentAnswers.__shuffledIds && itemsRight.length > 0) {
+      const ids = itemsRight.map((item: any) => item.id);
+      onAnswerChange(question.id, { ...currentAnswers, __shuffledIds: ids });
+    }
+  }, [question.id, itemsRight, currentAnswers.__shuffledIds, onAnswerChange]);
 
-    // Detect Pair Color 
-    const getPairColor = (itemId: string, side: 'left' | 'right') => {
-        const pairs = Object.entries(currentPairs);
-        const pairIndex = pairs.findIndex(([l, r]) => side === 'left' ? l === itemId : r === itemId);
-        return pairIndex !== -1 ? pairColors[pairIndex % pairColors.length] : null;
-    };
+  const getPairNumber = (itemId: string, side: 'left' | 'right') => {
+    const pairs = Object.entries(currentPairs);
+    const pairIndex = pairs.findIndex(([leftId, rightId]) => (
+      side === 'left' ? leftId === itemId : rightId === itemId
+    ));
+    return pairIndex >= 0 ? pairIndex + 1 : null;
+  };
 
-    return (
-        <div className="grid grid-cols-2 gap-x-6 md:gap-x-12 gap-y-4">
-            {/* Column A */}
-            <div className="space-y-4">
-                <div className="text-center font-bold text-gray-400 text-xs uppercase tracking-widest mb-4">CỘT A</div>
-                {itemsLeft.map((item: any, idx: number) => {
-                    const isSelected = selectedLeft === item.id;
-                    const color = getPairColor(item.id, 'left');
-                    return (
-                        <button
-                            key={item.id || idx}
-                            onClick={() => onMatchingClick?.(q.id, item.id, 'left')}
-                            className={`w-full text-left p-4 rounded-2xl border-2 transition-all relative flex items-center min-h-[70px] shadow-sm ${
-                                color ? `${color.bg} ${color.border} ${color.text} scale-[1.02] z-10` :
-                                isSelected ? 'border-orange-500 bg-orange-50 ring-4 ring-orange-100' : 'border-gray-100 bg-white hover:border-orange-200 hover:shadow-md'
-                            }`}
-                        >
-                            <span className="flex-1 pr-4 font-medium">
-                                <MathSpan content={item.content} className="text-sm md:text-base leading-snug" />
-                            </span>
-                            <div className={`w-4 h-4 rounded-full border-2 border-white flex-shrink-0 shadow-inner ${color ? color.dot : isSelected ? 'bg-orange-500' : 'bg-gray-200'}`} />
-                        </button>
-                    );
-                })}
-            </div>
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-3 md:gap-x-6">
+      <div className="space-y-3">
+        <h3 className="mb-2 text-center text-xs font-semibold text-slate-500">Cột A</h3>
+        {itemsLeft.map((item: any, index: number) => {
+          const isSelected = selectedLeft === item.id;
+          const pairNumber = getPairNumber(item.id, 'left');
+          const isPaired = pairNumber !== null;
 
-            {/* Column B */}
-            <div className="space-y-4">
-                <div className="text-center font-bold text-gray-400 text-xs uppercase tracking-widest mb-4">CỘT B</div>
-                {itemsRight.map((item: any, idx: number) => {
-                    // Important: if we generated IDs like l-0/r-0, we must match them back to original content
-                    // BUT currentPairs stores the matched IDs.
-                    // For now, let's assume item.id is stable.
-                    const isSelected = false; // No selection on right side in this state model
-                    const color = getPairColor(item.id, 'right');
-                    return (
-                        <button
-                            key={item.id || idx}
-                            onClick={() => onMatchingClick?.(q.id, item.id, 'right')}
-                            className={`w-full text-left p-4 rounded-2xl border-2 transition-all relative flex items-center min-h-[70px] shadow-sm ${
-                                color ? `${color.bg} ${color.border} ${color.text} scale-[1.02] z-10` :
-                                isSelected ? 'border-orange-500 bg-orange-50 ring-4 ring-orange-100' : 'border-gray-100 bg-white hover:border-orange-200 hover:shadow-md'
-                            }`}
-                        >
-                            <div className={`w-4 h-4 rounded-full border-2 border-white flex-shrink-0 mr-4 shadow-inner ${color ? color.dot : isSelected ? 'bg-orange-500' : 'bg-gray-200'}`} />
-                            <span className="flex-1 text-right pl-4 font-medium">
-                                <MathSpan content={item.content} className="text-sm md:text-base leading-snug" />
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
-    );
+          return (
+            <button
+              key={item.id || index}
+              type="button"
+              onClick={() => onMatchingClick?.(question.id, item.id, 'left')}
+              className={`relative flex min-h-[68px] w-full items-center rounded-[10px] border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 md:p-4 ${
+                isPaired
+                  ? 'border-sky-300 bg-sky-50 text-sky-950'
+                  : isSelected
+                    ? 'border-sky-500 bg-sky-50 text-sky-950'
+                    : 'border-slate-200 bg-white text-slate-800 hover:border-sky-300'
+              }`}
+            >
+              <span className="flex-1 pr-2 font-medium">
+                <MathSpan content={item.content} className="text-sm leading-snug md:text-base" />
+              </span>
+              {isPaired ? (
+                <span className="shrink-0 rounded-[6px] bg-white px-2 py-1 text-[10px] font-semibold text-sky-700">
+                  Cặp {pairNumber}
+                </span>
+              ) : isSelected ? (
+                <span className="shrink-0 text-[10px] font-semibold text-sky-700">Đang chọn</span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="space-y-3">
+        <h3 className="mb-2 text-center text-xs font-semibold text-slate-500">Cột B</h3>
+        {itemsRight.map((item: any, index: number) => {
+          const pairNumber = getPairNumber(item.id, 'right');
+          const isPaired = pairNumber !== null;
+
+          return (
+            <button
+              key={item.id || index}
+              type="button"
+              onClick={() => onMatchingClick?.(question.id, item.id, 'right')}
+              className={`relative flex min-h-[68px] w-full items-center rounded-[10px] border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 md:p-4 ${
+                isPaired
+                  ? 'border-sky-300 bg-sky-50 text-sky-950'
+                  : 'border-slate-200 bg-white text-slate-800 hover:border-sky-300'
+              }`}
+            >
+              {isPaired ? (
+                <span className="mr-2 shrink-0 rounded-[6px] bg-white px-2 py-1 text-[10px] font-semibold text-sky-700">
+                  Cặp {pairNumber}
+                </span>
+              ) : null}
+              <span className="flex-1 font-medium">
+                <MathSpan content={item.content} className="text-sm leading-snug md:text-base" />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 };
 
 export default React.memo(MatchingRenderer);

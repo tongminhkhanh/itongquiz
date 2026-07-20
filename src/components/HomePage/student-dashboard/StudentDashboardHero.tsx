@@ -1,4 +1,3 @@
-import { ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
 import type { StudentDashboardHeroProps } from './dashboard.types';
 
 export function StudentDashboardHero({
@@ -14,20 +13,15 @@ export function StudentDashboardHero({
   const attendanceDisabled = !attendanceAvailable && !attendanceClaimed;
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-br from-white via-sky-50 to-indigo-50 p-5 shadow-sm sm:p-7 md:p-9">
-      <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-sky-200/35 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-indigo-200/25 blur-3xl" />
-
-      <div className="relative flex max-w-3xl flex-col items-start gap-5">
+    <section className="rounded-[14px] border border-[#E7E2D8] bg-[#FFF9EA] px-5 py-6 sm:px-7 sm:py-8">
+      <div className="flex max-w-3xl flex-col items-start gap-5">
         <div>
-          <p className="mb-2 text-sm font-bold uppercase tracking-[0.16em] text-sky-700">
-            Learning Adventure
-          </p>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-            Chào ngày mới, {firstName}!
+          <p className="mb-2 text-sm font-medium text-[#6B7280]">Hôm nay em muốn bắt đầu từ đâu?</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[#172033] sm:text-3xl">
+            Chào {firstName}.
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-            Bắt đầu với bài giáo viên giao, sau đó tiếp tục khám phá những môn học em yêu thích.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#526174] sm:text-base">
+            Ưu tiên bài được giao trước, sau đó em có thể luyện thêm môn mình đang quan tâm.
           </p>
         </div>
 
@@ -35,23 +29,17 @@ export function StudentDashboardHero({
           <button
             type="button"
             onClick={onPrimaryAction}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-sky-600 px-5 text-sm font-extrabold text-white shadow-sm transition duration-200 hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+            className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-sky-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
           >
             {primaryLabel}
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </button>
 
           <button
             type="button"
             onClick={onAttendance}
             disabled={attendanceDisabled}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 text-sm font-bold text-amber-900 transition duration-200 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-500"
+            className="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-500"
           >
-            {attendanceClaimed ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-            ) : (
-              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-            )}
             {attendanceLabel}
           </button>
         </div>

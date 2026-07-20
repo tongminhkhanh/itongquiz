@@ -82,7 +82,7 @@ describe('LiveExamQuiz pagination activity', () => {
             });
         });
 
-        fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Câu tiếp theo' }));
         act(flushAnimationFrames);
 
         await waitFor(() => {

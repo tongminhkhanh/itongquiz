@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { BookOpen } from 'lucide-react';
 import {
   AssignedWorkSkeleton,
   DashboardEmptyState,
@@ -41,20 +40,15 @@ export const StudentHomeworkSection: React.FC<StudentHomeworkSectionProps> = ({
   }, [classId, studentId, fetchClassAssignments, fetchStudentSubmissions]);
 
   return (
-    <section aria-labelledby="student-homework-title" className="space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-indigo-200 bg-indigo-100 text-indigo-700">
-          <BookOpen className="h-5 w-5" aria-hidden="true" />
-        </div>
-        <div>
-          <h2 id="student-homework-title" className="text-2xl font-black tracking-tight text-slate-900">
-            Bài tập tự luận
-          </h2>
-          <p className="mt-1 text-sm font-medium text-slate-600">
-            Luyện viết, nộp bài và xem phản hồi từ giáo viên.
-            {assignments.length > 0 ? ` · ${assignments.length} bài tập` : ''}
-          </p>
-        </div>
+    <section aria-labelledby="student-homework-title">
+      <div className="mb-5">
+        <h2 id="student-homework-title" className="text-2xl font-semibold tracking-tight text-[#172033]">
+          Bài tập tự luận
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-[#526174]">
+          Luyện viết, nộp bài và xem phản hồi từ giáo viên.
+          {assignments.length > 0 ? ` · ${assignments.length} bài tập` : ''}
+        </p>
       </div>
 
       {isLoading && assignments.length === 0 ? <AssignedWorkSkeleton count={3} /> : null}
@@ -71,7 +65,7 @@ export const StudentHomeworkSection: React.FC<StudentHomeworkSectionProps> = ({
       ) : null}
 
       {assignments.length > 0 ? (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="overflow-hidden rounded-[14px] border border-[#E5E7EB] bg-white">
           {assignments.map((assignment) => (
             <StudentHomeworkCard
               key={assignment.id}

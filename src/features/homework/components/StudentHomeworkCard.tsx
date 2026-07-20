@@ -1,5 +1,4 @@
 import React from 'react';
-import { BookOpen, CheckCircle2, Clock, Info, Timer } from 'lucide-react';
 import type { HomeworkAssignment, HomeworkSubmission } from '../types';
 
 interface StudentHomeworkCardProps {
@@ -20,29 +19,21 @@ export const StudentHomeworkCard: React.FC<StudentHomeworkCardProps> = ({
   const deadlineDate = new Date(assignment.deadline);
   const isOverdue = !isSubmitted && deadlineDate < new Date();
 
-  const status = isGraded
-    ? {
-        label: 'Đã chấm',
-        color: 'bg-emerald-100 text-emerald-700',
-        icon: <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />,
-      }
+  const statusLabel = isGraded
+    ? 'Đã chấm'
     : isSubmitted
-      ? {
-          label: 'Đã nộp',
-          color: 'bg-blue-100 text-blue-700',
-          icon: <Clock className="h-3.5 w-3.5" aria-hidden="true" />,
-        }
+      ? 'Đã nộp'
       : isClosed
-        ? {
-            label: 'Đã đóng',
-            color: 'bg-rose-100 text-rose-700',
-            icon: <Timer className="h-3.5 w-3.5" aria-hidden="true" />,
-          }
-        : {
-            label: 'Mới',
-            color: 'bg-orange-100 text-orange-700',
-            icon: <Timer className="h-3.5 w-3.5" aria-hidden="true" />,
-          };
+        ? 'Đã đóng'
+        : 'Cần làm';
+
+  const statusClass = isGraded
+    ? 'text-emerald-700'
+    : isSubmitted
+      ? 'text-sky-700'
+      : isClosed || isOverdue
+        ? 'text-[#E76F51]'
+        : 'text-amber-700';
 
   const actionLabel = isGraded
     ? 'Xem lỗi sai'
@@ -53,77 +44,54 @@ export const StudentHomeworkCard: React.FC<StudentHomeworkCardProps> = ({
         : 'Làm bài ngay';
 
   return (
-    <article
-      className={`flex h-full flex-col rounded-3xl border bg-white p-5 shadow-sm ${
-        isGraded
-          ? 'border-emerald-200'
-          : isSubmitted
-            ? 'border-blue-200'
-            : isOverdue || isClosed
-              ? 'border-rose-200'
-              : 'border-slate-200'
-      }`}
-    >
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div
-          className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
-            isGraded ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'
-          }`}
-        >
-          <BookOpen className="h-6 w-6" aria-hidden="true" />
-        </div>
-        <div
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${status.color}`}
-        >
-          {status.icon}
-          {status.label}
-        </div>
-      </div>
-
-      <h3 className="line-clamp-2 text-lg font-black text-slate-900">{assignment.title}</h3>
-
-      <div className="mt-3 flex-1 space-y-3">
-        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
-          <Clock className="h-4 w-4" aria-hidden="true" />
-          <span>Hạn nộp: {deadlineDate.toLocaleDateString('vi-VN')}</span>
-          {isOverdue ? <span className="font-black text-rose-600">Quá hạn</span> : null}
-        </div>
-
-        {assignment.description ? (
-          <div className="flex items-start gap-2 rounded-2xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">
-            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <p className="line-clamp-2">{assignment.description}</p>
+    <article className="border-b border-[#E5E7EB] p-4 last:border-b-0 sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h3 className="line-clamp-2 text-base font-semibold text-[#172033] sm:text-lg">
+              {assignment.title}
+            </h3>
+            <span className={`text-xs font-medium ${statusClass}`}>{statusLabel}</span>
           </div>
-        ) : null}
-      </div>
 
-      <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-        {isGraded ? (
-          <div className="flex items-center gap-1">
-            <span className="text-xs font-bold text-slate-500">Điểm số:</span>
-            <span className="text-lg font-black text-emerald-600">{submission?.score}/10</span>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[#526174]">
+            <span>Môn: {assignment.subject || 'Tự luận'}</span>
+            <span>
+              Hạn:{' '}
+              <span className={isOverdue || isClosed ? 'text-[#E76F51]' : 'text-amber-700'}>
+                {deadlineDate.toLocaleDateString('vi-VN')}
+              </span>
+            </span>
           </div>
-        ) : (
-          <span className="text-xs font-bold text-slate-500">
-            {isSubmitted
-              ? 'Đang chờ chấm điểm'
-              : isOverdue || isClosed
-                ? 'Đã hết hạn nộp'
-                : 'Sẵn sàng để làm bài'}
-          </span>
-        )}
+
+          {assignment.description ? (
+            <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#526174]">
+              {assignment.description}
+            </p>
+          ) : null}
+
+          <p className="mt-2 text-sm font-medium text-slate-700">
+            {isGraded
+              ? `Điểm số: ${submission?.score}/10`
+              : isSubmitted
+                ? 'Đã nộp bài · Đang chờ chấm điểm'
+                : isOverdue || isClosed
+                  ? 'Đã hết hạn nộp'
+                  : 'Chưa nộp bài'}
+          </p>
+        </div>
 
         <button
           type="button"
           onClick={() => onClick(assignment)}
-          className={`inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-xs font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
+          className={`inline-flex min-h-11 w-full items-center justify-center rounded-[10px] px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:w-auto ${
             isGraded
-              ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              ? 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
               : isSubmitted
-                ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                ? 'border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100'
                 : isOverdue || isClosed
-                  ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  ? 'border border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-sky-500 text-white hover:bg-sky-600'
           }`}
         >
           {actionLabel}

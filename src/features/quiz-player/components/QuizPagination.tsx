@@ -1,83 +1,73 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Send } from 'lucide-react';
 import type { QuizPageChangeHandler } from '../hooks/useQuizPageNavigation';
 
 interface QuizPaginationProps {
-    currentPage: number;
-    totalPages: number;
-    onPageChange: QuizPageChangeHandler;
-    onSubmit: () => void;
-    isSubmitting: boolean;
+  currentPage: number;
+  totalPages: number;
+  onPageChange: QuizPageChangeHandler;
+  onSubmit: () => void;
+  isSubmitting: boolean;
 }
 
 const QuizPagination: React.FC<QuizPaginationProps> = ({
-    currentPage,
-    totalPages,
-    onPageChange,
-    onSubmit,
-    isSubmitting,
+  currentPage,
+  totalPages,
+  onPageChange,
+  onSubmit,
+  isSubmitting,
 }) => {
-    return (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pb-12 border-t border-gray-100 pt-6">
-            <div className="flex items-center gap-2">
-                <button
-                    type="button"
-                    aria-label="Trang trước"
-                    onClick={() => onPageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="p-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                    <ChevronLeft aria-hidden="true" className="w-6 h-6" />
-                </button>
+  return (
+    <div className="mt-8 flex flex-col gap-4 border-t border-slate-200 pb-12 pt-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center justify-between gap-2 sm:justify-start">
+        <button
+          type="button"
+          aria-label="Trang trước"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+        >
+          Câu trước
+        </button>
 
-                <div
-                    role="status"
-                    aria-live="polite"
-                    className="px-6 py-2 bg-gray-50 rounded-xl border border-gray-100 text-sm font-bold text-gray-600"
-                >
-                    Trang {currentPage} / {totalPages}
-                </div>
-
-                <button
-                    type="button"
-                    aria-label="Trang sau"
-                    onClick={() => onPageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="p-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                    <ChevronRight aria-hidden="true" className="w-6 h-6" />
-                </button>
-            </div>
-
-            {currentPage === totalPages ? (
-                <button
-                    type="button"
-                    onClick={onSubmit}
-                    disabled={isSubmitting}
-                    className={`
-                        w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black text-lg shadow-xl shadow-green-100 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3
-                        ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}
-                    `}
-                >
-                    {isSubmitting ? (
-                        <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                        <Send aria-hidden="true" className="w-6 h-6" />
-                    )}
-                    NỘP BÀI NGAY
-                </button>
-            ) : (
-                <button
-                    type="button"
-                    onClick={() => onPageChange(currentPage + 1)}
-                    className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
-                >
-                    Tiếp tục
-                    <ChevronRight aria-hidden="true" className="w-5 h-5" />
-                </button>
-            )}
+        <div
+          role="status"
+          aria-live="polite"
+          className="px-3 py-2 text-sm font-medium text-slate-500"
+        >
+          Trang {currentPage} / {totalPages}
         </div>
-    );
+
+        <button
+          type="button"
+          aria-label="Trang sau"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+        >
+          Câu tiếp theo
+        </button>
+      </div>
+
+      {currentPage === totalPages ? (
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={isSubmitting}
+          className="inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-sky-600 px-6 text-base font-semibold text-white transition-colors hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+        >
+          {isSubmitting ? 'Đang nộp bài...' : 'Nộp bài'}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onPageChange(currentPage + 1)}
+          className="inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-sky-500 px-6 text-base font-semibold text-white transition-colors hover:bg-sky-600 sm:w-auto"
+        >
+          Câu tiếp theo
+        </button>
+      )}
+    </div>
+  );
 };
 
 export default QuizPagination;

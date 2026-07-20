@@ -7,7 +7,7 @@ export function HeroSkeleton() {
     <section
       aria-busy="true"
       aria-label="Đang tải lời chào"
-      className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"
+      className="overflow-hidden rounded-[14px] border border-slate-200 bg-white p-5 sm:p-7"
     >
       <div className="animate-pulse space-y-5" aria-hidden="true">
         <div className="space-y-3">
@@ -35,7 +35,7 @@ export function AssignedWorkSkeleton({ count = 3 }: { count?: number }) {
         <div
           key={index}
           data-testid="assigned-work-skeleton"
-          className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+          className="animate-pulse rounded-[14px] border border-slate-200 bg-white p-4"
           aria-hidden="true"
         >
           <div className="flex items-start gap-3">
@@ -58,7 +58,7 @@ export function ProgressSkeleton() {
     <section
       aria-busy="true"
       aria-label="Đang tải tiến độ học tập"
-      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+      className="rounded-[14px] border border-slate-200 bg-white p-5"
     >
       <div className="animate-pulse space-y-5" aria-hidden="true">
         <div className="flex items-center justify-between gap-4">
@@ -94,7 +94,7 @@ export function DashboardEmptyState({
       className="flex flex-col items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center"
     >
       {icon ? (
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-500 shadow-sm">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-[10px] border border-slate-200 bg-white text-slate-500">
           {icon}
         </div>
       ) : null}
@@ -121,7 +121,7 @@ export function DashboardSectionError({ message, onRetry }: DashboardSectionErro
         <button
           type="button"
           onClick={onRetry}
-          className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-800 shadow-sm transition hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
+          className="mt-3 inline-flex min-h-11 items-center justify-center rounded-[10px] border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-800 transition-colors hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
         >
           Thử lại
         </button>

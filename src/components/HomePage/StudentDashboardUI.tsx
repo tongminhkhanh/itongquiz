@@ -30,7 +30,7 @@ const StudentDashboardUI = () => {
   }
 
   return (
-    <div className="student-dashboard min-h-dvh bg-[#F4F7FC] font-sans text-slate-800 flex flex-col items-center">
+    <div className="student-dashboard flex min-h-dvh flex-col items-center bg-[#FFFDF7] font-['Be_Vietnam_Pro'] text-[#172033]">
       <StudentDashboardContent
         studentSession={studentSession}
         activeSection={activeSection}

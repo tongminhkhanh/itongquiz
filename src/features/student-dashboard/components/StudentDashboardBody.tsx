@@ -9,7 +9,7 @@ export const StudentDashboardBody = ({
   studentSession, assignments, attendance, practice, rewards,
   giftShopEnabled, onOpenGiftShop, onOpenBadges, onSelectHomework,
 }: StudentDashboardContentProps) => (
-  <div className="flex flex-col gap-7 md:gap-10">
+  <div className="flex flex-col gap-8 md:gap-10">
     <StudentDashboardHero
       firstName={studentSession.fullName.split(' ').pop() || studentSession.fullName}
       hasReadyAssignment={assignments.hasReadyAssignment}
@@ -19,8 +19,8 @@ export const StudentDashboardBody = ({
       onPrimaryAction={assignments.scrollToPrimaryTarget}
       onAttendance={attendance.open}
     />
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)] xl:items-start">
-      <div data-testid="student-dashboard-main-column" className="min-w-0 space-y-8">
+    <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.9fr)_minmax(300px,0.9fr)] xl:items-start">
+      <div data-testid="student-dashboard-main-column" className="min-w-0 space-y-9">
         <AssignedWorkSection
           quizzes={assignments.pagedQuizzes}
           isLoading={assignments.isLoading}
@@ -31,8 +31,11 @@ export const StudentDashboardBody = ({
           onPageChange={assignments.setPage}
           onStartQuiz={assignments.startQuiz}
         />
-        <StudentHomeworkSection studentId={studentSession.studentId}
-          classId={studentSession.classId} onSelectAssignment={onSelectHomework} />
+        <StudentHomeworkSection
+          studentId={studentSession.studentId}
+          classId={studentSession.classId}
+          onSelectAssignment={onSelectHomework}
+        />
         <WeeklyQuestsPanel
           quests={rewards.weeklyQuests}
           isLoading={rewards.isWeeklyQuestsLoading}
@@ -50,8 +53,10 @@ export const StudentDashboardBody = ({
           onSelectSubject={practice.selectSubject}
         />
       </div>
-      <aside data-testid="student-dashboard-side-column"
-        className="min-w-0 space-y-6 xl:sticky xl:top-24">
+      <aside
+        data-testid="student-dashboard-side-column"
+        className="min-w-0 space-y-4 xl:sticky xl:top-24"
+      >
         <LearningProgressPanel
           dashboard={rewards.dashboard}
           isLoading={rewards.isLoading}
@@ -72,8 +77,10 @@ export const StudentDashboardBody = ({
         />
       </aside>
     </div>
-    <div className="hidden pb-12 text-center md:block">
-      <p className="text-sm font-medium text-slate-400">ÍtOngQuiz © 2026 - Môi trường học tập tích cực</p>
+    <div className="hidden border-t border-slate-200 pb-12 pt-6 text-center md:block">
+      <p className="text-sm font-medium text-slate-500">
+        ÍtOngQuiz © 2026 · Không gian học tập dành cho học sinh
+      </p>
     </div>
   </div>
 );

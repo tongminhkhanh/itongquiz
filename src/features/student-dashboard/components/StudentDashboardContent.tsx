@@ -25,7 +25,7 @@ export const StudentDashboardContent = (props: StudentDashboardContentProps) => 
       onOpenChangePassword={props.onOpenChangePassword}
       onLogout={props.onLogout}
     />
-    <main className="w-full max-w-[1280px] mx-auto px-3 py-5 md:px-8 md:py-10 flex-1">
+    <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 pb-28 pt-5 sm:px-5 md:pb-12 md:pt-8 lg:px-8">
       {activeSection === 'achievements'
         ? <StudentAchievementsPage />
         : <StudentDashboardBody {...props} />}

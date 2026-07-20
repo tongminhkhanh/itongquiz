@@ -106,10 +106,10 @@ const FillInTheBlankRenderer: React.FC<BaseRendererProps> = ({
                 value={currentValue}
                 onChange={(event) => handleFill(blankId, event.target.value)}
                 placeholder="..."
-                className={`inline-block align-middle mx-1 px-2 py-0.5 border outline-none min-w-[72px] w-20 text-center transition-all rounded-t-lg ${
+                className={`mx-1 inline-block w-20 min-w-[72px] rounded-[8px] border px-2 py-1 text-center align-middle outline-none transition-colors ${
                     isDragDrop
-                        ? 'border-indigo-400 bg-indigo-50/50 cursor-pointer focus:bg-indigo-100'
-                        : 'border-orange-300 bg-orange-50/30 focus:border-orange-500'
+                        ? 'cursor-pointer border-sky-300 bg-sky-50 focus:border-sky-500'
+                        : 'border-slate-300 bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-100'
                 }`}
                 onClick={() => isDragDrop && currentValue && handleFill(blankId, '')}
                 readOnly={isDragDrop}
@@ -119,7 +119,7 @@ const FillInTheBlankRenderer: React.FC<BaseRendererProps> = ({
 
     return (
         <div className="space-y-6">
-            <div className="bg-white p-5 md:p-8 rounded-2xl border-2 border-gray-100 shadow-sm leading-relaxed text-[18px] md:text-xl font-medium text-gray-800">
+            <div className="rounded-[10px] border border-slate-200 bg-white p-5 text-[18px] font-medium leading-relaxed text-slate-800 md:p-7 md:text-xl">
                 <InteractiveMathText
                     content={text}
                     renderBlank={renderBlank}
@@ -128,9 +128,9 @@ const FillInTheBlankRenderer: React.FC<BaseRendererProps> = ({
             </div>
 
             {isDragDrop && pool.length > 0 && (
-                <div className="bg-gray-50 p-5 rounded-2xl border-2 border-dashed border-gray-200">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
-                        📥 Chọn từ để điền vào chỗ trống:
+                <div className="rounded-[10px] border border-dashed border-slate-300 bg-slate-50 p-5">
+                    <p className="mb-4 text-sm font-semibold text-slate-600">
+                        Chọn từ để điền vào chỗ trống
                     </p>
                     <div className="flex flex-wrap gap-3">
                         {pool.map((option, index) => {
@@ -148,10 +148,10 @@ const FillInTheBlankRenderer: React.FC<BaseRendererProps> = ({
                                         if (firstEmptyId !== undefined) handleFill(firstEmptyId, option);
                                     }}
                                     disabled={isUsed}
-                                    className={`px-4 py-2 rounded-xl border-2 font-medium transition-all shadow-sm ${
+                                    className={`rounded-[8px] border px-4 py-2 font-medium transition-colors ${
                                         isUsed
-                                            ? 'bg-gray-100 text-gray-300 border-gray-200 cursor-not-allowed scale-95'
-                                            : 'bg-white border-indigo-200 text-indigo-700 hover:border-indigo-500 hover:shadow-md active:scale-95'
+                                            ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-300'
+                                            : 'border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:bg-sky-50'
                                     }`}
                                 >
                                     <SmartText content={option} />

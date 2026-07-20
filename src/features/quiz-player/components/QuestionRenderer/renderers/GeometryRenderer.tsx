@@ -2,45 +2,38 @@ import React from 'react';
 import { BaseRendererProps } from '../types';
 import GeometryContainer from '../../../../../components/common/GeometryRenderer';
 
-/**
- * GeometryRenderer: Renders geometry items (GeoGebra/Canvas based).
- */
 const GeometryRenderer: React.FC<BaseRendererProps> = ({
-    question: q,
-    answers,
-    onAnswerChange,
+  question: question,
+  answers,
+  onAnswerChange,
 }) => {
-    const geometryData = (q as any).geometryData;
-    const geometryType = (q as any).geometryType;
+  const geometryData = (question as any).geometryData;
 
-    if (!geometryData) {
-        return (
-            <div className="p-8 text-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 text-gray-400">
-                Không tìm thấy dữ liệu hình học.
-            </div>
-        );
-    }
-
+  if (!geometryData) {
     return (
-        <div className="flex flex-col items-center">
-            <div className="w-full max-w-2xl bg-white rounded-xl shadow-inner border-2 border-gray-100 overflow-hidden">
-                <GeometryContainer
-                    data={geometryData}
-                />
-            </div>
-            
-            {/* Input for answer if applicable */}
-            <div className="mt-6 w-full max-w-sm">
-                <input
-                    type="text"
-                    value={answers[q.id] || ''}
-                    onChange={(e) => onAnswerChange(q.id, e.target.value)}
-                    placeholder="Nhập kết quả quan sát được..."
-                    className="w-full p-4 text-center text-xl font-bold border-2 border-indigo-200 rounded-xl focus:border-indigo-500 outline-none"
-                />
-            </div>
-        </div>
+      <div className="rounded-[10px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+        Không tìm thấy dữ liệu hình học.
+      </div>
     );
+  }
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[10px] border border-slate-200 bg-white">
+        <GeometryContainer data={geometryData} />
+      </div>
+
+      <div className="mt-6 w-full max-w-sm">
+        <input
+          type="text"
+          value={answers[question.id] || ''}
+          onChange={(event) => onAnswerChange(question.id, event.target.value)}
+          placeholder="Nhập kết quả quan sát được..."
+          className="w-full rounded-[10px] border border-slate-300 bg-white p-4 text-center text-lg font-semibold text-slate-800 outline-none transition-colors focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+        />
+      </div>
+    </div>
+  );
 };
 
 export default React.memo(GeometryRenderer);

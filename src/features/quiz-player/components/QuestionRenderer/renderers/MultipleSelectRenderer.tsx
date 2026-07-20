@@ -1,51 +1,56 @@
 import React from 'react';
-import { CheckCircle } from 'lucide-react';
 import { BaseRendererProps } from '../types';
 import MathSpan from '../atoms/MathSpan';
 
-/**
- * MultipleSelectRenderer: Renders a Multiple Select (Multi-choice) Question.
- */
 const MultipleSelectRenderer: React.FC<BaseRendererProps> = ({
-    question: q,
-    answers,
-    onAnswerChange,
+  question: question,
+  answers,
+  onAnswerChange,
 }) => {
-    const options = (q as any).options ?? [];
+  const options = (question as any).options ?? [];
 
-    return (
-        <div className="grid grid-cols-1 gap-2">
-            {options.map((opt, idx) => {
-                const label = String.fromCharCode(65 + idx);
-                const currentAnswers = (answers[q.id] as string[]) || [];
-                const isSelected = currentAnswers.includes(label);
+  return (
+    <div className="grid grid-cols-1 gap-3">
+      {options.map((option: unknown, index: number) => {
+        const label = String.fromCharCode(65 + index);
+        const currentAnswers = (answers[question.id] as string[]) || [];
+        const isSelected = currentAnswers.includes(label);
 
-                return (
-                    <button
-                        key={idx}
-                        onClick={() => {
-                            const newAnswers = isSelected
-                                ? currentAnswers.filter(a => a !== label)
-                                : [...currentAnswers, label].sort();
-                            onAnswerChange(q.id, newAnswers);
-                        }}
-                        className={`text-left p-3 rounded-lg border transition-all flex items-center ${
-                            isSelected
-                                ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
-                                : 'border-gray-200 hover:bg-gray-50'
-                        }`}
-                    >
-                        <div className={`w-5 h-5 rounded border mr-3 flex items-center justify-center ${
-                            isSelected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-300'
-                        }`}>
-                            {isSelected && <CheckCircle className="w-3 h-3" />}
-                        </div>
-                        <MathSpan content={typeof opt === 'string' ? opt.replace(/^[A-Za-z][.)]\s*/, '') : String(opt)} className="flex-1" />
-                    </button>
-                );
-            })}
-        </div>
-    );
+        return (
+          <button
+            key={index}
+            type="button"
+            aria-pressed={isSelected}
+            onClick={() => {
+              const newAnswers = isSelected
+                ? currentAnswers.filter((answer) => answer !== label)
+                : [...currentAnswers, label].sort();
+              onAnswerChange(question.id, newAnswers);
+            }}
+            className={`flex min-h-14 items-center rounded-[10px] border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${
+              isSelected
+                ? 'border-sky-500 bg-sky-50 text-sky-950'
+                : 'border-slate-200 bg-white text-slate-800 hover:border-sky-300 hover:bg-slate-50'
+            }`}
+          >
+            <span
+              className={`mr-3 flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border text-xs font-semibold ${
+                isSelected
+                  ? 'border-sky-500 bg-sky-500 text-white'
+                  : 'border-slate-300 bg-white text-slate-500'
+              }`}
+            >
+              {label}
+            </span>
+            <MathSpan
+              content={typeof option === 'string' ? option.replace(/^[A-Za-z][.)]\s*/, '') : String(option)}
+              className="flex-1"
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
 };
 
 export default React.memo(MultipleSelectRenderer);

@@ -45,11 +45,11 @@ describe('StudentDashboardUI responsive composition', () => {
     expect(dashboardControllerSource).toContain('const homeworkSubmission = selectedHomework');
   });
 
-  it('uses the scoped Learning Adventure shell and desktop grid', () => {
+  it('uses the scoped Warm Human Education shell and desktop grid', () => {
     expect(dashboardShellSource).toContain('<StudentDashboardContent');
     expect(dashboardSource).toContain('student-dashboard');
-    expect(dashboardSource).toContain('max-w-[1280px]');
-    expect(dashboardSource).toContain('xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]');
+    expect(dashboardSource).toContain('max-w-[1180px]');
+    expect(dashboardSource).toContain('xl:grid-cols-[minmax(0,1.9fr)_minmax(300px,0.9fr)]');
   });
 
   it('keeps assigned work before all gamification in mobile DOM order', () => {

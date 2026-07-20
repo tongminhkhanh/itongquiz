@@ -1,11 +1,11 @@
 import React from 'react';
 import { Quiz, StudentResult } from '../types';
-import { 
-  AccessCodeForm, 
-  StudentInfoForm, 
-  SubmitConfirmModal, 
-  ResultScreen, 
-  QuestionRenderer 
+import {
+  AccessCodeForm,
+  StudentInfoForm,
+  SubmitConfirmModal,
+  ResultScreen,
+  QuestionRenderer,
 } from './student';
 import RewardOverlay from './gamification/RewardOverlay';
 import { useQuizPlayer } from '../features/quiz-player/hooks/useQuizPlayer';
@@ -13,15 +13,6 @@ import QuizHeader from '../features/quiz-player/components/QuizHeader';
 import QuizNavigation from '../features/quiz-player/components/QuizNavigation';
 import QuizPagination from '../features/quiz-player/components/QuizPagination';
 import { useQuizPageNavigation } from '../features/quiz-player/hooks/useQuizPageNavigation';
-
-/**
- * [SENIOR ENGINEERING REFACTOR]
- * StudentView: The main entry point for students taking a quiz.
- * Now refactored into a high-performance, modular 'Shell' component.
- * 
- * Logic is centralized in 'useQuizPlayer' hook.
- * UI is decomposed into specialized sub-components for better maintainability.
- */
 
 interface Props {
   quiz: Quiz;
@@ -36,7 +27,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     shuffledQuestions, isSubmitting, submitError, showReward, setShowReward,
     showSubmitConfirm, setShowSubmitConfirm,
     rewardData, currentPage, setCurrentPage, totalPages, questionsOnCurrentPage,
-    handleStart, handleCodeVerify, handleAnswerChange, handleMatchingClick, handleSubmit, isQuestionAnswered
+    handleStart, handleCodeVerify, handleAnswerChange, handleMatchingClick, handleSubmit, isQuestionAnswered,
   } = useQuizPlayer({ quiz, onExit, onSaveResult });
 
   const QUESTIONS_PER_PAGE = 10;
@@ -48,7 +39,6 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     setCurrentPage,
   });
 
-  // 1. Access Code Step
   if (step === 'code') {
     return (
       <AccessCodeForm
@@ -62,7 +52,6 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     );
   }
 
-  // 2. Student Info Step
   if (step === 'info') {
     return (
       <StudentInfoForm
@@ -77,29 +66,26 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     );
   }
 
-  // 3. Quiz Execution Step
   if (step === 'quiz') {
     const answeredCount = shuffledQuestions.filter(isQuestionAnswered).length;
     const unansweredCount = shuffledQuestions.length - answeredCount;
 
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        {/* Header: Timer & Progress */}
-        <QuizHeader 
-          title={quiz.title} 
-          timeLeft={timeLeft} 
-          totalQuestions={shuffledQuestions.length} 
+      <div className="student-quiz-shell flex min-h-screen flex-col bg-[#FFFDF7] font-['Be_Vietnam_Pro'] text-[#172033]">
+        <QuizHeader
+          title={quiz.title}
+          timeLeft={timeLeft}
+          totalQuestions={shuffledQuestions.length}
           answeredCount={answeredCount}
           isPractice={quiz.isPractice || false}
           studentName={studentName}
           avatar={studentAvatar}
         />
 
-        <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Sidebar: Navigation Grid (Visible on Desktop) */}
-            <aside className="hidden lg:block w-72 flex-shrink-0">
-              <QuizNavigation 
+        <div className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-5 sm:px-5 md:py-7 lg:px-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+            <aside className="hidden w-60 shrink-0 lg:block">
+              <QuizNavigation
                 questions={shuffledQuestions}
                 isQuestionAnswered={isQuestionAnswered}
                 activeQuestionId={activeQuestionId}
@@ -108,21 +94,20 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
               />
             </aside>
 
-            {/* Main Content: Questions List */}
-            <main className="flex-1 min-w-0">
-              <div className="space-y-8">
-                {questionsOnCurrentPage.map((q, idx) => (
-                  <div 
-                    key={q.id} 
-                    id={`question-${q.id}`}
+            <main className="min-w-0 flex-1">
+              <div className="space-y-6">
+                {questionsOnCurrentPage.map((question, index) => (
+                  <div
+                    key={question.id}
+                    id={`question-${question.id}`}
                     tabIndex={-1}
-                    aria-label={`Câu ${(currentPage - 1) * QUESTIONS_PER_PAGE + idx + 1}`}
-                    className="scroll-mt-32 transition-all duration-500 focus:outline-none"
+                    aria-label={`Câu ${(currentPage - 1) * QUESTIONS_PER_PAGE + index + 1}`}
+                    className="scroll-mt-28 focus:outline-none"
                   >
                     <QuestionRenderer
-                      question={q}
+                      question={question}
                       quizId={quiz.id}
-                      index={(currentPage - 1) * QUESTIONS_PER_PAGE + idx}
+                      index={(currentPage - 1) * QUESTIONS_PER_PAGE + index}
                       answers={answers}
                       onAnswerChange={handleAnswerChange}
                       onMatchingClick={handleMatchingClick}
@@ -131,8 +116,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                 ))}
               </div>
 
-              {/* Pagination & Submit Button */}
-              <QuizPagination 
+              <QuizPagination
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={changePage}
@@ -140,16 +124,15 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
                 isSubmitting={isSubmitting}
               />
 
-              {submitError && (
-                <div className="mt-4 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-center font-medium">
+              {submitError ? (
+                <div className="mt-4 rounded-[10px] border border-[#E76F51]/30 bg-[#FFF4F1] p-4 text-center text-sm font-medium text-[#B94D36]">
                   {submitError}
                 </div>
-              )}
+              ) : null}
             </main>
           </div>
         </div>
 
-        {/* Modals */}
         <SubmitConfirmModal
           isOpen={showSubmitConfirm}
           unansweredCount={unansweredCount}
@@ -163,7 +146,6 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     );
   }
 
-  // 4. Result Step
   if (step === 'result' && result) {
     return (
       <>
@@ -175,8 +157,8 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
           studentName={studentName}
           studentClass={studentClass}
         />
-        
-        {showReward && rewardData && (
+
+        {showReward && rewardData ? (
           <RewardOverlay
             expEarned={rewardData.expEarned}
             coinsEarned={rewardData.coinsEarned}
@@ -184,7 +166,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
             leveledUp={rewardData.leveledUp}
             onClose={() => setShowReward(false)}
           />
-        )}
+        ) : null}
       </>
     );
   }

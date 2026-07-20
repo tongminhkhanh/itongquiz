@@ -1,19 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  BookOpen,
-  Camera,
-  Gift,
-  KeyRound,
-  LogOut,
-  Radio,
-  Star,
-  Trophy,
-} from 'lucide-react';
 import NotificationBell from '../../common/NotificationBell';
 import type { StudentDashboardHeaderProps } from './dashboard.types';
 
 const baseActionClass =
-  'inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2';
+  'inline-flex min-h-11 items-center justify-center rounded-[10px] px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2';
 
 export function StudentDashboardHeader({
   studentName,
@@ -52,49 +42,38 @@ export function StudentDashboardHeader({
     action();
   };
 
+  const scrollToSection = (id: string) => {
+    onSelectSection('dashboard');
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
-      <div className="mx-auto flex min-h-16 max-w-7xl items-center gap-2 px-3 md:min-h-20 md:px-8">
+    <header className="sticky top-0 z-40 w-full border-b border-[#E5E7EB] bg-[#FFFDF7]">
+      <div className="mx-auto flex min-h-16 max-w-[1180px] items-center gap-3 px-4 sm:px-5 md:min-h-[68px] lg:px-8">
         <div className="flex shrink-0 items-center gap-2">
           <img
             src="/school-logo.png"
             alt="School logo iTong Quiz"
-            className="h-10 w-10 object-contain drop-shadow-sm"
+            className="h-9 w-9 object-contain"
           />
-          <span className="hidden text-xl font-black tracking-tight text-slate-800 sm:inline md:text-2xl">
-            ÍtOng<span className="text-orange-500">Quiz</span>
+          <span className="hidden text-xl font-bold tracking-tight text-slate-900 sm:inline">
+            ÍtOng<span className="text-sky-600">Quiz</span>
           </span>
         </div>
 
-        <div className="ml-auto hidden items-center gap-2 sm:flex">
-          <div
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 text-amber-700"
-            aria-label={`Cấp bậc ${level}`}
-          >
-            <Trophy className="h-4 w-4" aria-hidden="true" />
-            <span className="font-bold">{level}</span>
-          </div>
-          <div
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-yellow-200 bg-yellow-50 px-3 text-yellow-700"
-            aria-label={`${coins} xu`}
-          >
-            <Star className="h-4 w-4 fill-yellow-500" aria-hidden="true" />
-            <span className="font-bold">{coins}</span>
-          </div>
-        </div>
-
-        <nav className="hidden items-center gap-2 lg:flex" aria-label="Điều hướng học sinh">
+        <nav className="ml-5 hidden items-center gap-1 lg:flex" aria-label="Điều hướng học sinh">
           <button
             type="button"
             onClick={() => onSelectSection('dashboard')}
             aria-pressed={activeSection === 'dashboard'}
             className={`${baseActionClass} ${
               activeSection === 'dashboard'
-                ? 'border-sky-200 bg-sky-50 text-sky-700'
-                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                ? 'border-b-2 border-sky-500 text-sky-700'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <BookOpen className="h-4 w-4" aria-hidden="true" />
             Trang chủ
           </button>
           <button
@@ -103,40 +82,35 @@ export function StudentDashboardHeader({
             aria-pressed={activeSection === 'achievements'}
             className={`${baseActionClass} ${
               activeSection === 'achievements'
-                ? 'border-amber-200 bg-amber-50 text-amber-700'
-                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                ? 'border-b-2 border-sky-500 text-sky-700'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Trophy className="h-4 w-4" aria-hidden="true" />
             Thành tích
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('practice-library')}
+            className={`${baseActionClass} text-slate-600 hover:text-slate-900`}
+          >
+            Thư viện
           </button>
         </nav>
 
-        <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:ml-0 md:gap-2">
-          <button
-            type="button"
-            onClick={() => onSelectSection('achievements')}
-            aria-label="Mở thành tích"
-            aria-pressed={activeSection === 'achievements'}
-            className={`${baseActionClass} px-2.5 lg:hidden ${
-              activeSection === 'achievements'
-                ? 'border-amber-200 bg-amber-50 text-amber-700'
-                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            <Trophy className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden md:inline">Thành tích</span>
-          </button>
+        <div className="ml-auto hidden items-center gap-4 text-xs font-medium text-slate-500 sm:flex">
+          <span aria-label={`Cấp bậc ${level}`}>Cấp {level}</span>
+          <span aria-label={`${coins} xu`}>{coins} xu</span>
+        </div>
 
+        <div className="flex min-w-0 items-center gap-1.5 md:gap-2">
           {giftShopEnabled ? (
             <button
               type="button"
               onClick={onOpenGiftShop}
               aria-label="Mở Tiệm Tạp Hóa"
-              className={`${baseActionClass} border-indigo-200 bg-indigo-50 px-2.5 text-indigo-700 hover:bg-indigo-100`}
+              className={`${baseActionClass} hidden border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 xl:inline-flex`}
             >
-              <Gift className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden xl:inline">Tiệm Tạp Hóa</span>
+              Quà tặng
             </button>
           ) : null}
 
@@ -144,10 +118,9 @@ export function StudentDashboardHeader({
             type="button"
             onClick={onOpenLiveExam}
             aria-label="Thi trực tiếp"
-            className={`${baseActionClass} border-rose-200 bg-rose-50 px-2.5 text-rose-700 hover:bg-rose-100`}
+            className={`${baseActionClass} hidden border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 md:inline-flex`}
           >
-            <Radio className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden xl:inline">Thi trực tiếp</span>
+            Thi trực tiếp
           </button>
 
           <div className="flex min-h-11 min-w-11 items-center justify-center">
@@ -166,7 +139,7 @@ export function StudentDashboardHeader({
               aria-haspopup="menu"
               aria-expanded={isAccountMenuOpen}
               aria-controls="student-account-menu"
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border-2 border-sky-100 bg-white p-0.5 shadow-sm transition-colors hover:border-sky-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-slate-200 bg-white p-0.5 transition-colors hover:border-sky-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
             >
               <img
                 src={avatarUrl}
@@ -181,37 +154,34 @@ export function StudentDashboardHeader({
                 id="student-account-menu"
                 role="menu"
                 aria-label="Tài khoản học sinh"
-                className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"
+                className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-[12px] border border-slate-200 bg-white p-2"
               >
                 <div className="border-b border-slate-100 px-3 py-2">
-                  <p className="truncate text-sm font-bold text-slate-800">{studentName}</p>
+                  <p className="truncate text-sm font-semibold text-slate-800">{studentName}</p>
                   <p className="truncate text-xs text-slate-500">{className || 'Học sinh'}</p>
                 </div>
                 <button
                   type="button"
                   role="menuitem"
                   onClick={() => runAccountAction(onOpenAvatar)}
-                  className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                  className="mt-1 flex min-h-11 w-full items-center rounded-[10px] px-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                 >
-                  <Camera className="h-4 w-4 text-slate-500" aria-hidden="true" />
                   Đổi avatar
                 </button>
                 <button
                   type="button"
                   role="menuitem"
                   onClick={() => runAccountAction(onOpenChangePassword)}
-                  className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                  className="flex min-h-11 w-full items-center rounded-[10px] px-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                 >
-                  <KeyRound className="h-4 w-4 text-slate-500" aria-hidden="true" />
                   Đổi mật khẩu
                 </button>
                 <button
                   type="button"
                   role="menuitem"
                   onClick={() => runAccountAction(onLogout)}
-                  className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                  className="flex min-h-11 w-full items-center rounded-[10px] px-3 text-left text-sm font-medium text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                 >
-                  <LogOut className="h-4 w-4" aria-hidden="true" />
                   Đăng xuất
                 </button>
               </div>
@@ -219,6 +189,40 @@ export function StudentDashboardHeader({
           </div>
         </div>
       </div>
+
+      <nav
+        className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-slate-200 bg-white px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 md:hidden"
+        aria-label="Điều hướng học sinh trên điện thoại"
+      >
+        <button
+          type="button"
+          onClick={() => onSelectSection('dashboard')}
+          className="min-h-12 rounded-[10px] px-1 text-xs font-semibold text-sky-700"
+        >
+          Trang chủ
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollToSection('assigned-work')}
+          className="min-h-12 rounded-[10px] px-1 text-xs font-semibold text-slate-600"
+        >
+          Bài tập
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollToSection('practice-library')}
+          className="min-h-12 rounded-[10px] px-1 text-xs font-semibold text-slate-600"
+        >
+          Thư viện
+        </button>
+        <button
+          type="button"
+          onClick={() => onSelectSection('achievements')}
+          className="min-h-12 rounded-[10px] px-1 text-xs font-semibold text-slate-600"
+        >
+          Thành tích
+        </button>
+      </nav>
     </header>
   );
 }

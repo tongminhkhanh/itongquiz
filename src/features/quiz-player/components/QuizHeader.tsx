@@ -1,82 +1,78 @@
 import React from 'react';
-import { Timer, Trophy, CheckCircle2 } from 'lucide-react';
-import { getAvatarUrl } from '../../../config/avatars';
+import { Timer } from 'lucide-react';
 
 interface QuizHeaderProps {
-    title: string;
-    timeLeft: number;
-    totalQuestions: number;
-    answeredCount: number;
-    isPractice: boolean;
-    studentName?: string;
-    avatar?: string | null;
+  title: string;
+  timeLeft: number;
+  totalQuestions: number;
+  answeredCount: number;
+  isPractice: boolean;
+  studentName?: string;
+  avatar?: string | null;
 }
 
-const QuizHeader: React.FC<QuizHeaderProps> = ({ 
-    title, timeLeft, totalQuestions, answeredCount, isPractice, studentName, avatar 
+const QuizHeader: React.FC<QuizHeaderProps> = ({
+  title,
+  timeLeft,
+  totalQuestions,
+  answeredCount,
+  isPractice,
+  studentName,
 }) => {
-    const formatTime = (seconds: number) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m}:${s < 10 ? '0' : ''}${s}`;
-    };
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+  };
 
-    const progressPercentage = (answeredCount / totalQuestions) * 100;
+  const progressPercentage = totalQuestions > 0
+    ? Math.min(100, Math.max(0, (answeredCount / totalQuestions) * 100))
+    : 0;
 
-    return (
-        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-            <div className="max-w-5xl mx-auto px-4 py-3">
-                <div className="flex items-center justify-between gap-4 mb-2">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {/* Student Chibi Avatar */}
-                        <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-white shadow-lg shadow-indigo-100 flex items-center justify-center border-2 border-indigo-50 overflow-hidden relative group">
-                            <img 
-                                src={getAvatarUrl(avatar || 'default')} 
-                                alt="Avatar" 
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                            />
-                            <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                        </div>
-
-                        <div className="min-w-0">
-                            <h1 className="text-lg font-bold text-gray-800 truncate leading-tight">{title}</h1>
-                            <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
-                                <span className="flex items-center gap-1 font-medium">
-                                    <Trophy className="w-3 h-3 text-orange-400" />
-                                    {totalQuestions} câu hỏi
-                                </span>
-                                <span className="flex items-center gap-1 font-medium">
-                                    <CheckCircle2 className={`w-3 h-3 ${answeredCount === totalQuestions ? 'text-green-500' : 'text-blue-400'}`} />
-                                    Đã làm: {answeredCount}/{totalQuestions}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {!isPractice && (
-                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-colors ${
-                            timeLeft < 60 
-                                ? 'bg-red-50 border-red-200 text-red-600 animate-pulse' 
-                                : 'bg-blue-50 border-blue-100 text-blue-700'
-                        }`}>
-                            <Timer className={`w-5 h-5 ${timeLeft < 60 ? 'animate-spin-slow' : ''}`} />
-                            <span className="text-xl font-black font-mono tracking-wider">
-                                {formatTime(timeLeft)}
-                            </span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                        className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 ease-out" 
-                        style={{ width: `${progressPercentage}%` }}
-                    />
-                </div>
+  return (
+    <header className="sticky top-0 z-30 border-b border-[#E5E7EB] bg-[#FFFDF7]">
+      <div className="mx-auto max-w-[1180px] px-4 py-3 sm:px-5 lg:px-8">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="min-w-0">
+              <h1 className="truncate text-base font-semibold text-[#172033] sm:text-lg">{title}</h1>
+              <p className="mt-0.5 truncate text-xs text-[#526174]">
+                {studentName ? `${studentName} · ` : ''}Đã làm {answeredCount}/{totalQuestions} câu
+              </p>
             </div>
+          </div>
+
+          {!isPractice ? (
+            <div
+              className={`flex shrink-0 items-center gap-2 text-sm font-semibold ${
+                timeLeft < 60 ? 'text-[#E76F51]' : 'text-slate-700'
+              }`}
+              aria-label={`Thời gian còn lại ${formatTime(timeLeft)}`}
+            >
+              <Timer className="h-5 w-5" aria-hidden="true" />
+              <span className="font-mono text-lg tracking-wide sm:text-xl">{formatTime(timeLeft)}</span>
+            </div>
+          ) : (
+            <span className="shrink-0 text-sm font-medium text-slate-500">Luyện tập</span>
+          )}
         </div>
-    );
+
+        <div
+          role="progressbar"
+          aria-label="Tiến độ trả lời"
+          aria-valuemin={0}
+          aria-valuemax={Math.max(0, totalQuestions)}
+          aria-valuenow={Math.min(Math.max(0, answeredCount), Math.max(0, totalQuestions))}
+          className="mt-3 h-1.5 overflow-hidden rounded-[3px] bg-slate-200"
+        >
+          <div
+            className="h-full bg-sky-500 transition-[width] duration-300 motion-reduce:transition-none"
+            style={{ width: `${progressPercentage}%` }}
+          />
+        </div>
+      </div>
+    </header>
+  );
 };
 
 export default QuizHeader;

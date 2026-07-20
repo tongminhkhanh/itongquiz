@@ -13,27 +13,22 @@ export function WeeklyQuestsPanel({
   return (
     <section
       aria-labelledby="weekly-quests-title"
-      className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6"
+      className="rounded-[14px] border border-[#E5E7EB] bg-white p-5 md:p-6"
     >
-      <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 text-xl" aria-hidden="true">
-          📅
-        </div>
-        <div>
-          <h2 id="weekly-quests-title" className="text-lg font-black text-slate-900">
-            Nhiệm vụ tuần
-          </h2>
-          <p className="text-xs text-slate-500">Làm mới mỗi thứ Hai</p>
-        </div>
+      <div className="mb-5">
+        <h2 id="weekly-quests-title" className="text-xl font-semibold text-[#172033]">
+          Nhiệm vụ tuần
+        </h2>
+        <p className="mt-1 text-sm text-[#526174]">Làm mới vào thứ Hai hằng tuần.</p>
       </div>
 
       {isLoading ? (
-        <div aria-busy="true" aria-label="Đang tải nhiệm vụ tuần" className="space-y-3">
+        <div aria-busy="true" aria-label="Đang tải nhiệm vụ tuần" className="divide-y divide-slate-100">
           {Array.from({ length: 3 }, (_, index) => (
-            <div key={index} className="animate-pulse rounded-2xl border border-slate-200 bg-slate-50 p-4" aria-hidden="true">
-              <div className="mb-3 h-4 w-1/2 rounded-full bg-slate-200" />
-              <div className="mb-4 h-3 w-4/5 rounded-full bg-slate-200" />
-              <div className="h-2 rounded-full bg-slate-200" />
+            <div key={index} className="animate-pulse py-4 first:pt-0 last:pb-0" aria-hidden="true">
+              <div className="mb-3 h-4 w-1/2 rounded bg-slate-200" />
+              <div className="mb-4 h-3 w-4/5 rounded bg-slate-100" />
+              <div className="h-2 rounded bg-slate-200" />
             </div>
           ))}
         </div>
@@ -51,7 +46,7 @@ export function WeeklyQuestsPanel({
       ) : null}
 
       {!isLoading && !errorMessage && quests.length > 0 ? (
-        <div className="space-y-3">
+        <div className="divide-y divide-slate-100">
           {quests.map((quest) => {
             const percent = getWeeklyProgressPercent(quest.progress, quest.target);
             const isClaiming = claimingQuestId === quest.id;
@@ -65,76 +60,56 @@ export function WeeklyQuestsPanel({
                   : 'Chưa xong';
 
             return (
-              <article
-                key={quest.id}
-                className={`rounded-2xl border p-4 ${
-                  quest.claimed
-                    ? 'border-emerald-200 bg-emerald-50/60'
-                    : quest.completed
-                      ? 'border-violet-200 bg-violet-50/60'
-                      : 'border-slate-200 bg-slate-50'
-                }`}
-              >
-                <div className="mb-3 flex items-start gap-3">
-                  <span className="shrink-0 text-2xl" aria-hidden="true">{quest.icon}</span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="flex flex-wrap items-center gap-2 text-sm font-black text-slate-900">
-                      {quest.title}
-                      {quest.claimed ? (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
-                          Đã nhận
-                        </span>
-                      ) : null}
-                    </h3>
-                    <p className="mt-1 text-xs leading-5 text-slate-600">{quest.description}</p>
+              <article key={quest.id} className="py-4 first:pt-0 last:pb-0">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-[#172033]">{quest.title}</h3>
+                      <p className="mt-1 text-sm leading-6 text-[#526174]">{quest.description}</p>
+                    </div>
+                    <span className="shrink-0 text-xs font-medium text-slate-500">
+                      {quest.progress}/{quest.target}
+                    </span>
                   </div>
-                </div>
 
-                <div className="mb-3">
-                  <div className="mb-1 flex justify-between text-xs font-bold text-slate-600">
-                    <span>{quest.progress}/{quest.target}</span>
-                    <span>{percent}%</span>
-                  </div>
                   <div
                     role="progressbar"
                     aria-label={`Tiến độ nhiệm vụ tuần ${quest.title}`}
                     aria-valuemin={0}
                     aria-valuemax={Math.max(0, quest.target)}
                     aria-valuenow={Math.min(Math.max(0, quest.progress), Math.max(0, quest.target))}
-                    className="h-2 overflow-hidden rounded-full bg-slate-200"
+                    className="h-2 overflow-hidden rounded bg-slate-200"
                   >
                     <div
                       data-testid={`weekly-quest-progress-fill-${quest.id}`}
-                      className={`h-full origin-left rounded-full transition-transform duration-300 motion-reduce:transition-none ${
-                        quest.claimed ? 'bg-emerald-400' : 'bg-gradient-to-r from-blue-500 to-indigo-500'
+                      className={`h-full origin-left rounded transition-transform duration-300 motion-reduce:transition-none ${
+                        quest.claimed ? 'bg-emerald-500' : 'bg-sky-500'
                       }`}
                       style={{ transform: `scaleX(${percent / 100})` }}
                     />
                   </div>
-                </div>
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex flex-wrap items-center gap-1 text-xs font-bold text-amber-700">
-                    <span>🪙 +{quest.reward.coins} Xu</span>
-                    {quest.reward.exp > 0 ? <span className="text-violet-700">· +{quest.reward.exp} EXP</span> : null}
-                    {quest.reward.items.length > 0 ? (
-                      <span className="text-slate-600">· +{quest.reward.itemCount} vật phẩm</span>
-                    ) : null}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs font-medium text-slate-500">
+                      Thưởng {quest.reward.coins} xu
+                      {quest.reward.exp > 0 ? ` · ${quest.reward.exp} EXP` : ''}
+                      {quest.reward.items.length > 0 ? ` · ${quest.reward.itemCount} vật phẩm` : ''}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onClaim(quest.id)}
+                      disabled={disabled}
+                      className={`inline-flex min-h-10 items-center justify-center rounded-[10px] px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${
+                        quest.claimed
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : quest.completed
+                            ? 'bg-sky-500 text-white hover:bg-sky-600'
+                            : 'cursor-not-allowed bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {label}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onClaim(quest.id)}
-                    disabled={disabled}
-                    className={`inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-xs font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 ${
-                      quest.claimed
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : quest.completed
-                          ? 'bg-violet-600 text-white hover:bg-violet-700'
-                          : 'cursor-not-allowed bg-slate-200 text-slate-500'
-                    }`}
-                  >
-                    {label}
-                  </button>
                 </div>
               </article>
             );

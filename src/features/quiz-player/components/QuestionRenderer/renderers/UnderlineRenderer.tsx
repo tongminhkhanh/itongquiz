@@ -2,93 +2,75 @@ import React from 'react';
 import { BaseRendererProps } from '../types';
 import MathSpan from '../atoms/MathSpan';
 
-/**
- * UnderlineRenderer: Renders an interactive word-clicking question.
- * Allows students to click on words/phrases to toggle underlines.
- */
 const UnderlineRenderer: React.FC<BaseRendererProps> = ({
-    question: q,
-    answers,
-    onAnswerChange,
+  question: question,
+  answers,
+  onAnswerChange,
 }) => {
-    // UnderlineQuestion structure ensures 'words' is an array of strings
-    const words = (q as any).words || [];
-    
-    // userAnswer is an array of selected word indexes: number[]
-    // Fallback to empty array if no answer yet
-    const rawAnswer = answers[q.id];
-    const selectedIndexes: number[] = Array.isArray(rawAnswer) ? rawAnswer : [];
+  const words = (question as any).words || [];
+  const rawAnswer = answers[question.id];
+  const selectedIndexes: number[] = Array.isArray(rawAnswer) ? rawAnswer : [];
 
-    const handleToggle = (index: number) => {
-        let newSelection: number[];
-        if (selectedIndexes.includes(index)) {
-            // Remove if already selected
-            newSelection = selectedIndexes.filter(i => i !== index);
-        } else {
-            // Add to selection
-            newSelection = [...selectedIndexes, index].sort((a, b) => a - b);
-        }
-        onAnswerChange(q.id, newSelection);
-    };
+  const handleToggle = (index: number) => {
+    const newSelection = selectedIndexes.includes(index)
+      ? selectedIndexes.filter((selectedIndex) => selectedIndex !== index)
+      : [...selectedIndexes, index].sort((left, right) => left - right);
+    onAnswerChange(question.id, newSelection);
+  };
 
-    if (!words || words.length === 0) {
-        return (
-            <div className="p-4 bg-orange-50 text-orange-700 rounded-xl border border-orange-100 flex items-center gap-2">
-                <span className="text-xl">💡</span>
-                <span>Thông tin: Câu hỏi gạch chân không tìm thấy danh sách từ để chọn.</span>
-            </div>
-        );
-    }
-
+  if (!words || words.length === 0) {
     return (
-        <div className="underline-renderer-container pt-2">
-            {/* Word Display Area */}
-            <div className="flex flex-wrap gap-x-2 gap-y-4 items-center justify-center p-6 md:p-10 bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-200 min-h-[160px]">
-                {words.map((word: string, idx: number) => {
-                    const isSelected = selectedIndexes.includes(idx);
-                    
-                    return (
-                        <button
-                            key={idx}
-                            onClick={() => handleToggle(idx)}
-                            className={`group relative px-4 py-2 rounded-xl transition-all duration-200 active:scale-90 select-none ${
-                                isSelected 
-                                    ? 'bg-orange-500 text-white shadow-lg ring-2 ring-orange-200 ring-offset-2 scale-105 z-10' 
-                                    : 'bg-white hover:bg-orange-50 text-orange-950 hover:text-orange-900 border border-gray-100 shadow-sm hover:shadow-md'
-                            }`}
-                        >
-                            <span className="relative z-10">
-                                <MathSpan 
-                                    content={word} 
-                                    className={`text-lg md:text-xl font-medium ${isSelected ? 'underline underline-offset-8 decoration-2' : ''}`} 
-                                />
-                            </span>
-                            
-                            {/* Tap Indicator for hover (Micro-interaction) */}
-                            {!isSelected && (
-                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-0 h-1 bg-orange-400/30 group-hover:w-[70%] transition-all duration-300 rounded-full" />
-                            )}
-                        </button>
-                    );
-                })}
-            </div>
-            
-            <div className="mt-8 flex flex-col items-center gap-2">
-                <div className="flex items-center gap-2 text-orange-600 bg-orange-50 px-4 py-2 rounded-full text-sm font-semibold">
-                    <span className="w-5 h-5 flex items-center justify-center border-2 border-orange-300 rounded-full">!</span>
-                    <span>Hãy nhấn vào các từ để gạch chân đáp án bạn chọn</span>
-                </div>
-                {selectedIndexes.length > 0 && (
-                    <button 
-                        onClick={() => onAnswerChange(q.id, [])}
-                        className="text-gray-400 hover:text-orange-500 text-xs font-medium transition-colors"
-                    >
-                        Xóa tất cả gạch chân
-                    </button>
-                )}
-            </div>
-        </div>
+      <div className="rounded-[10px] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
+        Câu hỏi gạch chân chưa có danh sách từ để chọn.
+      </div>
     );
+  }
+
+  return (
+    <div className="underline-renderer-container pt-2">
+      <div className="flex min-h-[160px] flex-wrap items-center justify-center gap-x-2 gap-y-4 rounded-[10px] border border-dashed border-slate-300 bg-slate-50 p-6 md:p-8">
+        {words.map((word: string, index: number) => {
+          const isSelected = selectedIndexes.includes(index);
+
+          return (
+            <button
+              key={index}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => handleToggle(index)}
+              className={`rounded-[8px] border px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${
+                isSelected
+                  ? 'border-sky-500 bg-sky-50 text-sky-900'
+                  : 'border-slate-200 bg-white text-slate-800 hover:border-sky-300'
+              }`}
+            >
+              <MathSpan
+                content={word}
+                className={`text-lg font-medium md:text-xl ${
+                  isSelected ? 'underline decoration-2 underline-offset-8' : ''
+                }`}
+              />
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-5 flex flex-col items-center gap-3">
+        <p className="text-center text-sm leading-6 text-[#526174]">
+          Nhấn vào từ hoặc cụm từ em muốn gạch chân.
+        </p>
+        {selectedIndexes.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => onAnswerChange(question.id, [])}
+            className="min-h-10 rounded-[8px] px-3 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-[#E76F51]"
+          >
+            Xóa tất cả gạch chân
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
 };
 
 export default React.memo(UnderlineRenderer);

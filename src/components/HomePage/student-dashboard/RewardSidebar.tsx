@@ -1,5 +1,3 @@
-import { CalendarDays, Gift, Medal, Trophy } from 'lucide-react';
-import { getAchievementBadgeAlt, getAchievementBadgeImage } from '../../../config/achievementBadges';
 import type { RewardSidebarProps } from './dashboard.types';
 
 export function RewardSidebar({
@@ -28,54 +26,12 @@ export function RewardSidebar({
   const collection = dashboard?.profile.collection || [];
 
   return (
-    <aside aria-label="Phần thưởng và thành tích" className="space-y-6">
-      <section className="rounded-3xl border border-amber-100 bg-white p-5 shadow-sm md:p-6">
-        <div className="mb-4 flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-            <Gift className="h-5 w-5" aria-hidden="true" />
-          </span>
-          <div>
-            <h2 className="text-lg font-black text-slate-900">Rương thưởng ngày</h2>
-            <p className="text-sm font-medium text-slate-600">Mở khi hoàn thành đủ 3 nhiệm vụ.</p>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
-          <p className="mb-3 text-sm font-semibold leading-6 text-slate-700">
-            {chestClaimed
-              ? 'Em đã mở rương hôm nay rồi. Mai quay lại nhé!'
-              : chestAvailable
-                ? 'Rương đã sẵn sàng với phần thưởng sưu tầm hoặc booster nhẹ.'
-                : 'Hoàn thành đủ nhiệm vụ ngày để mở rương thưởng.'}
-          </p>
-          <button
-            type="button"
-            onClick={onOpenChest}
-            disabled={chestDisabled}
-            className={`inline-flex min-h-11 w-full items-center justify-center rounded-xl px-4 text-sm font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 ${
-              chestAvailable && !isProcessing
-                ? 'bg-amber-500 text-white hover:bg-amber-600'
-                : chestClaimed
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'cursor-not-allowed bg-slate-200 text-slate-500'
-            }`}
-          >
-            {chestLabel}
-          </button>
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
-              <CalendarDays className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div>
-              <h2 className="text-lg font-black text-slate-900">Nhịp học tuần này</h2>
-              <p className="text-sm font-medium text-slate-600">Duy trì đều đặn để tiến gần phần thưởng.</p>
-            </div>
-          </div>
-          <span className="text-sm font-black text-blue-700">{completedDays}/{targetDays}</span>
+    <aside aria-label="Phần thưởng và thành tích" className="overflow-hidden rounded-[14px] border border-[#E5E7EB] bg-white">
+      <section className="border-b border-slate-100 p-5">
+        <h2 className="text-lg font-semibold text-[#172033]">Nhịp học tuần này</h2>
+        <div className="mt-3 flex items-center justify-between text-sm">
+          <span className="text-[#526174]">Số ngày đã duy trì</span>
+          <span className="font-semibold text-slate-800">{completedDays}/{targetDays} ngày</span>
         </div>
         <div
           role="progressbar"
@@ -83,96 +39,91 @@ export function RewardSidebar({
           aria-valuemin={0}
           aria-valuemax={targetDays}
           aria-valuenow={Math.min(completedDays, targetDays)}
-          className="mb-3 h-3 overflow-hidden rounded-full bg-slate-200"
+          className="mt-3 h-2 overflow-hidden rounded bg-slate-200"
         >
           <div
-            className="h-full origin-left rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-transform duration-300 motion-reduce:transition-none"
+            className="h-full origin-left rounded bg-emerald-500 transition-transform duration-300 motion-reduce:transition-none"
             style={{ transform: `scaleX(${rhythmPercent / 100})` }}
           />
         </div>
-        <p className="mb-4 text-sm font-medium leading-6 text-slate-600">
-          Hoàn thành đủ nhiệm vụ trong 5 ngày để giữ nhịp tích lũy đẹp cho Gift Shop.
+        <p className="mt-3 text-sm leading-6 text-[#526174]">
+          Duy trì nhịp học đều để hình thành thói quen tốt hơn.
         </p>
         {giftShopEnabled ? (
           <button
             type="button"
             onClick={onOpenGiftShop}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-800 hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            className="mt-3 inline-flex min-h-10 items-center justify-center rounded-[10px] border border-slate-200 bg-white px-3 text-sm font-semibold text-sky-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
           >
-            Xem mục tiêu quà thật
+            Xem mục tiêu quà tặng
           </button>
         ) : null}
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-              <Medal className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div>
-              <h2 className="text-lg font-black text-slate-900">Sổ huy hiệu</h2>
-              <p className="text-sm font-medium text-slate-600">Nhìn lại những cột mốc em đã đạt được.</p>
-            </div>
+      <section className="border-b border-slate-100 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[#172033]">Rương thưởng ngày</h2>
+            <p className="mt-1 text-sm leading-6 text-[#526174]">
+              Mở khi hoàn thành đủ các nhiệm vụ trong ngày.
+            </p>
           </div>
-          {achievements.length > 0 ? (
-            <button
-              type="button"
-              onClick={onOpenBadges}
-              className="inline-flex min-h-11 items-center gap-1 rounded-xl px-3 text-xs font-black text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            >
-              Xem tất cả
-              <Trophy className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={onOpenChest}
+            disabled={chestDisabled}
+            className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-[10px] px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 ${
+              chestAvailable && !isProcessing
+                ? 'border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                : chestClaimed
+                  ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'cursor-not-allowed border border-slate-200 bg-slate-50 text-slate-500'
+            }`}
+          >
+            {chestLabel}
+          </button>
+        </div>
+      </section>
+
+      <section className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[#172033]">Huy hiệu và bộ sưu tập</h2>
+            <p className="mt-1 text-sm text-[#526174]">
+              {achievements.length} huy hiệu · {collection.length} vật phẩm
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenBadges}
+            className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-[10px] px-3 text-sm font-semibold text-sky-700 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          >
+            Xem tất cả
+          </button>
         </div>
 
-        <div className="mb-4 space-y-3">
-          {achievements.slice(0, 3).map((achievement) => {
-            const badgeImage = getAchievementBadgeImage(achievement.code);
-            return (
-              <article key={achievement.code} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                  {badgeImage ? (
-                    <img src={badgeImage} alt={getAchievementBadgeAlt(achievement)} className="h-9 w-9 object-contain" />
-                  ) : (
-                    <span className="text-xl" aria-hidden="true">{achievement.icon}</span>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-black text-slate-900">{achievement.title}</h3>
-                  <p className="text-xs font-medium leading-5 text-slate-600">{achievement.description}</p>
-                </div>
-              </article>
-            );
-          })}
+        <div className="mt-4 divide-y divide-slate-100 border-y border-slate-100">
+          {achievements.slice(0, 3).map((achievement) => (
+            <article key={achievement.code} className="py-3">
+              <h3 className="text-sm font-semibold text-slate-800">{achievement.title}</h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{achievement.description}</p>
+            </article>
+          ))}
           {achievements.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-center text-sm font-semibold text-slate-600">
+            <p className="py-4 text-sm leading-6 text-slate-500">
               Hoàn thành bài đầu tiên để mở huy hiệu đầu tiên nhé.
             </p>
           ) : null}
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Bộ sưu tập mini</p>
-          <div className="flex flex-wrap gap-2">
-            {collection.length > 0 ? (
-              collection.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-xl"
-                  title={item.title}
-                >
-                  {item.icon}
-                </div>
-              ))
-            ) : (
-              <p className="text-sm font-medium text-slate-600">Mở rương để bắt đầu bộ sưu tập Toán và Tiếng Việt.</p>
-            )}
+        <div className="mt-4 divide-y divide-slate-100 border-y border-slate-100 text-sm">
+          <div className="flex items-center justify-between py-3">
+            <p className="text-slate-500">Vé gợi ý</p>
+            <p className="font-semibold text-slate-800">{dashboard?.profile.hintTokens || 0}</p>
           </div>
-          <div className="mt-4 flex flex-wrap gap-3 text-sm font-bold text-slate-700">
-            <span>💡 Vé gợi ý: {dashboard?.profile.hintTokens || 0}</span>
-            <span>🛡️ Khiên chuỗi: {dashboard?.profile.streakShields || 0}</span>
+          <div className="flex items-center justify-between py-3">
+            <p className="text-slate-500">Khiên chuỗi</p>
+            <p className="font-semibold text-slate-800">{dashboard?.profile.streakShields || 0}</p>
           </div>
         </div>
       </section>

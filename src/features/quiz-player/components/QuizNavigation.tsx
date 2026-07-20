@@ -1,73 +1,70 @@
 import React from 'react';
-import { Pin } from 'lucide-react';
 import { Question } from '../../../types';
 import type { QuizPageChangeHandler } from '../hooks/useQuizPageNavigation';
 
 interface QuizNavigationProps {
-    questions: Question[];
-    isQuestionAnswered: (q: Question) => boolean;
-    activeQuestionId: string | null;
-    QUESTIONS_PER_PAGE: number;
-    onPageChange: QuizPageChangeHandler;
+  questions: Question[];
+  isQuestionAnswered: (question: Question) => boolean;
+  activeQuestionId: string | null;
+  QUESTIONS_PER_PAGE: number;
+  onPageChange: QuizPageChangeHandler;
 }
 
 const QuizNavigation: React.FC<QuizNavigationProps> = ({
-    questions,
-    isQuestionAnswered,
-    activeQuestionId,
-    QUESTIONS_PER_PAGE,
-    onPageChange,
+  questions,
+  isQuestionAnswered,
+  activeQuestionId,
+  QUESTIONS_PER_PAGE,
+  onPageChange,
 }) => {
-    const handleQuestionClick = (q: Question, page: number) => {
-        onPageChange(page, q.id);
-    };
+  const handleQuestionClick = (question: Question, page: number) => {
+    onPageChange(page, question.id);
+  };
 
-    return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm h-fit sticky top-24">
-            <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-                <Pin aria-hidden="true" className="size-4 text-blue-600" />
-                Danh sách câu hỏi
-            </h3>
+  return (
+    <div className="sticky top-24 rounded-[14px] border border-[#E5E7EB] bg-white p-4">
+      <h2 className="text-sm font-semibold text-[#172033]">Danh sách câu hỏi</h2>
+      <p className="mt-1 text-xs leading-5 text-[#526174]">Chọn số câu để chuyển nhanh.</p>
 
-            <div className="grid grid-cols-5 gap-2">
-                {questions.map((q, idx) => {
-                    const isAnswered = isQuestionAnswered(q);
-                    const pageOfQuestion = Math.floor(idx / QUESTIONS_PER_PAGE) + 1;
-                    const isActive = q.id === activeQuestionId;
+      <div className="mt-4 grid grid-cols-5 gap-2">
+        {questions.map((question, index) => {
+          const isAnswered = isQuestionAnswered(question);
+          const pageOfQuestion = Math.floor(index / QUESTIONS_PER_PAGE) + 1;
+          const isActive = question.id === activeQuestionId;
 
-                    return (
-                        <button
-                            key={q.id}
-                            type="button"
-                            aria-label={`Đi đến câu ${idx + 1}`}
-                            aria-current={isActive ? 'step' : undefined}
-                            onClick={() => handleQuestionClick(q, pageOfQuestion)}
-                            className={`
-                                w-full aspect-square flex items-center justify-center rounded-lg text-sm font-bold transition-all
-                                ${isAnswered
-                                    ? 'bg-green-500 text-white shadow-md shadow-green-200 hover:bg-green-600'
-                                    : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 border border-gray-100'}
-                                ${isActive ? 'ring-2 ring-blue-400 ring-offset-2' : ''}
-                            `}
-                        >
-                            {idx + 1}
-                        </button>
-                    );
-                })}
-            </div>
+          return (
+            <button
+              key={question.id}
+              type="button"
+              aria-label={`Đi đến câu ${index + 1}`}
+              aria-current={isActive ? 'step' : undefined}
+              onClick={() => handleQuestionClick(question, pageOfQuestion)}
+              className={`flex aspect-square w-full items-center justify-center rounded-[8px] border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 ${
+                isActive
+                  ? 'border-sky-500 bg-sky-50 text-sky-800 ring-1 ring-sky-500'
+                  : isAnswered
+                    ? 'border-sky-300 bg-white text-sky-700 hover:bg-sky-50'
+                    : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              {index + 1}
+            </button>
+          );
+        })}
+      </div>
 
-            <div className="mt-6 space-y-2 border-t border-gray-50 pt-4">
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <div className="w-3 h-3 bg-green-500 rounded-sm" />
-                    <span>Đã trả lời</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <div className="w-3 h-3 bg-gray-100 border border-gray-200 rounded-sm" />
-                    <span>Chưa trả lời</span>
-                </div>
-            </div>
+      <div className="mt-5 space-y-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
+        <div className="flex items-center gap-2">
+          <span className="h-3 w-3 rounded-[3px] border border-sky-200 bg-sky-50" />
+          <span>Đã trả lời</span>
         </div>
-    );
+        <div className="flex items-center gap-2">
+          <span className="h-3 w-3 rounded-[3px] border border-slate-200 bg-white" />
+          <span>Chưa trả lời</span>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default QuizNavigation;

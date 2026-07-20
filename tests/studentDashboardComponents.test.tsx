@@ -183,7 +183,7 @@ describe('student dashboard hero and assigned work', () => {
     const primaryAction = vi.fn();
     const { rerender } = renderHero(true, primaryAction);
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Chào ngày mới, An!');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Chào An.');
     fireEvent.click(screen.getByRole('button', { name: 'Làm bài được giao' }));
     expect(primaryAction).toHaveBeenCalledTimes(1);
 
@@ -298,7 +298,7 @@ describe('learning progress and weekly quest panels', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: /Hành trình hôm nay/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /Tiến độ học tập/i })).toHaveAttribute(
       'aria-expanded',
       'true',
     );

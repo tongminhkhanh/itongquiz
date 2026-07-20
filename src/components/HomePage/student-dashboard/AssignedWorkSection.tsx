@@ -1,4 +1,4 @@
-import { BookOpen, ChevronLeft, ChevronRight, Clock, Play, Target } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { AssignedWorkSkeleton, DashboardEmptyState, DashboardSectionError } from './DashboardStates';
 import type { AssignedWorkSectionProps } from './dashboard.types';
 import { getAssignmentActionLabel, getAssignmentVisualState } from './dashboard.utils';
@@ -18,16 +18,13 @@ export function AssignedWorkSection({
 
   return (
     <section id="assigned-work" aria-labelledby="assigned-work-title" className="scroll-mt-24">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
-          <Target className="h-5 w-5" aria-hidden="true" />
-        </div>
-        <div>
-          <h2 id="assigned-work-title" className="text-2xl font-black text-slate-900">
-            Bài được giao
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">Ưu tiên hoàn thành các bài giáo viên đã giao cho em.</p>
-        </div>
+      <div className="mb-4">
+        <h2 id="assigned-work-title" className="text-2xl font-semibold text-[#172033]">
+          Bài được giao
+        </h2>
+        <p className="mt-1 text-sm text-[#526174]">
+          Theo dõi hạn nộp và số lượt làm còn lại của từng bài.
+        </p>
       </div>
 
       {isLoading ? <AssignedWorkSkeleton /> : null}
@@ -44,47 +41,38 @@ export function AssignedWorkSection({
       ) : null}
 
       {!isLoading && !errorMessage && quizzes.length > 0 ? (
-        <div className="space-y-3">
+        <div className="overflow-hidden rounded-[14px] border border-[#E5E7EB] bg-white">
           {quizzes.map((quiz) => {
             const assignment = quiz._assignmentData;
             const visualState = getAssignmentVisualState(quiz);
             const actionLabel = getAssignmentActionLabel(visualState);
             const isReady = visualState === 'ready';
+            const attemptCount = Math.max(0, Number(assignment?.attemptCount) || 0);
+            const maxAttempts = Math.max(1, Number(assignment?.maxAttempts) || 1);
+            const remainingAttempts = Math.max(0, maxAttempts - attemptCount);
+            const deadline = assignment?.deadline ? new Date(assignment.deadline) : null;
+            const deadlineText = deadline && !Number.isNaN(deadline.getTime())
+              ? deadline.toLocaleDateString('vi-VN')
+              : 'Không giới hạn';
 
             return (
               <article
                 key={assignment?.id || quiz.id}
-                className={`rounded-2xl border bg-white p-4 shadow-sm sm:p-5 ${
-                  visualState === 'completed'
-                    ? 'border-emerald-200'
-                    : visualState === 'closed'
-                      ? 'border-slate-300'
-                      : 'border-sky-100'
-                }`}
+                className="border-b border-[#E5E7EB] px-4 py-5 last:border-b-0 sm:px-5"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                  <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
-                      visualState === 'completed'
-                        ? 'bg-emerald-50 text-emerald-600'
-                        : visualState === 'closed'
-                          ? 'bg-slate-100 text-slate-500'
-                          : 'bg-sky-50 text-sky-700'
-                    }`}
-                  >
-                    <BookOpen className="h-6 w-6" aria-hidden="true" />
-                  </div>
-
                   <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <h3 className="line-clamp-2 text-lg font-bold text-slate-900">{quiz.title}</h3>
+                    <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                      <h3 className="line-clamp-2 text-base font-semibold text-[#172033] sm:text-lg">
+                        {quiz.title}
+                      </h3>
                       <span
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide ${
+                        className={`text-xs font-medium ${
                           visualState === 'completed'
-                            ? 'bg-emerald-100 text-emerald-700'
+                            ? 'text-emerald-700'
                             : visualState === 'closed'
-                              ? 'bg-slate-200 text-slate-700'
-                              : 'bg-orange-100 text-orange-700'
+                              ? 'text-slate-500'
+                              : 'text-amber-700'
                         }`}
                       >
                         {visualState === 'completed'
@@ -94,15 +82,23 @@ export function AssignedWorkSection({
                             : 'Cần làm'}
                       </span>
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[#526174]">
                       <span className="inline-flex items-center gap-1.5">
                         <Clock className="h-4 w-4" aria-hidden="true" />
                         {quiz.timeLimit || 0} phút
                       </span>
                       <span>
-                        Lượt làm: {assignment?.attemptCount || 0}/{assignment?.maxAttempts || 1}
+                        Hạn:{' '}
+                        <span className={visualState === 'closed' ? 'text-[#E76F51]' : 'text-amber-700'}>
+                          {deadlineText}
+                        </span>
                       </span>
                     </div>
+
+                    <p className="mt-2 text-sm font-medium text-slate-700">
+                      Đã làm {attemptCount}/{maxAttempts} lượt • Còn {remainingAttempts} lượt
+                    </p>
                   </div>
 
                   <button
@@ -111,15 +107,14 @@ export function AssignedWorkSection({
                       if (isReady) onStartQuiz(quiz);
                     }}
                     disabled={!isReady}
-                    className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-extrabold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:w-auto sm:min-w-36 ${
+                    className={`inline-flex min-h-11 w-full items-center justify-center rounded-[10px] px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:w-auto sm:min-w-36 ${
                       isReady
-                        ? 'bg-sky-600 text-white hover:bg-sky-700 focus-visible:ring-sky-500'
+                        ? 'bg-sky-500 text-white hover:bg-sky-600 focus-visible:ring-sky-500'
                         : visualState === 'completed'
                           ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
                           : 'cursor-not-allowed border border-slate-300 bg-slate-100 text-slate-600'
                     }`}
                   >
-                    {isReady ? <Play className="h-4 w-4 fill-current" aria-hidden="true" /> : null}
                     {actionLabel}
                   </button>
                 </div>
@@ -130,25 +125,25 @@ export function AssignedWorkSection({
           {safeTotalPages > 1 ? (
             <nav
               aria-label="Phân trang bài được giao"
-              className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3"
+              className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 p-3"
             >
               <button
                 type="button"
                 onClick={() => onPageChange(Math.max(1, safePage - 1))}
                 disabled={safePage <= 1}
-                className="inline-flex min-h-11 items-center justify-center gap-1 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                className="inline-flex min-h-11 items-center justify-center gap-1 rounded-[10px] border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
               >
                 <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                 Trước
               </button>
-              <span className="text-sm font-semibold text-slate-600">
+              <span className="text-sm font-medium text-slate-600">
                 Trang {safePage}/{safeTotalPages}
               </span>
               <button
                 type="button"
                 onClick={() => onPageChange(Math.min(safeTotalPages, safePage + 1))}
                 disabled={safePage >= safeTotalPages}
-                className="inline-flex min-h-11 items-center justify-center gap-1 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                className="inline-flex min-h-11 items-center justify-center gap-1 rounded-[10px] border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
               >
                 Sau
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
