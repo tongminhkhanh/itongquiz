@@ -135,7 +135,7 @@ Detailed plan: `docs/plans/2026-07-20-security-hardening.md`
 
 ## Phase 4 — Verification và release gate
 
-- [ ] Task 18 — Full verification
+- [x] Task 18 — Full verification
   - [x] `npm run security:check`
   - [x] Frontend `npm audit`
   - [x] Backend `npm audit`
@@ -151,9 +151,9 @@ Detailed plan: `docs/plans/2026-07-20-security-hardening.md`
   - [x] Vercel Preview runtime smoke qua protection bypass CLI
   - [x] CORS preflight/mutation smoke với official, preview và untrusted origins
   - [x] Teacher/student login route smoke bằng tài khoản giả
-  - [ ] Production-like browser smoke tương tác
-  - [ ] Vercel Preview browser smoke tương tác
-  - [ ] Thực thi rollback drill
+  - [x] Production browser smoke tương tác với admin, giáo viên và học sinh
+  - [x] Vercel Preview browser smoke tương tác qua protection bypass
+  - [x] Thực thi rollback drill và khôi phục 100% traffic
   - [x] Approval trước deploy production
 
 ### Release evidence — 2026-07-20
@@ -167,6 +167,21 @@ Detailed plan: `docs/plans/2026-07-20-security-hardening.md`
 - Preview frontend `/` và same-origin `/api/health` qua `vercel curl`: đạt
 - Origin lạ: preflight và mutation đều bị chặn `403`
 - Teacher/student invalid-login routes: reachable, không `503`
+
+
+### Phase 4 evidence — 2026-07-20
+
+- Bugfix student session restore: commit `8ac687e`
+- Full regression sau bugfix: 113/113 files, 626/626 tests
+- Security scan: 1.497 files; frontend/Worker audits: 0 vulnerabilities
+- API Worker manual bugfix deploy: `e834179f-bd5c-42dd-876b-2fd83454a613`
+- API Worker version dùng cho browser smoke và khôi phục sau drill: `876e7d9c-5d8e-46ab-b430-0ffe9befc20a`
+- Rollback drill target: `d7ea0b56-17b9-40af-b93a-b3d5eacb8727`
+- Rollback và restore health/CORS smoke: đạt
+- Production browser smoke: admin 13/13, giáo viên 13/13, học sinh 13/13
+- Vercel Preview browser smoke: mở app, login, cookie, reload restore và logout đều đạt
+- Không đổi mật khẩu, khóa hoặc xóa tài khoản; chỉ đăng xuất các phiên do smoke test tạo
+- Credential vẫn chỉ nằm trong file local ignored `.env.phase4.local`
 
 ## Final Definition of Done
 
