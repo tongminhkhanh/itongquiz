@@ -4,6 +4,7 @@ import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
 import { mapPetData, mapShopItem, parseBody } from '../utils/helpers';
 import { verifyJWTMiddleware, isStudent } from '../middleware/jwtAuth';
+import { handleResultRewardClaim } from '../gamification/resultRewardClaim';
 
 const ATTENDANCE_BASE_REWARD = { exp: 50, coins: 50 };
 
@@ -333,6 +334,16 @@ export async function handleGamificationRoutes(request: Request, env: Env, path:
                 weekStartDateKey,
             },
         });
+    }
+
+    // POST /api/game-state/result-reward - Claim an idempotent reward for a saved result
+    if (path === '/api/game-state/result-reward' && method === 'POST') {
+        const body = await parseBody(request);
+        if (!body) return errorResponse('Invalid JSON body');
+
+        const subject = requireStudentSubject(body.username);
+        if (subject instanceof Response) return subject;
+        return handleResultRewardClaim(db, body, subject);
     }
 
     // POST /api/game-state - Update game state (add exp + coins)

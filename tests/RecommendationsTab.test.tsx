@@ -43,8 +43,9 @@ describe('RecommendationsTab', () => {
         );
 
         expect(await screen.findByText('Uu tien on Phan so')).toBeInTheDocument();
-        expect(screen.getByText(/Bat dau voi dang nay/i)).toBeInTheDocument();
-        expect(screen.getByText(/Nhan xet tong quan/i)).toBeInTheDocument();
+        expect(screen.getByText(focus.nextStepLabel)).toBeInTheDocument();
+        expect(screen.getByText(focus.nextStepHint)).toBeInTheDocument();
+        expect(screen.getByText('Nhận xét từ bài làm')).toBeInTheDocument();
         expect(extractWrongAnswers).toHaveBeenCalled();
         expect(getAIRecommendations).toHaveBeenCalled();
     });

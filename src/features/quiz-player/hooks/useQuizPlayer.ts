@@ -13,6 +13,24 @@ interface UseQuizPlayerProps {
     onSaveResult: (result: StudentResult) => void | StudentResult | Promise<void | StudentResult>;
 }
 
+export type CompletionRewardStatus = 'ready' | 'syncing' | 'error';
+
+export interface CompletionRewardData {
+    status: CompletionRewardStatus;
+    resultId: string;
+    score: number;
+    correctCount: number;
+    totalQuestions: number;
+    expEarned: number;
+    coinsEarned: number;
+    newLevel: number;
+    newExp: number;
+    newExpToNext: number;
+    newCoins: number;
+    leveledUp: boolean;
+    isPractice: boolean;
+}
+
 export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps) => {
     const classroomStore = useClassroomStore();
     const session = classroomStore.studentSession;
@@ -79,12 +97,7 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
 
     // Gamification state
     const [showReward, setShowReward] = useState(false);
-    const [rewardData, setRewardData] = useState<{
-        expEarned: number;
-        coinsEarned: number;
-        newLevel: number;
-        leveledUp: boolean;
-    } | null>(null);
+    const [rewardData, setRewardData] = useState<CompletionRewardData | null>(null);
 
     // Pagination state
     const QUESTIONS_PER_PAGE = 10;
@@ -196,7 +209,8 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
         setIsSubmitting(true);
         setSubmitError(null);
 
-        const timeTaken = Math.round((Date.now() - startTime) / 60000);
+        const elapsedSeconds = Math.max(0, Math.round((Date.now() - startTime) / 1000));
+        const timeTaken = Math.round((elapsedSeconds / 60) * 100) / 100;
 
         try {
             const validationResult = await validateAnswersOnServer({
@@ -288,37 +302,50 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
             }
             setResult(finalResult);
 
-            // Gamification logic
-            const addExp = mergedCorrectCount * 10 + (mergedScore === 10 ? 50 : 0);
-            const addCoins = mergedCorrectCount * 5;
-            
-            let rewardLevel = 1;
-            let didLevelUp = false;
-
             const gamStore = useGamificationStore.getState();
-            if (classroomStore.studentSession?.username && gamStore.pet) {
-                try {
-                    const success = await gamStore.updateGameState(
-                        classroomStore.studentSession.username,
-                        addExp,
-                        addCoins
-                    );
-                    if (success) {
-                        rewardLevel = useGamificationStore.getState().lastReward?.newLevel ?? 1;
-                        didLevelUp = useGamificationStore.getState().lastReward?.leveledUp ?? false;
+            const currentPet = gamStore.pet;
+            const baseRewardData: CompletionRewardData = {
+                status: 'ready',
+                resultId: finalResult.id,
+                score: finalResult.score,
+                correctCount: finalResult.correctCount,
+                totalQuestions: finalResult.totalQuestions,
+                expEarned: 0,
+                coinsEarned: 0,
+                newLevel: currentPet?.level ?? 1,
+                newExp: currentPet?.exp ?? 0,
+                newExpToNext: currentPet?.expToNext ?? 100,
+                newCoins: gamStore.coins ?? 0,
+                leveledUp: false,
+                isPractice: Boolean(quiz.isPractice),
+            };
+
+            let completionReward = baseRewardData;
+            const rewardUsername = classroomStore.studentSession?.username;
+            if (!quiz.isPractice && rewardUsername && typeof gamStore.claimResultReward === 'function') {
+                const claimedReward = await gamStore.claimResultReward(rewardUsername, finalResult.id);
+                completionReward = claimedReward
+                    ? {
+                        ...baseRewardData,
+                        status: 'ready',
+                        expEarned: claimedReward.awardedExp,
+                        coinsEarned: claimedReward.awardedCoins,
+                        newLevel: claimedReward.newLevel,
+                        newExp: claimedReward.newExp,
+                        newExpToNext: claimedReward.newExpToNext,
+                        newCoins: claimedReward.newCoins,
+                        leveledUp: claimedReward.leveledUp,
                     }
-                } catch (e) { console.warn('Gamification sync failed', e); }
+                    : { ...baseRewardData, status: 'error' };
             }
 
-            if (mergedCorrectCount > 0) {
-                setRewardData({ expEarned: addExp, coinsEarned: addCoins, newLevel: rewardLevel, leveledUp: didLevelUp });
-                setShowReward(true);
-            }
+            setRewardData(completionReward);
+            setShowReward(true);
 
             if (classroomStore.studentSession?.username) {
                 void useGameLoopStore.getState().trackQuizActivity({
                     username: classroomStore.studentSession.username,
-                    activityId: resultData.id,
+                    activityId: finalResult.id,
                     quizId: quiz.id,
                     category: quiz.category,
                     subject: quiz.topic,
@@ -336,6 +363,33 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
             setIsSubmitting(false);
         }
     }, [isSubmitting, startTime, quiz, answers, studentName, studentClass, generateUUID, shuffledQuestions, onSaveResult, classroomStore.studentSession?.username]);
+
+    const handleRetryReward = useCallback(async () => {
+        const rewardUsername = classroomStore.studentSession?.username;
+        if (!rewardData || rewardData.isPractice || !rewardUsername) return;
+
+        const gamStore = useGamificationStore.getState();
+        if (typeof gamStore.claimResultReward !== 'function') return;
+
+        setRewardData((current) => current ? { ...current, status: 'syncing' } : current);
+        const claimedReward = await gamStore.claimResultReward(rewardUsername, rewardData.resultId);
+        if (!claimedReward) {
+            setRewardData((current) => current ? { ...current, status: 'error' } : current);
+            return;
+        }
+
+        setRewardData((current) => current ? {
+            ...current,
+            status: 'ready',
+            expEarned: claimedReward.awardedExp,
+            coinsEarned: claimedReward.awardedCoins,
+            newLevel: claimedReward.newLevel,
+            newExp: claimedReward.newExp,
+            newExpToNext: claimedReward.newExpToNext,
+            newCoins: claimedReward.newCoins,
+            leveledUp: claimedReward.leveledUp,
+        } : current);
+    }, [classroomStore.studentSession?.username, rewardData]);
 
     const isQuestionAnswered = useCallback((q: Question) => {
         const val = answers[q.id];
@@ -364,6 +418,6 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
         shuffledQuestions, isSubmitting, submitError, showReward, setShowReward,
         showSubmitConfirm, setShowSubmitConfirm,
         rewardData, currentPage, setCurrentPage, totalPages, questionsOnCurrentPage,
-        handleStart, handleCodeVerify, handleAnswerChange, handleMatchingClick, handleSubmit, isQuestionAnswered
+        handleStart, handleCodeVerify, handleAnswerChange, handleMatchingClick, handleSubmit, handleRetryReward, isQuestionAnswered
     };
 };

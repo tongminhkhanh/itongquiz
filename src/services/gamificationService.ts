@@ -4,7 +4,15 @@
  * API calls to the Cloudflare Worker for Pet System, Shop, and Rewards.
  */
 
-import { PetData as UserPet, ShopItem, PurchaseResult as BuyItemResponse, LeaderboardEntry, GameStateResult, TopGoldStudent } from '../types/gamification.types';
+import {
+    PetData as UserPet,
+    ShopItem,
+    PurchaseResult as BuyItemResponse,
+    LeaderboardEntry,
+    GameStateResult,
+    ResultRewardClaimResult,
+    TopGoldStudent,
+} from '../types/gamification.types';
 import { callApi } from './apiAdapter';
 
 // Response type returned by the Worker API
@@ -68,6 +76,20 @@ export const updateGameState = async (
         username,
         addExp,
         addCoins,
+    });
+    if (res.status === 'success' && res.data) {
+        return res.data;
+    }
+    return null;
+};
+
+export const claimResultReward = async (
+    username: string,
+    resultId: string,
+): Promise<ResultRewardClaimResult | null> => {
+    const res = await callWorkerApi<ResultRewardClaimResult>('claim_result_reward', {
+        username,
+        resultId,
     });
     if (res.status === 'success' && res.data) {
         return res.data;

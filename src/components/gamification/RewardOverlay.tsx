@@ -1,189 +1,199 @@
-/**
- * RewardOverlay Component
- *
- * Full-screen overlay showing rewards after quiz completion.
- * Features: coin rain, EXP animation, level-up celebration.
- */
-
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Star, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import {
+    ArrowRight,
+    CheckCircle2,
+    Coins,
+    Home,
+    RefreshCw,
+    Star,
+    Trophy,
+} from 'lucide-react';
+import type { CompletionRewardData } from '../../features/quiz-player/hooks/useQuizPlayer';
 
 interface RewardOverlayProps {
-    expEarned: number;
-    coinsEarned: number;
-    newLevel: number;
-    leveledUp: boolean;
-    onClose: () => void;
+    data: CompletionRewardData;
+    onViewResult: () => void;
+    onExit: () => void;
+    onRetryReward: () => void | Promise<void>;
 }
 
+const celebrationPositions = [
+    ['12%', '15%'], ['25%', '8%'], ['42%', '17%'], ['58%', '9%'],
+    ['76%', '16%'], ['88%', '10%'], ['18%', '72%'], ['34%', '82%'],
+    ['52%', '76%'], ['68%', '84%'], ['82%', '70%'], ['92%', '80%'],
+] as const;
+
 const RewardOverlay: React.FC<RewardOverlayProps> = ({
-    expEarned,
-    coinsEarned,
-    newLevel,
-    leveledUp,
-    onClose,
+    data,
+    onViewResult,
+    onExit,
+    onRetryReward,
 }) => {
-    const [phase, setPhase] = useState<'coins' | 'exp' | 'levelup' | 'done'>('coins');
+    const primaryButtonRef = useRef<HTMLButtonElement>(null);
+    const progressPercent = useMemo(() => {
+        if (data.newExpToNext <= 0) return 0;
+        return Math.min(100, Math.max(0, Math.round((data.newExp / data.newExpToNext) * 100)));
+    }, [data.newExp, data.newExpToNext]);
+    const shouldCelebrate = data.leveledUp || data.score >= 10;
 
     useEffect(() => {
-        const timers = [
-            setTimeout(() => setPhase('exp'), 1200),
-            setTimeout(() => setPhase(leveledUp ? 'levelup' : 'done'), 2400),
-            setTimeout(() => { if (leveledUp) setPhase('done'); }, 3600),
-        ];
-        return () => timers.forEach(clearTimeout);
-    }, [leveledUp]);
+        primaryButtonRef.current?.focus();
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onViewResult();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onViewResult]);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
-            {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-
-            {/* Content */}
-            <div
-                className="relative z-10 text-center"
-                onClick={(e) => e.stopPropagation()}
-                style={{ animation: 'rewardFadeIn 0.5s ease-out' }}
-            >
-                {/* Coins Phase */}
-                <div className={`transition-all duration-500 ${phase === 'coins' ? 'opacity-100 scale-100' : phase === 'exp' ? 'opacity-0 -translate-y-10' : 'hidden'}`}>
-                    <div className="text-7xl mb-4" style={{ animation: 'coinFloat 0.5s ease-out' }}>💰</div>
-                    <p className="text-4xl font-black text-yellow-400 drop-shadow-lg" style={{ animation: 'numberPop 0.3s ease-out 0.3s both' }}>
-                        +{coinsEarned}
-                    </p>
-                    <p className="text-lg text-white/80 mt-1 font-medium">Vàng</p>
-                </div>
-
-                {/* EXP Phase */}
-                <div className={`transition-all duration-500 ${phase === 'exp' ? 'opacity-100 scale-100' : phase === 'levelup' || phase === 'done' ? 'opacity-0 -translate-y-10' : 'hidden'}`}>
-                    <div className="text-7xl mb-4" style={{ animation: 'coinFloat 0.5s ease-out' }}>⭐</div>
-                    <p className="text-4xl font-black text-blue-100 drop-shadow-lg" style={{ animation: 'numberPop 0.3s ease-out 0.3s both' }}>
-                        +{expEarned}
-                    </p>
-                    <p className="text-lg text-white/80 mt-1 font-medium">EXP</p>
-                </div>
-
-                {/* Level Up Phase */}
-                {leveledUp && (
-                    <div className={`transition-all duration-500 ${phase === 'levelup' ? 'opacity-100 scale-100' : phase === 'done' ? 'opacity-0 -translate-y-10' : 'hidden'}`}>
-                        <div className="text-7xl mb-4" style={{ animation: 'levelUpSpin 0.8s ease-out' }}>🎉</div>
-                        <p className="text-3xl font-black text-white drop-shadow-lg">
-                            Lên cấp!
-                        </p>
-                        <p className="text-5xl font-black text-amber-400 mt-2" style={{ animation: 'numberPop 0.3s ease-out 0.3s both' }}>
-                            Lv.{newLevel}
-                        </p>
-                    </div>
-                )}
-
-                {/* Done Phase */}
-                <div className={`transition-all duration-500 ${phase === 'done' ? 'opacity-100 scale-100' : 'hidden'}`}>
-                    <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 shadow-2xl max-w-xs mx-auto">
-                        <Sparkles className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-                        <h3 className="text-2xl font-bold text-white mb-4">Phần thưởng!</h3>
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between bg-white/10 rounded-xl px-4 py-2.5">
-                                <span className="text-white/80 text-sm">💰 Vàng</span>
-                                <span className="text-yellow-400 font-bold text-lg">+{coinsEarned}</span>
-                            </div>
-                            <div className="flex items-center justify-between bg-white/10 rounded-xl px-4 py-2.5">
-                                <span className="text-white/80 text-sm">⭐ EXP</span>
-                                <span className="text-blue-100 font-bold text-lg">+{expEarned}</span>
-                            </div>
-                            {leveledUp && (
-                                <div className="flex items-center justify-between bg-amber-500/20 rounded-xl px-4 py-2.5 border border-amber-400/30">
-                                    <span className="text-amber-200 text-sm">🎉 Lên cấp</span>
-                                    <span className="text-amber-400 font-bold text-lg">Lv.{newLevel}</span>
-                                </div>
-                            )}
-                        </div>
-                        <button
-                            onClick={onClose}
-                            className="mt-6 w-full py-3 bg-gradient-to-r from-blue-500 to-pink-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-95"
-                        >
-                            Tiếp tục xem kết quả
-                        </button>
-                    </div>
-                </div>
-
-                {/* Close hint */}
-                {phase !== 'done' && (
-                    <p className="text-white/40 text-sm mt-6">Nhấn để bỏ qua</p>
-                )}
-            </div>
-
-            {/* Coin rain particles */}
-            {(phase === 'coins' || phase === 'exp') && (
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    {[...Array(15)].map((_, i) => (
-                        <div
-                            key={i}
-                            className="absolute text-2xl"
-                            style={{
-                                left: `${Math.random() * 100}%`,
-                                top: '-30px',
-                                animation: `coinRain ${1.5 + Math.random() * 1.5}s ease-in forwards`,
-                                animationDelay: `${Math.random() * 0.8}s`,
-                            }}
-                        >
-                            {phase === 'coins' ? '🪙' : '✨'}
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Fireworks for level up */}
-            {phase === 'levelup' && (
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    {[...Array(20)].map((_, i) => (
-                        <div
-                            key={i}
-                            className="absolute w-2 h-2 rounded-full"
-                            style={{
-                                left: '50%',
-                                top: '50%',
-                                backgroundColor: ['#f43f5e', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899'][i % 6],
-                                animation: `firework 1s ease-out forwards`,
-                                animationDelay: `${Math.random() * 0.3}s`,
-                                ['--angle' as string]: `${(i * 360) / 20}deg`,
-                            }}
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[2px]">
+            {shouldCelebrate ? (
+                <div
+                    data-testid="completion-celebration"
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 overflow-hidden motion-reduce:hidden"
+                >
+                    {celebrationPositions.map(([left, top], index) => (
+                        <span
+                            key={`${left}-${top}`}
+                            className="absolute h-2.5 w-2.5 animate-[completionSpark_900ms_ease-out_both] rounded-sm bg-amber-300"
+                            style={{ left, top, animationDelay: `${index * 35}ms` }}
                         />
                     ))}
                 </div>
-            )}
+            ) : null}
+
+            <section
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="completion-dialog-title"
+                className="relative z-10 w-full max-w-lg overflow-hidden rounded-[16px] border border-slate-200 bg-[#FFFDF7] font-['Be_Vietnam_Pro'] text-slate-800 shadow-[0_24px_70px_rgba(15,23,42,0.24)]"
+            >
+                <div className="border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
+                    <div className="flex items-start gap-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-emerald-200 bg-emerald-50 text-emerald-700">
+                            <CheckCircle2 className="h-7 w-7" aria-hidden="true" />
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-sm font-semibold text-emerald-700">
+                                {data.isPractice ? 'Bài luyện tập đã hoàn thành' : 'Kết quả đã được lưu'}
+                            </p>
+                            <h2 id="completion-dialog-title" className="mt-1 text-xl font-bold leading-snug text-slate-900 sm:text-2xl">
+                                Chúc mừng em đã hoàn thành bài tập!
+                            </h2>
+                            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                                {data.isPractice
+                                    ? 'Em có thể xem lại bài để biết phần nào cần luyện thêm.'
+                                    : 'Kết quả của em đã được lưu.'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-[12px] border border-slate-200 bg-white p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Điểm số</p>
+                            <p className="mt-1 text-3xl font-bold text-sky-700">{data.score}/10</p>
+                        </div>
+                        <div className="rounded-[12px] border border-slate-200 bg-white p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Kết quả</p>
+                            <p className="mt-2 text-lg font-bold text-slate-900">
+                                {data.correctCount}/{data.totalQuestions} câu đúng
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="rounded-[12px] border border-slate-200 bg-white p-4">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-sm font-bold text-slate-900">Phần thưởng</p>
+                                <p className="mt-0.5 text-xs text-slate-500">
+                                    {data.isPractice
+                                        ? 'Bài luyện tập không cộng EXP hoặc xu.'
+                                        : data.status === 'error'
+                                            ? 'Phần thưởng chưa đồng bộ được.'
+                                            : data.status === 'syncing'
+                                                ? 'Đang đồng bộ phần thưởng...'
+                                                : 'Đã cộng vào tài khoản của em.'}
+                                </p>
+                            </div>
+                            {data.status === 'error' && !data.isPractice ? (
+                                <button
+                                    type="button"
+                                    onClick={onRetryReward}
+                                    className="inline-flex shrink-0 items-center gap-1.5 rounded-[9px] border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                                >
+                                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                                    Thử đồng bộ lại
+                                </button>
+                            ) : null}
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                            <div className="flex items-center gap-3 rounded-[10px] bg-sky-50 px-3 py-3 text-sky-800">
+                                <Star className="h-5 w-5" aria-hidden="true" />
+                                <span className="font-bold">+{data.expEarned} EXP</span>
+                            </div>
+                            <div className="flex items-center gap-3 rounded-[10px] bg-amber-50 px-3 py-3 text-amber-800">
+                                <Coins className="h-5 w-5" aria-hidden="true" />
+                                <span className="font-bold">+{data.coinsEarned} xu</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="rounded-[12px] border border-slate-200 bg-white p-4">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                                <Trophy className="h-5 w-5 text-amber-600" aria-hidden="true" />
+                                <span className="font-bold text-slate-900">Cấp {data.newLevel}</span>
+                            </div>
+                            <span className="text-sm font-semibold text-slate-500">
+                                {data.newExp}/{data.newExpToNext} EXP
+                            </span>
+                        </div>
+                        <div
+                            role="progressbar"
+                            aria-label={`Tiến độ Cấp ${data.newLevel}`}
+                            aria-valuemin={0}
+                            aria-valuemax={data.newExpToNext}
+                            aria-valuenow={data.newExp}
+                            className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-100"
+                        >
+                            <div className="h-full rounded-full bg-sky-500 transition-[width] motion-reduce:transition-none" style={{ width: `${progressPercent}%` }} />
+                        </div>
+                        {data.leveledUp ? (
+                            <p className="mt-3 text-sm font-bold text-emerald-700">Em đã lên Cấp {data.newLevel}!</p>
+                        ) : null}
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                        <button
+                            ref={primaryButtonRef}
+                            type="button"
+                            onClick={onViewResult}
+                            className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-sky-600 px-5 py-3 font-bold text-white hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+                        >
+                            Xem kết quả
+                            <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onExit}
+                            className="inline-flex items-center justify-center gap-2 rounded-[10px] border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+                        >
+                            <Home className="h-5 w-5" aria-hidden="true" />
+                            Về trang chủ
+                        </button>
+                    </div>
+                </div>
+            </section>
 
             <style>{`
-                @keyframes rewardFadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes coinFloat {
-                    0% { transform: scale(0) translateY(30px); }
-                    60% { transform: scale(1.3) translateY(-10px); }
-                    100% { transform: scale(1) translateY(0); }
-                }
-                @keyframes numberPop {
-                    0% { opacity: 0; transform: scale(0.5); }
-                    100% { opacity: 1; transform: scale(1); }
-                }
-                @keyframes coinRain {
-                    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-                    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-                }
-                @keyframes levelUpSpin {
-                    0% { transform: scale(0) rotate(-180deg); }
-                    60% { transform: scale(1.4) rotate(20deg); }
-                    100% { transform: scale(1) rotate(0deg); }
-                }
-                @keyframes firework {
-                    0% { transform: translate(0, 0) scale(1); opacity: 1; }
-                    100% {
-                        transform: translate(
-                            calc(cos(var(--angle)) * 150px),
-                            calc(sin(var(--angle)) * 150px)
-                        ) scale(0);
-                        opacity: 0;
-                    }
+                @keyframes completionSpark {
+                    0% { opacity: 0; transform: translateY(14px) scale(0.6) rotate(0deg); }
+                    35% { opacity: 1; }
+                    100% { opacity: 0; transform: translateY(-34px) scale(1) rotate(120deg); }
                 }
             `}</style>
         </div>

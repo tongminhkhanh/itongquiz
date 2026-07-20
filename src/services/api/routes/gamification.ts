@@ -19,6 +19,11 @@ export const gamificationRoutes: RouteRegistry = {
         auth: 'session',
         path: () => '/api/game-state',
     },
+    claim_result_reward: {
+        method: 'POST',
+        auth: 'session',
+        path: () => '/api/game-state/result-reward',
+    },
     get_attendance_status: {
         method: 'GET',
         auth: 'session',

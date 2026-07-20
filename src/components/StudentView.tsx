@@ -27,7 +27,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     shuffledQuestions, isSubmitting, submitError, showReward, setShowReward,
     showSubmitConfirm, setShowSubmitConfirm,
     rewardData, currentPage, setCurrentPage, totalPages, questionsOnCurrentPage,
-    handleStart, handleCodeVerify, handleAnswerChange, handleMatchingClick, handleSubmit, isQuestionAnswered,
+    handleStart, handleCodeVerify, handleAnswerChange, handleMatchingClick, handleSubmit, handleRetryReward, isQuestionAnswered,
   } = useQuizPlayer({ quiz, onExit, onSaveResult });
 
   const QUESTIONS_PER_PAGE = 10;
@@ -160,11 +160,10 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
 
         {showReward && rewardData ? (
           <RewardOverlay
-            expEarned={rewardData.expEarned}
-            coinsEarned={rewardData.coinsEarned}
-            newLevel={rewardData.newLevel}
-            leveledUp={rewardData.leveledUp}
-            onClose={() => setShowReward(false)}
+            data={rewardData}
+            onViewResult={() => setShowReward(false)}
+            onExit={onExit}
+            onRetryReward={handleRetryReward}
           />
         ) : null}
       </>

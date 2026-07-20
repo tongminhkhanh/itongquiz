@@ -1,12 +1,12 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { Quiz, StudentResult, Question } from '../../../types';
-
-import { BookOpen, Home, Sparkles } from 'lucide-react';
-
-// Components
-
-// Tabs
+import React, { useMemo, useRef, useState } from 'react';
+import { BarChart3, BookOpen, ClipboardCheck, Home } from 'lucide-react';
+import type { Quiz, StudentResult } from '../../../types';
+import {
+    buildStudentResultSummary,
+    getStoredAnswerOutcome,
+} from '../../../features/results/studentResultSummary';
 import OverviewTab from './tabs/OverviewTab';
+import ReviewTab from './tabs/ReviewTab';
 import RecommendationsTab from './tabs/RecommendationsTab';
 import type { StudentWeaknessFocus } from './studentWeaknessFocus';
 
@@ -19,310 +19,112 @@ interface Props {
     studentClass?: string;
 }
 
-export type TabType = 'overview' | 'recommendations';
+export type TabType = 'result' | 'review' | 'study-plan';
+type ReviewFilter = 'all' | 'incorrect' | 'skipped';
 
-const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentName, studentClass }) => {
+const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const isAnswerSkipped = (answer: any): boolean => (
-        answer === undefined ||
-        answer === null ||
-        answer === '' ||
-        (Array.isArray(answer) && answer.length === 0) ||
-        (typeof answer === 'object' && answer !== null && !Array.isArray(answer) && Object.keys(answer).length === 0)
-    );
-
-
-
-    const [activeTab, setActiveTab] = useState<TabType>('overview');
+    const [activeTab, setActiveTab] = useState<TabType>('result');
+    const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
     const [recommendationFocus, setRecommendationFocus] = useState<StudentWeaknessFocus | null>(null);
 
-    // Helper function to check if answer is correct 
-    // PRIORITY: Use server validationDetails if available, fallback to local calculation
-    const getAnswerStatus = (question: Question, answer: any): 'correct' | 'wrong' | 'skipped' => {
-        // 1. Check server validation result first (single source of truth)
-        if (result.validationDetails && result.validationDetails.length > 0) {
-            const serverResult = result.validationDetails.find(d => d.questionId === question.id);
-            if (serverResult) {
-                if (isAnswerSkipped(answer)) return 'skipped';
-                // Override: Server has bugs for ORDERING and UNDERLINE → fall through to local
-                if (!serverResult.isCorrect && (
-                    question.type === 'ORDERING' || question.type === 'UNDERLINE' ||
-                    question.type === 'ERROR_CORRECTION'
-                )) {
-                    // Fall through to local validation below
-                } else {
-                    return serverResult.isCorrect ? 'correct' : 'wrong';
-                }
-            }
-        }
+    const displayResult = useMemo<StudentResult>(() => {
+        const summary = buildStudentResultSummary(result, answers);
+        const validationDetails = quiz.questions.map((question) => ({
+            questionId: question.id,
+            isCorrect: getStoredAnswerOutcome(result, question.id, answers[question.id]) === 'correct',
+        }));
 
-        // 2. Fallback to local calculation if no server data
-        if (isAnswerSkipped(answer)) return 'skipped';
-
-        switch (question.type) {
-            case 'MCQ': {
-                return answer === (question as any).correctAnswer ? 'correct' : 'wrong';
-            }
-            case 'SHORT_ANSWER': {
-                return String(answer ?? '').replace(/^'/, '').toLowerCase().trim() === String((question as any).correctAnswer ?? '').replace(/^'/, '').toLowerCase().trim() ? 'correct' : 'wrong';
-            }
-            case 'TRUE_FALSE': {
-                const items = (question as any).items || [];
-                const allCorrect = items.every((item: any, idx: number) => {
-                    const itemKey = item.id || `item-${idx}`;
-                    return answer?.[itemKey] === item.isCorrect;
-                });
-                return allCorrect ? 'correct' : 'wrong';
-            }
-            case 'MATCHING': {
-                const pairs = (question as any).pairs || [];
-                const matchingCorrect = pairs.every((p: any) => answer?.[p.left] === p.right);
-                return matchingCorrect ? 'correct' : 'wrong';
-            }
-            case 'MULTIPLE_SELECT': {
-                const studentAns = (answer as string[]) || [];
-                const rawCorrect = (question as any).correctAnswers ?? (question as any).correctAnswer ?? [];
-                let correctAns: string[] = [];
-                if (Array.isArray(rawCorrect)) {
-                    correctAns = rawCorrect;
-                } else if (typeof rawCorrect === 'string') {
-                    try {
-                        const parsed = JSON.parse(rawCorrect);
-                        correctAns = Array.isArray(parsed) ? parsed : rawCorrect.split('|');
-                    } catch {
-                        correctAns = rawCorrect.split('|');
-                    }
-                }
-
-                const normalize = (arr: string[]) =>
-                    Array.from(new Set(arr.map(v => String(v || '').trim().toUpperCase()).filter(Boolean))).sort();
-
-                const normalizedStudent = normalize(studentAns);
-                const normalizedCorrect = normalize(correctAns);
-                const msCorrect = normalizedCorrect.length > 0 &&
-                    normalizedStudent.length > 0 &&
-                    normalizedStudent.length === normalizedCorrect.length &&
-                    normalizedStudent.every((v, idx) => v === normalizedCorrect[idx]);
-                return msCorrect ? 'correct' : 'wrong';
-            }
-            case 'WORD_SCRAMBLE': {
-                const letters = (question as any).letters || [];
-                const studentWord = ((answer as number[]) || []).map((i: number) => letters[i]).join('');
-                return studentWord.toLowerCase().replace(/\s+/g, '') === ((question as any).correctWord || '').toLowerCase().replace(/\s+/g, '') ? 'correct' : 'wrong';
-            }
-            case 'RIDDLE': {
-                return String(answer ?? '').replace(/^'/, '').toLowerCase().trim() === String((question as any).correctAnswer ?? '').replace(/^'/, '').toLowerCase().trim() ? 'correct' : 'wrong';
-            }
-            case 'DRAG_DROP': {
-                const ddText = (question as any).text || "";
-                const ddParts = ddText.split(/(\[.*?\])/g);
-                let ddBlankIndex = 0;
-                let isDDCorrect = true;
-                ddParts.forEach((part: string, partIdx: number) => {
-                    if (part.startsWith('[') && part.endsWith(']')) {
-                        const correctWord = (question as any).blanks?.[ddBlankIndex];
-                        const studentWord = answer?.[partIdx];
-                        if (studentWord !== correctWord) isDDCorrect = false;
-                        ddBlankIndex++;
-                    }
-                });
-                return isDDCorrect ? 'correct' : 'wrong';
-            }
-            case 'DROPDOWN': {
-                const dropdownBlanks = (question as any).blanks || [];
-                const isDropdownCorrect = dropdownBlanks.every((b: any) => answer?.[b.id] === b.correctAnswer);
-                return isDropdownCorrect ? 'correct' : 'wrong';
-            }
-            case 'ORDERING': {
-                let studentIndices: number[] = [];
-                const rawAnswer = answer;
-
-                // Hydrate correctOrder safely (handle if it's stringified JSON or missing)
-                let correctOrder = (question as any).correctOrder;
-                if (!Array.isArray(correctOrder) && correctOrder) {
-                    try { correctOrder = JSON.parse(correctOrder); } catch { }
-                }
-                if (!Array.isArray(correctOrder) && (question as any).correctAnswer) {
-                    try { correctOrder = JSON.parse((question as any).correctAnswer); } catch { }
-                }
-
-                // If correctOrder is strict array
-                correctOrder = Array.isArray(correctOrder) ? correctOrder : [];
-
-                const itemsCount = (question as any).items?.length || 0;
-
-                // Fallback: If correctOrder is missing but we have items, assume items are stored in correct order [0, 1, 2...]
-                if (correctOrder.length === 0 && itemsCount > 0) {
-                    correctOrder = Array.from({ length: itemsCount }, (_, i) => i);
-                }
-
-                // Normalize answer: Could be array of indices (if changed later) or object {originalIndex: position}
-                if (Array.isArray(rawAnswer)) {
-                    studentIndices = rawAnswer;
-                } else if (typeof rawAnswer === 'object' && rawAnswer !== null) {
-                    // Convert {originalIndex: position} -> [originalIndex at pos 1, originalIndex at pos 2...]
-                    const tempOrdered = new Array(Math.max(itemsCount, correctOrder.length)).fill(-1);
-                    Object.entries(rawAnswer).forEach(([origIdx, pos]) => {
-                        const position = Number(pos);
-                        const originalIndex = Number(origIdx);
-                        if (!isNaN(position) && position > 0) {
-                            tempOrdered[position - 1] = originalIndex;
-                        }
-                    });
-                    studentIndices = tempOrdered;
-                }
-
-                if (studentIndices.length !== correctOrder.length) {
-                    return 'wrong';
-                }
-
-                const isOrderCorrect = studentIndices.every((val: number, idx: number) => {
-                    return Number(val) === Number(correctOrder[idx]);
-                });
-                return isOrderCorrect ? 'correct' : 'wrong';
-            }
-            case 'CATEGORIZATION': {
-                const catItems = (question as any).items || [];
-                const isCatCorrect = catItems.every((item: any) => {
-                    const studentCatId = answer?.[item.id];
-                    const correctCatId = item.categoryId;
-                    if (correctCatId) {
-                        return studentCatId === correctCatId;
-                    } else {
-                        return !studentCatId;
-                    }
-                });
-                return isCatCorrect ? 'correct' : 'wrong';
-            }
-            case 'UNDERLINE': {
-                const studentIdxs = (answer as number[]) || [];
-                // Resolve correctWordIndexes: quiz object → snapshot → validationDetails
-                let correctIdxs = (question as any).correctWordIndexes || [];
-                if (correctIdxs.length === 0) {
-                    // Try parse from quiz.correctAnswer
-                    if ((question as any).correctAnswer) {
-                        try { const p = JSON.parse((question as any).correctAnswer); if (Array.isArray(p)) correctIdxs = p; } catch { }
-                    }
-                    // Try from result snapshot
-                    if (correctIdxs.length === 0) {
-                        const snap = result.answers?.[question.id]?.questionSnapshot;
-                        if (snap?.correctWordIndexes?.length > 0) { correctIdxs = snap.correctWordIndexes; }
-                        else if (snap?.correctAnswer) {
-                            try { const p = JSON.parse(snap.correctAnswer); if (Array.isArray(p)) correctIdxs = p; } catch { }
-                        }
-                    }
-                    // Try from validationDetails
-                    if (correctIdxs.length === 0) {
-                        const vd = result.validationDetails?.find(d => d.questionId === question.id);
-                        if (vd?.correctAnswer) {
-                            try { const p = typeof vd.correctAnswer === 'string' ? JSON.parse(vd.correctAnswer) : vd.correctAnswer; if (Array.isArray(p)) correctIdxs = p; } catch { }
-                        }
-                    }
-                }
-                if (studentIdxs.length !== correctIdxs.length) return 'wrong';
-                const sSorted = [...studentIdxs].sort((a, b) => a - b);
-                const cSorted = [...correctIdxs].sort((a, b) => a - b);
-                const isUnderlineCorrect = sSorted.every((val, idx) => val === cSorted[idx]);
-                return isUnderlineCorrect ? 'correct' : 'wrong';
-            }
-            case 'ERROR_CORRECTION': {
-                const ecAns = answer as { wrongWord?: string; correctWord?: string } || {};
-                const ecWrong = String(ecAns.wrongWord || '').toLowerCase().trim();
-                const ecCorrect = String(ecAns.correctWord || '').toLowerCase().trim();
-                const ecExpWrong = String((question as any).wrongWord || (question as any).distractors || '').toLowerCase().trim();
-                const ecExpCorrect = String((question as any).correctWord || (question as any).correctAnswer || '').toLowerCase().trim();
-                return (ecWrong && ecCorrect && ecWrong === ecExpWrong && ecCorrect === ecExpCorrect) ? 'correct' : 'wrong';
-            }
-            default:
-                return 'wrong';
-        }
-    };
-
-    // Calculate correct count using getAnswerStatus (which has local overrides for buggy server types)
-    const calculatedCorrectCount = useMemo(() => {
-        return quiz.questions.filter(q => getAnswerStatus(q, answers[q.id]) === 'correct').length;
-    }, [quiz.questions, answers, result.validationDetails]);
-
-    // Always use recalculated correct count for consistent display
-    const displayResult: StudentResult = useMemo(() => {
-        const total = quiz.questions.length;
-        const recalcScore = total > 0 ? parseFloat(((calculatedCorrectCount / total) * 10).toFixed(1)) : 0;
         return {
             ...result,
-            correctCount: calculatedCorrectCount,
-            totalQuestions: total,
-            score: recalcScore
+            correctCount: summary.correct,
+            totalQuestions: summary.total,
+            score: summary.score10,
+            validationDetails,
         };
-    }, [result, calculatedCorrectCount, quiz.questions.length]);
+    }, [answers, quiz.questions, result]);
 
+    const summary = useMemo(
+        () => buildStudentResultSummary(displayResult, answers),
+        [answers, displayResult],
+    );
+    const hasStudyPlan = summary.incorrect > 0;
+
+    const openReview = (filter: 'incorrect' | 'skipped' | undefined) => {
+        setReviewFilter(filter ?? 'all');
+        setActiveTab('review');
+    };
+
+    const tabs = [
+        { id: 'result' as const, label: 'Kết quả', icon: BarChart3 },
+        { id: 'review' as const, label: 'Xem lại bài', icon: ClipboardCheck },
+        ...(hasStudyPlan ? [{ id: 'study-plan' as const, label: 'Kế hoạch ôn tập', icon: BookOpen }] : []),
+    ];
 
     return (
-        <div
-            ref={containerRef}
-            className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50"
-        >
-            {/* Minimal Top Navigation */}
-            <div className="max-w-5xl mx-auto px-4 pt-6 pb-2 flex justify-between items-center">
+        <div ref={containerRef} className="min-h-screen bg-[#FFFDF7] font-['Be_Vietnam_Pro'] text-slate-800">
+            <div className="mx-auto flex max-w-5xl items-center px-4 pb-2 pt-6">
                 <button
+                    type="button"
                     onClick={onExit}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 hover:bg-indigo-50 hover:shadow-md rounded-full transition-all shadow-sm border border-indigo-100 font-medium"
+                    className="inline-flex items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-4 py-2.5 font-semibold text-sky-700 transition-colors hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
                 >
-                    <Home className="w-5 h-5" />
+                    <Home className="h-5 w-5" aria-hidden="true" />
                     <span>Về trang chủ</span>
                 </button>
             </div>
 
-            {/* Content Area */}
-            <div className="max-w-5xl mx-auto px-4 pb-8">
-                <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                    <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('overview')}
-                                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                                    activeTab === 'overview'
-                                        ? 'bg-indigo-600 text-white shadow-sm'
-                                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                                }`}
-                            >
-                                <Sparkles className="w-4 h-4" />
-                                Tong quan
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('recommendations')}
-                                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                                    activeTab === 'recommendations'
-                                        ? 'bg-indigo-600 text-white shadow-sm'
-                                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                                }`}
-                            >
-                                <BookOpen className="w-4 h-4" />
-                                Goi y hoc
-                            </button>
+            <div className="mx-auto max-w-5xl px-4 pb-8">
+                <div className="overflow-hidden rounded-[14px] border border-slate-200 bg-white">
+                    <div className="border-b border-slate-200 bg-slate-50 px-3 py-3 sm:px-4">
+                        <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Các phần kết quả bài làm">
+                            {tabs.map(({ id, label, icon: Icon }) => (
+                                <button
+                                    key={id}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={activeTab === id}
+                                    onClick={() => setActiveTab(id)}
+                                    className={`inline-flex shrink-0 items-center gap-2 rounded-[9px] px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                                        activeTab === id
+                                            ? 'bg-sky-600 text-white'
+                                            : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    <Icon className="h-4 w-4" aria-hidden="true" />
+                                    {label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    {activeTab === 'overview' ? (
+                    {activeTab === 'result' ? (
                         <OverviewTab
-                            quiz={quiz}
-                            result={result}
+                            result={displayResult}
                             answers={answers}
-                            studentUsername={studentName}
-                            onOpenRecommendations={(focus) => {
-                                setRecommendationFocus(focus ?? null);
-                                setActiveTab('recommendations');
-                            }}
+                            onOpenReview={openReview}
+                            onOpenStudyPlan={() => setActiveTab('study-plan')}
                         />
-                    ) : (
+                    ) : null}
+
+                    {activeTab === 'review' ? (
+                        <ReviewTab
+                            key={reviewFilter}
+                            quiz={quiz}
+                            result={displayResult}
+                            answers={answers}
+                            initialFilter={reviewFilter}
+                        />
+                    ) : null}
+
+                    {activeTab === 'study-plan' && hasStudyPlan ? (
                         <RecommendationsTab
                             quiz={quiz}
-                            result={result}
+                            result={displayResult}
                             answers={answers}
                             focus={recommendationFocus}
                         />
-                    )}
+                    ) : null}
                 </div>
             </div>
         </div>
@@ -330,4 +132,3 @@ const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, studentN
 };
 
 export default ResultScreen;
-

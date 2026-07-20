@@ -49,6 +49,12 @@ export interface GameStateResult {
     mood: PetMood;
 }
 
+export interface ResultRewardClaimResult extends GameStateResult {
+    awardedExp: number;
+    awardedCoins: number;
+    alreadyClaimed: boolean;
+}
+
 // --- Purchase ---
 
 export interface PurchaseResult {

@@ -9,6 +9,7 @@
 
 import { Question } from '../types';
 import { requestWorkerAiText } from './ai/workerAiClient';
+import { isSkippedAnswer } from '../features/results/studentResultSummary';
 
 // Call AI via the JWT-authenticated Worker proxy.
 async function callLLM(prompt: string): Promise<string> {
@@ -17,7 +18,7 @@ async function callLLM(prompt: string): Promise<string> {
         messages: [
             {
                 role: 'system',
-                content: 'B?n l? m?t gia s? AI th?n thi?n cho h?c sinh ti?u h?c Vi?t Nam. Tr? l?i b?ng ti?ng Vi?t, d?ng emoji ?? sinh ??ng.',
+                content: 'Bạn là một gia sư AI thân thiện cho học sinh tiểu học Việt Nam. Trả lời bằng tiếng Việt rõ ràng, ấm áp; chỉ dùng emoji khi thực sự cần.',
             },
             { role: 'user', content: prompt },
         ],
@@ -256,7 +257,12 @@ export function extractWrongAnswers(quiz: any, answers: Record<string, any>, res
     const wrongAnswers: WrongAnswer[] = [];
 
     quiz.questions.forEach((q: any, idx: number) => {
-        const answer = answers[q.id];
+        const storedAnswer = result?.answers?.[q.id];
+        const answer = storedAnswer && typeof storedAnswer === 'object' && !Array.isArray(storedAnswer) && 'selectedAnswer' in storedAnswer
+            ? storedAnswer.selectedAnswer
+            : answers[q.id];
+        if (isSkippedAnswer(answer)) return;
+
         const questionText = q.question || q.mainQuestion || '';
         const vd = result?.validationDetails?.find((d: any) => d.questionId === q.id);
 
@@ -334,7 +340,8 @@ export async function getAIRecommendations(
 
 Học sinh vừa hoàn thành bài kiểm tra "${quiz.title || 'Bài kiểm tra'}" với kết quả:
 - Số câu đúng: ${result.correctCount}/${result.totalQuestions}
-- Điểm: ${result.score}%
+- Điểm: ${result.score}/10
+- Độ chính xác: ${result.totalQuestions > 0 ? Math.round((result.correctCount / result.totalQuestions) * 100) : 0}%
 
 Các câu trả lời SAI:
 ${wrongQuestionsText}

@@ -15,6 +15,7 @@ import {
     LeaderboardEntry,
     PetMood,
     TopGoldStudent,
+    ResultRewardClaimResult,
 } from '../types/gamification.types';
 import * as gamificationService from '../services/gamificationService';
 import { StorageKeys } from '../constants/storageKeys';
@@ -43,6 +44,7 @@ interface GamificationStore {
     loadPetData: (username: string) => Promise<void>;
     initFromLoginData: (pet: PetData | null, coins: number, shopItems: ShopItem[]) => void;
     updateGameState: (username: string, addExp: number, addCoins: number) => Promise<boolean>;
+    claimResultReward: (username: string, resultId: string) => Promise<ResultRewardClaimResult | null>;
     fetchPetData: (username: string) => Promise<void>;
     buyItem: (username: string, itemId: string) => Promise<boolean>;
     fetchLeaderboard: () => Promise<void>;
@@ -149,6 +151,45 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
         } catch {
             set({ error: 'Lỗi khi cập nhật điểm.', isLoading: false });
             return false;
+        }
+    },
+
+    claimResultReward: async (username: string, resultId: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            const result = await gamificationService.claimResultReward(username, resultId);
+            if (!result) {
+                set({ error: 'Không thể đồng bộ phần thưởng.', isLoading: false });
+                return null;
+            }
+
+            const currentPet = get().pet;
+            const updatedPet: PetData | null = currentPet
+                ? {
+                    ...currentPet,
+                    level: result.newLevel,
+                    exp: result.newExp,
+                    expToNext: result.newExpToNext,
+                    mood: result.mood as PetMood,
+                }
+                : null;
+
+            set({
+                pet: updatedPet,
+                coins: result.newCoins,
+                isLoading: false,
+                lastReward: {
+                    exp: result.awardedExp,
+                    coins: result.awardedCoins,
+                    leveledUp: result.leveledUp,
+                    newLevel: result.newLevel,
+                },
+            });
+            saveToStorage(updatedPet, result.newCoins, get().shopItems);
+            return result;
+        } catch {
+            set({ error: 'Không thể đồng bộ phần thưởng.', isLoading: false });
+            return null;
         }
     },
 
