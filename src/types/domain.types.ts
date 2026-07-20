@@ -322,6 +322,7 @@ export interface StudentResult {
     id: string; // UUID
     submissionId?: string; // Alias for id, used by phieu flow
     quizId: string;
+    assignmentId?: string; // Exact assignment that authorized this attempt
     quizTitle?: string; // Optional quiz title from Google Sheets
     studentName: string;
     studentClass: string;

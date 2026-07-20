@@ -37,6 +37,13 @@ class FakeDatabase {
         status: 'OPEN', deadline: '2099-01-01T00:00:00.000Z',
       };
     }
+    if (sql.includes("UPPER(COALESCE(a.status, 'OPEN')) = 'OPEN'")) {
+      return {
+        id: 'assignment-current-3-attempts', quiz_id: 'quiz-week-30', class_id: 'class-4a9',
+        class_name: '4A9', student_id: '', max_attempts: 3,
+        status: 'OPEN', deadline: '2099-01-01T00:00:00.000Z',
+      };
+    }
     if (sql.includes('SELECT max_attempts FROM assignments WHERE quiz_id = ?')) {
       return { max_attempts: 1 };
     }
@@ -88,6 +95,25 @@ describe('assignment-scoped result attempt limits', () => {
       statement.sql.includes('WHERE a.id = ?')
       && statement.bindings[0] === 'assignment-current-3-attempts'
     ))).toBe(true);
+  });
+
+  it('falls back to the newest applicable open assignment for older clients', async () => {
+    const db = new FakeDatabase();
+    const { assignmentId: _assignmentId, ...legacyBody } = requestBody;
+
+    const response = await handleResultRoutes(
+      makeRequest(legacyBody),
+      { DB: db } as any,
+      '/api/results',
+      'POST',
+    );
+
+    expect(response.status).toBe(200);
+    const fallbackQuery = db.executed.find((statement) => (
+      statement.sql.includes("UPPER(COALESCE(a.status, 'OPEN')) = 'OPEN'")
+    ));
+    expect(fallbackQuery?.sql).toContain('datetime(a.created_at) DESC');
+    expect(fallbackQuery?.sql).toContain("COALESCE(a.student_id, '') = '' OR a.student_id = ?");
   });
 
   it('rejects an assignment id that does not belong to the submitted quiz', async () => {

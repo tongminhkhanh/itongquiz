@@ -263,6 +263,7 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
             const resultData: StudentResult = {
                 id: generateUUID(), // Temporary client ID, will be replaced by server ID
                 quizId: quiz.id,
+                assignmentId: quiz._assignmentData?.id ? String(quiz._assignmentData.id) : undefined,
                 quizTitle: quiz.title,
                 studentName,
                 studentClass,

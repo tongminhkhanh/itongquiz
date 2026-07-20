@@ -19,6 +19,86 @@ import {
 
 const normalizeName = (value: string | null | undefined): string => String(value || '').trim().toLowerCase();
 
+interface ResultAssignmentPolicy {
+    id: string;
+    quiz_id: string;
+    class_id: string;
+    class_name: string;
+    student_id: string;
+    max_attempts: number;
+    status: string;
+    deadline: string;
+}
+
+const loadResultAssignmentPolicy = async (
+    db: D1Database,
+    input: {
+        assignmentId: string;
+        quizId: string;
+        className: string;
+        student: any | null;
+    },
+): Promise<ResultAssignmentPolicy | null> => {
+    const selectColumns = `
+        SELECT a.id, a.quiz_id, a.class_id, COALESCE(a.student_id, '') AS student_id,
+               a.max_attempts, a.status, a.deadline, c.name AS class_name
+        FROM assignments a
+        JOIN classes c ON c.id = a.class_id`;
+
+    if (input.assignmentId) {
+        return await db.prepare(`${selectColumns} WHERE a.id = ?`)
+            .bind(input.assignmentId)
+            .first<ResultAssignmentPolicy>();
+    }
+
+    const bindings: unknown[] = [input.quizId, normalizeName(input.className), new Date().toISOString()];
+    let query = `${selectColumns}
+        WHERE a.quiz_id = ?
+          AND LOWER(TRIM(c.name)) = ?
+          AND UPPER(COALESCE(a.status, 'OPEN')) = 'OPEN'
+          AND (COALESCE(a.deadline, '') = '' OR a.deadline >= ?)`;
+
+    if (input.student) {
+        query += `
+          AND (COALESCE(a.student_id, '') = '' OR a.student_id = ?)
+        ORDER BY CASE WHEN a.student_id = ? THEN 0 ELSE 1 END,
+                 datetime(a.created_at) DESC
+        LIMIT 1`;
+        bindings.push(input.student.id, input.student.id);
+    } else {
+        query += ` ORDER BY datetime(a.created_at) DESC LIMIT 1`;
+    }
+
+    return await db.prepare(query).bind(...bindings).first<ResultAssignmentPolicy>();
+};
+
+const validateResultAssignmentPolicy = (
+    assignment: ResultAssignmentPolicy,
+    input: { quizId: string; className: string; student: any | null },
+): Response | null => {
+    if (
+        String(assignment.quiz_id) !== String(input.quizId)
+        || normalizeName(assignment.class_name) !== normalizeName(input.className)
+    ) {
+        return errorResponse('Forbidden: Assignment does not match this quiz or class', 403);
+    }
+
+    if (input.student && (
+        String(assignment.class_id) !== String(input.student.class_id)
+        || (String(assignment.student_id || '') && String(assignment.student_id) !== String(input.student.id))
+    )) {
+        return errorResponse('Forbidden: Assignment is not available to this student', 403);
+    }
+
+    const isClosed = String(assignment.status || '').toUpperCase() === 'CLOSED';
+    const deadline = Date.parse(String(assignment.deadline || ''));
+    if (isClosed || (Number.isFinite(deadline) && deadline < Date.now())) {
+        return errorResponse('Assignment is closed or expired', 409);
+    }
+
+    return null;
+};
+
 export const deriveResultMetricsFromAnswers = (
     answers: unknown,
     submittedTotalQuestions: unknown,
@@ -239,12 +319,13 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
         const quizId = body.quizId || '';
         let studentName = body.studentName || '';
         let className = body.className || '';
+        let studentContext: any | null = null;
 
         if (isStudent(user)) {
-            const student = await getStudentForUser(db, user);
-            if (!student) return errorResponse('Student not found', 404);
-            studentName = student.full_name || '';
-            className = student.class_name || '';
+            studentContext = await getStudentForUser(db, user);
+            if (!studentContext) return errorResponse('Student not found', 404);
+            studentName = studentContext.full_name || '';
+            className = studentContext.class_name || '';
         } else if (user.role === 'teacher') {
             if (!(await canTeacherAccessClassName(db, user, className))) {
                 return errorResponse('Forbidden: You do not manage this class', 403);
@@ -253,22 +334,34 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
             return errorResponse('Forbidden: Results submit access required', 403);
         }
 
-        // SECURITY CHECK: Check if this quiz has an assignment with maxAttempts limit
-        // 1. Find if there's an assignment for this quiz and class
-        const assignment = await db.prepare(
-            'SELECT max_attempts FROM assignments WHERE quiz_id = ? AND class_id IN (SELECT id FROM classes WHERE name = ?)'
-        ).bind(quizId, className).first<{ max_attempts: number }>();
+        // SECURITY CHECK: Enforce the exact assignment selected by the student UI.
+        // Older clients without assignmentId fall back only to the newest applicable open assignment.
+        const assignmentId = String(body.assignmentId || '').trim();
+        const assignment = await loadResultAssignmentPolicy(db, {
+            assignmentId,
+            quizId,
+            className,
+            student: studentContext,
+        });
+
+        if (assignmentId && !assignment) {
+            return errorResponse('Assignment not found', 404);
+        }
 
         if (assignment) {
-            const maxAttempts = Number(assignment.max_attempts) || 1;
+            const assignmentError = validateResultAssignmentPolicy(assignment, {
+                quizId,
+                className,
+                student: studentContext,
+            });
+            if (assignmentError) return assignmentError;
 
-            // 2. Count existing results for this student and quiz in the same class
+            const maxAttempts = Number(assignment.max_attempts) || 1;
             const countResult = await db.prepare(
                 'SELECT COUNT(*) as cnt FROM results WHERE LOWER(TRIM(student_name)) = ? AND LOWER(TRIM(class_name)) = ? AND quiz_id = ?'
             ).bind(normalizeName(studentName), normalizeName(className), quizId).first<{ cnt: number }>();
 
             const currentAttempts = countResult?.cnt || 0;
-
             if (currentAttempts >= maxAttempts) {
                 return errorResponse(`Bạn đã hết lượt làm bài tập này (${currentAttempts}/${maxAttempts}).`, 403);
             }
