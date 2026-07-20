@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getStoredJWTToken, buildAuthHeaders, getJWTPurpose } from '../auth';
+import { buildAuthHeaders, cleanupLegacyAuthStorage, getJWTPurpose } from '../auth';
 
 const mockStorage: Record<string, string> = {};
 
@@ -10,63 +10,42 @@ beforeEach(() => {
     );
 });
 
-describe('getStoredJWTToken', () => {
-    it('returns empty string when no tokens exist', () => {
-        expect(getStoredJWTToken('/api/quizzes')).toBe('');
-    });
-
-    it('uses student token for game-loop routes even if teacher token exists', () => {
+describe('cookie-first auth headers', () => {
+    it('does not read or send browser-persisted bearer tokens for session policies', () => {
         mockStorage['itongquiz_jwt_token'] = 'student-tok';
         mockStorage['itongquiz_teacher_jwt_token'] = 'teacher-tok';
-        expect(getStoredJWTToken('/api/game-loop/dashboard')).toBe('student-tok');
-    });
-
-    it('uses student token for /api/game-state routes', () => {
-        mockStorage['itongquiz_jwt_token'] = 'student-tok';
-        mockStorage['itongquiz_teacher_jwt_token'] = 'teacher-tok';
-        expect(getStoredJWTToken('/api/game-state/attendance-status')).toBe('student-tok');
-    });
-
-    it('uses student token for /api/student-login exact match', () => {
-        mockStorage['itongquiz_jwt_token'] = 'student-tok';
-        mockStorage['itongquiz_teacher_jwt_token'] = 'teacher-tok';
-        expect(getStoredJWTToken('/api/student-login')).toBe('student-tok');
-    });
-
-    it('uses teacher token for teacher routes', () => {
-        mockStorage['itongquiz_jwt_token'] = 'student-tok';
-        mockStorage['itongquiz_teacher_jwt_token'] = 'teacher-tok';
-        expect(getStoredJWTToken('/api/teachers')).toBe('teacher-tok');
-    });
-
-    it('falls back to student token when no teacher token', () => {
-        mockStorage['itongquiz_jwt_token'] = 'student-tok';
-        expect(getStoredJWTToken('/api/quizzes')).toBe('student-tok');
-    });
-
-    it('swallows localStorage JSON parse errors and returns empty', () => {
-        mockStorage['auth-storage'] = 'invalid json{';
-        expect(getStoredJWTToken('/api/quizzes')).toBe('');
-    });
-
-    it('reads from auth-storage fallback', () => {
         mockStorage['auth-storage'] = JSON.stringify({ state: { token: 'fallback-tok' } });
-        expect(getStoredJWTToken('/api/quizzes')).toBe('fallback-tok');
+
+        expect(buildAuthHeaders('session', '/api/teachers')).toEqual({});
+        expect(buildAuthHeaders('studentSession', '/api/game-loop/dashboard')).toEqual({});
+        expect(buildAuthHeaders('public', '/api/health')).toEqual({});
     });
 });
 
-describe('buildAuthHeaders', () => {
-    it('builds Bearer header for session policy when token exists', () => {
+describe('legacy auth storage cleanup', () => {
+    it('removes direct JWT keys and strips token fields while preserving harmless UI metadata', () => {
+        const removeItem = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => {
+            delete mockStorage[key];
+        });
+        const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
+            mockStorage[key] = value;
+        });
         mockStorage['itongquiz_teacher_jwt_token'] = 'teacher-tok';
-        const headers = buildAuthHeaders('session', '/api/teachers');
-        expect(headers['Authorization']).toBe('Bearer teacher-tok');
-        expect(headers['X-API-Token']).toBeUndefined();
-    });
+        mockStorage['itongquiz_jwt_token'] = 'student-tok';
+        mockStorage['auth-storage'] = JSON.stringify({
+            state: { username: 'teacher-a', teacherName: 'Cô An', token: 'fallback-tok' },
+            version: 0,
+        });
 
+        cleanupLegacyAuthStorage();
 
-    it('returns no auth header for session with no token', () => {
-        const headers = buildAuthHeaders('session', '/api/quizzes');
-        expect(headers['Authorization']).toBeUndefined();
+        expect(removeItem).toHaveBeenCalledWith('itongquiz_teacher_jwt_token');
+        expect(removeItem).toHaveBeenCalledWith('itongquiz_jwt_token');
+        expect(JSON.parse(mockStorage['auth-storage'])).toEqual({
+            state: { username: 'teacher-a', teacherName: 'Cô An' },
+            version: 0,
+        });
+        expect(setItem).toHaveBeenCalled();
     });
 });
 

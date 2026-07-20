@@ -1,7 +1,79 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { signJWT } from '../workers/src/utils/jwt';
+import { SignJWT } from 'jose';
+import {
+    JWT_AUDIENCE,
+    JWT_ISSUER,
+    createJWTCookie,
+    signJWT,
+    verifyJWT,
+} from '../workers/src/utils/jwt';
 import { verifyJWTMiddleware } from '../workers/src/middleware/jwtAuth';
+
+describe('JWT security contract', () => {
+    it('issues HS256 tokens with issuer, audience, and a normalized session purpose', async () => {
+        const secret = 'a-test-secret-that-is-long-enough';
+        const token = await signJWT({ username: 'teacher-a', role: 'teacher' }, secret);
+        const payload = await verifyJWT(token, secret, { allowLegacy: false });
+
+        expect(payload).toMatchObject({
+            username: 'teacher-a',
+            role: 'teacher',
+            purpose: 'session',
+            iss: JWT_ISSUER,
+            aud: JWT_AUDIENCE,
+        });
+    });
+
+    it('accepts a claim-less legacy token only while legacy mode is explicitly enabled', async () => {
+        const secret = 'a-test-secret-that-is-long-enough';
+        const key = new TextEncoder().encode(secret);
+        const legacy = await new SignJWT({ username: 'teacher-a', role: 'teacher' })
+            .setProtectedHeader({ alg: 'HS256' })
+            .setIssuedAt()
+            .setExpirationTime('5m')
+            .sign(key);
+
+        await expect(verifyJWT(legacy, secret, { allowLegacy: true })).resolves.toMatchObject({
+            username: 'teacher-a',
+            purpose: 'session',
+        });
+        await expect(verifyJWT(legacy, secret, { allowLegacy: false })).resolves.toBeNull();
+    });
+
+    it('rejects non-HS256 algorithms and malformed auth payloads', async () => {
+        const secret = 'a-test-secret-that-is-long-enough';
+        const key = new TextEncoder().encode(secret);
+        const hs384 = await new SignJWT({ username: 'teacher-a', role: 'teacher', purpose: 'session' })
+            .setProtectedHeader({ alg: 'HS384' })
+            .setIssuer(JWT_ISSUER)
+            .setAudience(JWT_AUDIENCE)
+            .setIssuedAt()
+            .setExpirationTime('5m')
+            .sign(key);
+        const missingRole = await new SignJWT({ username: 'teacher-a', purpose: 'session' })
+            .setProtectedHeader({ alg: 'HS256' })
+            .setIssuer(JWT_ISSUER)
+            .setAudience(JWT_AUDIENCE)
+            .setIssuedAt()
+            .setExpirationTime('5m')
+            .sign(key);
+
+        await expect(verifyJWT(hs384, secret, { allowLegacy: false })).resolves.toBeNull();
+        await expect(verifyJWT(missingRole, secret, { allowLegacy: false })).resolves.toBeNull();
+    });
+
+    it('uses a host-only HttpOnly Lax cookie for browser sessions', () => {
+        const cookie = createJWTCookie('signed-token', 900);
+        expect(cookie).toContain('auth_token=signed-token');
+        expect(cookie).toContain('HttpOnly');
+        expect(cookie).toContain('Secure');
+        expect(cookie).toContain('SameSite=Lax');
+        expect(cookie).toContain('Max-Age=900');
+        expect(cookie).not.toContain('Domain=');
+        expect(cookie).not.toContain('SameSite=None');
+    });
+});
 
 describe('teacher session version enforcement', () => {
     it('rejects legacy JWTs in enforce mode and accepts the current token version', async () => {

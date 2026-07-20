@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../../stores/authStore';
 import { callApi } from '../../../services/apiAdapter';
-import { getJWTPurpose, getStoredJWTToken } from '../../../services/api/auth';
 import { ApiError } from '../../../services/api/errors';
 import { showError } from '../../../utils/toast';
 import type { PasswordGateState } from './types';
@@ -15,12 +14,10 @@ export const useTeacherAccountGate = () => {
   useEffect(() => {
     if (!authStore.isLoggedIn) return;
     let active = true;
-    const token = getStoredJWTToken('/api/account/me');
-    const tokenPurpose = getJWTPurpose(token);
     callApi<{ data?: { mustChangePassword?: boolean } }>('get_account_profile')
       .then(response => {
-        if (active && response.data?.mustChangePassword && token) {
-          setPasswordGate({ token, requireCurrentPassword: tokenPurpose !== 'password_change' });
+        if (active && response.data?.mustChangePassword) {
+          setPasswordGate({ requireCurrentPassword: false });
         }
       })
       .catch(error => {
@@ -32,20 +29,19 @@ export const useTeacherAccountGate = () => {
           navigate('/', { replace: true });
           return;
         }
-        if (token && (tokenPurpose === 'password_change' || String(error).includes('Password change required'))) {
-          setPasswordGate({ token, requireCurrentPassword: tokenPurpose !== 'password_change' });
+        if ((error instanceof ApiError && error.status === 403) || String(error).includes('Password change required')) {
+          setPasswordGate({ requireCurrentPassword: false });
         }
       });
     return () => { active = false; };
   }, [authStore.isLoggedIn, authStore.username]);
 
-  const completePasswordChange = (token: string) => {
+  const completePasswordChange = () => {
     authStore.loginSuccess(
       authStore.username || '',
       authStore.teacherName || authStore.username || '',
       authStore.isAdmin,
       authStore.teacherClass,
-      token,
     );
     setPasswordGate(null);
   };

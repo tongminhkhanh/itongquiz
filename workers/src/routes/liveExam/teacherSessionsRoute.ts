@@ -1,6 +1,7 @@
 import { errorResponse, jsonResponse } from '../../utils/response';
 import { authenticateTeacher, isAuthResponse } from './auth';
 import type { LiveExamRouteHandler } from './routeContext';
+import { liveExamErrorResponse } from './responses';
 
 // GET /api/live-exam/teacher/:username/sessions
 export const handleTeacherSessionsRoute: LiveExamRouteHandler = async (context) => {
@@ -56,7 +57,6 @@ export const handleTeacherSessionsRoute: LiveExamRouteHandler = async (context) 
       updatedAt: row.updated_at,
     })));
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to get sessions';
-    return errorResponse(message || 'Failed to get sessions', 500);
+    return liveExamErrorResponse(error, context.request, 'Failed to get sessions');
   }
 };

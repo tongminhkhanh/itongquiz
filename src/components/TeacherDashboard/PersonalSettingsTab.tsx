@@ -46,7 +46,6 @@ const PersonalSettingsTab: React.FC = () => {
             try {
                 await callApi('logout_all');
                 authStore.logout();
-                localStorage.removeItem('itongquiz_teacher_jwt_token');
                 showSuccess('Đã thu hồi tất cả phiên đăng nhập.');
             } catch (err) { showError(err instanceof Error ? err.message : 'Không thể thu hồi phiên.'); }
         },
@@ -73,7 +72,7 @@ const PersonalSettingsTab: React.FC = () => {
             </div>
         </section>
         <section className="rounded-2xl border bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-4"><div className="flex gap-3"><MonitorCog className="h-5 w-5 text-slate-500" /><div><h3 className="font-bold">Giao diện gọn</h3><p className="text-sm text-slate-500">Giảm khoảng cách hiển thị trên thiết bị này.</p></div></div><input type="checkbox" checked={compact} onChange={(event) => toggleCompact(event.target.checked)} className="h-5 w-5" aria-label="Bật giao diện gọn" /></div></section>
-        {showPassword && <PasswordChangeDialog onCancel={() => setShowPassword(false)} onComplete={(token) => { authStore.loginSuccess(profile.username, profile.fullName, profile.role === 'admin', authStore.teacherClass, token); setShowPassword(false); }} />}
+        {showPassword && <PasswordChangeDialog onCancel={() => setShowPassword(false)} onComplete={() => { authStore.loginSuccess(profile.username, profile.fullName, profile.role === 'admin', authStore.teacherClass); setShowPassword(false); }} />}
     </div>;
 };
 

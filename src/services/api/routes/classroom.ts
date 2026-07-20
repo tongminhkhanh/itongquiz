@@ -74,8 +74,13 @@ export const classroomRoutes: RouteRegistry = {
     },
     student_login: {
         method: 'POST',
-        auth: 'session',
+        auth: 'public',
         path: () => '/api/student-login',
+    },
+    student_profile: {
+        method: 'GET',
+        auth: 'studentSession',
+        path: () => '/api/student-profile',
     },
     update_student_avatar: {
         method: 'PUT',

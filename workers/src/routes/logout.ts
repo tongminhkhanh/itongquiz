@@ -3,7 +3,7 @@
 
 import { Env } from '../types';
 import { jsonResponse } from '../utils/response';
-import { clearJWTCookie } from '../utils/jwt';
+import { withClearedAuthCookie } from '../utils/authSession';
 
 export async function handleLogoutRoute(request: Request, env: Env): Promise<Response> {
     // Create success response
@@ -12,13 +12,5 @@ export async function handleLogoutRoute(request: Request, env: Env): Promise<Res
         message: 'Logged out successfully',
     });
 
-    // Clear JWT cookie
-    const headers = new Headers(response.headers);
-    headers.append('Set-Cookie', clearJWTCookie());
-
-    return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-    });
+    return withClearedAuthCookie(response);
 }

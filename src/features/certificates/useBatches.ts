@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { WORKERS_API_URL } from '../../config/constants';
+import { getWorkersApiBaseUrl } from '../../services/api/config';
 import type {
     CertificateApiError,
     CertificateApiSuccess,
@@ -8,18 +8,6 @@ import type {
     CreateCertificateBatchResult,
     CertificateBatchDetail,
 } from '../../../shared/certificates.contract';
-
-function getTeacherJwt(): string {
-    try {
-        const direct = localStorage.getItem('itongquiz_teacher_jwt_token');
-        if (direct) return direct;
-        const raw = localStorage.getItem('auth-storage');
-        if (!raw) return '';
-        return JSON.parse(raw)?.state?.token || '';
-    } catch {
-        return '';
-    }
-}
 
 export interface BatchStudent {
     student_id: string;
@@ -37,12 +25,11 @@ export interface TemplateOption {
     is_default: number;
 }
 
-const base = () => (WORKERS_API_URL || '').replace(/\/$/, '');
+const base = () => getWorkersApiBaseUrl();
 
 function authHeaders(): HeadersInit {
     return {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${getTeacherJwt()}`,
     };
 }
 
@@ -72,6 +59,7 @@ export function useBatches() {
         try {
             const res = await fetch(`${base()}/api/certificate-batches`, {
                 headers: authHeaders(),
+                credentials: 'include',
             });
             if (!res.ok) throw new Error(await readCertificateError(res));
             const json = await res.json() as CertificateApiSuccess<BatchRecord[]>;
@@ -105,6 +93,7 @@ export function useBatches() {
         const res = await fetch(`${base()}/api/certificate-batches`, {
             method: 'POST',
             headers: authHeaders(),
+            credentials: 'include',
             body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error(await readCertificateError(res));
@@ -113,7 +102,7 @@ export function useBatches() {
     }, []);
 
     const fetchBatchDetail = useCallback(async (batchId: string): Promise<CertificateBatchDetail> => {
-        const res = await fetch(`${base()}/api/certificate-batches/${batchId}`, { headers: authHeaders() });
+        const res = await fetch(`${base()}/api/certificate-batches/${batchId}`, { headers: authHeaders(), credentials: 'include' });
         if (!res.ok) throw new Error(await readCertificateError(res));
         const json = await res.json() as CertificateApiSuccess<CertificateBatchDetail>;
         return json.data;
@@ -123,6 +112,7 @@ export function useBatches() {
         const res = await fetch(`${base()}/api/certificate-batches/${batchId}/retry`, {
             method: 'POST',
             headers: authHeaders(),
+            credentials: 'include',
         });
         if (!res.ok) throw new Error(await readCertificateError(res));
         pollAttempt.current = 0;
@@ -135,6 +125,7 @@ export function useBatches() {
 export async function fetchTemplateOptions(): Promise<TemplateOption[]> {
     const res = await fetch(`${base()}/api/certificates/templates`, {
         headers: authHeaders(),
+        credentials: 'include',
     });
     if (!res.ok) throw new Error(await readCertificateError(res));
     const json = await res.json() as CertificateApiSuccess<TemplateOption[]>;

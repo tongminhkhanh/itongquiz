@@ -57,46 +57,32 @@ describe('executeApiAction — method and URL', () => {
 });
 
 describe('executeApiAction — auth headers', () => {
-    it('game-loop uses student JWT when both tokens present', async () => {
+    it('uses cookies for student and teacher routes even when legacy tokens remain in storage', async () => {
         mockStorage['itongquiz_jwt_token'] = 'student-tok';
         mockStorage['itongquiz_teacher_jwt_token'] = 'teacher-tok';
         mockOk({});
         await executeApiAction('get_game_loop_dashboard');
-        const [, init] = mockFetch.mock.calls[0];
-        const headers = (init as RequestInit).headers as Record<string, string>;
-        expect(headers['Authorization']).toBe('Bearer student-tok');
-    });
+        const [, studentInit] = mockFetch.mock.calls[0];
+        expect((studentInit as RequestInit).credentials).toBe('include');
+        expect(((studentInit as RequestInit).headers as Record<string, string>).Authorization).toBeUndefined();
 
-    it('teacher route uses teacher JWT when both tokens present', async () => {
-        mockStorage['itongquiz_jwt_token'] = 'student-tok';
-        mockStorage['itongquiz_teacher_jwt_token'] = 'teacher-tok';
         mockOk([]);
         await executeApiAction('get_teachers');
-        const [, init] = mockFetch.mock.calls[0];
-        const headers = (init as RequestInit).headers as Record<string, string>;
-        expect(headers['Authorization']).toBe('Bearer teacher-tok');
+        const [, teacherInit] = mockFetch.mock.calls[1];
+        expect((teacherInit as RequestInit).credentials).toBe('include');
+        expect(((teacherInit as RequestInit).headers as Record<string, string>).Authorization).toBeUndefined();
     });
 
-    it('AI route sends Bearer token (session policy)', async () => {
-        mockStorage['itongquiz_teacher_jwt_token'] = 'teacher-tok';
-        mockOk({});
-        await executeApiAction('ai_chat', { message: 'hello' });
-        const [, init] = mockFetch.mock.calls[0];
-        const headers = (init as RequestInit).headers as Record<string, string>;
-        expect(headers['Authorization']).toBe('Bearer teacher-tok');
-    });
-
-    it('uses an explicit one-time auth token without leaking it into the request body', async () => {
-        mockStorage['itongquiz_teacher_jwt_token'] = 'stale-token';
-        mockOk({ status: 'success', data: { token: 'new-session' } });
+    it('drops legacy one-time token fields without sending a bearer header or leaking them into the body', async () => {
+        mockOk({ status: 'success' });
         await executeApiAction('change_password', {
-            __authToken: 'password-change-token',
+            __authToken: 'legacy-password-change-token',
             newPassword: 'Mat-khau-moi-2026',
         });
         const [, init] = mockFetch.mock.calls[0];
         const headers = (init as RequestInit).headers as Record<string, string>;
         const body = JSON.parse((init as RequestInit).body as string);
-        expect(headers.Authorization).toBe('Bearer password-change-token');
+        expect(headers.Authorization).toBeUndefined();
         expect(body.__authToken).toBeUndefined();
         expect(body.newPassword).toBe('Mat-khau-moi-2026');
     });

@@ -14,7 +14,6 @@ export async function executeApiAction<T = any>(
     payload: ApiPayload = {},
 ): Promise<T> {
     const route = resolveApiRoute(action);
-    const explicitAuthToken = typeof payload.__authToken === 'string' ? payload.__authToken.trim() : '';
     const requestPayload = { ...payload };
     delete requestPayload.__authToken;
     const path = route.path(requestPayload);
@@ -22,7 +21,6 @@ export async function executeApiAction<T = any>(
     const url = buildUrl(getWorkersApiBaseUrl(), path, query);
 
     const authHeaders = buildAuthHeaders(route.auth, path);
-    if (explicitAuthToken) authHeaders.Authorization = `Bearer ${explicitAuthToken}`;
 
     const requestInit: RequestInit = {
         method: route.method,

@@ -1,4 +1,3 @@
-import { getStoredJWTToken } from './api/auth';
 import { requestWorkerAi } from './ai/workerAiClient';
 
 const DEFAULT_MODEL = 'gemini-3-pro-image-preview';
@@ -37,9 +36,7 @@ const findImageUrl = (value: unknown, depth = 0): string => {
   return '';
 };
 
-export const checkImageServiceAvailability = async (): Promise<boolean> => {
-  return Boolean(getStoredJWTToken('/api/ai/chat'));
-};
+export const checkImageServiceAvailability = async (): Promise<boolean> => true;
 
 export const generateImage = async (prompt: string): Promise<ImageGenerationResult> => {
   try {

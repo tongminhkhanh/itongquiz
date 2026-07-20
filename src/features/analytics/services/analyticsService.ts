@@ -1,6 +1,4 @@
-import { getStoredJWTToken } from '../../../services/api/auth';
-
-const API_BASE_URL = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
+import { getWorkersApiBaseUrl } from '../../../services/api/config';
 
 export interface TrendData {
   assignment_id?: string;
@@ -28,10 +26,8 @@ export const analyticsService = {
    */
   async getClassAnalytics(classId: string): Promise<ClassAnalyticsResponse> {
     try {
-      const token = getStoredJWTToken(`/api/analytics/class/${classId}`);
-      const response = await fetch(`${API_BASE_URL}/api/analytics/class/${encodeURIComponent(classId)}`, {
+      const response = await fetch(`${getWorkersApiBaseUrl()}/api/analytics/class/${encodeURIComponent(classId)}`, {
         credentials: 'include',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) {
         throw new Error(`Failed to fetch analytics: ${response.statusText}`);

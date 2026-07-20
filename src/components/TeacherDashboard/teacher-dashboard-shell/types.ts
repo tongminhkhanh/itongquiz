@@ -5,7 +5,6 @@ import type { TeacherDashboardTab } from '../../../stores/useTeacherDashboardUIS
 export type ResultsLoadState = 'loading' | 'success' | 'error';
 
 export interface PasswordGateState {
-  token: string;
   requireCurrentPassword: boolean;
 }
 
@@ -17,7 +16,7 @@ export interface TeacherDashboardLayoutProps {
   setIsMobileMenuOpen: Dispatch<SetStateAction<boolean>>;
   giftShopEnabled: boolean;
   passwordGate: PasswordGateState | null;
-  completePasswordChange: (token: string) => void;
+  completePasswordChange: () => void;
   displayName: string;
   teacherInitial: string;
   isAdmin: boolean;

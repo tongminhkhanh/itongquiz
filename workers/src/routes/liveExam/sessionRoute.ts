@@ -21,8 +21,7 @@ export const handleSessionRoute: LiveExamRouteHandler = async (context) => {
       const session = await LiveExamService.getLiveExamById(context.db, sessionId);
       return jsonResponse({ success: true, session });
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to get session';
-      return errorResponse(message || 'Failed to get session', 500);
+      return liveExamErrorResponse(error, context.request, 'Failed to get session');
     }
   }
 
@@ -35,6 +34,6 @@ export const handleSessionRoute: LiveExamRouteHandler = async (context) => {
     );
     return jsonResponse({ success: true, message: 'Session archived successfully' });
   } catch (error: unknown) {
-    return liveExamErrorResponse(error, 'Failed to archive session');
+    return liveExamErrorResponse(error, context.request, 'Failed to archive session');
   }
 };

@@ -40,6 +40,6 @@ export const teacherRoutes: RouteRegistry = {
         body: (_action, payload) => ({ currentPassword: payload.currentPassword, newPassword: payload.newPassword }),
     },
     logout_all: { method: 'POST', auth: 'session', path: () => '/api/account/logout-all', body: () => ({}) },
-    login: { method: 'POST', auth: 'session', path: () => '/api/login' },
+    login: { method: 'POST', auth: 'public', path: () => '/api/login' },
     logout: { method: 'POST', auth: 'session', path: () => '/api/logout' },
 };

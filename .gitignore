@@ -83,3 +83,8 @@ data/migration/*
 # Local D1 exports generated from ignored migration CSV files
 workers/data/*
 !workers/data/README.md
+
+# Local Worker operational dumps and one-off repair scripts
+workers/dump*.json
+workers/*query*.txt
+workers/fix_*.ps1

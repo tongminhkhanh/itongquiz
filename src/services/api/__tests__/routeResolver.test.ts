@@ -6,7 +6,7 @@ describe('resolveApiRoute', () => {
         const r = resolveApiRoute('login');
         expect(r.method).toBe('POST');
         expect(r.path({})).toBe('/api/login');
-        expect(r.auth).toBe('session');
+        expect(r.auth).toBe('public');
     });
 
     it('resolves get_questions route with query', () => {

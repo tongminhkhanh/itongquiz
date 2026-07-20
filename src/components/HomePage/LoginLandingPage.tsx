@@ -6,7 +6,6 @@ import { showError, showConfirm } from '../../utils/toast';
 import { getAnnouncement, Announcement as AnnouncementData } from '../../services/announcementService';
 import AnnouncementBanner from '../common/AnnouncementBanner';
 import PasswordChangeDialog from '../common/PasswordChangeDialog';
-import { getJWTPurpose } from '../../services/api/auth';
 
 // Sub-components
 import LandingHeader from './components/LandingHeader';
@@ -88,23 +87,18 @@ const LoginLandingPage: React.FC = () => {
                 const tFullName = tFullNameRaw || tUsername;
                 const isTeacherAdmin = String(teacher.role || '').trim().toLowerCase() === 'admin';
                 const tClass = teacher.class ? String(teacher.class).trim() : undefined;
-                if (teacher.token) {
-                    localStorage.removeItem('itongquiz_jwt_token');
-                    localStorage.setItem('itongquiz_teacher_jwt_token', teacher.token);
-                }
-                if (teacher.requiresPasswordChange || getJWTPurpose(teacher.token) === 'password_change') {
+                if (teacher.requiresPasswordChange) {
                     authStore.loginPendingPasswordChange();
                     setPendingTeacher({
                         username: tUsername,
                         fullName: tFullName,
                         isAdmin: isTeacherAdmin,
                         class: tClass,
-                        token: teacher.token,
                     });
                     return;
                 }
                 
-                authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass, teacher.token || null);
+                authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass);
                 quizStore.setView('teacher_dash');
                 return;
             }
@@ -129,11 +123,11 @@ const LoginLandingPage: React.FC = () => {
     return (
         <div className="min-h-screen flex flex-col relative font-baloo bg-[url('/meadow-bg.webp')] bg-cover bg-bottom bg-no-repeat transition-all duration-500">
             {pendingTeacher && (
-                <PasswordChangeDialog forced authToken={pendingTeacher.token} onCancel={() => {
-                    localStorage.removeItem('itongquiz_teacher_jwt_token');
+                <PasswordChangeDialog forced onCancel={() => {
+                    void import('../../services/apiAdapter').then(({ callApi }) => callApi('logout')).catch(() => undefined);
                     setPendingTeacher(null);
-                }} onComplete={(token) => {
-                    authStore.loginSuccess(pendingTeacher.username, pendingTeacher.fullName, pendingTeacher.isAdmin, pendingTeacher.class, token);
+                }} onComplete={() => {
+                    authStore.loginSuccess(pendingTeacher.username, pendingTeacher.fullName, pendingTeacher.isAdmin, pendingTeacher.class);
                     setPendingTeacher(null);
                     quizStore.setView('teacher_dash');
                 }} />

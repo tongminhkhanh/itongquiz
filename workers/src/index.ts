@@ -4,6 +4,7 @@
 import { handleCors, corsHeaders } from './middleware/cors';
 import { verifyToken } from './middleware/auth';
 import { jsonResponse, errorResponse } from './utils/response';
+import { internalErrorResponse } from './utils/internalError';
 import { handleTeacherRoutes } from './routes/teachers';
 import { handleQuizRoutes } from './routes/quizzes';
 import { handleResultRoutes } from './routes/results';
@@ -99,7 +100,7 @@ export default {
                 response = await handleQuizRoutes(request, env, path, method);
             } else if (path.startsWith('/api/results') || path === '/api/validate') {
                 response = await handleResultRoutes(request, env, path, method);
-            } else if (path.startsWith('/api/classes') || path.startsWith('/api/students') || path.startsWith('/api/assignments') || path === '/api/student-login') {
+            } else if (path.startsWith('/api/classes') || path.startsWith('/api/students') || path.startsWith('/api/assignments') || path === '/api/student-login' || path === '/api/student-profile') {
                 response = await handleClassroomRoutes(request, env, path, method);
             } else if (path.startsWith('/api/pets') || path.startsWith('/api/game-state') || path.startsWith('/api/shop') || path.startsWith('/api/leaderboard')) {
                 response = await handleGamificationRoutes(request, env, path, method);
@@ -146,9 +147,10 @@ export default {
             if (response) return addCors(response, request);
 
             return addCors(errorResponse('Not found: ' + path, 404), request);
-        } catch (error: any) {
-            console.error('Worker error:', error);
-            return addCors(errorResponse(error.message || 'Internal server error', 500), request);
+        } catch (error: unknown) {
+            return addCors(internalErrorResponse(error, request, {
+                context: `${method} ${path}`,
+            }), request);
         }
     },
 

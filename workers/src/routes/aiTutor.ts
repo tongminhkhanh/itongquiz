@@ -4,6 +4,7 @@
 import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
 import { verifyJWTMiddleware } from '../middleware/jwtAuth';
+import { internalErrorResponse } from '../utils/internalError';
 
 // Prompt template for Gemini AI
 const buildPrompt = (wrongQuestions: any[]): string => {
@@ -175,9 +176,10 @@ export async function handleAiTutorRoutes(
                 }
             });
 
-        } catch (error: any) {
-            console.error('[AI Tutor] Error:', error);
-            return errorResponse('Internal error: ' + (error.message || 'Unknown'), 500);
+        } catch (error: unknown) {
+            return internalErrorResponse(error, request, {
+                context: 'POST /api/ai-tutor/diagnose',
+            });
         }
     }
 

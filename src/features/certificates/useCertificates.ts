@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Certificate } from './certificates.types';
-import { WORKERS_API_URL } from '../../config/constants';
+import { getWorkersApiBaseUrl } from '../../services/api/config';
 import type {
     CertificateApiError,
     CertificateApiSuccess,
@@ -23,32 +23,10 @@ function mapCertificate(certificate: StudentCertificateItem): Certificate {
     };
 }
 
-export function getStudentJwt(): string {
-    try {
-        const direct = localStorage.getItem('itongquiz_jwt_token');
-        if (direct) return direct;
-
-        const sessionRaw = localStorage.getItem('student_session');
-        if (sessionRaw) {
-            const session = JSON.parse(sessionRaw);
-            if (session?.token) return session.token;
-        }
-
-        const raw = localStorage.getItem('classroom-storage');
-        if (!raw) return '';
-        const parsed = JSON.parse(raw);
-        return parsed?.state?.studentToken || '';
-    } catch {
-        return '';
-    }
-}
-
 export async function fetchCertificateImageBlob(imagePath: string): Promise<Blob> {
-    const token = getStudentJwt();
-    if (!token) throw new Error('Phiên đăng nhập học sinh đã hết hạn');
-    const base = (WORKERS_API_URL || '').replace(/\/$/, '');
+    const base = getWorkersApiBaseUrl();
     const url = imagePath.startsWith('http') ? imagePath : `${base}${imagePath}`;
-    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const response = await fetch(url, { credentials: 'include' });
     if (!response.ok) throw new Error(`Không thể tải ảnh chứng nhận (${response.status})`);
     return response.blob();
 }
@@ -59,23 +37,15 @@ export function useCertificates() {
     const [error, setError] = useState<string | null>(null);
 
     const fetchCertificates = useCallback(async () => {
-        const token = getStudentJwt();
-        if (!token) {
-            setCertificates([]);
-            return;
-        }
-
         setIsLoading(true);
         setError(null);
 
         try {
-            const base = (WORKERS_API_URL || '').replace(/\/$/, '');
+            const base = getWorkersApiBaseUrl();
             const res = await fetch(`${base}/api/certificates/my`, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
             });
 
             if (!res.ok) {

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useQuizStore } from '../../../../stores/quizStore';
 
 import { cacheService } from '../../../services/CacheService';
-import { checkAndWarnJWTExpiry } from '../../../utils/jwtInterceptor';
 import type { ResultsLoadState } from './types';
 
 export const useTeacherDashboardBootstrap = () => {
@@ -29,12 +28,6 @@ export const useTeacherDashboardBootstrap = () => {
     cacheService.invalidatePrefix('quizzes:');
     quizStore.loadQuizzes();
     void loadTeacherResults();
-    checkAndWarnJWTExpiry();
-    const expiryCheckInterval = setInterval(checkAndWarnJWTExpiry, 5 * 60 * 1000);
-    return () => {
-
-      clearInterval(expiryCheckInterval);
-    };
   }, [loadTeacherResults]);
 
   return { resultsLoadState, resultsLoadError, loadTeacherResults };

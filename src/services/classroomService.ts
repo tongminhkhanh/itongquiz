@@ -164,12 +164,24 @@ export const changeStudentPassword = async (
 /**
  * Student login (password verified against hash on server side)
  */
+const stripLegacySessionToken = (data: StudentSession & { token?: string }): StudentSession => {
+    const { token: _legacyToken, ...session } = data;
+    return session;
+};
+
 export const studentLogin = async (payload: StudentLoginPayload): Promise<StudentSession | null> => {
-    const res = await callWorkerApi<StudentSession>('student_login', payload);
-    if (res.status === 'success' && res.data) {
-        return res.data;
-    }
+    const res = await callWorkerApi<StudentSession & { token?: string }>('student_login', payload);
+    if (res.status === 'success' && res.data) return stripLegacySessionToken(res.data);
     return null;
+};
+
+export const getStudentProfile = async (): Promise<StudentSession | null> => {
+    const res = await callWorkerApi<StudentSession>('student_profile');
+    return res.status === 'success' && res.data ? res.data : null;
+};
+
+export const logoutSession = async (): Promise<void> => {
+    await callWorkerApi('logout');
 };
 
 // ==========================================

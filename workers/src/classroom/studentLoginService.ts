@@ -1,14 +1,10 @@
 import type { Env } from '../types';
-import { createJWTCookie, signJWT } from '../utils/jwt';
+import { signJWT } from '../utils/jwt';
+import { buildAuthSessionData, withAuthCookie } from '../utils/authSession';
 import { errorResponse, hashPassword, jsonResponse, verifyPassword } from '../utils/response';
 import { mapLoginPet, mapLoginShopItem } from './studentLoginMappers';
 
-export const authenticateStudent = async (
-    env: Env,
-    username: string,
-    password: string
-): Promise<Response> => {
-    const student = await env.DB.prepare(`
+const STUDENT_SESSION_QUERY = `
         SELECT
             s.*, c.name as class_name,
             p.pet_id, p.pet_name, p.level as pet_level, p.exp as pet_exp,
@@ -21,7 +17,33 @@ export const authenticateStudent = async (
         WHERE s.username = ?
           AND COALESCE(s.archived_at, '') = ''
           AND COALESCE(c.archived_at, '') = ''
-    `).bind(username).first<any>();
+    `;
+
+const toStudentSessionData = (student: any, shopItems: any[]) => ({
+    studentId: student.id,
+    fullName: student.full_name,
+    username: student.username,
+    classId: student.class_id,
+    className: student.class_name || '',
+    avatar: student.avatar || '',
+    coins: Number(student.coins) || 0,
+    pet: mapLoginPet(student),
+    shopItems: shopItems.map(mapLoginShopItem),
+});
+
+export const loadStudentSessionData = async (env: Env, username: string) => {
+    const student = await env.DB.prepare(STUDENT_SESSION_QUERY).bind(username).first<any>();
+    if (!student) return null;
+    const shopItems = await env.DB.prepare('SELECT * FROM shop_items').all<any>();
+    return toStudentSessionData(student, shopItems.results || []);
+};
+
+export const authenticateStudent = async (
+    env: Env,
+    username: string,
+    password: string
+): Promise<Response> => {
+    const student = await env.DB.prepare(STUDENT_SESSION_QUERY).bind(username).first<any>();
     const passwordCheck = student
         ? await verifyPassword(password, String(student.password_hash || ''))
         : { valid: false, needsRehash: false };
@@ -50,17 +72,7 @@ export const authenticateStudent = async (
     }, env.JWT_SECRET, '7d');
     const response = jsonResponse({
         status: 'success',
-        data: {
-            studentId: student.id, fullName: student.full_name,
-            username: student.username, token, classId: student.class_id,
-            className: student.class_name || '', avatar: student.avatar || '',
-            coins: Number(student.coins) || 0, pet: mapLoginPet(student),
-            shopItems: shopItems.results.map(mapLoginShopItem),
-        },
+        data: buildAuthSessionData(env, toStudentSessionData(student, shopItems.results || []), token),
     });
-    const headers = new Headers(response.headers);
-    headers.append('Set-Cookie', createJWTCookie(token));
-    return new Response(response.body, {
-        status: response.status, statusText: response.statusText, headers,
-    });
+    return withAuthCookie(response, token);
 };

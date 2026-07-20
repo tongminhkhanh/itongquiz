@@ -3,6 +3,13 @@
 
 import { SignJWT, jwtVerify } from 'jose';
 
+export const JWT_ISSUER = 'itongquiz-api';
+export const JWT_AUDIENCE = 'itongquiz-web';
+
+export interface VerifyJWTOptions {
+    allowLegacy?: boolean;
+}
+
 export interface JWTPayload {
     id?: string;
     username: string;
@@ -12,6 +19,8 @@ export interface JWTPayload {
     school_id?: string;
     tokenVersion?: number;
     purpose?: 'session' | 'password_change';
+    iss?: string;
+    aud?: string | string[];
     iat?: number;
     exp?: number;
 }
@@ -30,8 +39,18 @@ export async function signJWT(
     const encoder = new TextEncoder();
     const secretKey = encoder.encode(secret);
 
-    const jwt = await new SignJWT(payload as any)
-        .setProtectedHeader({ alg: 'HS256' })
+    const normalizedPayload = {
+        ...payload,
+        purpose: payload.purpose ?? 'session',
+    };
+    if (!isValidAuthPayload(normalizedPayload, true)) {
+        throw new Error('Invalid JWT payload');
+    }
+
+    const jwt = await new SignJWT(normalizedPayload as any)
+        .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+        .setIssuer(JWT_ISSUER)
+        .setAudience(JWT_AUDIENCE)
         .setIssuedAt()
         .setExpirationTime(expiresIn)
         .sign(secretKey);
@@ -45,17 +64,54 @@ export async function signJWT(
  * @param secret JWT secret from environment
  * @returns Decoded payload or null if invalid
  */
+function hasExpectedAudience(audience: unknown): boolean {
+    if (typeof audience === 'string') return audience === JWT_AUDIENCE;
+    return Array.isArray(audience) && audience.length > 0
+        && audience.every(item => typeof item === 'string')
+        && audience.includes(JWT_AUDIENCE);
+}
+
+function isOptionalString(value: unknown, maxLength = 256): boolean {
+    return value === undefined || (typeof value === 'string' && value.length <= maxLength);
+}
+
+function isValidAuthPayload(payload: Record<string, unknown>, allowLegacy: boolean): payload is JWTPayload & Record<string, unknown> {
+    if (typeof payload.username !== 'string' || !payload.username.trim() || payload.username.length > 128) return false;
+    if (!['student', 'teacher', 'admin'].includes(String(payload.role))) return false;
+    if (!isOptionalString(payload.id, 128)
+        || !isOptionalString(payload.fullName, 256)
+        || !isOptionalString(payload.classId, 128)
+        || !isOptionalString(payload.school_id, 128)) return false;
+    if (payload.tokenVersion !== undefined
+        && (!Number.isInteger(payload.tokenVersion) || Number(payload.tokenVersion) < 0)) return false;
+
+    const hasRegisteredClaims = payload.iss !== undefined || payload.aud !== undefined;
+    if (hasRegisteredClaims) {
+        if (payload.iss !== JWT_ISSUER || !hasExpectedAudience(payload.aud)) return false;
+        if (payload.purpose !== 'session' && payload.purpose !== 'password_change') return false;
+        return true;
+    }
+
+    if (!allowLegacy) return false;
+    return payload.purpose === undefined || payload.purpose === 'session' || payload.purpose === 'password_change';
+}
+
 export async function verifyJWT(
     token: string,
-    secret: string
+    secret: string,
+    options: VerifyJWTOptions = {},
 ): Promise<JWTPayload | null> {
     try {
         const encoder = new TextEncoder();
         const secretKey = encoder.encode(secret);
+        const { payload } = await jwtVerify(token, secretKey, { algorithms: ['HS256'] });
+        const candidate = payload as Record<string, unknown>;
+        if (!isValidAuthPayload(candidate, options.allowLegacy ?? true)) return null;
 
-        const { payload } = await jwtVerify(token, secretKey);
-
-        return payload as unknown as JWTPayload;
+        return {
+            ...(candidate as unknown as JWTPayload),
+            purpose: candidate.purpose === 'password_change' ? 'password_change' : 'session',
+        };
     } catch (error) {
         console.error('[JWT] Verification failed:', error);
         return null;
@@ -103,7 +159,7 @@ export function createJWTCookie(token: string, maxAge: number = 7 * 24 * 60 * 60
         `auth_token=${token}`,
         'HttpOnly',
         'Secure',
-        'SameSite=None',
+        'SameSite=Lax',
         `Max-Age=${maxAge}`,
         'Path=/',
     ].join('; ');
@@ -118,7 +174,7 @@ export function clearJWTCookie(): string {
         'auth_token=',
         'HttpOnly',
         'Secure',
-        'SameSite=None',
+        'SameSite=Lax',
         'Max-Age=0',
         'Path=/',
     ].join('; ');

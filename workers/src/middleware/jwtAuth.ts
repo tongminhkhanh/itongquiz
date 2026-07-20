@@ -30,7 +30,9 @@ export async function verifyJWTMiddleware(
         return errorResponse('Authentication service unavailable', 503);
     }
 
-    const payload = await verifyJWT(token, env.JWT_SECRET);
+    const payload = await verifyJWT(token, env.JWT_SECRET, {
+        allowLegacy: (env.AUTH_MIGRATION_MODE || 'compat') !== 'enforce',
+    });
 
     if (!payload) {
         return errorResponse('Unauthorized: Invalid or expired token', 401);

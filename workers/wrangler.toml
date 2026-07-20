@@ -30,6 +30,7 @@ zone_name = "thitong.site"
 CLIPROXY_API = "https://api.thitong.site/v1"
 R2_PUBLIC_URL = "https://r2.thitong.site"
 AUTH_MIGRATION_MODE = "compat"
+AUTH_TOKEN_TRANSPORT_MODE = "cookie"
 ANNOUNCEMENT_IMAGE_HOSTS = "thitong.site,www.thitong.site,r2.thitong.site"
 
 # Cron triggers

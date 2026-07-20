@@ -2,6 +2,7 @@ import { errorResponse, jsonResponse } from '../../utils/response';
 import * as LiveExamService from '../../services/liveExamService';
 import { authenticateTeacherForSession, isAuthResponse } from './auth';
 import type { LiveExamRouteHandler } from './routeContext';
+import { liveExamErrorResponse } from './responses';
 
 // GET /api/live-exam/:id/participants
 export const handleParticipantsRoute: LiveExamRouteHandler = async (context) => {
@@ -43,7 +44,6 @@ export const handleParticipantsRoute: LiveExamRouteHandler = async (context) => 
       onlineCount: combined.filter((participant) => participant.isOnline).length,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to get participants';
-    return errorResponse(message || 'Failed to get participants', 500);
+    return liveExamErrorResponse(error, context.request, 'Failed to get participants');
   }
 };

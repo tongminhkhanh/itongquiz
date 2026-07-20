@@ -2,7 +2,7 @@ import { errorResponse, jsonResponse } from '../../utils/response';
 import * as LiveExamService from '../../services/liveExamService';
 import { authenticateStudent, isAuthResponse, requireStudentParticipant } from './auth';
 import type { LiveExamRouteHandler } from './routeContext';
-import { calculateTimeRemaining } from './responses';
+import { calculateTimeRemaining, liveExamErrorResponse } from './responses';
 
 // GET /api/live-exam/:id/status
 export const handleStatusRoute: LiveExamRouteHandler = async (context) => {
@@ -41,7 +41,6 @@ export const handleStatusRoute: LiveExamRouteHandler = async (context) => {
       timeRemaining,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to get status';
-    return errorResponse(message || 'Failed to get status', 500);
+    return liveExamErrorResponse(error, context.request, 'Failed to get status');
   }
 };

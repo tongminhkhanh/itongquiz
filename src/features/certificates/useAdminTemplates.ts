@@ -1,18 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { WORKERS_API_URL } from '../../config/constants';
+import { getWorkersApiBaseUrl } from '../../services/api/config';
 import type { FieldConfig } from './certificates.types';
-
-function getTeacherJwt(): string {
-    try {
-        const direct = localStorage.getItem('itongquiz_teacher_jwt_token');
-        if (direct) return direct;
-        const raw = localStorage.getItem('auth-storage');
-        if (!raw) return '';
-        return JSON.parse(raw)?.state?.token || '';
-    } catch {
-        return '';
-    }
-}
 
 export interface AdminTemplate {
     id: string;
@@ -27,12 +15,11 @@ export interface AdminTemplate {
     created_at: string;
 }
 
-const base = () => (WORKERS_API_URL || '').replace(/\/$/, '');
+const base = () => getWorkersApiBaseUrl();
 
 function authHeaders(): HeadersInit {
     return {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${getTeacherJwt()}`,
     };
 }
 
@@ -47,6 +34,7 @@ export function useAdminTemplates() {
         try {
             const res = await fetch(`${base()}/api/admin/certificate-templates`, {
                 headers: authHeaders(),
+                credentials: 'include',
             });
             if (!res.ok) throw new Error(`Lỗi ${res.status}`);
             const json = await res.json() as { data: AdminTemplate[] };
@@ -68,6 +56,7 @@ export function useAdminTemplates() {
         const res = await fetch(`${base()}/api/admin/certificate-templates`, {
             method: 'POST',
             headers: authHeaders(),
+            credentials: 'include',
             body: JSON.stringify(payload),
         });
         const json = await res.json() as { data?: { id: string }; error?: string };
@@ -82,6 +71,7 @@ export function useAdminTemplates() {
         const res = await fetch(`${base()}/api/admin/certificate-templates/${id}`, {
             method: 'PATCH',
             headers: authHeaders(),
+            credentials: 'include',
             body: JSON.stringify(patch),
         });
         if (!res.ok) {

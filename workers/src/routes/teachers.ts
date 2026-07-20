@@ -1,7 +1,8 @@
 import { Env } from '../types';
 import { jsonResponse, errorResponse, hashPassword } from '../utils/response';
 import { parseBody } from '../utils/helpers';
-import { signJWT, createJWTCookie, JWTPayload } from '../utils/jwt';
+import { signJWT, JWTPayload } from '../utils/jwt';
+import { buildAuthSessionData, withAuthCookie, withClearedAuthCookie } from '../utils/authSession';
 import { verifyJWTMiddleware, requireAdmin, requireTeacher } from '../middleware/jwtAuth';
 import {
     generateTemporaryPassword,
@@ -33,13 +34,6 @@ type TeacherRow = {
 
 function requestId(request: Request): string {
     return request.headers.get('cf-ray') || request.headers.get('x-request-id') || crypto.randomUUID();
-}
-
-function withCookie(response: Response, token: string, maxAge?: number): Response {
-    const headers = new Headers(response.headers);
-    headers.append('Set-Cookie', createJWTCookie(token, maxAge));
-    headers.set('Cache-Control', 'no-store');
-    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 async function passwordMatches(password: string, stored: string): Promise<{ valid: boolean; legacy: boolean }> {
@@ -114,16 +108,15 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
                 .bind(new Date().toISOString(), new Date().toISOString(), username).run();
         }
 
-        return withCookie(jsonResponse({
+        return withAuthCookie(jsonResponse({
             status: 'success',
-            data: {
+            data: buildAuthSessionData(env, {
                 username: teacher.username,
                 fullName: teacher.full_name,
                 role: teacher.role,
                 class: teacher.class,
-                token: jwtToken,
                 requiresPasswordChange,
-            },
+            }, jwtToken),
         }), jwtToken, requiresPasswordChange ? 15 * 60 : undefined);
     }
 
@@ -162,7 +155,10 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
             targetId: teacher.username,
             requestId: requestId(request),
         });
-        return withCookie(jsonResponse({ status: 'success', data: { token } }), token);
+        return withAuthCookie(jsonResponse({
+            status: 'success',
+            data: buildAuthSessionData(env, {}, token),
+        }), token);
     }
 
     if (path === '/api/account/me' && method === 'GET') {
@@ -197,7 +193,7 @@ export async function handleTeacherRoutes(request: Request, env: Env, path: stri
             targetId: user.username,
             requestId: requestId(request),
         });
-        return jsonResponse({ status: 'success' });
+        return withClearedAuthCookie(jsonResponse({ status: 'success' }));
     }
 
     const isLegacy = path === '/api/teachers' || path.startsWith('/api/teachers/');

@@ -37,6 +37,6 @@ export const handleSubmitRoute: LiveExamRouteHandler = async (context) => {
       participant: submission,
     });
   } catch (error: unknown) {
-    return liveExamErrorResponse(error, 'Failed to submit answers');
+    return liveExamErrorResponse(error, context.request, 'Failed to submit answers');
   }
 };

@@ -5,15 +5,13 @@ import { showError, showSuccess } from '../../utils/toast';
 
 interface PasswordChangeDialogProps {
     forced?: boolean;
-    authToken?: string;
     requireCurrentPassword?: boolean;
-    onComplete: (token: string) => void;
+    onComplete: () => void;
     onCancel?: () => void;
 }
 
 const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({
     forced = false,
-    authToken,
     requireCurrentPassword,
     onComplete,
     onCancel,
@@ -30,16 +28,13 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({
         if (newPassword !== confirmPassword) return showError('Hai lần nhập mật khẩu chưa khớp.');
         setSaving(true);
         try {
-            const response = await callApi<{ status: string; data?: { token?: string } }>('change_password', {
-                __authToken: authToken,
+            const response = await callApi<{ status: string }>('change_password', {
                 currentPassword: asksForCurrentPassword ? currentPassword : undefined,
                 newPassword,
             });
-            const token = response.data?.token;
-            if (!token) throw new Error('Máy chủ không trả về phiên đăng nhập mới.');
-            localStorage.setItem('itongquiz_teacher_jwt_token', token);
+            if (response.status !== 'success') throw new Error('Máy chủ không tạo được phiên đăng nhập mới.');
             showSuccess('Đổi mật khẩu thành công.');
-            onComplete(token);
+            onComplete();
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Không thể đổi mật khẩu.');
         } finally {

@@ -5,7 +5,9 @@ import { MathJaxContext } from 'better-react-mathjax';
 import App from './App';
 import MathRenderTelemetryObserver from './src/components/common/MathRenderTelemetryObserver';
 import { installChunkRecovery } from './src/utils/chunkRecovery';
+import { cleanupLegacyAuthStorage } from './src/services/api/auth';
 
+cleanupLegacyAuthStorage();
 installChunkRecovery();
 
 const rootElement = document.getElementById('root');

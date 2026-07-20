@@ -1,8 +1,8 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 /**
- * session: Yêu cầu JWT (Bearer token)
- * public: Không cần xác thực (public endpoints)
+ * session/studentSession: xác thực bằng HttpOnly cookie
+ * public: không cần xác thực
  */
 export type AuthPolicy = 'session' | 'studentSession' | 'public';
 

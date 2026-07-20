@@ -35,7 +35,7 @@ export const handleTimingRoute: LiveExamRouteHandler = async (context) => {
       );
       return jsonResponse({ success: true });
     } catch (error: unknown) {
-      return liveExamErrorResponse(error, 'Failed to track timing', 400);
+      return liveExamErrorResponse(error, context.request, 'Failed to track timing', 400);
     }
   }
 
@@ -53,6 +53,6 @@ export const handleTimingRoute: LiveExamRouteHandler = async (context) => {
     );
     return jsonResponse({ success: true });
   } catch (error: unknown) {
-    return liveExamErrorResponse(error, 'Failed to track timing', 400);
+    return liveExamErrorResponse(error, context.request, 'Failed to track timing', 400);
   }
 };

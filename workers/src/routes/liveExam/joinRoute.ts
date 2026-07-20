@@ -43,6 +43,6 @@ export const handleJoinRoute: LiveExamRouteHandler = async (context) => {
       },
     });
   } catch (error: unknown) {
-    return liveExamErrorResponse(error, 'Failed to join session', 400);
+    return liveExamErrorResponse(error, context.request, 'Failed to join session', 400);
   }
 };

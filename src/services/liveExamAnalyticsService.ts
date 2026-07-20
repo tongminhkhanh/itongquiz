@@ -4,42 +4,7 @@
  */
 
 import { fetchWithJWTInterceptor } from '../utils/jwtInterceptor';
-
-const REMOTE_WORKERS_API_URL = 'https://phieu.thitong.site';
-const API_BASE = (import.meta.env.VITE_WORKERS_API_URL || REMOTE_WORKERS_API_URL).replace(/\/$/, '');
-const TEACHER_JWT_STORAGE_KEY = 'itongquiz_teacher_jwt_token';
-const STUDENT_JWT_STORAGE_KEY = 'itongquiz_jwt_token';
-
-function getLiveExamApiBaseUrl(): string {
-  if (import.meta.env.DEV && API_BASE === REMOTE_WORKERS_API_URL) {
-    return '';
-  }
-
-  return API_BASE;
-}
-
-function getStudentJWTToken(): string {
-  try {
-    return localStorage.getItem(STUDENT_JWT_STORAGE_KEY) || '';
-  } catch {
-    return '';
-  }
-}
-
-function getTeacherJWTToken(): string {
-  try {
-    const directToken = localStorage.getItem(TEACHER_JWT_STORAGE_KEY);
-    if (directToken) return directToken;
-
-    const authStorage = localStorage.getItem('auth-storage');
-    if (!authStorage) return '';
-
-    const parsed = JSON.parse(authStorage);
-    return parsed?.state?.token || '';
-  } catch {
-    return '';
-  }
-}
+import { getWorkersApiBaseUrl } from './api/config';
 
 export interface SessionAnalytics {
   session: {
@@ -90,13 +55,11 @@ export interface SessionAnalytics {
  * Fetch comprehensive analytics for a session
  */
 export async function fetchAnalytics(sessionId: string): Promise<SessionAnalytics> {
-  const jwtToken = getTeacherJWTToken();
-  const response = await fetchWithJWTInterceptor(`${getLiveExamApiBaseUrl()}/api/live-exam/${sessionId}/analytics`, {
+  const response = await fetchWithJWTInterceptor(`${getWorkersApiBaseUrl()}/api/live-exam/${sessionId}/analytics`, {
     method: 'GET',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(jwtToken ? { Authorization: `Bearer ${jwtToken}` } : {}),
     },
   });
 
@@ -117,13 +80,11 @@ export async function trackQuestionTiming(
   questionIndex: number,
   timeSpentSeconds: number
 ): Promise<void> {
-  const studentToken = getStudentJWTToken();
-  const response = await fetchWithJWTInterceptor(`${getLiveExamApiBaseUrl()}/api/live-exam/${sessionId}/track-timing`, {
+  const response = await fetchWithJWTInterceptor(`${getWorkersApiBaseUrl()}/api/live-exam/${sessionId}/track-timing`, {
     method: 'POST',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(studentToken ? { Authorization: `Bearer ${studentToken}` } : {}),
     },
     body: JSON.stringify({
       questionIndex,
@@ -144,13 +105,11 @@ export async function batchTrackQuestionTiming(
   sessionId: string,
   timings: Array<{ questionIndex: number; timeSpentSeconds: number }>
 ): Promise<void> {
-  const studentToken = getStudentJWTToken();
-  const response = await fetchWithJWTInterceptor(`${getLiveExamApiBaseUrl()}/api/live-exam/${sessionId}/track-timing`, {
+  const response = await fetchWithJWTInterceptor(`${getWorkersApiBaseUrl()}/api/live-exam/${sessionId}/track-timing`, {
     method: 'POST',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(studentToken ? { Authorization: `Bearer ${studentToken}` } : {}),
     },
     body: JSON.stringify({
       timings,

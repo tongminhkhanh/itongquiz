@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://phieu.thitong.site/api/:path*"
+    },
+    {
       "source": "/phieu/:path*",
       "destination": "/index.html"
     },

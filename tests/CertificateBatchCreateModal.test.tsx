@@ -99,7 +99,6 @@ describe('Certificate BatchCreateModal contracts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    localStorage.setItem('itongquiz_teacher_jwt_token', 'teacher-token');
     mocks.fetchTemplateOptions.mockResolvedValue([
       { id: 'template-1', name: 'Mẫu phụ', is_active: 1, is_default: 0 },
       { id: 'template-default', name: 'Mẫu mặc định', is_active: 1, is_default: 1 },
@@ -128,7 +127,7 @@ describe('Certificate BatchCreateModal contracts', () => {
     expect((selects[1] as HTMLSelectElement).value).toBe('class-1');
     expect(mocks.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/students?classId=class-1'),
-      expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer teacher-token' }) }),
+      expect.objectContaining({ credentials: 'include', headers: expect.not.objectContaining({ Authorization: expect.anything() }) }),
     );
   });
 

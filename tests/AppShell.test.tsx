@@ -86,13 +86,14 @@ describe('App shell routing contracts', () => {
             teacherName: null,
             isAdmin: false,
             teacherClass: null,
-            token: null,
+            restoreSession: vi.fn(async () => undefined),
         }, true);
         useClassroomStore.setState({
             ...originalClassroomState,
             studentSession: null,
             isLoading: false,
             error: null,
+            restoreStudentSession: vi.fn(async () => undefined),
         }, true);
     });
 

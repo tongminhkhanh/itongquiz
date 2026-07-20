@@ -13,7 +13,6 @@ export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => (
     {props.passwordGate && (
       <PasswordChangeDialog
         forced
-        authToken={props.passwordGate.token}
         requireCurrentPassword={props.passwordGate.requireCurrentPassword}
         onComplete={props.completePasswordChange}
       />

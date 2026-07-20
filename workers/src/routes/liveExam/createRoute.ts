@@ -30,6 +30,6 @@ export const handleCreateRoute: LiveExamRouteHandler = async (context) => {
     });
     return jsonResponse({ success: true, session });
   } catch (error: unknown) {
-    return liveExamErrorResponse(error, 'Failed to create session');
+    return liveExamErrorResponse(error, context.request, 'Failed to create session');
   }
 };

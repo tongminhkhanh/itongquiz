@@ -49,6 +49,31 @@ describe('Classroom route contracts', () => {
         expect(verifyJWTMiddleware).toHaveBeenCalledOnce();
     });
 
+    it('restores the student cookie session without exposing a token', async () => {
+        asStudent();
+        const db = new ClassroomDatabase({
+            student: {
+                id: 'student-a', username: 'student-a', full_name: 'Lan', class_id: 'class-a',
+                class_name: '3A', avatar: 'cat', coins: 25, pet_id: null,
+            },
+            shopItems: [],
+        });
+        const response = await callRoute('/api/student-profile', 'GET', db);
+        const payload = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(payload.data).toMatchObject({
+            studentId: 'student-a', username: 'student-a', fullName: 'Lan', classId: 'class-a',
+        });
+        expect(payload.data.token).toBeUndefined();
+    });
+
+    it('rejects teacher access to the student profile endpoint', async () => {
+        authState.currentUser = { username: 'teacher-a', role: 'teacher' };
+        const response = await callRoute('/api/student-profile', 'GET');
+        expect(response.status).toBe(403);
+    });
+
     it('hides roster contact metadata from students', async () => {
         asStudent();
         const db = new ClassroomDatabase({
@@ -100,5 +125,35 @@ describe('Classroom route contracts', () => {
         authState.currentUser = { username: 'teacher-a', role: 'teacher' };
         const response = await callRoute('/api/classroom/unknown', 'GET');
         expect(response.status).toBe(404);
+    });
+
+    it('does not expose D1 details when student batch persistence fails', async () => {
+        authState.currentUser = { username: 'teacher-a', role: 'teacher' };
+        const db = new ClassroomDatabase({
+            classroom: { id: 'class-a', teacher_username: 'teacher-a', archived_at: '' },
+            batchError: new Error('D1_ERROR: UNIQUE constraint failed: students.username'),
+        });
+        const request = classroomRequest('/api/students/batch', {
+            method: 'POST',
+            headers: { 'x-request-id': 'req-classroom-1' },
+            body: JSON.stringify({
+                students: [{
+                    fullName: 'Nguyễn Văn A', username: 'student-new', password: 'secret12345',
+                    classId: 'class-a', parentPhone: '',
+                }],
+            }),
+        });
+        const response = await handleClassroomRoutes(
+            request,
+            classroomEnv(db),
+            '/api/students/batch',
+            'POST',
+        );
+        const payload = await response.json() as any;
+
+        expect(response.status).toBe(500);
+        expect(payload.message).toBe('Internal server error');
+        expect(payload.requestId).toBe('req-classroom-1');
+        expect(JSON.stringify(payload)).not.toContain('UNIQUE constraint');
     });
 });

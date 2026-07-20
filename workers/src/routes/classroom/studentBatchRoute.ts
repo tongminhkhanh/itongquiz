@@ -5,6 +5,7 @@ import { normalizeStudentInput, validateStudentInput } from '../../classroom/val
 import { isStudent } from '../../middleware/jwtAuth';
 import { extractIdFromPath, parseBody } from '../../utils/helpers';
 import { errorResponse, generateId, hashPassword, jsonResponse, verifyPassword } from '../../utils/response';
+import { internalErrorResponse } from '../../utils/internalError';
 
 export async function handleStudentBatchRoute(context: ClassroomRouteContext): Promise<Response | null> {
     const { request, path, method, db, url, nowIso, user } = context;
@@ -68,8 +69,10 @@ export async function handleStudentBatchRoute(context: ClassroomRouteContext): P
             if (stmts.length > 0) {
                 try {
                     await db.batch(stmts);
-                } catch (dbErr: any) {
-                    return errorResponse(`Database batch error: ${dbErr.cause?.message || dbErr.message}`);
+                } catch (error: unknown) {
+                    return internalErrorResponse(error, request, {
+                        context: 'POST /api/students/batch',
+                    });
                 }
             }
 

@@ -5,10 +5,11 @@ import { handleStudentBatchRoute } from './studentBatchRoute';
 import { handleStudentChangePasswordRoute } from './studentChangePasswordRoute';
 import { handleStudentCreateRoute } from './studentCreateRoute';
 import { handleStudentListRoute } from './studentListRoute';
+import { handleStudentProfileRoute } from './studentProfileRoute';
 import { handleStudentResetPasswordRoute } from './studentResetPasswordRoute';
 
 const handlers = [
-    handleStudentListRoute, handleStudentCreateRoute, handleStudentBatchRoute,
+    handleStudentProfileRoute, handleStudentListRoute, handleStudentCreateRoute, handleStudentBatchRoute,
     handleStudentArchiveRoute, handleStudentChangePasswordRoute,
     handleStudentResetPasswordRoute, handleStudentAvatarRoute,
 ];

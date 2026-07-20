@@ -1,4 +1,3 @@
-import { getStoredJWTToken } from '../api/auth';
 import { getWorkersApiBaseUrl } from '../api/config';
 import { extractAIContent, extractAIErrorMessage } from './utils/aiResponseParser';
 
@@ -69,11 +68,6 @@ export const requestWorkerAi = async (
   options: WorkerAiRequestOptions = {},
 ): Promise<WorkerAiResult> => {
   const path = '/api/ai/chat';
-  const token = getStoredJWTToken(path);
-  if (!token) {
-    throw new Error('Phi?n ??ng nh?p ?? h?t h?n. Vui l?ng ??ng nh?p l?i ?? s? d?ng AI.');
-  }
-
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs ?? 300_000);
 
@@ -83,7 +77,6 @@ export const requestWorkerAi = async (
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(requestBody),
       signal: controller.signal,

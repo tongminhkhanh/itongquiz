@@ -1,51 +1,58 @@
 import { useCallback, useEffect, useState } from 'react';
-import { WORKERS_API_URL } from '../config/constants';
+import { getWorkersApiBaseUrl } from '../services/api/config';
 import type { CertificateApiSuccess, CertificateNotification } from '../../shared/certificates.contract';
-import { getStudentJwt } from '../features/certificates/useCertificates';
 
-const apiBase = () => (WORKERS_API_URL || '').replace(/\/$/, '');
+const apiBase = () => getWorkersApiBaseUrl();
 
 export function useRealtimeNotifications(userId: string | null) {
   const [notifications, setNotifications] = useState<CertificateNotification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const refresh = useCallback(async () => {
-    const token = getStudentJwt();
-    if (!userId || !token) {
+    if (!userId) {
       setNotifications([]);
       return;
     }
     setIsLoading(true);
     try {
       const response = await fetch(`${apiBase()}/api/certificates/notifications`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        setNotifications([]);
+        return;
+      }
       const payload = await response.json() as CertificateApiSuccess<CertificateNotification[]>;
       setNotifications(payload.data ?? []);
+    } catch {
+      // Notification polling is background-only and must never create an
+      // unhandled rejection or break the student dashboard when offline.
+      setNotifications([]);
     } finally {
       setIsLoading(false);
     }
   }, [userId]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
-    const token = getStudentJwt();
-    if (!token) return;
-    const response = await fetch(`${apiBase()}/api/certificates/notifications/${notificationId}/read`, {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (response.ok) {
-      setNotifications((current) => current.map((item) => (
-        item.id === notificationId ? { ...item, is_read: true } : item
-      )));
+    try {
+      const response = await fetch(`${apiBase()}/api/certificates/notifications/${notificationId}/read`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        setNotifications((current) => current.map((item) => (
+          item.id === notificationId ? { ...item, is_read: true } : item
+        )));
+      }
+    } catch {
+      // Reading a notification is best-effort; retain the local unread state.
     }
   }, []);
 
   useEffect(() => {
-    refresh();
+    void refresh();
     if (!userId) return;
-    const interval = window.setInterval(refresh, 30000);
+    const interval = window.setInterval(() => void refresh(), 30000);
     return () => window.clearInterval(interval);
   }, [refresh, userId]);
 

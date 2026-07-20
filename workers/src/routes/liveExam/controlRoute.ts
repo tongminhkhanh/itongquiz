@@ -47,6 +47,6 @@ export const handleControlRoute: LiveExamRouteHandler = async (context) => {
       session,
     });
   } catch (error: unknown) {
-    return liveExamErrorResponse(error, 'Failed to execute action');
+    return liveExamErrorResponse(error, context.request, 'Failed to execute action');
   }
 };

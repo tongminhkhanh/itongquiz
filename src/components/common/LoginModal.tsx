@@ -6,7 +6,6 @@ import { Loader2, KeyRound, User, Lock, GraduationCap, Apple } from 'lucide-reac
 import { motion, AnimatePresence } from 'framer-motion';
 import { showError } from '../../utils/toast';
 import PasswordChangeDialog from './PasswordChangeDialog';
-import { getJWTPurpose } from '../../services/api/auth';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -64,17 +63,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
                 const tFullName = tFullNameRaw || tUsername;
                 const isTeacherAdmin = String(teacher.role || '').trim().toLowerCase() === 'admin';
                 const tClass = teacher.class ? String(teacher.class).trim() : undefined;
-                const tToken = (teacher.token as string | undefined) ?? null;
-                if (tToken) {
-                    localStorage.removeItem('itongquiz_jwt_token');
-                    localStorage.setItem('itongquiz_teacher_jwt_token', tToken);
-                }
-                if (teacher.requiresPasswordChange || getJWTPurpose(tToken) === 'password_change') {
+                if (teacher.requiresPasswordChange) {
                     authStore.loginPendingPasswordChange();
                     setPendingTeacher({ ...teacher, username: tUsername, fullName: tFullName, isAdmin: isTeacherAdmin, class: tClass });
                     return;
                 }
-                authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass, tToken);
+                authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass);
                 onClose();
                 return;
             }
@@ -101,11 +95,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialTab = '
     if (!isOpen) return null;
 
     if (pendingTeacher) {
-        return <PasswordChangeDialog forced authToken={pendingTeacher.token} onCancel={() => {
-            localStorage.removeItem('itongquiz_teacher_jwt_token');
+        return <PasswordChangeDialog forced onCancel={() => {
+            void import('../../services/apiAdapter').then(({ callApi }) => callApi('logout')).catch(() => undefined);
             setPendingTeacher(null);
-        }} onComplete={(token) => {
-            authStore.loginSuccess(pendingTeacher.username, pendingTeacher.fullName, pendingTeacher.isAdmin, pendingTeacher.class, token);
+        }} onComplete={() => {
+            authStore.loginSuccess(pendingTeacher.username, pendingTeacher.fullName, pendingTeacher.isAdmin, pendingTeacher.class);
             setPendingTeacher(null);
             onClose();
         }} />;

@@ -12,11 +12,7 @@ import { useTeacherDashboardUIStore } from '../src/stores/useTeacherDashboardUIS
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   callApi: vi.fn(),
-  getStoredJWTToken: vi.fn(),
-  getJWTPurpose: vi.fn(),
-
   invalidatePrefix: vi.fn(),
-  checkJwtExpiry: vi.fn(),
   showSuccess: vi.fn(),
   showError: vi.fn(),
 }));
@@ -27,15 +23,8 @@ vi.mock('react-router-dom', async () => {
 });
 
 vi.mock('../src/services/apiAdapter', () => ({ callApi: mocks.callApi }));
-vi.mock('../src/services/api/auth', () => ({
-  getStoredJWTToken: mocks.getStoredJWTToken,
-  getJWTPurpose: mocks.getJWTPurpose,
-}));
 vi.mock('../src/services/CacheService', () => ({
   cacheService: { invalidatePrefix: mocks.invalidatePrefix },
-}));
-vi.mock('../src/utils/jwtInterceptor', () => ({
-  checkAndWarnJWTExpiry: mocks.checkJwtExpiry,
 }));
 vi.mock('../src/utils/toast', () => ({
   showSuccess: mocks.showSuccess,
@@ -52,7 +41,7 @@ vi.mock('../src/components/common/CurrentAnnouncementBanner', () => ({
 }));
 vi.mock('../src/components/common/PasswordChangeDialog', () => ({
   default: ({ onComplete }: any) => (
-    <div data-testid="password-gate"><button onClick={() => onComplete('new-token')}>Đổi mật khẩu</button></div>
+    <div data-testid="password-gate"><button onClick={() => onComplete()}>Đổi mật khẩu</button></div>
   ),
 }));
 
@@ -172,11 +161,7 @@ describe('TeacherDashboard shell contracts', () => {
     resetStores();
     mocks.navigate.mockReset();
     mocks.callApi.mockReset().mockResolvedValue({ data: { mustChangePassword: false } });
-    mocks.getStoredJWTToken.mockReset().mockReturnValue('jwt-token');
-    mocks.getJWTPurpose.mockReset().mockReturnValue('session');
-
     mocks.invalidatePrefix.mockReset();
-    mocks.checkJwtExpiry.mockReset();
     mocks.showSuccess.mockReset();
     mocks.showError.mockReset();
   });
@@ -185,14 +170,13 @@ describe('TeacherDashboard shell contracts', () => {
     vi.restoreAllMocks();
   });
 
-  it('bootstraps teacher data and schedules JWT checks', async () => {
+  it('bootstraps teacher data using the HttpOnly cookie session', async () => {
     const view = render(<TeacherDashboard />);
 
     await waitFor(() => expect(useQuizStore.getState().loadQuizzes).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(useQuizStore.getState().loadResults).toHaveBeenCalledTimes(1));
 
     expect(mocks.invalidatePrefix).toHaveBeenCalledWith('quizzes:');
-    expect(mocks.checkJwtExpiry).toHaveBeenCalled();
 
     view.unmount();
 

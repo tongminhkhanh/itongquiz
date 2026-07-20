@@ -12,6 +12,7 @@ import { mapQuestionForSave, parseBody, extractIdFromPath } from '../utils/helpe
 import { verifyJWTMiddleware, requireAdmin, requireTeacher } from '../middleware/jwtAuth';
 import { JWTPayload } from '../utils/jwt';
 import { withD1Retry } from '../utils/d1';
+import { internalErrorResponse } from '../utils/internalError';
 import {
     auditPersistedQuestionRow,
     CURRENT_MATH_FORMAT_VERSION,
@@ -275,9 +276,8 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
                 questionCount: mappedQuestions.length,
                 mathFormatVersion: CURRENT_MATH_FORMAT_VERSION,
             });
-        } catch (err: any) {
-            console.error('[POST /api/quizzes] Error:', err.message, err.stack);
-            return errorResponse(`Failed to create quiz: ${err.message}`, 500);
+        } catch (error: unknown) {
+            return internalErrorResponse(error, request, { context: 'POST /api/quizzes' });
         }
     }
 
@@ -345,10 +345,11 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
                 .first<{ cnt: number }>();
             const actualCount = countResult?.cnt || 0;
             if (actualCount !== mappedQuestions.length) {
-                return jsonResponse({
-                    status: 'error',
-                    message: `Save verification failed: expected ${mappedQuestions.length} questions, but ${actualCount} were saved`,
-                }, 500);
+                return internalErrorResponse(
+                    new Error(`Save verification failed: expected ${mappedQuestions.length}, actual ${actualCount}`),
+                    request,
+                    { context: `PUT /api/quizzes/${quizId} verification` },
+                );
             }
 
             return jsonResponse({
@@ -356,9 +357,8 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
                 questionCount: actualCount,
                 mathFormatVersion: CURRENT_MATH_FORMAT_VERSION,
             });
-        } catch (err: any) {
-            console.error('[PUT /api/quizzes] Error:', err.message, err.stack);
-            return errorResponse(`Failed to update quiz: ${err.message}`, 500);
+        } catch (error: unknown) {
+            return internalErrorResponse(error, request, { context: `PUT /api/quizzes/${quizId}` });
         }
     }
 
@@ -430,9 +430,10 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
                     mathFormatVersion: CURRENT_MATH_FORMAT_VERSION,
                 },
             });
-        } catch (err: any) {
-            console.error('[POST /api/quizzes/:id/duplicate] Error:', err.message, err.stack);
-            return errorResponse(`Failed to duplicate quiz: ${err.message}`, 500);
+        } catch (error: unknown) {
+            return internalErrorResponse(error, request, {
+                context: `POST /api/quizzes/${quizId}/duplicate`,
+            });
         }
     }
 

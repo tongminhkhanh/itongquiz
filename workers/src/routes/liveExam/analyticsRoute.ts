@@ -20,6 +20,6 @@ export const handleAnalyticsRoute: LiveExamRouteHandler = async (context) => {
     );
     return jsonResponse({ success: true, analytics });
   } catch (error: unknown) {
-    return liveExamErrorResponse(error, 'Failed to calculate analytics');
+    return liveExamErrorResponse(error, context.request, 'Failed to calculate analytics');
   }
 };

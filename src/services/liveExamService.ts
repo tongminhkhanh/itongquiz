@@ -25,45 +25,7 @@ import type {
     UpdateWaitingRoomChatSettingsRequest,
 } from '../types/liveExam.types';
 import { fetchWithJWTInterceptor } from '../utils/jwtInterceptor';
-
-const REMOTE_WORKERS_API_URL = 'https://phieu.thitong.site';
-const API_BASE = (import.meta.env.VITE_WORKERS_API_URL || REMOTE_WORKERS_API_URL).replace(/\/$/, '');
-const STUDENT_JWT_STORAGE_KEY = 'itongquiz_jwt_token';
-const TEACHER_JWT_STORAGE_KEY = 'itongquiz_teacher_jwt_token';
-
-function getLiveExamApiBaseUrl(): string {
-    if (import.meta.env.DEV && API_BASE === REMOTE_WORKERS_API_URL) {
-        return '';
-    }
-
-    return API_BASE;
-}
-
-function getStudentJWTToken(): string {
-    try {
-        const directToken = localStorage.getItem(STUDENT_JWT_STORAGE_KEY);
-        if (directToken) return directToken;
-
-        return '';
-    } catch {
-        return '';
-    }
-}
-
-function getTeacherJWTToken(): string {
-    try {
-        const directToken = localStorage.getItem(TEACHER_JWT_STORAGE_KEY);
-        if (directToken) return directToken;
-
-        const authStorage = localStorage.getItem('auth-storage');
-        if (!authStorage) return '';
-
-        const parsed = JSON.parse(authStorage);
-        return parsed?.state?.token || '';
-    } catch {
-        return '';
-    }
-}
+import { getWorkersApiBaseUrl } from './api/config';
 
 /**
  * Generic API call helper
@@ -71,15 +33,12 @@ function getTeacherJWTToken(): string {
 async function apiCall<T>(
     endpoint: string,
     options: RequestInit = {},
-    tokenResolver: () => string = getTeacherJWTToken
 ): Promise<T> {
-    const jwtToken = tokenResolver();
-    const response = await fetchWithJWTInterceptor(`${getLiveExamApiBaseUrl()}${endpoint}`, {
+    const response = await fetchWithJWTInterceptor(`${getWorkersApiBaseUrl()}${endpoint}`, {
         ...options,
         credentials: 'include', // Include JWT cookie
         headers: {
             'Content-Type': 'application/json',
-            ...(jwtToken ? { Authorization: `Bearer ${jwtToken}` } : {}),
             ...options.headers,
         },
     });
@@ -218,7 +177,6 @@ export async function joinLiveExam(
             method: 'POST',
             body: JSON.stringify({ accessCode }),
         },
-        getStudentJWTToken
     );
 }
 
@@ -232,7 +190,6 @@ export async function getSessionStatus(
     return apiCall<LiveExamStatusResponse>(
         `/api/live-exam/${sessionId}/status`,
         {},
-        getStudentJWTToken
     );
 }
 
@@ -249,7 +206,6 @@ export async function submitAnswers(
             method: 'POST',
             body: JSON.stringify({ answers }),
         },
-        getStudentJWTToken
     );
 
     return {
@@ -274,7 +230,6 @@ export async function updateActivity(
             method: 'POST',
             body: JSON.stringify(data),
         },
-        getStudentJWTToken
     );
 }
 
@@ -287,7 +242,6 @@ export async function getResults(
     return apiCall<LiveExamResultsResponse>(
         `/api/live-exam/${sessionId}/results`,
         {},
-        getStudentJWTToken
     );
 }
 
@@ -298,7 +252,6 @@ export async function getWaitingRoomChat(
     return apiCall<WaitingRoomChatResponse>(
         `/api/live-exam/${sessionId}/chat`,
         {},
-        asTeacher ? getTeacherJWTToken : getStudentJWTToken
     );
 }
 
@@ -312,7 +265,6 @@ export async function sendWaitingRoomMessage(
             method: 'POST',
             body: JSON.stringify(data),
         },
-        getStudentJWTToken
     );
     return result.message;
 }
@@ -327,7 +279,6 @@ export async function sendWaitingRoomAnnouncement(
             method: 'POST',
             body: JSON.stringify(data),
         },
-        getTeacherJWTToken
     );
     return result.message;
 }
@@ -342,7 +293,6 @@ export async function updateWaitingRoomChatSettings(
             method: 'PUT',
             body: JSON.stringify(data),
         },
-        getTeacherJWTToken
     );
 }
 
@@ -355,7 +305,6 @@ export async function hideWaitingRoomChatMessage(
         {
             method: 'PUT',
         },
-        getTeacherJWTToken
     );
 }
 

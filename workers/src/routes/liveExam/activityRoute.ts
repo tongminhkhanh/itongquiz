@@ -33,6 +33,6 @@ export const handleActivityRoute: LiveExamRouteHandler = async (context) => {
     await LiveExamService.updateActivity(context.db, validation.data);
     return jsonResponse({ success: true });
   } catch (error: unknown) {
-    return liveExamErrorResponse(error, 'Failed to update activity');
+    return liveExamErrorResponse(error, context.request, 'Failed to update activity');
   }
 };

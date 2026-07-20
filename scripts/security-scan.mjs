@@ -36,6 +36,9 @@ for (const rawFile of tracked) {
   if (lower.startsWith('workers/data/') && lower !== 'workers/data/readme.md') {
     report(file, 1, 'tracked-data-export', 'Generated D1 seed exports must remain local.');
   }
+  if (/^workers\/(?:dump[^/]*\.json|[^/]*query[^/]*\.txt|fix_[^/]*\.ps1)$/i.test(file)) {
+    report(file, 1, 'tracked-operational-artifact', 'Worker query dumps and one-off repair scripts must remain local.');
+  }
   if (/\.(?:pem|key|p12|pfx|keystore)$/i.test(file)) {
     report(file, 1, 'tracked-private-key-file', 'Private key/certificate material is forbidden.');
   }
@@ -96,6 +99,15 @@ for (const rawFile of tracked) {
     && !/(?:^|\/)(?:tests?|__tests__|fixtures)(?:\/|$)/.test(file)
     && !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file);
   if (isExecutableSource) {
+    if (/^src\//.test(file) && file !== 'src/services/api/auth.ts') {
+      for (const match of text.matchAll(/itongquiz_(?:teacher_)?jwt_token|(?:auth-storage|student_session)[^\r\n]{0,120}(?:state\??\.?token|\.token)/g)) {
+        report(file, lineNumber(text, match.index ?? 0), 'browser-jwt-storage', 'Browser-readable JWT storage is forbidden; use the HttpOnly session cookie.');
+      }
+      for (const match of text.matchAll(/Authorization\s*[:=][^\r\n]{0,80}Bearer/g)) {
+        report(file, lineNumber(text, match.index ?? 0), 'browser-bearer-session', 'Browser session requests must use credentials: include instead of a readable bearer token.');
+      }
+    }
+
     const assignment = /(?:^|[^\w])\$?(email|username|user|pass|password|passwd|pwd|api[_-]?key|api[_-]?secret|secret|token)\s*=\s*(['"])([^'"\r\n]{4,})\2/gim;
     for (const match of text.matchAll(assignment)) {
       const field = match[1];

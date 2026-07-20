@@ -10,6 +10,7 @@ vi.mock('../workers/src/middleware/jwtAuth', () => ({
 
 import * as LiveExamService from '../workers/src/services/liveExamService';
 import { handleLiveExamRoutes } from '../workers/src/routes/liveExam';
+import { liveExamErrorResponse } from '../workers/src/routes/liveExam/responses';
 
 class FakeStatement {
   bindings: unknown[] = [];
@@ -300,5 +301,50 @@ describe('live exam analytics route', () => {
 
     expect(response.status).toBe(200);
     expect(db.executed[0].sql).toContain('s.archived_at IS NULL');
+  });
+
+  it('keeps business LiveExamServiceError messages but hides unknown 500 details', async () => {
+    const request = new Request('https://test/api/live-exam/live-1', {
+      headers: { 'x-request-id': 'req-live-1' },
+    });
+    const business = liveExamErrorResponse(
+      new LiveExamService.LiveExamServiceError('Cannot archive an active session', 409),
+      request,
+      'Failed to archive session',
+    );
+    await expect(business.json()).resolves.toMatchObject({
+      message: 'Cannot archive an active session',
+    });
+    expect(business.status).toBe(409);
+
+    const internal = liveExamErrorResponse(
+      new Error('D1_ERROR: no such table live_exam_sessions'),
+      request,
+      'Failed to get session',
+    );
+    const payload = await internal.json() as any;
+    expect(internal.status).toBe(500);
+    expect(payload.message).toBe('Failed to get session');
+    expect(payload.requestId).toBe('req-live-1');
+    expect(JSON.stringify(payload)).not.toContain('live_exam_sessions');
+  });
+
+  it('does not expose raw errors from the teacher sessions route', async () => {
+    const db = new FakeDB();
+    db.all = () => { throw new Error('D1_ERROR: no such column secret_score'); };
+    const response = await handleLiveExamRoutes(
+      new Request('https://test/api/live-exam/teacher/teacher-a/sessions', {
+        headers: { 'x-request-id': 'req-live-list-1' },
+      }),
+      { DB: db, JWT_SECRET: 'test' } as any,
+      '/api/live-exam/teacher/teacher-a/sessions',
+      'GET',
+    );
+    const payload = await response.json() as any;
+
+    expect(response.status).toBe(500);
+    expect(payload.message).toBe('Failed to get sessions');
+    expect(payload.requestId).toBe('req-live-list-1');
+    expect(JSON.stringify(payload)).not.toContain('secret_score');
   });
 });

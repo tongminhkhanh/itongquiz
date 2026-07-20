@@ -26,6 +26,7 @@ class Statement {
 
 class Database {
   executed: Statement[] = [];
+  batchError: Error | null = null;
   question = {
     id: 'q-1', quiz_id: 'quiz-a', type: 'TRUE_FALSE', question: 'Chọn đúng sai',
     options: '', correct_answer: 'B', items: JSON.stringify([{ id: 'i-1', statement: 'Mệnh đề', isCorrect: true }]),
@@ -49,6 +50,7 @@ class Database {
   }
   async batch(statements: Statement[]) {
     for (const statement of statements) this.executed.push(statement);
+    if (this.batchError) throw this.batchError;
     return statements.map(() => ({ success: true }));
   }
 }
@@ -152,5 +154,25 @@ describe('quiz answer confidentiality and ownership', () => {
     const db = new Database();
     const response = await handleQuizRoutes(authRequest('https://test/api/quizzes/quiz-b/duplicate', { method: 'POST' }), env(db), '/api/quizzes/quiz-b/duplicate', 'POST');
     expect(response.status).toBe(403);
+  });
+
+  it('does not expose D1 details when quiz creation fails', async () => {
+    currentUser = { username: 'teacher-a', role: 'teacher' };
+    const db = new Database();
+    db.batchError = new Error('D1_ERROR: no such table: secret_quizzes');
+    const response = await handleQuizRoutes(authRequest('https://test/api/quizzes', {
+      method: 'POST',
+      headers: { 'x-request-id': 'req-quiz-1' },
+      body: JSON.stringify({
+        id: 'quiz-a', title: 'Đề', classLevel: '4', timeLimit: 15,
+        createdAt: '2026-07-20T00:00:00.000Z', questions: [],
+      }),
+    }), env(db), '/api/quizzes', 'POST');
+    const payload = await response.json() as any;
+
+    expect(response.status).toBe(500);
+    expect(payload.message).toBe('Internal server error');
+    expect(payload.requestId).toBe('req-quiz-1');
+    expect(JSON.stringify(payload)).not.toContain('secret_quizzes');
   });
 });

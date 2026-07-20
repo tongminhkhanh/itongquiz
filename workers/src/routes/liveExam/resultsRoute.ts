@@ -3,6 +3,7 @@ import * as LiveExamService from '../../services/liveExamService';
 import { authenticateStudent, isAuthResponse } from './auth';
 import type { LiveExamRouteHandler } from './routeContext';
 import { calculateLiveExamRewards } from './resultRewards';
+import { liveExamErrorResponse } from './responses';
 
 // GET /api/live-exam/:id/results
 export const handleResultsRoute: LiveExamRouteHandler = async (context) => {
@@ -48,7 +49,6 @@ export const handleResultsRoute: LiveExamRouteHandler = async (context) => {
       })),
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to get results';
-    return errorResponse(message || 'Failed to get results', 500);
+    return liveExamErrorResponse(error, context.request, 'Failed to get results');
   }
 };
