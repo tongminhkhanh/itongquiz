@@ -147,19 +147,34 @@ Detailed plan: `docs/plans/2026-07-20-security-hardening.md`
   - [x] Certificate consumer dry-run bundle
   - [x] Git diff review
   - [x] GitNexus impact review
-  - [ ] Production-like browser smoke
-  - [ ] Vercel Preview browser smoke
-  - [ ] Rollback steps verified
-  - [ ] Approval trước deploy production
+  - [x] Production runtime smoke qua `www.thitong.site`
+  - [x] Vercel Preview runtime smoke qua protection bypass CLI
+  - [x] CORS preflight/mutation smoke với official, preview và untrusted origins
+  - [x] Teacher/student login route smoke bằng tài khoản giả
+  - [ ] Production-like browser smoke tương tác
+  - [ ] Vercel Preview browser smoke tương tác
+  - [ ] Thực thi rollback drill
+  - [x] Approval trước deploy production
 
+### Release evidence — 2026-07-20
+
+- Commit production: `9c81107`
+- API Worker version hiện tại: `d0c41781-0e7c-4aa3-aca0-a089ffc2b9fe`
+- API Worker version rollback gần nhất: `b8e5ce6a-3786-4b3d-b124-95077ff16d9e`
+- Vercel production deployment: `dpl_2P3TJycrTS8VkP141oA8k9sZcXut`
+- Vercel preview deployment: `dpl_DcqRjfq7mpNERGFb5getDqEnkE2t`
+- Production frontend `/` và same-origin `/api/health`: đạt
+- Preview frontend `/` và same-origin `/api/health` qua `vercel curl`: đạt
+- Origin lạ: preflight và mutation đều bị chặn `403`
+- Teacher/student invalid-login routes: reachable, không `503`
 ## Final Definition of Done
 
-- [ ] Không auth JWT trong persistent browser storage
-- [ ] Không raw 500 errors
-- [ ] OG SVG escaped
-- [ ] CORS/Origin policy production-safe
-- [ ] Sensitive rate limit fail closed
-- [ ] Dump artifacts không tracked
-- [ ] Audit/test/typecheck/build/dry-run đạt
-- [ ] Runtime smoke đạt
-- [ ] Deploy và revoke chỉ sau approval
+- [x] Không auth JWT trong persistent browser storage
+- [x] Không raw 500 errors
+- [x] OG SVG escaped
+- [x] CORS/Origin policy production-safe
+- [x] Sensitive rate limit fail closed
+- [x] Dump artifacts không tracked
+- [x] Audit/test/typecheck/build/dry-run đạt
+- [x] Runtime smoke đạt
+- [x] Deploy và revoke chỉ sau approval
