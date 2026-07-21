@@ -100,3 +100,12 @@ export const deserializeManualQuizDraft = (
 
 export const getManualQuizDraftHash = (envelope: ManualQuizDraftEnvelope): string =>
     serializeManualQuizDraft(envelope).hash;
+
+export const getManualQuizDraftContentHash = (envelope: ManualQuizDraftEnvelope): string => {
+    validatePersistableValue(envelope);
+    return hashText(JSON.stringify({
+        ...envelope,
+        revision: 0,
+        updatedAt: '',
+    }));
+};

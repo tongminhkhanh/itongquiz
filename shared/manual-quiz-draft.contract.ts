@@ -8,6 +8,7 @@ export interface ManualQuizDraftQuizPayload {
     classLevel: string;
     timeLimit: number;
     questions: unknown[];
+    createdAt: string;
     [key: string]: unknown;
 }
 
@@ -109,6 +110,9 @@ export const parsePutManualQuizDraftRequest = (
     }
     if (!Array.isArray(draft.quiz.questions) || draft.quiz.questions.length > MAX_MANUAL_QUIZ_DRAFT_QUESTIONS) {
         return invalid(`Bản nháp chỉ hỗ trợ tối đa ${MAX_MANUAL_QUIZ_DRAFT_QUESTIONS} câu hỏi.`);
+    }
+    if (typeof draft.quiz.createdAt !== 'string' || Number.isNaN(Date.parse(draft.quiz.createdAt))) {
+        return invalid('Thời gian tạo đề kiểm tra không hợp lệ.');
     }
     if (draft.selectedQuestionId !== null && typeof draft.selectedQuestionId !== 'string') {
         return invalid('Câu hỏi đang chọn không hợp lệ.');

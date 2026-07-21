@@ -4,6 +4,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import ManualQuizWorkspaceGuard from './components/ManualQuizWorkspaceGuard';
 import DraftRecoveryDialog from './components/DraftRecoveryDialog';
+import DraftConflictDialog from './components/DraftConflictDialog';
 import QuestionEditorPane from './components/QuestionEditorPane';
 import QuestionNavigator from './components/QuestionNavigator';
 import StudentPreviewPane from './components/StudentPreviewPane';
@@ -50,7 +51,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
 
     const seed = navigationState?.manualQuizSeed ?? DEFAULT_SEED;
 
-    useManualQuizAutosave(envelope);
+    const autosaveController = useManualQuizAutosave(envelope);
 
     useEffect(() => {
         if (!username || envelope || pendingRecovery || recoveryChecked) return;
@@ -129,6 +130,15 @@ const ManualQuizWorkspacePage: React.FC = () => {
                     {!isPreviewCollapsed && <StudentPreviewPane />}
                 </div>
                 <WorkspaceStatusBar />
+                {autosaveController.conflict && envelope && (
+                    <DraftConflictDialog
+                        localDraft={envelope}
+                        serverRecord={autosaveController.conflict}
+                        isResolving={autosaveController.isResolvingConflict}
+                        onUseLocal={autosaveController.resolveWithLocal}
+                        onUseServer={autosaveController.resolveWithServer}
+                    />
+                )}
                 {pendingRecovery && (
                     <DraftRecoveryDialog
                         draft={pendingRecovery}

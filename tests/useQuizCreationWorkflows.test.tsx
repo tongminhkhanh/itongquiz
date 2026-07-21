@@ -83,6 +83,20 @@ function resetStores(addAssignment = vi.fn(async () => null)) {
     });
 }
 
+const createManualQuiz = (title: string): Quiz => ({
+    id: `quiz-manual-${title.toLowerCase().replace(/\s+/g, '-')}`,
+    title,
+    classLevel: '4A',
+    timeLimit: 15,
+    questions: [],
+    createdAt: '2026-07-21T00:00:00.000Z',
+    createdBy: 'Teacher Test',
+    category: 'toan',
+    tags: [],
+    requireCode: false,
+    showOnHome: true,
+});
+
 function renderCreationHook(overrides: Partial<{
     editingQuiz: Quiz | null;
     onSaveQuiz: (quiz: Quiz) => Promise<void>;
@@ -191,7 +205,7 @@ describe('quiz creation workflows', () => {
 
         act(() => {
             result.current.setQuizTitle('Manual quiz');
-            result.current.handleStartManual();
+            result.current.setGeneratedQuiz(createManualQuiz('Manual quiz'));
         });
         const createdQuiz = result.current.generatedQuiz;
         expect(createdQuiz).not.toBeNull();
@@ -217,7 +231,7 @@ describe('quiz creation workflows', () => {
             result.current.setSelectedClassId('class-4a');
             result.current.setDeadline('2026-07-25');
             result.current.setMaxAttempts(2);
-            result.current.handleStartManual();
+            result.current.setGeneratedQuiz(createManualQuiz('Assigned quiz'));
         });
 
         await act(async () => result.current.handleSaveQuiz());

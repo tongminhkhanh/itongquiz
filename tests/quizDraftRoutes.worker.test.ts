@@ -111,6 +111,7 @@ const draft = (overrides: Partial<ManualQuizDraftPayload> = {}): ManualQuizDraft
         classLevel: '3A',
         timeLimit: 15,
         questions: [],
+        createdAt: '2026-07-21T08:00:00.000Z',
     },
     selectedQuestionId: null,
     targetPoints: 10,
@@ -244,6 +245,7 @@ describe('quiz draft worker routes', () => {
             quiz: {
                 id: 'quiz-manual-1', title: 'x'.repeat(1_050_000),
                 classLevel: '3A', timeLimit: 15, questions: [],
+                createdAt: '2026-07-21T08:00:00.000Z',
             },
         });
         const oversized = await handleQuizDraftRoutes(

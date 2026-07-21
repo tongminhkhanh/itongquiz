@@ -36,6 +36,8 @@ interface ManualQuizWorkspaceState {
     initializeFromSeed(seed: ManualQuizSeed, ownerUsername: string): void;
     initializeFromQuiz(quiz: Quiz, ownerUsername: string): void;
     hydrateEnvelope(envelope: ManualQuizDraftEnvelope): void;
+    replaceEnvelope(envelope: ManualQuizDraftEnvelope): void;
+    acknowledgeRemoteRevision(revision: number, updatedAt?: string): void;
     updateQuiz(patch: Partial<ManualQuizDraftEnvelope['quiz']>): void;
     selectQuestion(questionId: string | null): void;
     addQuestion(question: ManualQuizQuestion): void;
@@ -126,6 +128,28 @@ export const useManualQuizWorkspaceStore = create<ManualQuizWorkspaceState>((set
             },
         },
     }),
+
+    replaceEnvelope: (envelope) => set((state) => ({
+        envelope: {
+            ...envelope,
+            quiz: {
+                ...envelope.quiz,
+                questions: envelope.quiz.questions.map((question) => ({ ...question })),
+            },
+        },
+        saveStatus: 'saved',
+        saveError: null,
+        isNavigatorCollapsed: state.isNavigatorCollapsed,
+        isPreviewCollapsed: state.isPreviewCollapsed,
+    })),
+
+    acknowledgeRemoteRevision: (revision, updatedAt) => set((state) => state.envelope ? ({
+        envelope: {
+            ...state.envelope,
+            revision,
+            updatedAt: updatedAt || state.envelope.updatedAt,
+        },
+    }) : state),
 
     updateQuiz: (patch) => set((state) => state.envelope ? ({
         envelope: touchEnvelope(state.envelope, {
