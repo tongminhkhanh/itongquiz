@@ -95,7 +95,10 @@ CREATE TABLE IF NOT EXISTS questions (
   subject TEXT DEFAULT '',
   skill_code TEXT DEFAULT '',
   subskill_code TEXT DEFAULT '',
-  difficulty INTEGER DEFAULT NULL
+  difficulty INTEGER DEFAULT NULL,
+  math_format_version INTEGER NOT NULL DEFAULT 1,
+  points REAL,
+  explanation TEXT NOT NULL DEFAULT ''
 );
 
 -- Results

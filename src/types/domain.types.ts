@@ -10,6 +10,10 @@ export interface QuestionMetadata extends QuestionSkillMetadataFields {
     tags?: string[] | string;
     /** Version of the server-owned math normalization applied to this question. */
     mathFormatVersion?: number;
+    /** Điểm dành cho câu hỏi trong đề do giáo viên soạn. */
+    points?: number;
+    /** Lời giải/hướng dẫn, chỉ hiển thị theo policy sau khi học sinh nộp bài. */
+    explanation?: string;
 }
 
 export enum QuestionType {

@@ -55,8 +55,8 @@ const buildQuestionInsertStatement = (db: D1Database) => db.prepare(
     `INSERT INTO questions (
         id, quiz_id, type, question, options, correct_answer, items, text_field,
         blanks, distractors, sentence, words, correct_word_indexes, image, tags,
-        subject, skill_code, subskill_code, difficulty, math_format_version
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        subject, skill_code, subskill_code, difficulty, math_format_version, points, explanation
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 );
 
 const mapQuestionBatch = (questions: unknown[], quizId: string): string[][] =>
@@ -109,6 +109,8 @@ const copiedQuestionValues = (
         question.subskill_code || '',
         String(question.difficulty || ''),
         String(CURRENT_MATH_FORMAT_VERSION),
+        question.points === undefined || question.points === null ? '' : String(question.points),
+        question.explanation || '',
     ];
 };
 
@@ -116,6 +118,7 @@ export const sanitizeQuestionForStudent = (question: any): any => {
     const safe = { ...question };
     for (const field of [
         'correct_answer', 'correctAnswer', 'correct_answers', 'correctAnswers',
+        'explanation',
         'correct_order', 'correctOrder', 'correct_word_indexes', 'correctWordIndexes',
         'correct_word', 'correctWord', 'wrong_word', 'wrongWord',
     ]) delete safe[field];

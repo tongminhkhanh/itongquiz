@@ -49,6 +49,8 @@ export interface Question {
     subskill_code?: string;
     difficulty?: 1 | 2 | 3 | null;
     math_format_version?: number;
+    points?: number | null;
+    explanation?: string;
 }
 
 export interface Assignment {

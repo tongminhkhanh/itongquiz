@@ -34,6 +34,6 @@ describe('D1 migration layout', () => {
     expect(registered).toHaveLength(25);
     const numericPrefixes = migrations.map((name) => name.slice(0, 4));
     expect(new Set(numericPrefixes).size).toBe(numericPrefixes.length);
-    expect(migrations.at(-1)).toBe('0033_create_quiz_drafts.sql');
+    expect(migrations.at(-1)).toBe('0034_add_question_authoring_fields.sql');
   });
 });
