@@ -257,7 +257,7 @@ describe('QuizPreview contracts', () => {
         await waitFor(() => expect(screen.queryByText('loading-q1')).not.toBeInTheDocument());
     });
 
-    it('creates the current default dummy draft for quick-add question types', () => {
+    it('creates a useful starter draft for quick-add question types', () => {
         render(<QuizPreview quiz={makeQuiz()} onSave={vi.fn()} onUpdateQuestions={vi.fn()} />);
 
         fireEvent.click(screen.getByRole('button', { name: 'Đúng/Sai' }));
@@ -265,11 +265,15 @@ describe('QuizPreview contracts', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
         expect(mocks.editor.openAddEditor).toHaveBeenCalledWith(expect.objectContaining({
-            id: expect.stringMatching(/^q-manual-\d+$/),
+            id: expect.stringMatching(/^q-manual-/),
             type: QuestionType.TRUE_FALSE,
             difficulty: 1,
+            points: 1,
             mainQuestion: '',
-            items: [],
+            items: [
+                expect.objectContaining({ statement: '', isCorrect: true }),
+                expect.objectContaining({ statement: '', isCorrect: false }),
+            ],
         }));
     });
 

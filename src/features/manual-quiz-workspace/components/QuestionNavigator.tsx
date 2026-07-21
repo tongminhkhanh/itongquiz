@@ -10,11 +10,15 @@ import {
 } from '@dnd-kit/core';
 import { ChevronLeft, Library, Plus, RotateCcw, Search } from 'lucide-react';
 import { QuestionType } from '../../../types';
-import { createManualQuestionDraft } from '../../../components/TeacherDashboard/quiz-preview/questionTypes';
+import {
+    createManualQuestionDraft,
+    QUICK_ADD_TYPES,
+} from '../../../components/TeacherDashboard/quiz-preview/questionTypes';
 import { useManualQuizWorkspaceStore } from '../store/useManualQuizWorkspaceStore';
 import type { ManualQuizQuestion } from '../types/manualQuizWorkspace.types';
 import QuestionNavigatorItem, { getQuestionNavigatorLabel } from './QuestionNavigatorItem';
 import { useQuestionUndo } from '../hooks/useQuestionUndo';
+import QuestionTypePicker from './QuestionTypePicker';
 
 export const handleQuestionDragEnd = (
     event: Pick<DragEndEvent, 'active' | 'over'>,
@@ -28,6 +32,7 @@ export const handleQuestionDragEnd = (
 
 const QuestionNavigator: React.FC = () => {
     const [query, setQuery] = useState('');
+    const [isTypePickerOpen, setTypePickerOpen] = useState(false);
     const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
     const selectQuestion = useManualQuizWorkspaceStore((state) => state.selectQuestion);
     const addQuestion = useManualQuizWorkspaceStore((state) => state.addQuestion);
@@ -50,9 +55,10 @@ const QuestionNavigator: React.FC = () => {
         );
     }, [query, questions]);
 
-    const createFirstQuestion = () => {
-        const draft = createManualQuestionDraft(QuestionType.MCQ) as ManualQuizQuestion;
-        addQuestion({ ...draft, points: 1 });
+    const createQuestion = (type: QuestionType) => {
+        const draft = createManualQuestionDraft(type) as ManualQuizQuestion;
+        addQuestion(draft);
+        setTypePickerOpen(false);
     };
 
     return (
@@ -135,13 +141,29 @@ const QuestionNavigator: React.FC = () => {
                 </div>
             )}
 
-            <div className="space-y-2 border-t border-slate-200 bg-slate-50 p-3">
+            <div className="space-y-3 border-t border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Thêm nhanh</p>
+                <div className="grid grid-cols-2 gap-2">
+                    {QUICK_ADD_TYPES.map((item) => (
+                        <button
+                            key={item.type}
+                            type="button"
+                            onClick={() => createQuestion(item.type)}
+                            aria-label={`Thêm nhanh ${item.label}`}
+                            title={item.description}
+                            className={`min-h-11 rounded-[10px] px-2 text-xs font-semibold transition ${item.color}`}
+                        >
+                            {item.label}
+                        </button>
+                    ))}
+                </div>
                 <button
                     type="button"
-                    onClick={createFirstQuestion}
+                    onClick={() => setTypePickerOpen(true)}
+                    aria-label="Thêm dạng khác"
                     className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-sky-500 px-3 text-sm font-semibold text-white hover:bg-sky-600"
                 >
-                    <Plus className="h-4 w-4" /> Thêm câu hỏi
+                    <Plus className="h-4 w-4" /> Thêm dạng khác
                 </button>
                 <button
                     type="button"
@@ -150,6 +172,12 @@ const QuestionNavigator: React.FC = () => {
                     <Library className="h-4 w-4" /> Mở kho câu hỏi
                 </button>
             </div>
+
+            <QuestionTypePicker
+                open={isTypePickerOpen}
+                onClose={() => setTypePickerOpen(false)}
+                onSelect={createQuestion}
+            />
         </nav>
     );
 };
