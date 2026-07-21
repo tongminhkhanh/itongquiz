@@ -8,6 +8,7 @@ import { jsonResponse, errorResponse } from './utils/response';
 import { internalErrorResponse } from './utils/internalError';
 import { handleTeacherRoutes } from './routes/teachers';
 import { handleQuizRoutes } from './routes/quizzes';
+import { handleQuizDraftRoutes } from './routes/quizDrafts';
 import { handleResultRoutes } from './routes/results';
 import { handleClassroomRoutes } from './routes/classroom';
 import { handleGamificationRoutes } from './routes/gamification';
@@ -130,6 +131,8 @@ export default {
                 response = await handleTeacherRoutes(request, env, path, method);
             } else if (path === '/api/logout' && method === 'POST') {
                 response = await handleLogoutRoute(request, env);
+            } else if (path.startsWith('/api/quiz-drafts/')) {
+                response = await handleQuizDraftRoutes(request, env, path, method);
             } else if (path.startsWith('/api/quizzes') || path.startsWith('/api/questions')) {
                 response = await handleQuizRoutes(request, env, path, method);
             } else if (path.startsWith('/api/results') || path === '/api/validate') {

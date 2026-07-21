@@ -67,6 +67,16 @@ const unavailable = () => new Response(JSON.stringify({ status: 'error', message
 });
 
 describe('Worker root route dispatch', () => {
+  it('registers manual quiz drafts before the broader quiz routes', async () => {
+    const source = await import('../workers/src/index?raw');
+    const draftRoute = source.default.indexOf("path.startsWith('/api/quiz-drafts/')");
+    const quizRoute = source.default.indexOf("path.startsWith('/api/quizzes')");
+
+    expect(draftRoute).toBeGreaterThan(-1);
+    expect(quizRoute).toBeGreaterThan(draftRoute);
+    expect(source.default).toContain('handleQuizDraftRoutes(request, env, path, method)');
+  });
+
   it('routes the read-only math monitor before legacy handlers', async () => {
     const response = await worker.fetch(request('/api/admin/math-audit/issues?limit=1'), env);
     expect(response.status).toBe(401);
