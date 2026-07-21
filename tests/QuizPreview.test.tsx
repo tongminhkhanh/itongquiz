@@ -321,7 +321,7 @@ describe('QuizPreview contracts', () => {
 
         render(<QuizPreview quiz={makeQuiz()} onSave={vi.fn()} onUpdateQuestions={vi.fn()} />);
 
-        expect(screen.getByText('Thêm câu hỏi mới')).toBeInTheDocument();
+        expect(screen.getByTestId('question-editor-modal')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'editor-save' }));
         expect(mocks.editor.saveEdit).toHaveBeenCalledTimes(1);
         fireEvent.click(screen.getByRole('button', { name: 'editor-cancel' }));
