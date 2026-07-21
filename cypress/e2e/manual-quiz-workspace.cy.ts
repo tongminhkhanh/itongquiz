@@ -112,16 +112,22 @@ const visitManualWorkspace = (draft?: ReturnType<typeof validDraft>) => {
     });
 };
 
-const continueRecoveredDraft = () => {
+const continueRecoveredDraft = (expectedTitle: string) => {
     cy.get('body', { timeout: 15_000 }).should(($body) => {
-        const hasWorkspace = $body.find('[data-testid="manual-quiz-workspace"]').length > 0;
-        const hasContinue = Array.from($body.find('button')).some((button) => button.textContent?.includes('Tiếp tục soạn'));
-        expect(hasWorkspace || hasContinue, 'workspace or recovery action').to.eq(true);
+        const hasContinue = Array.from($body.find('button'))
+            .some((button) => button.textContent?.includes('Tiếp tục soạn'));
+        const currentTitle = String($body.find('#manual-quiz-title').val() || '');
+        expect(
+            hasContinue || currentTitle === expectedTitle,
+            'recovery action or hydrated draft title',
+        ).to.eq(true);
     }).then(($body) => {
-        const button = Array.from($body.find('button')).find((item) => item.textContent?.includes('Tiếp tục soạn'));
+        const button = Array.from($body.find('button'))
+            .find((item) => item.textContent?.includes('Tiếp tục soạn'));
         if (button) cy.wrap(button).click({ force: true });
     });
     cy.get('[data-testid="manual-quiz-workspace"]', { timeout: 15_000 }).should('be.visible');
+    cy.get('#manual-quiz-title', { timeout: 15_000 }).should('have.value', expectedTitle);
 };
 
 const assertNoHorizontalOverflow = () => {
@@ -158,8 +164,7 @@ describe('Manual quiz workspace end-to-end', () => {
 
         cy.reload();
         cy.wait('@accountProfile', { timeout: 15_000 });
-        continueRecoveredDraft();
-        cy.get('#manual-quiz-title').should('have.value', 'Đề đang tự động lưu');
+        continueRecoveredDraft('Đề đang tự động lưu');
         cy.contains('1 + 1 bằng bao nhiêu?').should('exist');
 
         cy.window().then((win) => {
@@ -179,7 +184,7 @@ describe('Manual quiz workspace end-to-end', () => {
 
     it('validates a recovered draft and publishes exactly once', () => {
         visitManualWorkspace(validDraft());
-        continueRecoveredDraft();
+        continueRecoveredDraft('Đề kiểm tra E2E');
         cy.contains('button', 'Kiểm tra và xuất bản').click();
         cy.get('[role="dialog"][aria-label="Kiểm tra trước khi xuất bản"]').should('be.visible');
         cy.contains('Cần sửa hết lỗi bắt buộc trước khi xuất bản.').should('not.exist');
@@ -198,7 +203,7 @@ describe('Manual quiz workspace end-to-end', () => {
         it(`has no horizontal overflow and captures ${label}`, () => {
             cy.viewport(width, height);
             visitManualWorkspace(validDraft());
-            continueRecoveredDraft();
+            continueRecoveredDraft('Đề kiểm tra E2E');
             assertNoHorizontalOverflow();
             cy.screenshot(`manual-quiz-workspace/${label}`, { capture: 'viewport' });
         });
