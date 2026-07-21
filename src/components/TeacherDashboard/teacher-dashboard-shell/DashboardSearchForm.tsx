@@ -22,12 +22,12 @@ export const DashboardSearchForm = ({
       value={searchQuery}
       onChange={event => setSearchQuery(event.target.value)}
       placeholder="Tìm chức năng..."
-      className="w-52 rounded-full border border-slate-200 bg-slate-100 py-2 pl-4 pr-10 text-sm outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-500 lg:w-64"
+      className="h-10 w-52 rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] py-2 pl-3 pr-10 text-sm text-[#172033] outline-none transition-colors placeholder:text-[#9AA5B1] focus:border-[#0EA5E9] focus:bg-white focus:ring-2 focus:ring-[#BAE6FD] lg:w-64"
     />
     <button
       type="submit"
       aria-label="Tìm chức năng"
-      className="absolute right-1 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      className="absolute right-1 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#7A8796] hover:bg-white hover:text-[#0284C7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9]"
     >
       <Search aria-hidden="true" className="size-4" />
     </button>

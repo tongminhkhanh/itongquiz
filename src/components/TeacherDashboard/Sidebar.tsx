@@ -204,11 +204,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                 aria-current={isActive ? 'page' : undefined}
                 className={`flex min-h-10 w-full items-center gap-3 rounded-xl border-l-[3px] px-3 py-2 text-left text-sm transition-colors ${
                     isActive
-                        ? 'border-blue-600 bg-blue-50 font-bold text-blue-700'
-                        : 'border-transparent font-medium text-slate-700 hover:bg-white hover:text-slate-950'
+                        ? 'border-[#0EA5E9] bg-[#F0F9FF] font-semibold text-[#0284C7]'
+                        : 'border-transparent font-medium text-[#526174] hover:bg-white hover:text-[#172033]'
                 }`}
             >
-                <span aria-hidden="true" className={isActive ? 'text-blue-600' : 'text-slate-500'}>{item.icon}</span>
+                <span aria-hidden="true" className={isActive ? 'text-[#0284C7]' : 'text-[#7A8796]'}>{item.icon}</span>
                 <span>{item.label}</span>
             </button>
         );
@@ -236,12 +236,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => toggleGroup(groupKey)}
                     aria-expanded={isOpen}
                     aria-controls={panelId}
-                    className="flex h-9 w-full items-center justify-between rounded-xl px-3 text-left transition-colors hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    className="flex h-9 w-full items-center justify-between rounded-[10px] px-3 text-left transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9]"
                 >
-                    <span className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">{title}</span>
+                    <span className="text-xs font-semibold text-[#7A8796]">{title}</span>
                     <ChevronRight
                         aria-hidden="true"
-                        className={`size-4 transition-transform duration-200 ${isOpen ? 'rotate-90 text-blue-600' : 'text-slate-400'}`}
+                        className={`size-4 transition-transform duration-200 ${isOpen ? 'rotate-90 text-[#0284C7]' : 'text-[#9AA5B1]'}`}
                     />
                 </button>
 
@@ -257,37 +257,37 @@ const Sidebar: React.FC<SidebarProps> = ({
     return (
         <>
             {isMobileOpen && (
-                <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setIsMobileOpen(false)} />
+                <div className="fixed inset-0 z-40 bg-[#172033]/30 lg:hidden" onClick={() => setIsMobileOpen(false)} />
             )}
 
             <aside
                 aria-label="Điều hướng quản trị"
                 aria-hidden={isMobileDrawerInactive || undefined}
                 inert={isMobileDrawerInactive || undefined}
-                className={`fixed left-0 top-0 z-50 flex h-[calc(100vh-64px)] w-64 flex-col overflow-hidden border-r border-slate-200 bg-slate-50 pb-20 transition-transform duration-300 ease-in-out lg:h-full lg:pb-0 ${
+                className={`fixed left-0 top-0 z-50 flex h-full w-[248px] flex-col overflow-hidden border-r border-[#E5E7EB] bg-[#F8FAFC] transition-transform duration-300 ease-in-out ${
                     isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                 }`}
             >
-                <div className="flex h-16 shrink-0 items-center border-b border-slate-200 bg-white/90 px-4 backdrop-blur">
+                <div className="flex h-16 shrink-0 items-center border-b border-[#E5E7EB] bg-white px-4">
                     <div className="flex items-center gap-3">
-                        <div className="flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
+                        <div className="flex size-10 items-center justify-center rounded-[10px] border border-[#E5E7EB] bg-white p-1.5">
                             <img
                                 src="/shool-logo1-removebg.png"
                                 alt={`Logo ${SCHOOL_NAME}`}
                                 className="size-full object-contain"
                             />
                         </div>
-                        <span className="text-2xl font-black tracking-tight text-slate-900">
-                            iTong<span className="text-blue-600">Quiz</span>
+                        <span className="text-2xl font-bold tracking-tight text-[#172033]">
+                            iTong<span className="text-[#0EA5E9]">Quiz</span>
                         </span>
                     </div>
                 </div>
 
-                <div className="shrink-0 border-b border-slate-200 bg-white/60 p-3">
+                <div className="shrink-0 border-b border-[#E5E7EB] bg-white p-3">
                     <button
                         type="button"
                         onClick={() => navigateTo('create')}
-                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#0EA5E9] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0284C7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9] focus-visible:ring-offset-2"
                     >
                         <PlusCircle aria-hidden="true" className="size-5" />
                         Tạo đề mới
@@ -299,8 +299,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                         aria-current={activeTab === 'overview' ? 'page' : undefined}
                         className={`mt-2 flex min-h-10 w-full items-center gap-3 rounded-xl border-l-[3px] px-3 py-2 text-left text-sm transition-colors ${
                             activeTab === 'overview'
-                                ? 'border-blue-600 bg-blue-50 font-bold text-blue-700'
-                                : 'border-transparent font-semibold text-slate-700 hover:bg-white hover:text-slate-950'
+                                ? 'border-[#0EA5E9] bg-[#F0F9FF] font-semibold text-[#0284C7]'
+                                : 'border-transparent font-medium text-[#526174] hover:bg-[#F8FAFC] hover:text-[#172033]'
                         }`}
                     >
                         <Home aria-hidden="true" className="size-5" />
@@ -311,7 +311,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <nav
                     aria-label="Các khu vực chức năng"
                     className="flex-1 overflow-y-auto px-2 py-3"
-                    style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}
+                    style={{ scrollbarWidth: 'thin', scrollbarColor: '#D1D5DB transparent' }}
                 >
                     <NavGroup title="Đề thi" items={examItems} groupKey="exams" />
                     <NavGroup title="Dạy và giao bài" items={teachingItems} groupKey="teaching" />
@@ -322,11 +322,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <NavGroup title="Quản trị hệ thống" items={settingItems} groupKey="system" adminOnly />
                 </nav>
 
-                <div className="shrink-0 border-t border-slate-200 bg-white/80 p-3">
+                <div className="shrink-0 border-t border-[#E5E7EB] bg-white p-3">
                     <button
                         type="button"
                         onClick={onLogout}
-                        className="flex min-h-10 w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-red-900 transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                        className="flex min-h-11 w-full items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-[#B94733] transition-colors hover:bg-[#FFF4F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E76F51]"
                     >
                         <LogOut aria-hidden="true" className="size-5" />
                         Đăng xuất

@@ -15,18 +15,20 @@ const formatQuizDate = (value: string): string => {
 };
 
 const RecentQuizzesPanel: React.FC<RecentQuizzesPanelProps> = ({ quizzes, onCreateQuiz, onManageQuizzes }) => (
-    <section aria-labelledby="recent-quizzes-heading" className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <section aria-labelledby="recent-quizzes-heading" className="min-w-0 max-w-full overflow-hidden rounded-[14px] border border-[#E5E7EB] bg-white">
+        <div className="flex flex-col gap-3 border-b border-[#E5E7EB] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <div>
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-blue-600">Nội dung giảng dạy</p>
-                <h2 id="recent-quizzes-heading" className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">Đề kiểm tra gần đây</h2>
-                <p className="mt-1 text-sm text-slate-500">Mở nhanh danh sách quản lý hoặc bắt đầu tạo một đề mới.</p>
+                <p className="text-sm font-medium text-[#0284C7]">Nội dung giảng dạy</p>
+                <h2 id="recent-quizzes-heading" className="mt-1 text-xl font-semibold tracking-tight text-[#172033] sm:text-2xl">
+                    Đề kiểm tra gần đây
+                </h2>
+                <p className="mt-1 text-sm text-[#526174]">Mở danh sách quản lý hoặc bắt đầu tạo một đề mới.</p>
             </div>
             <div className="flex flex-wrap gap-2">
                 <button
                     type="button"
                     onClick={onCreateQuiz}
-                    className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-sm font-black text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-[10px] bg-[#0EA5E9] px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0284C7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9] focus-visible:ring-offset-2"
                 >
                     <FilePlus2 aria-hidden="true" className="size-4" />
                     Tạo đề
@@ -34,7 +36,7 @@ const RecentQuizzesPanel: React.FC<RecentQuizzesPanelProps> = ({ quizzes, onCrea
                 <button
                     type="button"
                     onClick={onManageQuizzes}
-                    className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-[10px] border border-[#E5E7EB] bg-white px-3.5 py-2 text-sm font-medium text-[#526174] transition-colors hover:bg-[#F8FAFC] hover:text-[#172033] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9]"
                 >
                     Xem tất cả
                     <ArrowRight aria-hidden="true" className="size-4" />
@@ -44,10 +46,10 @@ const RecentQuizzesPanel: React.FC<RecentQuizzesPanelProps> = ({ quizzes, onCrea
 
         {quizzes.length > 0 ? (
             <>
-                <div className="hidden overflow-x-auto xl:block">
+                <div className="hidden overflow-x-auto lg:block">
                     <table className="w-full min-w-[760px] border-collapse text-left">
                         <thead>
-                            <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-black uppercase tracking-[0.08em] text-slate-500">
+                            <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] text-xs font-medium text-[#7A8796]">
                                 <th className="px-5 py-3">Tên đề</th>
                                 <th className="px-4 py-3">Lớp</th>
                                 <th className="px-4 py-3">Số câu</th>
@@ -56,29 +58,24 @@ const RecentQuizzesPanel: React.FC<RecentQuizzesPanelProps> = ({ quizzes, onCrea
                                 <th className="px-5 py-3 text-right"><span className="sr-only">Thao tác</span></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-[#E5E7EB]">
                             {quizzes.map((quiz) => (
-                                <tr key={quiz.id} className="transition-colors hover:bg-slate-50/70">
+                                <tr key={quiz.id} className="transition-colors hover:bg-[#F8FAFC]">
                                     <td className="px-5 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                                                <Files aria-hidden="true" className="size-4" />
-                                            </span>
-                                            <div className="min-w-0">
-                                                <p className="max-w-md truncate text-sm font-black text-slate-900">{quiz.title}</p>
-                                                <p className="mt-0.5 text-xs text-slate-400">{quiz.topic || quiz.detectedCategory || 'Chưa phân loại'}</p>
-                                            </div>
+                                        <div className="min-w-0">
+                                            <p className="max-w-md truncate text-sm font-semibold text-[#172033]">{quiz.title}</p>
+                                            <p className="mt-0.5 text-xs text-[#7A8796]">{quiz.topic || quiz.detectedCategory || 'Chưa phân loại'}</p>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-4 text-sm font-semibold text-slate-600">{quiz.classLevel || '—'}</td>
-                                    <td className="px-4 py-4 text-sm font-semibold text-slate-600">{quiz.questions?.length || 0}</td>
-                                    <td className="px-4 py-4 text-sm text-slate-600">{quiz.timeLimit || 0} phút</td>
-                                    <td className="px-4 py-4 text-sm text-slate-500">{formatQuizDate(quiz.createdAt)}</td>
+                                    <td className="px-4 py-4 text-sm font-medium text-[#526174]">{quiz.classLevel || '—'}</td>
+                                    <td className="px-4 py-4 text-sm font-medium text-[#526174]">{quiz.questions?.length || 0}</td>
+                                    <td className="px-4 py-4 text-sm text-[#526174]">{quiz.timeLimit || 0} phút</td>
+                                    <td className="px-4 py-4 text-sm text-[#7A8796]">{formatQuizDate(quiz.createdAt)}</td>
                                     <td className="px-5 py-4 text-right">
                                         <button
                                             type="button"
                                             onClick={onManageQuizzes}
-                                            className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                            className="inline-flex min-h-9 items-center gap-1.5 rounded-[8px] px-2.5 text-xs font-medium text-[#0284C7] transition-colors hover:bg-[#F0F9FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9]"
                                         >
                                             Quản lý
                                             <ArrowRight aria-hidden="true" className="size-3.5" />
@@ -90,29 +87,27 @@ const RecentQuizzesPanel: React.FC<RecentQuizzesPanelProps> = ({ quizzes, onCrea
                     </table>
                 </div>
 
-                <div className="divide-y divide-slate-100 xl:hidden">
+                <div className="divide-y divide-[#E5E7EB] lg:hidden">
                     {quizzes.map((quiz) => (
                         <article key={quiz.id} className="p-4">
                             <div className="flex items-start gap-3">
-                                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                                    <Files aria-hidden="true" className="size-5" />
-                                </span>
+                                <Files aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-[#0284C7]" />
                                 <div className="min-w-0 flex-1">
-                                    <h3 className="line-clamp-2 text-sm font-black text-slate-900">{quiz.title}</h3>
-                                    <p className="mt-1 text-xs text-slate-400">{quiz.topic || quiz.detectedCategory || 'Chưa phân loại'}</p>
+                                    <h3 className="line-clamp-2 text-sm font-semibold text-[#172033]">{quiz.title}</h3>
+                                    <p className="mt-1 text-xs text-[#7A8796]">{quiz.topic || quiz.detectedCategory || 'Chưa phân loại'}</p>
                                 </div>
                             </div>
-                            <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-600">
-                                <span className="rounded-lg bg-slate-50 px-2 py-2 font-semibold">Lớp {quiz.classLevel || '—'}</span>
-                                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2 py-2 font-semibold"><ListChecks aria-hidden="true" className="size-3.5" />{quiz.questions?.length || 0} câu</span>
-                                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2 py-2 font-semibold"><Clock3 aria-hidden="true" className="size-3.5" />{quiz.timeLimit || 0} phút</span>
+                            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-[#526174]">
+                                <span>Lớp {quiz.classLevel || '—'}</span>
+                                <span className="inline-flex items-center gap-1"><ListChecks aria-hidden="true" className="size-3.5" />{quiz.questions?.length || 0} câu</span>
+                                <span className="inline-flex items-center gap-1"><Clock3 aria-hidden="true" className="size-3.5" />{quiz.timeLimit || 0} phút</span>
                             </div>
-                            <div className="mt-3 flex items-center justify-between gap-3">
-                                <span className="text-xs text-slate-400">{formatQuizDate(quiz.createdAt)}</span>
+                            <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#E5E7EB] pt-3">
+                                <span className="text-xs text-[#7A8796]">{formatQuizDate(quiz.createdAt)}</span>
                                 <button
                                     type="button"
                                     onClick={onManageQuizzes}
-                                    className="inline-flex min-h-9 cursor-pointer items-center gap-1 rounded-lg px-2.5 text-xs font-bold text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                    className="inline-flex min-h-9 items-center gap-1 rounded-[8px] px-2.5 text-xs font-medium text-[#0284C7] hover:bg-[#F0F9FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9]"
                                 >
                                     Quản lý
                                     <ArrowRight aria-hidden="true" className="size-3.5" />
@@ -124,15 +119,13 @@ const RecentQuizzesPanel: React.FC<RecentQuizzesPanelProps> = ({ quizzes, onCrea
             </>
         ) : (
             <div className="px-5 py-12 text-center">
-                <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-                    <Files aria-hidden="true" className="size-6" />
-                </span>
-                <h3 className="mt-4 text-lg font-black text-slate-900">Chưa có đề kiểm tra</h3>
-                <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-slate-500">Tạo đề đầu tiên để bắt đầu giao bài và theo dõi kết quả học tập.</p>
+                <Files aria-hidden="true" className="mx-auto size-8 text-[#9AA5B1]" />
+                <h3 className="mt-4 text-lg font-semibold text-[#172033]">Chưa có đề kiểm tra</h3>
+                <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-[#526174]">Tạo đề đầu tiên để bắt đầu giao bài và theo dõi kết quả học tập.</p>
                 <button
                     type="button"
                     onClick={onCreateQuiz}
-                    className="mt-4 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-black text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-[10px] bg-[#0EA5E9] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0284C7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9] focus-visible:ring-offset-2"
                 >
                     <FilePlus2 aria-hidden="true" className="size-4" />
                     Tạo đề mới

@@ -92,7 +92,7 @@ describe('TeacherDashboard OverviewTab', () => {
         expect(document.body.textContent).not.toContain('Chi');
     });
 
-    it('uses the light teacher dashboard palette for the hero', () => {
+    it('uses the warm flat teacher dashboard palette for the hero', () => {
         render(
             <OverviewTab
                 resultsLoadState="success"
@@ -103,12 +103,14 @@ describe('TeacherDashboard OverviewTab', () => {
         const heroHeading = screen.getByRole('heading', { name: 'Chào buổi sáng, Cô An!' });
         const heroSection = heroHeading.closest('section');
         expect(heroSection).toBeTruthy();
-        expect(heroSection?.className).toContain('from-blue-50');
-        expect(heroSection?.className).toContain('text-slate-950');
-        expect(heroSection?.className).not.toContain('bg-slate-950');
+        expect(heroSection?.className).toContain('bg-white');
+        expect(heroSection?.className).toContain('border-[#E5E7EB]');
+        expect(heroSection?.className).toContain('rounded-[14px]');
+        expect(heroSection?.className).not.toContain('gradient');
+        expect(heroSection?.className).not.toContain('shadow');
     });
 
-    it('uses polished rounded cards with stable hover elevation', () => {
+    it('uses restrained flat cards without hover lift', () => {
         render(
             <OverviewTab
                 resultsLoadState="success"
@@ -121,11 +123,32 @@ describe('TeacherDashboard OverviewTab', () => {
         const createAction = within(quickActionsSection as HTMLElement).getByRole('button', { name: /Tạo đề mới/i });
         const quizMetric = screen.getByText('Đề kiểm tra').closest('article');
 
-        expect(quickActionsSection?.className).toContain('rounded-[24px]');
-        expect(createAction.className).toContain('rounded-[20px]');
-        expect(createAction.className).toContain('motion-safe:hover:-translate-y-1');
-        expect(quizMetric?.className).toContain('rounded-[22px]');
-        expect(quizMetric?.className).toContain('motion-safe:hover:-translate-y-1');
+        expect(quickActionsSection?.className).toContain('rounded-[14px]');
+        expect(createAction.className).toContain('rounded-[12px]');
+        expect(createAction.className).not.toContain('translate-y');
+        expect(createAction.className).not.toContain('gradient');
+        expect(quizMetric?.className).toContain('rounded-[14px]');
+        expect(quizMetric?.className).not.toContain('translate-y');
+        expect(quizMetric?.className).not.toContain('gradient');
+    });
+
+    it('uses flat bordered analysis and activity panels', () => {
+        render(
+            <OverviewTab
+                resultsLoadState="success"
+                onRetryResults={vi.fn()}
+            />,
+        );
+
+        const performancePanel = screen.getByRole('heading', { name: 'Tình hình điểm số' }).closest('section');
+        const submissionsPanel = screen.getByRole('heading', { name: 'Bài vừa nộp' }).closest('section');
+        const quizzesPanel = screen.getByRole('heading', { name: 'Đề kiểm tra gần đây' }).closest('section');
+
+        for (const panel of [performancePanel, submissionsPanel, quizzesPanel]) {
+            expect(panel?.className).toContain('rounded-[14px]');
+            expect(panel?.className).toContain('border-[#E5E7EB]');
+            expect(panel?.className).not.toContain('shadow');
+        }
     });
 
     it.each([

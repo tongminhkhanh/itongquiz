@@ -2919,9 +2919,10 @@ canvas {
     word-break: break-word;
 }
 
-/* Warm Human Education: scoped student surfaces. */
+/* Warm Human Education: scoped student and teacher surfaces. */
 .student-dashboard,
-.student-quiz-shell {
+.student-quiz-shell,
+.teacher-dashboard-shell {
   font-family: "Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 

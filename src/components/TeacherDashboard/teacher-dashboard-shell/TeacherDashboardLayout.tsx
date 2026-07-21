@@ -2,14 +2,13 @@ import { Footer } from '../../common';
 import CurrentAnnouncementBanner from '../../common/CurrentAnnouncementBanner';
 import PasswordChangeDialog from '../../common/PasswordChangeDialog';
 import Sidebar from '../Sidebar';
-import BottomNavigation from '../BottomNavigation';
 import { AccessCodeDialog } from './AccessCodeDialog';
 import { TeacherDashboardHeader } from './TeacherDashboardHeader';
 import { TeacherDashboardTabContent } from './TeacherDashboardTabContent';
 import type { TeacherDashboardLayoutProps } from './types';
 
 export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => (
-  <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+  <div className="teacher-dashboard-shell flex min-h-screen flex-col bg-[#FFFDF7] text-[#172033] lg:flex-row">
     {props.passwordGate && (
       <PasswordChangeDialog
         forced
@@ -26,10 +25,11 @@ export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => (
       isMobileOpen={props.isMobileMenuOpen}
       setIsMobileOpen={props.setIsMobileMenuOpen}
     />
-    <div className="flex min-h-screen min-w-0 w-full flex-1 flex-col pb-20 transition-all duration-300 lg:ml-64 lg:w-[calc(100%-16rem)] lg:flex-none lg:pb-0">
+    <div className="flex min-h-screen min-w-0 w-full flex-1 flex-col lg:ml-[248px] lg:w-[calc(100%-248px)] lg:flex-none">
       <TeacherDashboardHeader
         activeTab={props.activeTab}
         setActiveTab={props.setActiveTab}
+        onOpenMenu={() => props.setIsMobileMenuOpen(true)}
         searchQuery={props.searchQuery}
         setSearchQuery={props.setSearchQuery}
         onSearchSubmit={props.onSearchSubmit}
@@ -38,7 +38,7 @@ export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => (
         isAdmin={props.isAdmin}
         onLogout={props.onLogout}
       />
-      <main className="flex-1 p-3 sm:p-5 lg:p-10 overflow-x-hidden">
+      <main className="flex-1 overflow-x-hidden px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         <TeacherDashboardTabContent
           activeTab={props.activeTab}
           setActiveTab={props.setActiveTab}
@@ -62,11 +62,6 @@ export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => (
         <Footer onNavigate={props.onNavigate} showPublicLinks={false} />
       </div>
     </div>
-    <BottomNavigation
-      activeTab={props.activeTab}
-      setActiveTab={props.selectTab}
-      onToggleMenu={() => props.setIsMobileMenuOpen(true)}
-    />
     <AccessCodeDialog
       editingAccessCode={props.editingAccessCode}
       newAccessCode={props.newAccessCode}

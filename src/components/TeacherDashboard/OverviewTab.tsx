@@ -134,48 +134,48 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             title: 'Tạo đề mới',
             description: 'Soạn đề từ nội dung có sẵn, PDF hoặc công cụ AI.',
             icon: <PlusCircle />,
-            iconClassName: 'text-blue-700',
-            surfaceClassName: 'bg-blue-50',
+            iconClassName: 'text-[#0284C7]',
+            surfaceClassName: 'bg-[#F0F9FF]',
         },
         {
             tab: 'assignments',
             title: 'Giao bài',
             description: 'Chọn lớp, đặt hạn nộp và gửi bài cho học sinh.',
             icon: <ClipboardList />,
-            iconClassName: 'text-violet-700',
-            surfaceClassName: 'bg-violet-50',
+            iconClassName: 'text-[#7C3AED]',
+            surfaceClassName: 'bg-[#F5F3FF]',
         },
         {
             tab: 'live-exam',
             title: 'Thi trực tiếp',
             description: 'Mở phòng thi và theo dõi tiến độ theo thời gian thực.',
             icon: <Radio />,
-            iconClassName: 'text-rose-700',
-            surfaceClassName: 'bg-rose-50',
+            iconClassName: 'text-[#E76F51]',
+            surfaceClassName: 'bg-[#FFF4F1]',
         },
         {
             tab: 'results',
             title: 'Xem kết quả',
             description: 'Xem điểm, bài nộp và phân tích mức độ hoàn thành.',
             icon: <FileText />,
-            iconClassName: 'text-emerald-700',
-            surfaceClassName: 'bg-emerald-50',
+            iconClassName: 'text-[#0D8B67]',
+            surfaceClassName: 'bg-[#ECFDF5]',
         },
         {
             tab: 'classes',
             title: 'Quản lý lớp',
             description: 'Cập nhật danh sách lớp và thông tin học sinh.',
             icon: <GraduationCap />,
-            iconClassName: 'text-cyan-700',
-            surfaceClassName: 'bg-cyan-50',
+            iconClassName: 'text-[#0891B2]',
+            surfaceClassName: 'bg-[#ECFEFF]',
         },
         {
             tab: 'certificates',
             title: 'Cấp chứng nhận',
             description: 'Tạo giấy chứng nhận từ các mẫu đã thiết lập.',
             icon: <Award />,
-            iconClassName: 'text-amber-700',
-            surfaceClassName: 'bg-amber-50',
+            iconClassName: 'text-[#A16207]',
+            surfaceClassName: 'bg-[#FFFBEB]',
         },
     ];
 
@@ -185,37 +185,37 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             value: visibleQuizzes.length,
             helper: `${scopeLabel} · ${recentQuizzes.length} đề mới nhất được hiển thị bên dưới`,
             icon: <FileText />,
-            iconClassName: 'text-blue-700',
-            surfaceClassName: 'bg-blue-50',
+            iconClassName: 'text-[#0284C7]',
+            surfaceClassName: 'bg-[#F0F9FF]',
         },
         {
             label: 'Điểm trung bình',
             value: statistics.mean.toFixed(1),
             helper: `${statistics.passRate}% bài đạt từ 5 điểm trở lên`,
             icon: <TrendingUp />,
-            iconClassName: 'text-emerald-700',
-            surfaceClassName: 'bg-emerald-50',
+            iconClassName: 'text-[#0D8B67]',
+            surfaceClassName: 'bg-[#ECFDF5]',
         },
         {
             label: 'Số bài đã nộp',
             value: statistics.totalResults,
             helper: `${todayResults.length} bài được nộp trong hôm nay`,
             icon: <CheckCircle2 />,
-            iconClassName: 'text-violet-700',
-            surfaceClassName: 'bg-violet-50',
+            iconClassName: 'text-[#7C3AED]',
+            surfaceClassName: 'bg-[#F5F3FF]',
         },
         {
             label: 'Học sinh tham gia',
             value: uniqueStudents,
             helper: statistics.totalResults > 0 ? 'Tính theo tên học sinh trong dữ liệu hiện có' : 'Chưa có lượt tham gia',
             icon: <UsersRound />,
-            iconClassName: 'text-amber-700',
-            surfaceClassName: 'bg-amber-50',
+            iconClassName: 'text-[#A16207]',
+            surfaceClassName: 'bg-[#FFFBEB]',
         },
     ];
 
     return (
-        <div className="mx-auto w-full max-w-[1600px] space-y-4 sm:space-y-5 lg:space-y-6">
+        <div className="mx-auto w-full max-w-[1280px] space-y-4 sm:space-y-5 lg:space-y-6">
             <DashboardHero
                 greeting={getGreeting(now)}
                 teacherName={authStore.teacherName || authStore.username || 'Cô/Thầy'}
@@ -230,18 +230,18 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             />
 
             {resultsLoadState === 'error' && (
-                <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800 sm:flex-row sm:items-center sm:justify-between">
+                <div role="alert" className="flex flex-col gap-3 rounded-[14px] border border-[#F3B5A7] bg-[#FFF4F1] p-4 text-[#8E3F2E] sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3">
                         <AlertCircle aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
                         <div>
-                            <p className="font-black">Không thể tải kết quả học tập</p>
-                            <p className="mt-1 text-sm text-red-700">{resultsError || 'Vui lòng kiểm tra kết nối rồi thử lại.'}</p>
+                            <p className="font-semibold">Không thể tải kết quả học tập</p>
+                            <p className="mt-1 text-sm text-[#A9533E]">{resultsError || 'Vui lòng kiểm tra kết nối rồi thử lại.'}</p>
                         </div>
                     </div>
                     <button
                         type="button"
                         onClick={() => void onRetryResults()}
-                        className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-black text-red-700 shadow-sm ring-1 ring-inset ring-red-200 transition-colors hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] border border-[#F3B5A7] bg-white px-4 py-2 text-sm font-semibold text-[#8E3F2E] transition-colors hover:bg-[#FFEAE4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E76F51]"
                     >
                         <RefreshCw aria-hidden="true" className="size-4" />
                         Thử lại

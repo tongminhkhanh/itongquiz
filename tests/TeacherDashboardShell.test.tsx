@@ -46,9 +46,10 @@ vi.mock('../src/components/common/PasswordChangeDialog', () => ({
 }));
 
 vi.mock('../src/components/TeacherDashboard/Sidebar', () => ({
-  default: ({ activeTab, setActiveTab, onLogout }: any) => (
+  default: ({ activeTab, setActiveTab, onLogout, isMobileOpen }: any) => (
     <aside>
       <span data-testid="sidebar-active">{activeTab}</span>
+      <span data-testid="sidebar-mobile-state">{isMobileOpen ? 'open' : 'closed'}</span>
       <button onClick={() => setActiveTab('results')}>Sidebar kết quả</button>
       <button onClick={onLogout}>Sidebar đăng xuất</button>
     </aside>
@@ -180,6 +181,15 @@ describe('TeacherDashboard shell contracts', () => {
 
     view.unmount();
 
+  });
+
+  it('opens the mobile drawer from the header and removes the fixed bottom navigation', async () => {
+    render(<TeacherDashboard />);
+
+    expect(screen.getByTestId('sidebar-mobile-state')).toHaveTextContent('closed');
+    fireEvent.click(screen.getByRole('button', { name: 'Mở menu điều hướng' }));
+    expect(screen.getByTestId('sidebar-mobile-state')).toHaveTextContent('open');
+    expect(screen.queryByRole('button', { name: 'Bottom tạo đề' })).toBeNull();
   });
 
   it('searches dashboard destinations and reports an unknown function', async () => {

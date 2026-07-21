@@ -34,52 +34,44 @@ const DashboardHero: React.FC<DashboardHeroProps> = ({
 }) => (
     <section
         aria-labelledby="teacher-overview-heading"
-        className="relative overflow-hidden rounded-[20px] border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-5 py-6 text-slate-950 shadow-sm sm:px-7 sm:py-7 lg:px-8"
+        className="rounded-[14px] border border-[#E5E7EB] bg-white px-5 py-5 text-[#172033] sm:px-6 sm:py-6 lg:px-7"
     >
-        <div aria-hidden="true" className="absolute -right-20 -top-24 size-64 rounded-full bg-blue-200/60 blur-3xl" />
-        <div aria-hidden="true" className="absolute -bottom-32 left-1/3 size-72 rounded-full bg-indigo-100/70 blur-3xl" />
-
-        <div className="relative grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)] xl:items-end">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)] xl:items-center">
             <div>
-                <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-blue-700">
-                    <span>Tổng quan giáo viên</span>
-                    <span aria-hidden="true" className="size-1 rounded-full bg-blue-400" />
-                    <span className="inline-flex items-center gap-1.5 normal-case tracking-normal text-slate-500">
-                        <CalendarDays aria-hidden="true" className="size-4" />
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-[#526174]">
+                    <span className="inline-flex items-center gap-2">
+                        <CalendarDays aria-hidden="true" className="size-4 text-[#0284C7]" />
                         {dateLabel}
                     </span>
+                    <span aria-hidden="true" className="hidden h-4 w-px bg-[#E5E7EB] sm:block" />
+                    <span className="inline-flex items-center gap-2">
+                        {isAdmin
+                            ? <ShieldCheck aria-hidden="true" className="size-4 text-[#0284C7]" />
+                            : <GraduationCap aria-hidden="true" className="size-4 text-[#0284C7]" />}
+                        {isAdmin ? 'Quản trị viên' : 'Giáo viên'} · {scopeLabel}
+                    </span>
                 </div>
 
-                <h1 id="teacher-overview-heading" className="mt-4 max-w-3xl text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
+                <h1 id="teacher-overview-heading" className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
                     {greeting}, {teacherName}!
                 </h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-                    Theo dõi tình hình học tập, xử lý công việc quan trọng và đi thẳng đến chức năng cần dùng trong một màn hình.
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#526174] sm:text-base">
+                    Theo dõi tình hình học tập và xử lý các công việc quan trọng trong một màn hình rõ ràng.
                 </p>
 
-                <div className="mt-5 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700">
-                    <span className="inline-flex min-h-8 items-center gap-2 rounded-full border border-blue-100 bg-white/80 px-3 shadow-sm">
-                        {isAdmin ? <ShieldCheck aria-hidden="true" className="size-4 text-blue-600" /> : <GraduationCap aria-hidden="true" className="size-4 text-blue-600" />}
-                        {isAdmin ? 'Quản trị viên' : 'Giáo viên'}
-                    </span>
-                    <span className="inline-flex min-h-8 items-center rounded-full border border-slate-200 bg-white/80 px-3 shadow-sm">
-                        Phạm vi: {scopeLabel}
-                    </span>
-                </div>
-
-                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                     <button
                         type="button"
                         onClick={onCreateQuiz}
-                        className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white shadow-sm transition-colors duration-200 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-[#0EA5E9] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0284C7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9] focus-visible:ring-offset-2"
                     >
-                        <FilePlus2 aria-hidden="true" className="size-5 text-blue-600" />
+                        <FilePlus2 aria-hidden="true" className="size-5" />
                         Tạo đề mới
                     </button>
                     <button
                         type="button"
                         onClick={onViewResults}
-                        className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/85 px-4 py-2.5 text-sm font-bold text-blue-900 shadow-sm transition-colors duration-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm font-semibold text-[#172033] transition-colors hover:border-[#BAE6FD] hover:bg-[#F0F9FF] hover:text-[#0284C7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9] focus-visible:ring-offset-2"
                     >
                         Xem kết quả
                         <ArrowRight aria-hidden="true" className="size-4" />
@@ -87,21 +79,18 @@ const DashboardHero: React.FC<DashboardHeroProps> = ({
                 </div>
             </div>
 
-            <dl className="grid grid-cols-3 gap-2 rounded-2xl border border-blue-100 bg-white/80 p-2 shadow-sm backdrop-blur-sm sm:gap-3 sm:p-3">
-                <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-4">
-                    <dt className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">Hôm nay</dt>
-                    <dd className="mt-1 text-2xl font-black text-slate-950">{todaySubmissionCount}</dd>
-                    <p className="mt-0.5 text-xs text-slate-500">bài nộp</p>
+            <dl className="grid grid-cols-3 divide-x divide-[#E5E7EB] rounded-[12px] border border-[#E5E7EB] bg-[#F8FAFC] px-2 py-4 sm:px-3">
+                <div className="min-w-0 px-2 text-center sm:px-3">
+                    <dt className="text-[11px] font-medium leading-4 text-[#7A8796] sm:text-xs">Bài nộp hôm nay</dt>
+                    <dd className="mt-2 text-2xl font-bold text-[#172033]">{todaySubmissionCount}</dd>
                 </div>
-                <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-4">
-                    <dt className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">Tỷ lệ đạt</dt>
-                    <dd className="mt-1 text-2xl font-black text-slate-950">{passRate}%</dd>
-                    <p className="mt-0.5 text-xs text-slate-500">từ 5 điểm</p>
+                <div className="min-w-0 px-2 text-center sm:px-3">
+                    <dt className="text-[11px] font-medium leading-4 text-[#7A8796] sm:text-xs">Tỷ lệ đạt</dt>
+                    <dd className="mt-2 text-2xl font-bold text-[#172033]">{passRate}%</dd>
                 </div>
-                <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-4">
-                    <dt className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">Học sinh</dt>
-                    <dd className="mt-1 text-2xl font-black text-slate-950">{uniqueStudents}</dd>
-                    <p className="mt-0.5 text-xs text-slate-500">đã tham gia</p>
+                <div className="min-w-0 px-2 text-center sm:px-3">
+                    <dt className="text-[11px] font-medium leading-4 text-[#7A8796] sm:text-xs">Học sinh</dt>
+                    <dd className="mt-2 text-2xl font-bold text-[#172033]">{uniqueStudents}</dd>
                 </div>
             </dl>
         </div>
