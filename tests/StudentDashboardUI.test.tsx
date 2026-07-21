@@ -64,6 +64,14 @@ describe('StudentDashboardUI responsive composition', () => {
     expect(assigned).toBeLessThan(rewards);
   });
 
+  it('wires the private result-report section and notification deep link through the controller', () => {
+    expect(dashboardControllerSource).toContain('openResultReport');
+    expect(dashboardControllerSource).toContain("setActiveSection('resultReports')");
+    expect(dashboardContentSource).toContain('<StudentResultReportsPage');
+    expect(dashboardShellSource).toContain('selectedResultReportId={controller.selectedResultReportId}');
+    expect(dashboardShellSource).toContain('onOpenResultReport={controller.openResultReport}');
+  });
+
   it('composes the expected main and sidebar regions', () => {
     const mainColumn = dashboardSource.indexOf('data-testid="student-dashboard-main-column"');
     const sideColumn = dashboardSource.indexOf('data-testid="student-dashboard-side-column"');

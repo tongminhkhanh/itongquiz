@@ -15,6 +15,7 @@ export function StudentDashboardHeader({
   giftShopEnabled,
   studentId,
   onSelectSection,
+  onOpenResultReport,
   onOpenGiftShop,
   onOpenLiveExam,
   onOpenAvatar,
@@ -90,6 +91,18 @@ export function StudentDashboardHeader({
           </button>
           <button
             type="button"
+            onClick={() => onSelectSection('resultReports')}
+            aria-pressed={activeSection === 'resultReports'}
+            className={`${baseActionClass} ${
+              activeSection === 'resultReports'
+                ? 'border-b-2 border-sky-500 text-sky-700'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Phiếu kết quả
+          </button>
+          <button
+            type="button"
             onClick={() => scrollToSection('practice-library')}
             className={`${baseActionClass} text-slate-600 hover:text-slate-900`}
           >
@@ -127,6 +140,7 @@ export function StudentDashboardHeader({
             <NotificationBell
               userId={studentId}
               onOpenCertificate={() => onSelectSection('achievements')}
+              onOpenResultReport={onOpenResultReport}
             />
           </div>
 
@@ -191,7 +205,7 @@ export function StudentDashboardHeader({
       </div>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-slate-200 bg-white px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-slate-200 bg-white px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 md:hidden"
         aria-label="Điều hướng học sinh trên điện thoại"
       >
         <button
@@ -214,6 +228,13 @@ export function StudentDashboardHeader({
           className="min-h-12 rounded-[10px] px-1 text-xs font-semibold text-slate-600"
         >
           Thư viện
+        </button>
+        <button
+          type="button"
+          onClick={() => onSelectSection('resultReports')}
+          className={`min-h-12 rounded-[10px] px-1 text-xs font-semibold ${activeSection === 'resultReports' ? 'text-sky-700' : 'text-slate-600'}`}
+        >
+          Phiếu KQ
         </button>
         <button
           type="button"

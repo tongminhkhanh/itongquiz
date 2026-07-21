@@ -5,15 +5,27 @@ import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
 interface NotificationBellProps {
   userId: string | null;
   onOpenCertificate?: (certificateId: string) => void;
+  onOpenResultReport?: (phieuId: string) => void;
 }
 
-export default function NotificationBell({ userId, onOpenCertificate }: NotificationBellProps) {
+export default function NotificationBell({
+  userId,
+  onOpenCertificate,
+  onOpenResultReport,
+}: NotificationBellProps) {
   const { notifications, isLoading, markAsRead } = useRealtimeNotifications(userId);
   const [isOpen, setIsOpen] = useState(false);
   const unreadCount = notifications.filter((notification) => !notification.is_read).length;
 
   const openNotification = async (notification: typeof notifications[number]) => {
     if (!notification.is_read) await markAsRead(notification.id);
+    const phieuId = notification.data.phieu_id;
+    if (notification.type === 'result_report_published' && typeof phieuId === 'string') {
+      setIsOpen(false);
+      onOpenResultReport?.(phieuId);
+      return;
+    }
+
     const certificateId = notification.data.certificate_id;
     if (typeof certificateId === 'string') {
       setIsOpen(false);

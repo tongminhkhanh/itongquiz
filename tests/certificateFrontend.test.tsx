@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const fetchImageMock = vi.hoisted(() => vi.fn());
 const markAsReadMock = vi.hoisted(() => vi.fn());
+const notificationItems = vi.hoisted(() => ({ value: [] as any[] }));
 
 vi.mock('../src/features/certificates/useCertificates', () => ({
   fetchCertificateImageBlob: fetchImageMock,
@@ -13,11 +14,7 @@ vi.mock('../src/hooks/useRealtimeNotifications', () => ({
   useRealtimeNotifications: () => ({
     isLoading: false,
     markAsRead: markAsReadMock,
-    notifications: [{
-      id: 'notification-1', type: 'certificate_issued', title: 'Bạn có chứng nhận mới',
-      body: 'Hoàn thành tốt', data: { certificate_id: 'cert-1' }, is_read: false,
-      created_at: '2026-07-14T00:00:00.000Z',
-    }],
+    notifications: notificationItems.value,
   }),
 }));
 
@@ -30,6 +27,11 @@ describe('certificate frontend', () => {
     fetchImageMock.mockResolvedValue(new Blob(['png'], { type: 'image/png' }));
     markAsReadMock.mockReset();
     markAsReadMock.mockResolvedValue(undefined);
+    notificationItems.value = [{
+      id: 'notification-1', type: 'certificate_issued', title: 'Bạn có chứng nhận mới',
+      body: 'Hoàn thành tốt', data: { certificate_id: 'cert-1' }, is_read: false,
+      created_at: '2026-07-14T00:00:00.000Z',
+    }];
     vi.stubGlobal('URL', {
       ...URL,
       createObjectURL: vi.fn(() => 'blob:certificate-1'),
@@ -59,5 +61,30 @@ describe('certificate frontend', () => {
 
     await waitFor(() => expect(markAsReadMock).toHaveBeenCalledWith('notification-1'));
     expect(openCertificate).toHaveBeenCalledWith('cert-1');
+  });
+
+  it('marks a result-report notification read and opens the exact private report', async () => {
+    notificationItems.value = [{
+      id: 'notification-report-1', type: 'result_report_published',
+      title: 'Bạn có phiếu kết quả mới', body: 'Bài 1 – Ôn tập phép nhân',
+      data: { phieu_id: 'phieu-an', result_id: 'result-an' }, is_read: false,
+      created_at: '2026-07-21T00:00:00.000Z',
+    }];
+    const openCertificate = vi.fn();
+    const openResultReport = vi.fn();
+    render(
+      <NotificationBell
+        userId="student-1"
+        onOpenCertificate={openCertificate}
+        onOpenResultReport={openResultReport}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Thông báo, 1 chưa đọc/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bạn có phiếu kết quả mới/i }));
+
+    await waitFor(() => expect(markAsReadMock).toHaveBeenCalledWith('notification-report-1'));
+    expect(openResultReport).toHaveBeenCalledWith('phieu-an');
+    expect(openCertificate).not.toHaveBeenCalled();
   });
 });

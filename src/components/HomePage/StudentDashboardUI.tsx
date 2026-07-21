@@ -34,12 +34,14 @@ const StudentDashboardUI = () => {
       <StudentDashboardContent
         studentSession={studentSession}
         activeSection={activeSection}
+        selectedResultReportId={controller.selectedResultReportId}
         giftShopEnabled={giftShopEnabled}
         assignments={assignments}
         attendance={attendance}
         practice={practice}
         rewards={rewards}
         onSelectSection={controller.setActiveSection}
+        onOpenResultReport={controller.openResultReport}
         onOpenGiftShop={controller.openGiftShop}
         onOpenLiveExam={liveExam.openJoinModal}
         onOpenAvatar={controller.openAvatar}

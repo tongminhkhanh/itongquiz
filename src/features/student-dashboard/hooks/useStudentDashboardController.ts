@@ -17,6 +17,7 @@ export const useStudentDashboardController = () => {
   const setView = useQuizStore((state) => state.setView);
   const quizzes = useQuizStore((state) => state.quizzes);
   const [activeSection, setActiveSection] = useState<StudentDashboardSection>('dashboard');
+  const [selectedResultReportId, setSelectedResultReportId] = useState<string | null>(null);
   const [selectedHomework, setSelectedHomework] = useState<HomeworkAssignment | null>(null);
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
   const [isBadgeGalleryOpen, setIsBadgeGalleryOpen] = useState(false);
@@ -33,10 +34,21 @@ export const useStudentDashboardController = () => {
     ? homeworkSubmissions.find((submission) => submission.assignment_id === selectedHomework.id)
     : undefined;
 
+  const selectSection = (section: StudentDashboardSection) => {
+    setActiveSection(section);
+    if (section !== 'resultReports') setSelectedResultReportId(null);
+  };
+  const openResultReport = (phieuId: string) => {
+    setSelectedResultReportId(phieuId);
+    setActiveSection('resultReports');
+  };
+
   return {
     studentSession,
     activeSection,
-    setActiveSection,
+    setActiveSection: selectSection,
+    selectedResultReportId,
+    openResultReport,
     selectedHomework,
     setSelectedHomework,
     isAvatarOpen,

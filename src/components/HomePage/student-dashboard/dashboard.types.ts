@@ -11,10 +11,11 @@ export interface StudentDashboardHeaderProps {
   avatarUrl: string;
   level: number;
   coins: number;
-  activeSection: 'dashboard' | 'achievements';
+  activeSection: 'dashboard' | 'achievements' | 'resultReports';
   giftShopEnabled: boolean;
   studentId: string;
-  onSelectSection: (section: 'dashboard' | 'achievements') => void;
+  onSelectSection: (section: 'dashboard' | 'achievements' | 'resultReports') => void;
+  onOpenResultReport: (phieuId: string) => void;
   onOpenGiftShop: () => void;
   onOpenLiveExam: () => void;
   onOpenAvatar: () => void;
