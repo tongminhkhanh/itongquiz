@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { X, Search, Plus, Trash2, Library, CheckCircle2 } from 'lucide-react';
 import { testBankService, TestBankItem } from '../../../services/testBankService';
 import type { Question } from '../../../types';
+import MathSpan from '../../../components/common/MathSpan';
 
 interface TestBankModalProps {
     isOpen: boolean;
@@ -122,9 +123,11 @@ export const TestBankModal: React.FC<TestBankModalProps> = ({ isOpen, onClose, o
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
-                                            <p className="text-slate-700 font-medium line-clamp-3 text-sm">
-                                                {q.mainQuestion || q.question || "[Chưa rõ tiêu đề câu hỏi]"}
-                                            </p>
+                                            <MathSpan
+                                                content={q.mainQuestion || q.question || '[Chưa rõ tiêu đề câu hỏi]'}
+                                                as="p"
+                                                className="line-clamp-3 text-sm font-medium text-slate-700"
+                                            />
                                         </div>
                                         <button 
                                             disabled={isAdded}

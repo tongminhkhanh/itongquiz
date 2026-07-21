@@ -41,7 +41,12 @@ const DropdownRenderer: React.FC<DropdownRendererProps> = ({ question }) => {
                                     className="inline-flex items-center mx-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-md border border-indigo-200 text-xs font-bold"
                                     title={`Options: ${optionsList.join(', ')}`}
                                 >
-                                    ▼ {blank.correctAnswer}
+                                    <span aria-hidden="true">▼</span>
+                                    <NewlineMathText
+                                        content={blank.correctAnswer}
+                                        as="span"
+                                        className="quiz-text-preserve-inline"
+                                    />
                                 </span>
                             );
                         }

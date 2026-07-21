@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Clock, TrendingUp } from 'lucide-react';
+import MathSpan from '../../common/MathSpan';
 
 interface QuestionTimeData {
   questionIndex: number;
@@ -56,12 +57,6 @@ const getTimeStatus = (avgTime: number | null, expectedTime: number = 120) => {
     color: 'text-green-600',
     bgColor: 'bg-green-50'
   };
-};
-
-// Truncate text
-const truncateText = (text: string, maxLength: number = 60): string => {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
 };
 
 export const TimeAnalysisCard: React.FC<TimeAnalysisCardProps> = ({ questions }) => {
@@ -121,7 +116,7 @@ export const TimeAnalysisCard: React.FC<TimeAnalysisCardProps> = ({ questions })
 
                     {/* Question Text */}
                     <td className="py-3 px-2 text-slate-700">
-                      {truncateText(question.questionText, 80)}
+                      <MathSpan content={question.questionText} className="line-clamp-2" />
                     </td>
 
                     {/* Average Time */}

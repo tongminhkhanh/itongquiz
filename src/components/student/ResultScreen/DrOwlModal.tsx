@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { X, Loader2, Stethoscope, BookOpen, CheckCircle2, XCircle, Sparkles, ArrowRight } from 'lucide-react';
 import { callApi } from '../../../services/apiAdapter';
 import { motion, AnimatePresence } from 'framer-motion';
+import MathSpan from '../../common/MathSpan';
+import ExplanationContent from '../../common/ExplanationContent';
 
 // Fluent Emoji CDN
 const FLUENT_CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
@@ -213,7 +215,11 @@ const DrOwlModal: React.FC<DrOwlModalProps> = ({
                                                 <Stethoscope className="w-5 h-5 text-amber-600" />
                                                 <span className="font-bold text-amber-800 text-sm">Chẩn đoán</span>
                                             </div>
-                                            <p className="text-slate-700 text-sm leading-relaxed">{data?.diagnosis}</p>
+                                            <MathSpan
+                                                content={data?.diagnosis}
+                                                as="p"
+                                                className="text-slate-700 text-sm leading-relaxed"
+                                            />
                                         </div>
 
                                         {/* Explanation */}
@@ -223,7 +229,10 @@ const DrOwlModal: React.FC<DrOwlModalProps> = ({
                                                     <BookOpen className="w-5 h-5 text-blue-600" />
                                                     <span className="font-bold text-blue-800 text-sm">Bác sĩ giảng lại</span>
                                                 </div>
-                                                <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-line">{data.explanation}</p>
+                                                <ExplanationContent
+                                                    content={data.explanation}
+                                                    className="text-slate-700 text-sm leading-relaxed"
+                                                />
                                             </div>
                                         )}
 
@@ -269,9 +278,11 @@ const DrOwlModal: React.FC<DrOwlModalProps> = ({
                                     <p className="text-xs font-bold text-slate-400 uppercase mb-2">
                                         💊 Viên thuốc {currentQIndex + 1}/{totalQuestions}
                                     </p>
-                                    <p className="text-base font-semibold text-slate-800 leading-relaxed">
-                                        {data.practiceQuestions[currentQIndex]?.question}
-                                    </p>
+                                    <MathSpan
+                                        content={data.practiceQuestions[currentQIndex]?.question}
+                                        as="p"
+                                        className="text-base font-semibold text-slate-800 leading-relaxed"
+                                    />
                                 </div>
 
                                 {/* Options */}
@@ -300,7 +311,7 @@ const DrOwlModal: React.FC<DrOwlModalProps> = ({
                                                 <span className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold flex-shrink-0">
                                                     {String.fromCharCode(65 + i)}
                                                 </span>
-                                                <span className="flex-1">{opt}</span>
+                                                <MathSpan content={opt} className="flex-1" />
                                                 {showResult && isCorrectAnswer && <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />}
                                                 {showResult && isSelected && !isCorrectAnswer && <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />}
                                             </button>

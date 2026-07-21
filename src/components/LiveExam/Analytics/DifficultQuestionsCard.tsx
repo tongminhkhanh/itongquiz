@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { AlertTriangle, TrendingDown } from 'lucide-react';
+import MathSpan from '../../common/MathSpan';
 
 interface DifficultQuestion {
   questionIndex: number;
@@ -31,12 +32,6 @@ const RankBadge: React.FC<{ rank: number }> = ({ rank }) => {
       #{rank}
     </div>
   );
-};
-
-// Truncate text helper
-const truncateText = (text: string, maxLength: number = 100): string => {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
 };
 
 export const DifficultQuestionsCard: React.FC<DifficultQuestionsCardProps> = ({ 
@@ -102,9 +97,11 @@ export const DifficultQuestionsCard: React.FC<DifficultQuestionsCardProps> = ({
                   </div>
                 </div>
 
-                <p className="text-sm text-slate-600 mb-3 line-clamp-2">
-                  {truncateText(question.questionText, 120)}
-                </p>
+                <MathSpan
+                  content={question.questionText}
+                  as="p"
+                  className="mb-3 line-clamp-2 text-sm text-slate-600"
+                />
 
                 {/* Stats */}
                 <div className="flex items-center gap-4 text-xs text-slate-500">

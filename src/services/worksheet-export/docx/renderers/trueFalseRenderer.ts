@@ -1,5 +1,5 @@
 import { AlignmentType, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from 'docx';
-import { normalizeWorksheetMath } from '../../shared/mathNormalizer';
+import { createDocxMathChildren } from '../docxMath';
 
 function headerCell(text: string, width: number, centered = false): TableCell {
     return new TableCell({
@@ -18,7 +18,7 @@ export function renderDocxTrueFalse(question: any): Table {
     ] })];
     (question.items || []).forEach((item: any) => rows.push(new TableRow({ children: [
         new TableCell({ children: [new Paragraph({
-            children: [new TextRun({ text: normalizeWorksheetMath(item.statement || '', true), size: 28 })],
+            children: createDocxMathChildren(item.statement || '', { size: 28 }),
             spacing: { line: 280 },
         })] }),
         ...['Đ', 'S'].map(() => new TableCell({ children: [new Paragraph({

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { HomeworkAssignment, HomeworkSubmission } from '../types';
+import MathSpan from '../../../components/common/MathSpan';
 
 interface StudentHomeworkCardProps {
   assignment: HomeworkAssignment;
@@ -65,9 +66,11 @@ export const StudentHomeworkCard: React.FC<StudentHomeworkCardProps> = ({
           </div>
 
           {assignment.description ? (
-            <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#526174]">
-              {assignment.description}
-            </p>
+            <MathSpan
+              content={assignment.description}
+              as="p"
+              className="mt-2 line-clamp-2 text-sm leading-6 text-[#526174]"
+            />
           ) : null}
 
           <p className="mt-2 text-sm font-medium text-slate-700">

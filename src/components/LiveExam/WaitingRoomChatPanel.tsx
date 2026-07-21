@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Loader2, MessageCircle, Send, ShieldAlert } from 'lucide-react';
 import type { WaitingRoomChatMessage } from '../../types/liveExam.types';
+import NewlineMathText from '../common/NewlineMathText';
 
 interface WaitingRoomChatPanelProps {
     messages: WaitingRoomChatMessage[];
@@ -69,9 +70,12 @@ export const WaitingRoomChatPanel: React.FC<WaitingRoomChatPanelProps> = ({
 
                         if (isSystem) {
                             return (
-                                <div key={message.id} className="text-center text-xs font-semibold text-slate-500 py-1">
-                                    {message.content}
-                                </div>
+                                <NewlineMathText
+                                    key={message.id}
+                                    content={message.content}
+                                    as="div"
+                                    className="py-1 text-center text-xs font-semibold text-slate-500"
+                                />
                             );
                         }
 
@@ -87,7 +91,11 @@ export const WaitingRoomChatPanel: React.FC<WaitingRoomChatPanelProps> = ({
                                     <div className={`text-[11px] font-black mb-1 ${isMine ? 'text-blue-100' : 'text-slate-500'}`}>
                                         {isAnnouncement ? `Thong bao - ${message.senderName}` : message.senderName}
                                     </div>
-                                    <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</div>
+                                    <NewlineMathText
+                                        content={message.content}
+                                        as="div"
+                                        className="break-words text-sm leading-relaxed"
+                                    />
                                     <div className={`text-[10px] mt-2 ${isMine ? 'text-blue-100/80' : 'text-slate-400'}`}>
                                         {new Date(message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                                     </div>

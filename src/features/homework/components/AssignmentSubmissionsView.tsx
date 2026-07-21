@@ -209,7 +209,17 @@ export const AssignmentSubmissionsView: React.FC<AssignmentSubmissionsViewProps>
             <h3 className="text-lg font-black text-slate-800">Câu/tiêu chí sai nhiều nhất</h3>
             <p className="text-sm text-slate-500 mb-4">Dưới 50%: chưa đạt; 50–79%: đạt một phần; từ 80%: thành thạo.</p>
             <div className="space-y-3">
-              {(analyticsData?.mostMissed || []).map(item => <div key={item.questionId} className="rounded-2xl border border-slate-100 p-4"><div className="flex justify-between gap-3"><span className="font-bold text-slate-700">{item.label}</span><span className="text-sm font-bold text-rose-600">{item.notMet}/{item.total} chưa đạt</span></div>{item.studentsNeedingHelp.length > 0 && <p className="text-xs text-slate-500 mt-2">Cần hỗ trợ: {item.studentsNeedingHelp.join(', ')}</p>}</div>)}
+              {(analyticsData?.mostMissed || []).map(item => (
+                <div key={item.questionId} className="rounded-2xl border border-slate-100 p-4">
+                  <div className="flex justify-between gap-3">
+                    <MathSpan content={item.label} className="font-bold text-slate-700" />
+                    <span className="text-sm font-bold text-rose-600">{item.notMet}/{item.total} chưa đạt</span>
+                  </div>
+                  {item.studentsNeedingHelp.length > 0 && (
+                    <p className="text-xs text-slate-500 mt-2">Cần hỗ trợ: {item.studentsNeedingHelp.join(', ')}</p>
+                  )}
+                </div>
+              ))}
               {(analyticsData?.mostMissed || []).length === 0 && <p className="text-sm text-slate-400">Chưa có đủ bài đã duyệt để phân tích.</p>}
             </div>
           </div>

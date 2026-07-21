@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { CheckCircle2, MinusCircle, XCircle } from 'lucide-react';
 import type { Quiz, StudentResult } from '../../../../types';
+import MathSpan from '../../../common/MathSpan';
 import {
     getStoredAnswerOutcome,
     type AnswerOutcome,
@@ -126,16 +127,24 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ quiz, result, answers, initialFil
                                     {meta.label}
                                 </span>
                             </div>
-                            <p className="mt-3 font-semibold leading-relaxed text-slate-900">{questionText}</p>
+                            <MathSpan
+                                content={questionText}
+                                as="p"
+                                className="mt-3 font-semibold leading-relaxed text-slate-900"
+                            />
                             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                                 <div className="rounded-[9px] bg-slate-50 p-3">
                                     <dt className="font-semibold text-slate-500">Câu trả lời của em</dt>
-                                    <dd className="mt-1 break-words font-medium text-slate-800">{formatAnswer(selectedAnswer)}</dd>
+                                    <dd className="mt-1 break-words font-medium text-slate-800">
+                                        <MathSpan content={formatAnswer(selectedAnswer)} />
+                                    </dd>
                                 </div>
                                 {outcome !== 'correct' && correctAnswer !== null ? (
                                     <div className="rounded-[9px] bg-emerald-50 p-3">
                                         <dt className="font-semibold text-emerald-700">Đáp án đúng</dt>
-                                        <dd className="mt-1 break-words font-medium text-emerald-900">{formatAnswer(correctAnswer)}</dd>
+                                        <dd className="mt-1 break-words font-medium text-emerald-900">
+                                            <MathSpan content={formatAnswer(correctAnswer)} />
+                                        </dd>
                                     </div>
                                 ) : null}
                             </dl>

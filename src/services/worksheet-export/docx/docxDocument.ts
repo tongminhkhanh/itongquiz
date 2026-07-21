@@ -5,6 +5,7 @@ import { getWorksheetAnswerText } from '../shared/answerFormatter';
 import type { WorksheetExportOptions } from '../types';
 import { DOCX_NO_BORDERS } from './docxHelpers';
 import { renderDocxQuestion } from './docxQuestionRenderers';
+import { createDocxMathChildren } from './docxMath';
 
 function createDocxHeader(opts: WorksheetExportOptions, schoolName: string): any[] {
     return [
@@ -31,7 +32,7 @@ function createDocxAnswerKey(opts: WorksheetExportOptions): any[] {
         ...opts.quiz.questions.map((question: any, index) => new Paragraph({
             children: [
                 new TextRun({ text: `Câu ${index + 1}: `, bold: true, size: 28 }),
-                new TextRun({ text: getWorksheetAnswerText(question, true), size: 28 }),
+                ...createDocxMathChildren(getWorksheetAnswerText(question, true), { size: 28 }),
             ],
             spacing: { before: 20, after: 20, line: 320 },
         })),

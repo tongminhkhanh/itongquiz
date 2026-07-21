@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bot, Loader2, MessageCircle, Send, Trash2, User, X } from 'lucide-react';
 import { useChatStore } from '../../stores/useChatStore';
+import ExplanationContent from '../common/ExplanationContent';
+import NewlineMathText from '../common/NewlineMathText';
 
 const ChatBot: React.FC = () => {
     const { isOpen, messages, isLoading, toggleChat, sendMessage, clearHistory } = useChatStore();
@@ -125,7 +127,11 @@ const ChatBot: React.FC = () => {
                                         {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                                     </div>
                                     <div className="chatbot-message-content">
-                                        <p>{msg.content}</p>
+                                        {msg.role === 'assistant' ? (
+                                            <ExplanationContent content={msg.content} />
+                                        ) : (
+                                            <NewlineMathText content={msg.content} as="p" />
+                                        )}
                                         {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
                                             <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2">
                                                 <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">Nguồn tham khảo</p>
@@ -134,7 +140,7 @@ const ChatBot: React.FC = () => {
                                                         <li key={`${source.sourcePath}-${sourceIdx}`} className="text-xs leading-snug text-slate-700">
                                                             <p className="font-semibold">{source.title}</p>
                                                             <p className="text-slate-500">{source.sourcePath}</p>
-                                                            <p>{source.snippet}</p>
+                                                            <NewlineMathText content={source.snippet} as="p" />
                                                         </li>
                                                     ))}
                                                 </ul>

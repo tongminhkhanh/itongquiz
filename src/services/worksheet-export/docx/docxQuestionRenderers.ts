@@ -1,16 +1,17 @@
 import { Paragraph, TextRun } from 'docx';
 import { QuestionType } from '../../../types';
-import { normalizeWorksheetMath } from '../shared/mathNormalizer';
 import { createDocxAnswerLine } from './docxHelpers';
+import { createDocxMathChildren } from './docxMath';
 import { renderDocxChoices } from './renderers/choiceRenderer';
 import { renderDocxDragDrop, renderDocxMatching } from './renderers/matchingDragRenderer';
 import { renderDocxTrueFalse } from './renderers/trueFalseRenderer';
 
 export function renderDocxQuestion(question: any, index: number): any[] {
+    const questionText = question.question || question.mainQuestion || '';
     const children: any[] = [new Paragraph({
         children: [
             new TextRun({ text: `Câu ${index + 1}: `, bold: true, size: 28 }),
-            new TextRun({ text: normalizeWorksheetMath(question.question || question.mainQuestion || '', true), size: 28 }),
+            ...createDocxMathChildren(questionText, { size: 28 }),
         ],
         spacing: { before: 0, after: 0, line: 320 },
     })];

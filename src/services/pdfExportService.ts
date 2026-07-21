@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { Quiz, StudentResult, QuestionType } from '../types';
 import { setupUnicodeFont, FONT_NAME } from '../utils/pdfFonts';
+import { normalizeWorksheetMath } from './worksheet-export/shared/mathNormalizer';
 
 interface ExportOptions {
     quiz: Quiz;
@@ -155,7 +156,9 @@ export const exportResultToPDF = async (options: ExportOptions): Promise<void> =
         doc.setFontSize(10);
         doc.setFont(FONT_NAME, 'normal');
         
-        const qText = (question as any).question || (question as any).mainQuestion || '';
+        const qText = normalizeWorksheetMath(
+            (question as any).question || (question as any).mainQuestion || '',
+        );
         const wrappedQ = splitText(qText, pageWidth - 2 * margin - 5);
         doc.text(wrappedQ, margin + 2, yPos);
         yPos += wrappedQ.length * 5 + 3;
@@ -166,7 +169,7 @@ export const exportResultToPDF = async (options: ExportOptions): Promise<void> =
         doc.text('Câu trả lời của bạn:', margin + 2, yPos);
         doc.setFont(FONT_NAME, 'normal');
         
-        const ansText = formatAnswer(studentAns, question);
+        const ansText = normalizeWorksheetMath(formatAnswer(studentAns, question));
         const wrappedAns = splitText(ansText || 'Không trả lời', pageWidth - 2 * margin - 45);
         doc.text(wrappedAns, margin + 42, yPos);
         yPos += wrappedAns.length * 5 + 3;
@@ -178,7 +181,7 @@ export const exportResultToPDF = async (options: ExportOptions): Promise<void> =
             doc.text('Đáp án đúng:', margin + 2, yPos);
             doc.setFont(FONT_NAME, 'normal');
 
-            const correctAnsText = formatCorrectAnswer(question);
+            const correctAnsText = normalizeWorksheetMath(formatCorrectAnswer(question));
             const wrappedCorrect = splitText(correctAnsText, pageWidth - 2 * margin - 45);
             doc.text(wrappedCorrect, margin + 42, yPos);
             yPos += wrappedCorrect.length * 5 + 3;

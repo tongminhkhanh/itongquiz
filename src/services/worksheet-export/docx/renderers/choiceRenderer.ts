@@ -1,6 +1,6 @@
 import { Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from 'docx';
-import { normalizeWorksheetMath } from '../../shared/mathNormalizer';
 import { DOCX_NO_BORDERS, DOCX_TABLE_NO_BORDERS } from '../docxHelpers';
+import { createDocxMathChildren } from '../docxMath';
 
 export function renderDocxChoices(question: any): Table[] {
     const letters = ['A', 'B', 'C', 'D'];
@@ -8,7 +8,7 @@ export function renderDocxChoices(question: any): Table[] {
         children: [new Paragraph({
             children: [
                 new TextRun({ text: `${letters[index]}. `, bold: true, size: 28 }),
-                new TextRun({ text: normalizeWorksheetMath(option.replace(/^[A-Da-d][.)]\s*/, ''), true), size: 28 }),
+                ...createDocxMathChildren(option.replace(/^[A-Da-d][.)]\s*/, ''), { size: 28 }),
             ],
             spacing: { after: 20, line: 320 },
         })],

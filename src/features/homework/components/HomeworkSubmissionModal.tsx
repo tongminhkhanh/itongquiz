@@ -56,7 +56,9 @@ const AssignmentDetails = React.memo(({ assignment, submission, isGraded }: {
             <span className="text-3xl font-black text-emerald-600">{submission.score}/10</span>
           </div>
           <div className="text-emerald-800 leading-relaxed whitespace-pre-wrap italic">
-            "{submission.teacher_feedback || submission.ai_evaluation}"
+            <span aria-hidden="true">“</span>
+            <MathSpan content={submission.teacher_feedback || submission.ai_evaluation || ''} />
+            <span aria-hidden="true">”</span>
           </div>
         </div>
       </section>

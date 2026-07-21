@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, BrainCircuit, RefreshCw, Quote, Send, Loader2, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ExplanationContent from '../../../components/common/ExplanationContent';
+import { hasMathSyntax, normalizeMathText } from '../../../utils/mathText';
 
 interface AIInsightBoxProps {
   insight: string | null;
@@ -19,16 +21,26 @@ export const AIInsightBox: React.FC<AIInsightBoxProps> = ({
   
   // Hiệu ứng "typing" khi có insight mới
   useEffect(() => {
-    if (insight && !isLoading) {
-      let index = 0;
+    if (!insight || isLoading) {
       setDisplayText('');
-      const interval = setInterval(() => {
-        setDisplayText(insight.substring(0, index));
-        index += 2; // Tăng tốc độ gõ
-        if (index > insight.length) clearInterval(interval);
-      }, 5);
-      return () => clearInterval(interval);
+      return;
     }
+
+    // A partial TeX expression is invalid while the typewriter is running.
+    // Mathematical insights are rendered atomically; plain prose keeps the effect.
+    if (hasMathSyntax(normalizeMathText(insight))) {
+      setDisplayText(insight);
+      return;
+    }
+
+    let index = 0;
+    setDisplayText('');
+    const interval = setInterval(() => {
+      setDisplayText(insight.substring(0, index));
+      index += 2;
+      if (index > insight.length) clearInterval(interval);
+    }, 5);
+    return () => clearInterval(interval);
   }, [insight, isLoading]);
 
   return (
@@ -115,10 +127,7 @@ export const AIInsightBox: React.FC<AIInsightBoxProps> = ({
               >
                 <Quote className="absolute -top-4 -left-2 w-8 h-8 text-indigo-100 -scale-x-100" />
                 <div className="prose prose-slate prose-sm max-w-none text-slate-700 leading-relaxed font-medium">
-                  {/* Render markdown đơn giản (manual formatting for safety) */}
-                  <div className="whitespace-pre-wrap">
-                    {displayText}
-                  </div>
+                  <ExplanationContent content={displayText} />
                 </div>
                 <div className="mt-8 flex items-center justify-between border-t border-slate-50 pt-4">
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic flex items-center gap-2">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { EyeOff, Loader2, Megaphone, MessageCircle } from 'lucide-react';
 import type { WaitingRoomChatMessage } from '../../types/liveExam.types';
+import NewlineMathText from '../common/NewlineMathText';
 
 interface WaitingRoomChatTeacherCardProps {
     messages: WaitingRoomChatMessage[];
@@ -82,7 +83,11 @@ export const WaitingRoomChatTeacherCard: React.FC<WaitingRoomChatTeacherCardProp
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
                                         <div className="text-xs font-black text-slate-500 mb-1">{message.senderName}</div>
-                                        <div className="text-sm text-slate-800 break-words">{message.content}</div>
+                                        <NewlineMathText
+                                            content={message.content}
+                                            as="div"
+                                            className="break-words text-sm text-slate-800"
+                                        />
                                     </div>
                                     <button
                                         type="button"

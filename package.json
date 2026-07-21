@@ -78,6 +78,8 @@
     "wrangler": "^4.107.0"
   },
   "overrides": {
-    "uuid": ">=14.0.0"
+    "uuid": ">=14.0.0",
+    "brace-expansion@<1.1.16": "1.1.16",
+    "brace-expansion@>=2.0.0 <2.1.2": "2.1.2"
   }
 }

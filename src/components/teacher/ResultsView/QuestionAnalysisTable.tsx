@@ -208,7 +208,7 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
                                                     <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
                                                     <span>
                                                         <strong>Đáp án đúng:</strong>{' '}
-                                                        {item.correctAnswerText || 'Xem trong nội dung câu hỏi'}
+                                                        <MathSpan content={item.correctAnswerText || 'Xem trong nội dung câu hỏi'} />
                                                     </span>
                                                 </div>
                                                 <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-amber-800">
@@ -216,7 +216,7 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
                                                     <span>
                                                         <strong>Sai phổ biến:</strong>{' '}
                                                         {topWrongAnswer
-                                                            ? `${topWrongAnswer.answer} (${topWrongAnswer.count} học sinh)`
+                                                            ? <MathSpan content={`${topWrongAnswer.answer} (${topWrongAnswer.count} học sinh)`} />
                                                             : 'Chưa xác định được mẫu sai'}
                                                     </span>
                                                 </div>
@@ -240,7 +240,7 @@ export const QuestionAnalysisTable: React.FC<QuestionAnalysisTableProps> = ({
                                                             {item.commonWrongAnswers.length > 1 && (
                                                                 <p className="mt-1">
                                                                     <strong>Các mẫu sai:</strong>{' '}
-                                                                    {item.commonWrongAnswers.map(entry => `${entry.answer} (${entry.count})`).join(' • ')}
+                                                                    <MathSpan content={item.commonWrongAnswers.map(entry => `${entry.answer} (${entry.count})`).join(' • ')} />
                                                                 </p>
                                                             )}
                                                             {item.unknownCount > 0 && (
