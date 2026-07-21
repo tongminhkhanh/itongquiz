@@ -566,6 +566,7 @@ CREATE TABLE IF NOT EXISTS result_report_delivery_items (
     CHECK (student_status IN ('not_requested', 'pending', 'sent', 'viewed', 'failed', 'unresolved')),
   parent_status TEXT NOT NULL DEFAULT 'not_requested'
     CHECK (parent_status IN ('not_requested', 'link_created', 'opened', 'revoked', 'failed')),
+  draft_json TEXT NOT NULL DEFAULT '{}',
   attempt_count INTEGER NOT NULL DEFAULT 0,
   last_error TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

@@ -15,6 +15,7 @@ export interface ResultReportClassRow {
 export interface ResultReportQuizRow {
   id: string;
   title: string;
+  category?: string | null;
 }
 
 export interface ResultReportRosterDbRow {

@@ -45,6 +45,7 @@ describe('result report delivery migration', () => {
       'public_link_id text',
       'student_status text not null',
       'parent_status text not null',
+      'draft_json text not null',
       'attempt_count integer not null',
       'last_error text',
       'created_at text not null',

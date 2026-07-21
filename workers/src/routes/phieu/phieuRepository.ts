@@ -21,7 +21,7 @@ export async function getActivePublicLinkByPhieuId(
   phieuId: string,
 ): Promise<any | null> {
   const row = await db.prepare(`
-    SELECT l.phieu_id, l.batch_id, l.public_token, l.expires_at, p.student_name
+    SELECT l.phieu_id, l.id, l.batch_id, l.public_token, l.expires_at, p.student_name
     FROM phieu_public_links l
     JOIN phieu_nhanxet p ON p.id = l.phieu_id
     WHERE l.phieu_id = ?
@@ -30,7 +30,12 @@ export async function getActivePublicLinkByPhieuId(
     ORDER BY l.created_at DESC, l.id DESC
     LIMIT 1
   `).bind(phieuId).first<any>();
-  return row ? { ...mapPublicLink(row), batchId: String(row.batch_id || '') } : null;
+  return row ? {
+    ...mapPublicLink(row),
+    id: String(row.id || ''),
+    batchId: String(row.batch_id || ''),
+    expiresAt: row.expires_at ? String(row.expires_at) : null,
+  } : null;
 }
 
 export async function getPublicPhieuRecord(

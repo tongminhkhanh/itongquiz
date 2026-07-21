@@ -83,7 +83,7 @@ class CohortDatabase {
 
   first(sql: string, _bindings: unknown[]) {
     if (sql.includes('FROM classes') && sql.includes('WHERE id = ?')) return this.classRow;
-    if (sql.includes('SELECT id, title FROM quizzes')) return this.quizRow;
+    if (sql.includes('FROM quizzes') && sql.includes('WHERE id = ?') && !sql.includes('SELECT q.id')) return this.quizRow;
     if (sql.includes('SELECT q.id FROM quizzes q')) return this.quizAccess ? { id: 'quiz-1' } : null;
     return null;
   }

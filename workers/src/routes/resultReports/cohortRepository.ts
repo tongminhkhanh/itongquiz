@@ -41,7 +41,7 @@ async function loadQuizScope(
   input: ResultReportCohortInput,
 ): Promise<ResultReportQuizRow | Response> {
   const quiz = await env.DB.prepare(`
-    SELECT id, title FROM quizzes WHERE id = ? LIMIT 1
+    SELECT id, title, category FROM quizzes WHERE id = ? LIMIT 1
   `).bind(input.quizId).first<ResultReportQuizRow>();
   if (!quiz) {
     return resultReportError('RESULT_REPORT_QUIZ_NOT_FOUND', 'Quiz not found', 404);
