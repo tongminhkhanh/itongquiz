@@ -20,7 +20,10 @@ import {
   type ResultReportBatchRecord,
   type ResultReportDeliveryItemRecord,
 } from '../workers/src/routes/resultReports/batchRepository';
-import { processResultReportBatch } from '../workers/src/routes/resultReports/deliveryItemService';
+import {
+  createResultReportDeliveryRuntime,
+  processResultReportBatch,
+} from '../workers/src/routes/resultReports/deliveryItemService';
 import { handleRetryResultReportBatch } from '../workers/src/routes/resultReports/retryHandler';
 import { handleRevokeResultReportLinks } from '../workers/src/routes/resultReports/revokeHandler';
 
@@ -251,6 +254,39 @@ describe('per-item delivery and retry semantics', () => {
     expect(runtime.ensureParentLink).toHaveBeenCalledTimes(1);
     expect(runtime.insertNotification).toHaveBeenCalledTimes(2);
     expect(item.studentStatus).toBe('sent');
+  });
+});
+
+describe('delivery runtime notifications', () => {
+  it('uses the teacher display name in the student notification body', async () => {
+    let boundValues: unknown[] = [];
+    const env = {
+      DB: {
+        prepare: vi.fn(() => ({
+          bind: (...values: unknown[]) => {
+            boundValues = values;
+            return { run: vi.fn(async () => ({ success: true })) };
+          },
+        })),
+      },
+    } as any;
+    const runtime = createResultReportDeliveryRuntime(env, teacher);
+
+    await runtime.insertNotification({
+      notificationId: 'notification-an',
+      studentId: 'student-an',
+      phieuId: 'phieu-an',
+      resultId: 'result-an',
+      batchId: 'rrb-1',
+      quizId: 'quiz-1',
+      quizTitle: 'Bài 1 – Ôn tập phép nhân',
+      score: 8,
+      teacherName: 'teacher-a',
+    });
+
+    expect(boundValues[3]).toBe(
+      'Cô Khánh đã gửi kết quả bài “Bài 1 – Ôn tập phép nhân”. Điểm của em: 8/10.',
+    );
   });
 });
 

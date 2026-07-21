@@ -133,7 +133,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = (props) => (
       </div>
     </div>
 
-    <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
+    <div data-testid="result-report-review-actions" className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
       <button type="button" onClick={props.onBack} className="min-h-11 rounded-lg border border-slate-300 px-4 font-semibold text-slate-700">Quay lại</button>
       <div className="flex items-center gap-3">
         <span className="text-sm font-semibold text-slate-700">Sẽ gửi {props.selectedCount} phiếu</span>

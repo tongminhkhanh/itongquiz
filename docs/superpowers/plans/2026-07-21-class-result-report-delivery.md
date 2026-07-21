@@ -428,3 +428,15 @@ git commit -m "test(results): verify result report delivery flow"
 **Step 6: Finish branch**
 
 Use `finishing-a-development-branch`; report branch, commits, verification and integration options. Do not push, merge or deploy without explicit user instruction.
+
+### Completion record — 2026-07-21
+
+- [x] Desktop wizard 3-step component coverage.
+- [x] Mobile 390px coverage for cards, sticky actions and horizontal overflow.
+- [x] Partial-failure retry verifies only the failed delivery item is retried.
+- [x] Frontend TypeScript and Worker TypeScript pass.
+- [x] Full Vitest passes: 136 files, 730 tests.
+- [x] Production build passes; generated `public/sitemap.xml` was restored before commit.
+- [x] Cypress component spec passes: 2 tests.
+- [x] Production dependency audit reports 0 vulnerabilities.
+- [x] Repository security scan and `git diff --check` pass.

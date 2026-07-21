@@ -301,7 +301,7 @@ export function createResultReportDeliveryRuntime(
         input.notificationId,
         input.studentId,
         'Bạn có phiếu kết quả mới',
-        `${input.teacherName} đã gửi kết quả bài “${input.quizTitle}”. Điểm của em: ${input.score}/10.`,
+        `${user.fullName || input.teacherName} đã gửi kết quả bài “${input.quizTitle}”. Điểm của em: ${input.score}/10.`,
         JSON.stringify({
           phieu_id: input.phieuId,
           result_id: input.resultId,
