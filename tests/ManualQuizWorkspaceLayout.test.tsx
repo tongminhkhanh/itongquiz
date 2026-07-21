@@ -45,7 +45,7 @@ describe('ManualQuizWorkspace desktop shell', () => {
         expect(screen.getByRole('navigation', { name: 'Danh sách câu hỏi' })).toHaveAttribute('data-pane-width', '280');
         expect(screen.getByRole('main', { name: 'Trình soạn câu hỏi' })).toBeInTheDocument();
         expect(screen.getByRole('complementary', { name: 'Xem trước học sinh' })).toHaveAttribute('data-pane-width', '380');
-        expect(screen.getByRole('status')).toHaveClass('sticky');
+        expect(screen.getByRole('status', { name: 'Trạng thái đề kiểm tra' })).toHaveClass('sticky');
         expect(screen.getByDisplayValue('Kiểm tra giữa kỳ – Toán lớp 3')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-grid')).toHaveClass('min-h-0');
     });

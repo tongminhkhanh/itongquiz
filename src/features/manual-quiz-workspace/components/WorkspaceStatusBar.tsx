@@ -22,6 +22,7 @@ const WorkspaceStatusBar: React.FC<WorkspaceStatusBarProps> = ({ onOpenValidatio
     return (
         <div
             role="status"
+            aria-label="Trạng thái đề kiểm tra"
             aria-live="polite"
             className="sticky bottom-0 z-20 flex min-h-12 items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 py-2 text-sm lg:px-6"
         >

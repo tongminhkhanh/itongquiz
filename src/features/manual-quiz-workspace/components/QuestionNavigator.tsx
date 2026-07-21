@@ -1,14 +1,29 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronLeft, GripVertical, Library, Plus, Search } from 'lucide-react';
+import {
+    closestCenter,
+    DndContext,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+} from '@dnd-kit/core';
+import { ChevronLeft, Library, Plus, RotateCcw, Search } from 'lucide-react';
 import { QuestionType } from '../../../types';
 import { createManualQuestionDraft } from '../../../components/TeacherDashboard/quiz-preview/questionTypes';
 import { useManualQuizWorkspaceStore } from '../store/useManualQuizWorkspaceStore';
 import type { ManualQuizQuestion } from '../types/manualQuizWorkspace.types';
+import QuestionNavigatorItem, { getQuestionNavigatorLabel } from './QuestionNavigatorItem';
+import { useQuestionUndo } from '../hooks/useQuestionUndo';
 
-const questionLabel = (question: ManualQuizQuestion): string => {
-    const data = question as any;
-    return String(question.type === QuestionType.TRUE_FALSE ? data.mainQuestion : data.question).trim()
-        || 'Câu hỏi chưa có nội dung';
+export const handleQuestionDragEnd = (
+    event: Pick<DragEndEvent, 'active' | 'over'>,
+    reorderQuestion: (activeId: string, overId: string) => void,
+): void => {
+    const activeId = String(event.active.id);
+    const overId = event.over ? String(event.over.id) : null;
+    if (!overId || activeId === overId) return;
+    reorderQuestion(activeId, overId);
 };
 
 const QuestionNavigator: React.FC = () => {
@@ -16,13 +31,21 @@ const QuestionNavigator: React.FC = () => {
     const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
     const selectQuestion = useManualQuizWorkspaceStore((state) => state.selectQuestion);
     const addQuestion = useManualQuizWorkspaceStore((state) => state.addQuestion);
+    const duplicateQuestion = useManualQuizWorkspaceStore((state) => state.duplicateQuestion);
+    const moveQuestion = useManualQuizWorkspaceStore((state) => state.moveQuestion);
+    const reorderQuestion = useManualQuizWorkspaceStore((state) => state.reorderQuestion);
     const setNavigatorCollapsed = useManualQuizWorkspaceStore((state) => state.setNavigatorCollapsed);
+    const undo = useQuestionUndo();
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+        useSensor(KeyboardSensor),
+    );
     const questions = envelope?.quiz.questions ?? [];
     const filteredQuestions = useMemo(() => {
         const normalized = query.trim().toLowerCase();
         if (!normalized) return questions;
         return questions.filter((question, index) =>
-            questionLabel(question).toLowerCase().includes(normalized)
+            getQuestionNavigatorLabel(question).toLowerCase().includes(normalized)
             || String(index + 1).includes(normalized),
         );
     }, [query, questions]);
@@ -62,36 +85,55 @@ const QuestionNavigator: React.FC = () => {
                 </label>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
                 {filteredQuestions.length === 0 && (
                     <div className="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500">
                         {questions.length === 0 ? 'Chưa có câu hỏi nào.' : 'Không tìm thấy câu hỏi.'}
                     </div>
                 )}
-                {filteredQuestions.map((question) => {
-                    const index = questions.findIndex((item) => item.id === question.id);
-                    const selected = envelope?.selectedQuestionId === question.id;
-                    return (
-                        <button
-                            type="button"
-                            key={question.id}
-                            onClick={() => selectQuestion(question.id)}
-                            className={`flex w-full items-start gap-2 rounded-xl border p-3 text-left transition ${selected
-                                ? 'border-sky-500 bg-sky-50'
-                                : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                        >
-                            <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-slate-100 text-xs font-semibold">
-                                {index + 1}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                                <span className="line-clamp-2 block text-sm font-medium text-slate-800">{questionLabel(question)}</span>
-                                <span className="mt-1 block text-xs text-slate-500">{question.type} • {question.points ?? 0} điểm</span>
-                            </span>
-                        </button>
-                    );
-                })}
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event) => handleQuestionDragEnd(event, reorderQuestion)}
+                >
+                    <div className="space-y-2">
+                        {filteredQuestions.map((question) => {
+                            const index = questions.findIndex((item) => item.id === question.id);
+                            return (
+                                <QuestionNavigatorItem
+                                    key={question.id}
+                                    question={question}
+                                    index={index}
+                                    total={questions.length}
+                                    selected={envelope?.selectedQuestionId === question.id}
+                                    onSelect={() => selectQuestion(question.id)}
+                                    onMove={(offset) => moveQuestion(question.id, offset)}
+                                    onDuplicate={() => duplicateQuestion(question.id)}
+                                    onDelete={() => undo.deleteWithUndo(question.id)}
+                                />
+                            );
+                        })}
+                    </div>
+                </DndContext>
             </div>
+
+            {undo.pendingDeletion && (
+                <div
+                    role="status"
+                    aria-label="Hoàn tác xóa câu hỏi"
+                    className="mx-3 mb-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+                >
+                    <p>Đã xóa câu {undo.pendingDeletion.displayNumber}.</p>
+                    <button
+                        type="button"
+                        onClick={undo.undoDeletion}
+                        aria-label="Hoàn tác xóa câu hỏi"
+                        className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-lg bg-white px-3 font-semibold text-amber-800"
+                    >
+                        <RotateCcw className="h-4 w-4" /> Hoàn tác
+                    </button>
+                </div>
+            )}
 
             <div className="space-y-2 border-t border-slate-200 bg-slate-50 p-3">
                 <button

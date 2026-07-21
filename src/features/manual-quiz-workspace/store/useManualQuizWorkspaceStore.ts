@@ -47,6 +47,8 @@ interface ManualQuizWorkspaceState {
     ): void;
     duplicateQuestion(questionId: string): void;
     removeQuestion(questionId: string): void;
+    restoreQuestion(question: ManualQuizQuestion, index: number): void;
+    moveQuestion(questionId: string, offset: -1 | 1): void;
     reorderQuestion(activeId: string, overId: string): void;
     setQuestionPoints(pointsByQuestionId: Record<string, number>): void;
     setTargetPoints(targetPoints: number): void;
@@ -220,6 +222,40 @@ export const useManualQuizWorkspaceStore = create<ManualQuizWorkspaceState>((set
             envelope: touchEnvelope(state.envelope, {
                 quiz: { ...state.envelope.quiz, questions },
                 selectedQuestionId,
+            }),
+            saveStatus: 'idle',
+            saveError: null,
+        };
+    }),
+
+    restoreQuestion: (question, index) => set((state) => {
+        if (!state.envelope) return state;
+        if (state.envelope.quiz.questions.some((item) => item.id === question.id)) return state;
+        const questions = [...state.envelope.quiz.questions];
+        const safeIndex = Math.max(0, Math.min(index, questions.length));
+        questions.splice(safeIndex, 0, { ...question });
+        return {
+            envelope: touchEnvelope(state.envelope, {
+                quiz: { ...state.envelope.quiz, questions },
+                selectedQuestionId: question.id,
+            }),
+            saveStatus: 'idle',
+            saveError: null,
+        };
+    }),
+
+    moveQuestion: (questionId, offset) => set((state) => {
+        if (!state.envelope) return state;
+        const questions = [...state.envelope.quiz.questions];
+        const sourceIndex = questions.findIndex((question) => question.id === questionId);
+        const targetIndex = sourceIndex + offset;
+        if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= questions.length) return state;
+        const [question] = questions.splice(sourceIndex, 1);
+        questions.splice(targetIndex, 0, question);
+        return {
+            envelope: touchEnvelope(state.envelope, {
+                quiz: { ...state.envelope.quiz, questions },
+                selectedQuestionId: questionId,
             }),
             saveStatus: 'idle',
             saveError: null,
