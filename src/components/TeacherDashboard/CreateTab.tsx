@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Quiz } from '../../types';
 import { Button } from '../common';
 import { FileText, Sparkles, Search, Zap, Edit3, Wand2 } from 'lucide-react';
 import QuizPreview from './QuizPreview';
 import { useCreateQuizLogic } from '../../features/quiz-generator/hooks/useCreateQuizLogic';
+import { buildManualQuizSeed } from '../../features/manual-quiz-workspace/domain/manualQuizSeed';
 
 // Sub-components
 import GeneralInfoSection from '../../features/quiz-generator/components/GeneralInfoSection';
@@ -23,6 +25,21 @@ interface CreateTabProps {
 
 const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSuccess }) => {
     const logic = useCreateQuizLogic({ editingQuiz, onSaveQuiz, onUpdateQuiz, onSuccess });
+    const navigate = useNavigate();
+
+    const openManualWorkspace = () => {
+        const manualQuizSeed = buildManualQuizSeed({
+            quizTitle: logic.quizTitle,
+            classLevel: logic.classLevel,
+            category: logic.category,
+            manualTimeLimit: logic.manualTimeLimit,
+            tags: logic.tags,
+            requireCode: logic.requireCode,
+            accessCode: logic.accessCode,
+            showOnHome: logic.showOnHome,
+        });
+        navigate('/teacher/quizzes/manual/new', { state: { manualQuizSeed } });
+    };
 
     const questionCount = logic.difficultyLevels.level1 + logic.difficultyLevels.level2 + logic.difficultyLevels.level3;
 
@@ -227,7 +244,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                             logic.setGeneratedQuiz({ ...logic.generatedQuiz, questions });
                         }
                     }}
-                    onStartManual={logic.handleStartManual}
+                    onStartManual={openManualWorkspace}
                     onRegenerateQuestion={logic.handleRegenerateSingle}
                 />
             </div>

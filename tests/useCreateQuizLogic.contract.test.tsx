@@ -1,6 +1,5 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { QuestionType } from '../src/types';
 import { useAssignmentStore } from '../src/stores/useAssignmentStore';
 import { useClassStore } from '../src/stores/useClassStore';
 import { useAuthStore } from '../stores/authStore';
@@ -62,7 +61,6 @@ const expectedPublicKeys = [
     'handleRegenerateSingle',
     'handleSaveQuiz',
     'handleSelectLearnerMode',
-    'handleStartManual',
     'handleToggleThongTu27',
     'hasAiQuota',
     'isClassLocked',
@@ -192,7 +190,7 @@ describe('useCreateQuizLogic public contract', () => {
         });
     });
 
-    it('creates a manual quiz with the current form values', () => {
+    it('does not create an empty manual quiz inside the AI form state', async () => {
         const { result } = renderHook(() => useCreateQuizLogic({
             editingQuiz: null,
             onSaveQuiz: vi.fn(async () => undefined),
@@ -200,25 +198,8 @@ describe('useCreateQuizLogic public contract', () => {
             onSuccess: vi.fn(),
         }));
 
-        act(() => {
-            result.current.setQuizTitle('Manual quiz');
-            result.current.setManualTimeLimit(25);
-            result.current.setRequireCode(true);
-            result.current.setAccessCode('abc123');
-            result.current.setSelectedTypes({ [QuestionType.MCQ]: true });
-        });
-
-        act(() => result.current.handleStartManual());
-
-        expect(result.current.generatedQuiz).toEqual(expect.objectContaining({
-            title: 'Manual quiz',
-            classLevel: '4A',
-            timeLimit: 25,
-            accessCode: 'ABC123',
-            requireCode: true,
-            questions: [],
-        }));
-
-        return waitFor(() => expect(result.current.dailyAiLimit).toBe(5));
+        expect(result.current.generatedQuiz).toBeNull();
+        expect('handleStartManual' in result.current).toBe(false);
+        await waitFor(() => expect(result.current.dailyAiLimit).toBe(5));
     });
 });

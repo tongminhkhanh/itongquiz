@@ -129,7 +129,6 @@ export const useCreateQuizLogic = ({
         addTagToState: form.addTagToState,
         handleApplyAiCategory: form.handleApplyAiCategory,
         handleApplyAiTitleSuggestion: form.handleApplyAiTitleSuggestion,
-        handleStartManual: form.handleStartManual,
         handleGenerate: generation.handleGenerate,
         handleRegenerateSingle: generation.handleRegenerateSingle,
         handleSaveQuiz: persistence.handleSaveQuiz,

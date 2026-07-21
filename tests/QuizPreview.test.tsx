@@ -189,7 +189,7 @@ describe('QuizPreview contracts', () => {
         render(<QuizPreview quiz={null} onSave={vi.fn()} onStartManual={onStartManual} />);
 
         expect(screen.getByText('Chưa có dữ liệu đề thi')).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Bắt đầu tạo đề THỦ CÔNG' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Mở phòng soạn đề thủ công' }));
         expect(onStartManual).toHaveBeenCalledTimes(1);
         expect(screen.queryByText('Tải file Word')).not.toBeInTheDocument();
     });

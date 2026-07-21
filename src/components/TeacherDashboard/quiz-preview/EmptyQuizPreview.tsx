@@ -8,7 +8,7 @@ const EmptyQuizPreview: React.FC<{ onStartManual?: () => void }> = ({ onStartMan
         </div>
         <h3 className="text-lg font-bold text-slate-700 mb-2">Chưa có dữ liệu đề thi</h3>
         <p className="text-slate-500 max-w-xs mx-auto mb-6">
-            Vui lòng nhập thông tin bên trái và chọn phương thức tạo đề (AI hoặc Thủ công).
+            Nhập thông tin cơ bản bên trái, sau đó mở phòng soạn toàn màn hình để tạo câu hỏi thủ công.
         </p>
         {onStartManual && (
             <div className="flex flex-col gap-3">
@@ -16,7 +16,7 @@ const EmptyQuizPreview: React.FC<{ onStartManual?: () => void }> = ({ onStartMan
                     onClick={onStartManual}
                     className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md active:scale-95 text-sm"
                 >
-                    Bắt đầu tạo đề THỦ CÔNG
+                    Mở phòng soạn đề thủ công
                 </button>
             </div>
         )}

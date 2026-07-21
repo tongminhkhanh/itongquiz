@@ -165,27 +165,6 @@ export const useQuizFormState = ({
         setProfilePresetNotice(null);
     };
 
-    const handleStartManual = () => {
-        const quiz: Quiz = {
-            id: editingQuiz?.id || `quiz-manual-${Date.now()}`,
-            title: quizTitle || 'Đề thi mới (Chưa đặt tên)',
-            classLevel: classLevel || '3',
-            timeLimit: typeof manualTimeLimit === 'number' ? manualTimeLimit : 15,
-            questions: [],
-            createdAt: editingQuiz ? editingQuiz.createdAt : new Date().toISOString(),
-            createdBy: editingQuiz?.createdBy || teacherName || undefined,
-            accessCode: requireCode ? accessCode.toUpperCase() : undefined,
-            requireCode,
-            showOnHome,
-            category,
-            tags,
-            detectedCategory: aiDetectedCategory || undefined,
-            detectedLesson: aiDetectedLesson || undefined,
-            suggestedTags: aiSuggestedTags.length > 0 ? aiSuggestedTags : undefined,
-        };
-        setGeneratedQuiz(quiz);
-    };
-
     useEffect(() => {
         if (editingQuiz) {
             setTopic('');
@@ -321,7 +300,6 @@ export const useQuizFormState = ({
         addTagToState,
         handleApplyAiCategory,
         handleApplyAiTitleSuggestion,
-        handleStartManual,
         resetAfterSave,
     };
 };
