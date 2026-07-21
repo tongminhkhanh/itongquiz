@@ -24,6 +24,11 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
   );
   const phieu = usePhieuResult();
   const actions = useResultsTabActions(filters.filteredResults, filters.statistics);
+  const selectedQuiz = quizzes.find((quiz) => quiz.id === filters.activeQuizId);
+  const canCreateClassReports = filters.activeQuizId !== 'all'
+    && filters.resultsHook.filterClass !== 'All'
+    && Boolean(filters.resultsHook.filterClass)
+    && filters.filteredResults.length > 0;
   const handleSortChange = (field: 'score' | 'submittedAt') => {
     if (field === filters.resultsHook.sortField) {
       filters.resultsHook.setSortOrder(filters.resultsHook.sortOrder === 'asc' ? 'desc' : 'asc');
@@ -51,8 +56,10 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
           isMobile={isMobile}
           isRefreshing={filters.resultsHook.isRefreshing}
           onRefresh={filters.resultsHook.handleRefresh}
-          onOpenPhieuPanel={() => phieu.setShowPhieuPanel(true)}
-          phieuDisabled={filters.filteredResults.length === 0}
+          onOpenPhieuPanel={() => {
+            if (canCreateClassReports) phieu.setShowPhieuPanel(true);
+          }}
+          phieuDisabled={!canCreateClassReports}
           onExportCsv={actions.exportCsv}
           onExportSummary={actions.exportSummary}
         />
@@ -86,6 +93,9 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, quizzes, onRefresh }) 
       <ResultsOverlays
         showPhieuPanel={phieu.showPhieuPanel}
         filteredResults={filters.filteredResults}
+        deliveryClassName={filters.resultsHook.filterClass}
+        deliveryQuizId={filters.activeQuizId === 'all' ? '' : filters.activeQuizId}
+        deliveryQuizTitle={selectedQuiz?.title || 'Bài kiểm tra'}
         onClosePhieuPanel={() => phieu.setShowPhieuPanel(false)}
         phieuResult={phieu.phieuResult}
         quizzes={quizzes}

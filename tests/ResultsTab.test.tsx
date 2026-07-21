@@ -48,8 +48,8 @@ vi.mock('../src/utils/question/scoring.util', () => ({
 
 vi.mock('../src/components/common', () => ({
   Card: ({ children }: { children: React.ReactNode }) => <section>{children}</section>,
-  Button: ({ children, onClick, disabled, loading }: any) => (
-    <button onClick={onClick} disabled={disabled || loading}>{children}</button>
+  Button: ({ children, onClick, disabled, loading, title }: any) => (
+    <button onClick={onClick} disabled={disabled || loading} title={title}>{children}</button>
   ),
 }));
 
@@ -95,6 +95,15 @@ vi.mock('../src/features/results/components/ResultRowPhieuModal', () => ({
       <span data-testid="saved-phieu">{JSON.stringify(initialSavedPhieu)}</span>
       <span data-testid="published-link">{JSON.stringify(initialPublishedLink)}</span>
       <button onClick={onClose}>Đóng phiếu</button>
+    </div>
+  ),
+}));
+
+vi.mock('../src/features/results/components/result-report-delivery', () => ({
+  ResultReportDeliveryWizard: ({ className, quizId, quizTitle, onClose }: any) => (
+    <div data-testid="result-report-wizard">
+      <span data-testid="wizard-scope">{JSON.stringify({ className, quizId, quizTitle })}</span>
+      <button onClick={onClose}>Đóng wizard</button>
     </div>
   ),
 }));
@@ -190,6 +199,28 @@ describe('TeacherDashboard ResultsTab contracts', () => {
     expect(screen.getByText('Hà')).toBeTruthy();
     expect(screen.getByText('Minh')).toBeTruthy();
     expect(screen.getByTestId('question-analysis')).toBeTruthy();
+  });
+
+  it('requires one class and one quiz before opening the class delivery wizard', () => {
+    render(<ResultsTab results={results} quizzes={quizzes} />);
+
+    const deliveryButton = screen.getByRole('button', { name: 'Tạo và gửi phiếu' });
+    expect(deliveryButton).toBeDisabled();
+    expect(deliveryButton).toHaveAttribute('title', 'Hãy chọn một lớp và một bài kiểm tra trước khi tạo phiếu.');
+
+    const selects = screen.getAllByRole('combobox');
+    fireEvent.change(selects[0], { target: { value: 'quiz-1' } });
+    expect(deliveryButton).toBeDisabled();
+    fireEvent.change(selects[1], { target: { value: '3A' } });
+    expect(deliveryButton).toBeEnabled();
+
+    fireEvent.change(screen.getByPlaceholderText('Tìm học sinh...'), { target: { value: 'An' } });
+    fireEvent.click(deliveryButton);
+
+    expect(screen.getByTestId('result-report-wizard')).toBeInTheDocument();
+    expect(screen.getByTestId('wizard-scope')).toHaveTextContent(JSON.stringify({
+      className: '3A', quizId: 'quiz-1', quizTitle: 'Phân số',
+    }));
   });
 
   it('navigates to result detail and caches the loaded phieu across reopen', async () => {

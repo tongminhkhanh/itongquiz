@@ -187,13 +187,15 @@ const EditBlock: React.FC<{
   onChange: (v: string) => void;
   rows?: number;
   placeholder?: string;
-}> = ({ value, editable, onChange, rows = 3, placeholder = '' }) => {
+  ariaLabel?: string;
+}> = ({ value, editable, onChange, rows = 3, placeholder = '', ariaLabel }) => {
   if (editable) {
     return (
       <textarea
         rows={rows}
         value={value}
         placeholder={placeholder}
+        aria-label={ariaLabel}
         onChange={(e) => onChange(e.target.value)}
         style={{
           width: '100%',
@@ -389,6 +391,7 @@ export const PhieuBTCard: React.FC<Props> = ({
           editable={editable}
           onChange={(v) => update('nhan_xet', v)}
           rows={3}
+          ariaLabel="Nhận xét"
           placeholder="(Chưa có nhận xét)"
         />
       </div>
@@ -404,6 +407,7 @@ export const PhieuBTCard: React.FC<Props> = ({
           editable={editable}
           onChange={(v) => update('noi_dung_co_gang', v)}
           rows={2}
+          ariaLabel="Cần cố gắng"
           placeholder="(Chưa có nội dung)"
         />
       </div>
@@ -419,6 +423,7 @@ export const PhieuBTCard: React.FC<Props> = ({
           editable={editable}
           onChange={(v) => update('loi_dong_vien', v)}
           rows={2}
+          ariaLabel="Lời động viên"
           placeholder="(Chưa có lời động viên)"
         />
       </div>

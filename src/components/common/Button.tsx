@@ -16,6 +16,7 @@ export interface ButtonProps {
     className?: string;
     type?: 'button' | 'submit' | 'reset';
     icon?: React.ReactNode;
+    title?: string;
 }
 
 const variantStyles: Record<string, string> = {
@@ -42,6 +43,7 @@ export const Button: React.FC<ButtonProps> = ({
     className = '',
     type = 'button',
     icon,
+    title,
 }) => {
     const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500';
 
@@ -52,6 +54,7 @@ export const Button: React.FC<ButtonProps> = ({
             type={type}
             onClick={onClick}
             disabled={disabled || loading}
+            title={title}
             className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${disabledStyles} ${className}`}
         >
             {loading ? (

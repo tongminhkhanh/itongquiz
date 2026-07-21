@@ -42,8 +42,10 @@ export const ResultsActions = ({
         variant="primary"
         icon={<ClipboardList className="w-4 h-4" />}
         disabled={phieuDisabled}
+        title={phieuDisabled ? 'Hãy chọn một lớp và một bài kiểm tra trước khi tạo phiếu.' : undefined}
+        className="bg-sky-600 hover:bg-sky-700"
       >
-        Phiếu KQ
+        Tạo và gửi phiếu
       </Button>
       <div className="relative">
         <Button

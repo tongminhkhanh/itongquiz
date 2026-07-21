@@ -1,11 +1,14 @@
 import type { Quiz, StudentResult } from '../../../types';
 import ResultRowPhieuModal from '../../../features/results/components/ResultRowPhieuModal';
-import { PhieuFromResultsPanel } from '../../../features/results/components/PhieuFromResultsPanel';
+import { ResultReportDeliveryWizard } from '../../../features/results/components/result-report-delivery';
 import type { PhieuCache, PhieuCacheEntry } from './types';
 
 interface ResultsOverlaysProps {
   showPhieuPanel: boolean;
   filteredResults: StudentResult[];
+  deliveryClassName: string;
+  deliveryQuizId: string;
+  deliveryQuizTitle: string;
   onClosePhieuPanel: () => void;
   phieuResult: StudentResult | null;
   quizzes: Quiz[];
@@ -20,8 +23,11 @@ export const ResultsOverlays = (props: ResultsOverlaysProps) => {
   return (
     <>
       {props.showPhieuPanel && (
-        <PhieuFromResultsPanel
-          results={props.filteredResults as any[]}
+        <ResultReportDeliveryWizard
+          isOpen
+          className={props.deliveryClassName}
+          quizId={props.deliveryQuizId}
+          quizTitle={props.deliveryQuizTitle}
           onClose={props.onClosePhieuPanel}
         />
       )}
