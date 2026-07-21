@@ -8,7 +8,7 @@ import {
     useSensors,
     type DragEndEvent,
 } from '@dnd-kit/core';
-import { ChevronLeft, Library, Plus, RotateCcw, Search } from 'lucide-react';
+import { ChevronLeft, FileUp, Library, Plus, RotateCcw, Search } from 'lucide-react';
 import { QuestionType } from '../../../types';
 import {
     createManualQuestionDraft,
@@ -32,9 +32,10 @@ export const handleQuestionDragEnd = (
 
 interface QuestionNavigatorProps {
     onOpenQuestionBank?: () => void;
+    onOpenImport?: () => void;
 }
 
-const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBank }) => {
+const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBank, onOpenImport }) => {
     const [query, setQuery] = useState('');
     const [isTypePickerOpen, setTypePickerOpen] = useState(false);
     const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
@@ -175,6 +176,13 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBan
                     className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-slate-200 bg-white px-3 text-sm font-medium"
                 >
                     <Library className="h-4 w-4" /> Mở kho câu hỏi
+                </button>
+                <button
+                    type="button"
+                    onClick={onOpenImport}
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-slate-200 bg-white px-3 text-sm font-medium"
+                >
+                    <FileUp className="h-4 w-4" /> Nhập từ tệp
                 </button>
             </div>
 

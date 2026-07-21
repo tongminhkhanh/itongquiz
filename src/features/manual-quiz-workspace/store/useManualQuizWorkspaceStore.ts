@@ -42,6 +42,7 @@ interface ManualQuizWorkspaceState {
     selectQuestion(questionId: string | null): void;
     addQuestion(question: ManualQuizQuestion): void;
     addQuestions(questions: ManualQuizQuestion[]): void;
+    removeQuestions(questionIds: string[]): void;
     updateQuestion(
         questionId: string,
         updater: (question: ManualQuizQuestion) => ManualQuizQuestion,
@@ -189,6 +190,23 @@ export const useManualQuizWorkspaceStore = create<ManualQuizWorkspaceState>((set
                     questions: [...state.envelope.quiz.questions, ...clones],
                 },
                 selectedQuestionId: clones[clones.length - 1].id,
+            }),
+            saveStatus: 'idle',
+            saveError: null,
+        };
+    }),
+
+    removeQuestions: (questionIds) => set((state) => {
+        if (!state.envelope || questionIds.length === 0) return state;
+        const idSet = new Set(questionIds);
+        const questions = state.envelope.quiz.questions.filter((question) => !idSet.has(question.id));
+        const selectedQuestionId = state.envelope.selectedQuestionId && idSet.has(state.envelope.selectedQuestionId)
+            ? questions[questions.length - 1]?.id ?? null
+            : state.envelope.selectedQuestionId;
+        return {
+            envelope: touchEnvelope(state.envelope, {
+                quiz: { ...state.envelope.quiz, questions },
+                selectedQuestionId,
             }),
             saveStatus: 'idle',
             saveError: null,

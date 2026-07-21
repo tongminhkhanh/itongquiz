@@ -28,6 +28,8 @@ import type {
     ManualQuizSeed,
 } from './types/manualQuizWorkspace.types';
 
+const QuestionImportDrawer = React.lazy(() => import('./components/QuestionImportDrawer'));
+
 const DEFAULT_SEED: ManualQuizSeed = {
     title: 'Đề kiểm tra mới',
     classLevel: '3',
@@ -65,6 +67,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
     const [isPointDialogOpen, setPointDialogOpen] = useState(false);
     const [previousPoints, setPreviousPoints] = useState<Record<string, number> | null>(null);
     const [isQuestionBankOpen, setQuestionBankOpen] = useState(false);
+    const [isQuestionImportOpen, setQuestionImportOpen] = useState(false);
 
     const seed = navigationState?.manualQuizSeed ?? DEFAULT_SEED;
 
@@ -183,7 +186,12 @@ const ManualQuizWorkspacePage: React.FC = () => {
                     data-testid="workspace-grid"
                     className={`grid min-h-0 flex-1 overflow-hidden ${columnClass}`}
                 >
-                    {!isNavigatorCollapsed && <QuestionNavigator onOpenQuestionBank={() => setQuestionBankOpen(true)} />}
+                    {!isNavigatorCollapsed && (
+                        <QuestionNavigator
+                            onOpenQuestionBank={() => setQuestionBankOpen(true)}
+                            onOpenImport={() => setQuestionImportOpen(true)}
+                        />
+                    )}
                     <QuestionEditorPane />
                     {!isPreviewCollapsed && <StudentPreviewPane />}
                 </div>
@@ -212,6 +220,11 @@ const ManualQuizWorkspacePage: React.FC = () => {
                         teacherId={username}
                         onClose={() => setQuestionBankOpen(false)}
                     />
+                )}
+                {isQuestionImportOpen && (
+                    <React.Suspense fallback={<div role="status" className="fixed inset-0 z-50 grid place-items-center bg-white/80">Đang mở trình nhập…</div>}>
+                        <QuestionImportDrawer open onClose={() => setQuestionImportOpen(false)} />
+                    </React.Suspense>
                 )}
                 {envelope && isPointDialogOpen && (
                     <PointDistributionDialog
