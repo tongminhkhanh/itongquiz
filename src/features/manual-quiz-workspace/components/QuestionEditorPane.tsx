@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Braces, Copy, Trash2 } from 'lucide-react';
 import { QuestionType } from '../../../types';
 import QuestionEditorForm from '../../quiz-editor/components/QuestionEditorModal/QuestionEditorForm';
@@ -11,13 +11,17 @@ import type { ManualQuizQuestion } from '../types/manualQuizWorkspace.types';
 import MathComposerPanel from '../math-composer/MathComposerPanel';
 import { MathComposerProvider } from '../math-composer/useMathComposer';
 import { useMathFieldValidation } from '../math-composer/useMathFieldValidation';
+import { useWorkspaceKeyboardShortcuts } from '../hooks/useWorkspaceKeyboardShortcuts';
 
 const InlineQuestionEditor: React.FC<{ question: ManualQuizQuestion }> = ({ question }) => {
     const [draft, setDraft] = useState<AnyEditorDraft>(() => questionToDraft(question));
     const updateQuestion = useManualQuizWorkspaceStore((state) => state.updateQuestion);
+    const selectQuestion = useManualQuizWorkspaceStore((state) => state.selectQuestion);
+    const moveQuestion = useManualQuizWorkspaceStore((state) => state.moveQuestion);
+    const questions = useManualQuizWorkspaceStore((state) => state.envelope?.quiz.questions ?? []);
     const mathValidation = useMathFieldValidation(draft);
 
-    const saveQuestion = () => {
+    const saveQuestion = useCallback(() => {
         const rawQuestion = draftToQuestion(draft, question);
         const normalizedQuestion = normalizeQuestionMath(rawQuestion);
         updateQuestion(question.id, (current) => ({
@@ -28,7 +32,23 @@ const InlineQuestionEditor: React.FC<{ question: ManualQuizQuestion }> = ({ ques
             imageAlt: normalizedQuestion.imageAlt ?? current.imageAlt,
             showExplanation: current.showExplanation,
         }) as ManualQuizQuestion);
-    };
+    }, [draft, question, updateQuestion]);
+
+    const saveQuestionAndNext = useCallback(() => {
+        saveQuestion();
+        const index = questions.findIndex((item) => item.id === question.id);
+        const next = questions[index + 1];
+        if (!next) return;
+        selectQuestion(next.id);
+        window.setTimeout(() => {
+            document.querySelector<HTMLElement>('[aria-label="Trình soạn câu hỏi"] textarea')?.focus();
+        }, 0);
+    }, [question.id, questions, saveQuestion, selectQuestion]);
+
+    useWorkspaceKeyboardShortcuts({
+        onSaveQuestionAndNext: saveQuestionAndNext,
+        onMoveQuestion: (offset) => moveQuestion(question.id, offset),
+    });
 
     return (
         <div className="space-y-3">

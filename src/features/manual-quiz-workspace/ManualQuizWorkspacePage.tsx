@@ -21,6 +21,7 @@ import {
 } from './draft/manualQuizDraftRepository';
 import { useManualQuizAutosave } from './hooks/useManualQuizAutosave';
 import { useManualQuizPublish } from './hooks/useManualQuizPublish';
+import { useWorkspaceKeyboardShortcuts } from './hooks/useWorkspaceKeyboardShortcuts';
 import { useManualQuizWorkspaceStore } from './store/useManualQuizWorkspaceStore';
 import { validateManualQuiz } from './validation/manualQuizValidation';
 import type {
@@ -60,6 +61,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
     const updateQuiz = useManualQuizWorkspaceStore((state) => state.updateQuiz);
     const setQuestionPoints = useManualQuizWorkspaceStore((state) => state.setQuestionPoints);
     const setNavigatorCollapsed = useManualQuizWorkspaceStore((state) => state.setNavigatorCollapsed);
+    const setPreviewCollapsed = useManualQuizWorkspaceStore((state) => state.setPreviewCollapsed);
     const isNavigatorCollapsed = useManualQuizWorkspaceStore((state) => state.isNavigatorCollapsed);
     const isPreviewCollapsed = useManualQuizWorkspaceStore((state) => state.isPreviewCollapsed);
     const [pendingRecovery, setPendingRecovery] = useState<ManualQuizDraftEnvelope | null>(null);
@@ -87,6 +89,27 @@ const ManualQuizWorkspacePage: React.FC = () => {
     const validationIssues = useMemo(() => envelope
         ? validateManualQuiz(envelope.quiz, { targetPoints: envelope.targetPoints })
         : [], [envelope]);
+
+    const closeActiveSurface = useCallback(() => {
+        if (isValidationOpen) setValidationOpen(false);
+        else if (isPointDialogOpen) setPointDialogOpen(false);
+        else if (isQuestionImportOpen) setQuestionImportOpen(false);
+        else if (isQuestionBankOpen) setQuestionBankOpen(false);
+        else if (!isPreviewCollapsed) setPreviewCollapsed(true);
+    }, [
+        isPointDialogOpen,
+        isPreviewCollapsed,
+        isQuestionBankOpen,
+        isQuestionImportOpen,
+        isValidationOpen,
+        setPreviewCollapsed,
+    ]);
+
+    useWorkspaceKeyboardShortcuts({
+        enabled: Boolean(envelope),
+        onSaveDraft: autosaveController.saveNow,
+        onEscape: closeActiveSurface,
+    });
 
     useEffect(() => {
         if (!username || envelope || pendingRecovery || recoveryChecked) return;

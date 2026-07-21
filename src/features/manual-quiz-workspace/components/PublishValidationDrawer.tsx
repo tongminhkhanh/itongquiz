@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import {
     AlertTriangle,
     CheckCircle2,
@@ -16,6 +16,7 @@ import {
     type ManualQuizIssue,
     type ManualQuizIssueSeverity,
 } from '../validation/manualQuizValidation';
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
 
 interface PublishValidationDrawerProps {
     open: boolean;
@@ -118,23 +119,18 @@ const PublishValidationDrawer: React.FC<PublishValidationDrawerProps> = ({
     publishError = null,
     cleanupWarning = null,
 }) => {
+    const drawerRef = useRef<HTMLElement>(null);
     const closeButtonRef = useRef<HTMLButtonElement>(null);
     const summary = summarizeManualQuizIssues(issues);
     const hasErrors = hasBlockingManualQuizIssues(issues);
     const totalPoints = quiz.questions.reduce((total, question) => total + Number(question.points || 0), 0);
 
-    useEffect(() => {
-        if (open) closeButtonRef.current?.focus();
-    }, [open]);
-
-    useEffect(() => {
-        if (!open) return undefined;
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onClose();
-        };
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, [onClose, open]);
+    useDialogFocusTrap({
+        open,
+        containerRef: drawerRef,
+        initialFocusRef: closeButtonRef,
+        onEscape: onClose,
+    });
 
     if (!open) return null;
 
@@ -143,6 +139,8 @@ const PublishValidationDrawer: React.FC<PublishValidationDrawerProps> = ({
             if (event.target === event.currentTarget) onClose();
         }}>
             <aside
+                ref={drawerRef}
+                tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
                 aria-label="Kiểm tra trước khi xuất bản"

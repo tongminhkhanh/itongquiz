@@ -17,12 +17,16 @@ import {
 } from './useDraftConflictResolution';
 import type { LocalManualQuizAutosaveController } from './useLocalManualQuizAutosave';
 
+export interface RemoteManualQuizAutosaveController extends DraftConflictResolutionController {
+    saveNow(): void;
+}
+
 const REMOTE_AUTOSAVE_DELAY_MS = 2_000;
 
 export const useRemoteManualQuizAutosave = (
     envelope: ManualQuizDraftEnvelope | null,
     localAutosave: LocalManualQuizAutosaveController,
-): DraftConflictResolutionController => {
+): RemoteManualQuizAutosaveController => {
     const { lastSavedHashRef, persistImmediately } = localAutosave;
     const setSaveStatus = useManualQuizWorkspaceStore((state) => state.setSaveStatus);
     const replaceEnvelope = useManualQuizWorkspaceStore((state) => state.replaceEnvelope);
@@ -189,10 +193,23 @@ export const useRemoteManualQuizAutosave = (
         setSaveStatus,
     ]);
 
+    const saveNow = useCallback(() => {
+        const current = latestEnvelopeRef.current;
+        if (!current) return;
+        persistImmediately(current);
+        if (!browserIsOnline()) {
+            setSaveStatus('offline');
+            return;
+        }
+        forceImmediateRemoteRef.current = true;
+        setSaveStatus('idle');
+        setRemoteRetryTick((value) => value + 1);
+    }, [persistImmediately, setSaveStatus]);
+
     useEffect(() => () => {
         controllersRef.current.forEach((controller) => controller.abort());
         controllersRef.current.clear();
     }, []);
 
-    return conflictController;
+    return { ...conflictController, saveNow };
 };

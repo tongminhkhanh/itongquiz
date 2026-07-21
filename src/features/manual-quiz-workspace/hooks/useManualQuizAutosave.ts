@@ -4,9 +4,12 @@ import {
     type DraftConflictResolutionController,
 } from './useDraftConflictResolution';
 import { useLocalManualQuizAutosave } from './useLocalManualQuizAutosave';
-import { useRemoteManualQuizAutosave } from './useRemoteManualQuizAutosave';
+import {
+    useRemoteManualQuizAutosave,
+    type RemoteManualQuizAutosaveController,
+} from './useRemoteManualQuizAutosave';
 
-export type ManualQuizAutosaveController = DraftConflictResolutionController;
+export type ManualQuizAutosaveController = RemoteManualQuizAutosaveController;
 
 export const useManualQuizAutosave = (
     envelope: ManualQuizDraftEnvelope | null,

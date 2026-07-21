@@ -4,6 +4,7 @@ import QuestionImportReview from '../import/QuestionImportReview';
 import type { QuestionImportResult } from '../import/questionImport.types';
 import type { ManualQuizQuestion } from '../types/manualQuizWorkspace.types';
 import { useManualQuizWorkspaceStore } from '../store/useManualQuizWorkspaceStore';
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
 
 interface QuestionImportDrawerProps {
     open: boolean;
@@ -12,6 +13,8 @@ interface QuestionImportDrawerProps {
 
 const QuestionImportDrawer: React.FC<QuestionImportDrawerProps> = ({ open, onClose }) => {
     const inputRef = useRef<HTMLInputElement>(null);
+    const drawerRef = useRef<HTMLElement>(null);
+    const closeButtonRef = useRef<HTMLButtonElement>(null);
     const [result, setResult] = useState<QuestionImportResult | null>(null);
     const [fileName, setFileName] = useState('');
     const [loading, setLoading] = useState(false);
@@ -19,6 +22,13 @@ const QuestionImportDrawer: React.FC<QuestionImportDrawerProps> = ({ open, onClo
     const [lastAddedIds, setLastAddedIds] = useState<string[]>([]);
     const addQuestions = useManualQuizWorkspaceStore((state) => state.addQuestions);
     const removeQuestions = useManualQuizWorkspaceStore((state) => state.removeQuestions);
+
+    useDialogFocusTrap({
+        open,
+        containerRef: drawerRef,
+        initialFocusRef: closeButtonRef,
+        onEscape: onClose,
+    });
 
     if (!open) return null;
 
@@ -58,13 +68,13 @@ const QuestionImportDrawer: React.FC<QuestionImportDrawerProps> = ({ open, onClo
 
     return (
         <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/35" onMouseDown={onClose}>
-            <section role="dialog" aria-modal="true" aria-label="Nhập câu hỏi từ tệp" onMouseDown={(event) => event.stopPropagation()} className="flex h-full w-full max-w-5xl flex-col bg-white shadow-2xl">
+            <section ref={drawerRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Nhập câu hỏi từ tệp" onMouseDown={(event) => event.stopPropagation()} className="flex h-full w-full max-w-5xl flex-col bg-white shadow-2xl">
                 <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 lg:px-6">
                     <div className="flex items-start gap-3">
                         <span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><FileSpreadsheet className="h-5 w-5" /></span>
                         <div><h2 className="text-xl font-semibold text-slate-900">Nhập câu hỏi từ tệp</h2><p className="mt-1 text-sm text-slate-600">CSV/XLSX theo mẫu hoặc DOCX có cấu trúc Câu – phương án – đáp án.</p></div>
                     </div>
-                    <button type="button" aria-label="Đóng nhập câu hỏi" onClick={onClose} className="grid h-11 w-11 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+                    <button ref={closeButtonRef} type="button" aria-label="Đóng nhập câu hỏi" onClick={onClose} className="grid h-11 w-11 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
                 </header>
 
                 <div className="border-b border-slate-200 bg-slate-50 p-4">

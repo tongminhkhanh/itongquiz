@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Calculator, X } from 'lucide-react';
 import type { Question } from '../../../types';
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
 
 interface PointDistributionDialogProps {
     questions: Question[];
@@ -29,14 +30,25 @@ const PointDistributionDialog: React.FC<PointDistributionDialogProps> = ({
     onApply,
     onClose,
 }) => {
+    const dialogRef = useRef<HTMLElement>(null);
+    const closeButtonRef = useRef<HTMLButtonElement>(null);
     const proposed = useMemo(
         () => distributePointsExactly(questions, targetPoints),
         [questions, targetPoints],
     );
 
+    useDialogFocusTrap({
+        open: true,
+        containerRef: dialogRef,
+        initialFocusRef: closeButtonRef,
+        onEscape: onClose,
+    });
+
     return (
         <div className="fixed inset-0 z-[90] grid place-items-center bg-slate-900/50 p-4 backdrop-blur-sm">
             <section
+                ref={dialogRef}
+                tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
                 aria-label="Chia điểm cho các câu hỏi"
@@ -52,6 +64,7 @@ const PointDistributionDialog: React.FC<PointDistributionDialogProps> = ({
                         </p>
                     </div>
                     <button
+                        ref={closeButtonRef}
                         type="button"
                         onClick={onClose}
                         aria-label="Đóng chia điểm"
