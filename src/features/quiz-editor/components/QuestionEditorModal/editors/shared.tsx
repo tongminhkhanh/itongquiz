@@ -2,6 +2,11 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { NewlineMathText } from '../../../../../components/common';
 import { analyzeMathText, hasMathSyntax } from '../../../../../utils/mathText';
+import {
+    insertMathTemplate,
+    type FormulaInsertionResult,
+} from '../../../../manual-quiz-workspace/math-composer/mathInsertion';
+import type { MathTemplateId } from '../../../../manual-quiz-workspace/math-composer/mathTemplates';
 
 export const FieldRow: React.FC<{
     label: string;
@@ -38,89 +43,20 @@ export const MathFieldPreview: React.FC<{ value: string; className?: string }> =
     );
 };
 
-export interface FormulaInsertionResult {
-    value: string;
-    selectionStart: number;
-    selectionEnd: number;
-}
+export type { FormulaInsertionResult };
 
-type FormulaTemplateId = 'fraction' | 'sqrt' | 'power' | 'subscript' | 'angle' | 'segment' | 'triangle' | 'parallel' | 'perpendicular';
-
-const wrapMath = (inner: string): string => `$${inner}$`;
-
-/** Pure selection-aware insertion helper, exported for regression tests. */
+/** Compatibility adapter for the legacy compact toolbar. */
 export const insertFormulaTemplate = (
     value: string,
     selectionStart: number,
     selectionEnd: number,
-    templateId: FormulaTemplateId,
-): FormulaInsertionResult => {
-    const safeStart = Math.max(0, Math.min(selectionStart, value.length));
-    const safeEnd = Math.max(safeStart, Math.min(selectionEnd, value.length));
-    const selected = value.slice(safeStart, safeEnd);
-
-    let insertion = '';
-    let caretOffset = 0;
-
-    switch (templateId) {
-        case 'fraction': {
-            const numerator = selected || '';
-            insertion = wrapMath(`\\frac{${numerator}}{}`);
-            caretOffset = selected
-                ? insertion.lastIndexOf('{}') + 1
-                : insertion.indexOf('{}') + 1;
-            break;
-        }
-        case 'sqrt': {
-            insertion = wrapMath(`\\sqrt{${selected}}`);
-            caretOffset = selected ? insertion.length : insertion.indexOf('{}') + 1;
-            break;
-        }
-        case 'power': {
-            insertion = selected ? wrapMath(`${selected}^{}`) : wrapMath('x^{}');
-            caretOffset = insertion.lastIndexOf('{}') + 1;
-            break;
-        }
-        case 'subscript': {
-            insertion = selected ? wrapMath(`${selected}_{}`) : wrapMath('x_{}');
-            caretOffset = insertion.lastIndexOf('{}') + 1;
-            break;
-        }
-        case 'angle': {
-            insertion = wrapMath(`\\angle ${selected || 'ABC'}`);
-            caretOffset = selected ? insertion.length : insertion.indexOf('ABC');
-            break;
-        }
-        case 'segment': {
-            insertion = wrapMath(`\\overline{${selected || 'AB'}}`);
-            caretOffset = selected ? insertion.length : insertion.indexOf('AB');
-            break;
-        }
-        case 'triangle': {
-            insertion = wrapMath(`\\triangle ${selected || 'ABC'}`);
-            caretOffset = selected ? insertion.length : insertion.indexOf('ABC');
-            break;
-        }
-        case 'parallel': {
-            insertion = wrapMath(`${selected || 'AB'} \\parallel CD`);
-            caretOffset = selected ? insertion.length : insertion.indexOf('AB');
-            break;
-        }
-        case 'perpendicular': {
-            insertion = wrapMath(`${selected || 'AB'} \\perp CD`);
-            caretOffset = selected ? insertion.length : insertion.indexOf('AB');
-            break;
-        }
-    }
-
-    const nextValue = `${value.slice(0, safeStart)}${insertion}${value.slice(safeEnd)}`;
-    const nextCaret = safeStart + Math.max(0, caretOffset);
-    return {
-        value: nextValue,
-        selectionStart: nextCaret,
-        selectionEnd: nextCaret,
-    };
-};
+    templateId: MathTemplateId,
+): FormulaInsertionResult => insertMathTemplate({
+    value,
+    selectionStart,
+    selectionEnd,
+    template: templateId,
+});
 
 interface MathFormulaToolbarProps {
     value: string;
@@ -128,7 +64,7 @@ interface MathFormulaToolbarProps {
     onValueChange: (value: string) => void;
 }
 
-const FORMULA_BUTTONS: Array<{ id: FormulaTemplateId; label: string; title: string }> = [
+const FORMULA_BUTTONS: Array<{ id: MathTemplateId; label: string; title: string }> = [
     { id: 'fraction', label: 'a⁄b', title: 'Phân số' },
     { id: 'sqrt', label: '√', title: 'Căn bậc hai' },
     { id: 'power', label: 'xⁿ', title: 'Số mũ' },
@@ -139,7 +75,7 @@ const FORMULA_BUTTONS: Array<{ id: FormulaTemplateId; label: string; title: stri
 export const MathFormulaToolbar: React.FC<MathFormulaToolbarProps> = ({ value, targetRef, onValueChange }) => {
     const [showGeometry, setShowGeometry] = useState(false);
 
-    const applyTemplate = useCallback((templateId: FormulaTemplateId) => {
+    const applyTemplate = useCallback((templateId: MathTemplateId) => {
         const target = targetRef.current;
         if (!target) return;
         const result = insertFormulaTemplate(
@@ -199,7 +135,7 @@ export const MathFormulaToolbar: React.FC<MathFormulaToolbarProps> = ({ value, t
                                 key={id}
                                 type="button"
                                 onMouseDown={(event) => event.preventDefault()}
-                                onClick={() => applyTemplate(id as FormulaTemplateId)}
+                                onClick={() => applyTemplate(id as MathTemplateId)}
                                 className="block w-full rounded px-2 py-1.5 text-left text-xs text-blue-900 hover:bg-blue-50 hover:text-blue-700"
                             >
                                 {label}
