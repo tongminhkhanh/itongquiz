@@ -9,6 +9,7 @@ import { assignmentRoutes } from './assignments';
 import { gamificationRoutes } from './gamification';
 import { giftShopRoutes } from './giftShop';
 import { phieuRoutes } from './phieu';
+import { resultReportRoutes } from './resultReports';
 import { systemRoutes } from './system';
 import { homeworkRoutes } from './homework';
 
@@ -23,6 +24,7 @@ export const routes: RouteRegistry = {
     ...gamificationRoutes,
     ...giftShopRoutes,
     ...phieuRoutes,
+    ...resultReportRoutes,
     ...systemRoutes,
     ...homeworkRoutes,
 };
