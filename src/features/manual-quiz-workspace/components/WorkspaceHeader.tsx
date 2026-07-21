@@ -17,6 +17,7 @@ const WorkspaceHeader: React.FC = () => {
     const navigate = useNavigate();
     const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
     const saveStatus = useManualQuizWorkspaceStore((state) => state.saveStatus);
+    const saveError = useManualQuizWorkspaceStore((state) => state.saveError);
     const isNavigatorCollapsed = useManualQuizWorkspaceStore((state) => state.isNavigatorCollapsed);
     const isPreviewCollapsed = useManualQuizWorkspaceStore((state) => state.isPreviewCollapsed);
     const updateQuiz = useManualQuizWorkspaceStore((state) => state.updateQuiz);
@@ -47,9 +48,14 @@ const WorkspaceHeader: React.FC = () => {
                     onChange={(event) => updateQuiz({ title: event.target.value })}
                     className="w-full truncate rounded-lg border border-transparent bg-transparent px-2 py-1 text-base font-semibold text-[#172033] outline-none hover:border-slate-200 focus:border-sky-500 lg:text-lg"
                 />
-                <p className="flex items-center gap-1 px-2 text-xs text-slate-500" aria-live="polite">
+                <p
+                    className="flex min-w-0 items-center gap-1 px-2 text-xs text-slate-500"
+                    aria-live="polite"
+                    title={saveError || undefined}
+                >
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                    {SAVE_STATUS_COPY[saveStatus]}
+                    <span className="shrink-0">{SAVE_STATUS_COPY[saveStatus]}</span>
+                    {saveError && <span className="truncate text-rose-600">— {saveError}</span>}
                 </p>
             </div>
 

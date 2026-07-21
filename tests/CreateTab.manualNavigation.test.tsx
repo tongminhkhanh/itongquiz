@@ -86,6 +86,8 @@ describe('CreateTab manual workspace navigation', () => {
         expect(screen.getByTestId('pathname')).toHaveTextContent('/teacher/quizzes/manual/new');
         expect(screen.getByTestId('route-state')).toHaveTextContent('Đề Toán lớp 4');
         expect(screen.getByTestId('route-state')).toHaveTextContent('ABC123');
+        const routeState = JSON.parse(screen.getByTestId('route-state').textContent || '{}');
+        expect(Date.parse(routeState.workspaceStartedAt)).not.toBeNaN();
         expect(useQuizStore.getState().view).toBe('teacher_dash');
         expect(logic.setGeneratedQuiz).not.toHaveBeenCalled();
     });

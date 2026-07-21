@@ -13,6 +13,7 @@ export interface ManualQuizSeed {
 
 export interface ManualQuizNavigationState {
     manualQuizSeed?: ManualQuizSeed;
+    workspaceStartedAt?: string;
 }
 
 export type ManualQuizSaveStatus =

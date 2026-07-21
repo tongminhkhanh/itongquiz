@@ -38,7 +38,12 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             accessCode: logic.accessCode,
             showOnHome: logic.showOnHome,
         });
-        navigate('/teacher/quizzes/manual/new', { state: { manualQuizSeed } });
+        navigate('/teacher/quizzes/manual/new', {
+            state: {
+                manualQuizSeed,
+                workspaceStartedAt: new Date().toISOString(),
+            },
+        });
     };
 
     const questionCount = logic.difficultyLevels.level1 + logic.difficultyLevels.level2 + logic.difficultyLevels.level3;

@@ -1,15 +1,35 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import ManualQuizWorkspaceGuard from './components/ManualQuizWorkspaceGuard';
+import DraftRecoveryDialog from './components/DraftRecoveryDialog';
 import QuestionEditorPane from './components/QuestionEditorPane';
 import QuestionNavigator from './components/QuestionNavigator';
 import StudentPreviewPane from './components/StudentPreviewPane';
 import WorkspaceHeader from './components/WorkspaceHeader';
 import WorkspaceStatusBar from './components/WorkspaceStatusBar';
+import {
+    findLatestLocalDraft,
+    removeLocalDraft,
+} from './draft/manualQuizDraftRepository';
+import { useManualQuizAutosave } from './hooks/useManualQuizAutosave';
 import { useManualQuizWorkspaceStore } from './store/useManualQuizWorkspaceStore';
-import type { ManualQuizNavigationState } from './types/manualQuizWorkspace.types';
+import type {
+    ManualQuizDraftEnvelope,
+    ManualQuizNavigationState,
+    ManualQuizSeed,
+} from './types/manualQuizWorkspace.types';
+
+const DEFAULT_SEED: ManualQuizSeed = {
+    title: 'Đề kiểm tra mới',
+    classLevel: '3',
+    category: 'toan',
+    timeLimit: 15,
+    tags: [],
+    requireCode: false,
+    showOnHome: true,
+};
 
 const ManualQuizWorkspacePage: React.FC = () => {
     const { quizId } = useParams<{ quizId?: string }>();
@@ -22,26 +42,65 @@ const ManualQuizWorkspacePage: React.FC = () => {
     const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
     const initializeFromSeed = useManualQuizWorkspaceStore((state) => state.initializeFromSeed);
     const initializeFromQuiz = useManualQuizWorkspaceStore((state) => state.initializeFromQuiz);
+    const hydrateEnvelope = useManualQuizWorkspaceStore((state) => state.hydrateEnvelope);
     const isNavigatorCollapsed = useManualQuizWorkspaceStore((state) => state.isNavigatorCollapsed);
     const isPreviewCollapsed = useManualQuizWorkspaceStore((state) => state.isPreviewCollapsed);
+    const [pendingRecovery, setPendingRecovery] = useState<ManualQuizDraftEnvelope | null>(null);
+    const [recoveryChecked, setRecoveryChecked] = useState(false);
+
+    const seed = navigationState?.manualQuizSeed ?? DEFAULT_SEED;
+
+    useManualQuizAutosave(envelope);
 
     useEffect(() => {
-        if (!username || envelope) return;
-        if (availableQuiz) {
-            initializeFromQuiz(availableQuiz, username);
+        if (!username || envelope || pendingRecovery || recoveryChecked) return;
+
+        const latestDraft = findLatestLocalDraft(username, quizId);
+        const workspaceStartedAt = navigationState?.workspaceStartedAt;
+        const isNewerThanCurrentEntry = latestDraft
+            && (!workspaceStartedAt || latestDraft.updatedAt > workspaceStartedAt);
+
+        if (latestDraft && isNewerThanCurrentEntry) {
+            setPendingRecovery(latestDraft);
+            setRecoveryChecked(true);
             return;
         }
-        const seed = navigationState?.manualQuizSeed ?? {
-            title: 'Đề kiểm tra mới',
-            classLevel: '3',
-            category: 'toan',
-            timeLimit: 15,
-            tags: [],
-            requireCode: false,
-            showOnHome: true,
-        };
-        initializeFromSeed(seed, username);
-    }, [availableQuiz, envelope, initializeFromQuiz, initializeFromSeed, navigationState, username]);
+
+        setRecoveryChecked(true);
+        if (availableQuiz) {
+            initializeFromQuiz(availableQuiz, username);
+        } else {
+            initializeFromSeed(seed, username);
+        }
+    }, [
+        availableQuiz,
+        envelope,
+        initializeFromQuiz,
+        initializeFromSeed,
+        navigationState?.workspaceStartedAt,
+        pendingRecovery,
+        quizId,
+        recoveryChecked,
+        seed,
+        username,
+    ]);
+
+    const continueRecoveredDraft = () => {
+        if (!pendingRecovery) return;
+        hydrateEnvelope(pendingRecovery);
+        setPendingRecovery(null);
+    };
+
+    const discardRecoveredDraft = () => {
+        if (!pendingRecovery || !username) return;
+        removeLocalDraft(username, pendingRecovery.draftId);
+        setPendingRecovery(null);
+        if (availableQuiz) {
+            initializeFromQuiz(availableQuiz, username);
+        } else {
+            initializeFromSeed(seed, username);
+        }
+    };
 
     const columnClass = isNavigatorCollapsed
         ? isPreviewCollapsed
@@ -70,6 +129,13 @@ const ManualQuizWorkspacePage: React.FC = () => {
                     {!isPreviewCollapsed && <StudentPreviewPane />}
                 </div>
                 <WorkspaceStatusBar />
+                {pendingRecovery && (
+                    <DraftRecoveryDialog
+                        draft={pendingRecovery}
+                        onContinue={continueRecoveredDraft}
+                        onDiscard={discardRecoveredDraft}
+                    />
+                )}
             </div>
         </ManualQuizWorkspaceGuard>
     );
