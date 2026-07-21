@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useGamificationStore } from './useGamificationStore';
+import { useClassroomStore } from './useClassroomStore';
 import {
     giftShopService,
     GiftCatalogDeleteInput,
@@ -25,13 +26,40 @@ interface PurchaseArgs {
     idempotencyKey: string;
 }
 
+type LoadingArea = 'catalog' | 'studentOrders' | 'managedOrders' | 'events' | 'action';
+type ErrorArea = LoadingArea;
+
+export interface GiftShopLoadingState {
+    catalog: boolean;
+    studentOrders: boolean;
+    managedOrders: boolean;
+    events: boolean;
+    action: boolean;
+}
+
+export interface GiftShopErrorState {
+    catalog: string | null;
+    studentOrders: string | null;
+    managedOrders: string | null;
+    events: string | null;
+    action: string | null;
+}
+
+export interface GiftShopPendingAction {
+    type: 'purchase' | 'deliver' | 'cancel' | 'save-catalog' | 'delete-catalog';
+    targetId?: string;
+}
+
 interface GiftShopStore {
     catalog: GiftCatalogItem[];
     myOrders: GiftOrder[];
     managedOrders: GiftOrder[];
     eventLogs: GiftShopEventLog[];
+    loading: GiftShopLoadingState;
+    errors: GiftShopErrorState;
     isLoading: boolean;
     error: string | null;
+    pendingAction: GiftShopPendingAction | null;
     lastPurchase: GiftPurchaseResponse | null;
 
     loadCatalog: () => Promise<void>;
@@ -47,6 +75,59 @@ interface GiftShopStore {
     clearError: () => void;
 }
 
+const EMPTY_LOADING: GiftShopLoadingState = {
+    catalog: false,
+    studentOrders: false,
+    managedOrders: false,
+    events: false,
+    action: false,
+};
+
+const EMPTY_ERRORS: GiftShopErrorState = {
+    catalog: null,
+    studentOrders: null,
+    managedOrders: null,
+    events: null,
+    action: null,
+};
+
+type StoreSetter = (
+    partial: Partial<GiftShopStore> | ((state: GiftShopStore) => Partial<GiftShopStore>)
+) => void;
+
+const firstError = (errors: GiftShopErrorState) =>
+    errors.action
+    || errors.managedOrders
+    || errors.studentOrders
+    || errors.catalog
+    || errors.events
+    || null;
+
+const setLoading = (set: StoreSetter, area: LoadingArea, value: boolean) => {
+    set((state) => {
+        const loading = { ...state.loading, [area]: value };
+        return { loading, isLoading: Object.values(loading).some(Boolean) };
+    });
+};
+
+const setAreaError = (set: StoreSetter, area: ErrorArea, value: string | null) => {
+    set((state) => {
+        const errors = { ...state.errors, [area]: value };
+        return { errors, error: firstError(errors) };
+    });
+};
+
+const startAction = (set: StoreSetter, pendingAction: GiftShopPendingAction) => {
+    set({ pendingAction });
+    setAreaError(set, 'action', null);
+    setLoading(set, 'action', true);
+};
+
+const finishAction = (set: StoreSetter) => {
+    set({ pendingAction: null });
+    setLoading(set, 'action', false);
+};
+
 const syncGamificationCoins = (coins: number) => {
     useGamificationStore.setState((state) => ({
         ...state,
@@ -54,69 +135,75 @@ const syncGamificationCoins = (coins: number) => {
     }));
 };
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error ? error.message : fallback;
+
 export const useGiftShopStore = create<GiftShopStore>((set, get) => ({
     catalog: [],
     myOrders: [],
     managedOrders: [],
     eventLogs: [],
+    loading: { ...EMPTY_LOADING },
+    errors: { ...EMPTY_ERRORS },
     isLoading: false,
     error: null,
+    pendingAction: null,
     lastPurchase: null,
 
     loadCatalog: async () => {
-        set({ isLoading: true, error: null });
+        setAreaError(set, 'catalog', null);
+        setLoading(set, 'catalog', true);
         try {
             const catalog = await giftShopService.getCatalog();
-            set({ catalog, isLoading: false });
+            set({ catalog });
         } catch (error) {
-            set({
-                isLoading: false,
-                error: error instanceof Error ? error.message : 'Không thể tải danh mục quà.',
-            });
+            setAreaError(set, 'catalog', getErrorMessage(error, 'Không thể tải danh mục quà.'));
+        } finally {
+            setLoading(set, 'catalog', false);
         }
     },
 
     loadStudentOrders: async (studentId: string) => {
-        set({ isLoading: true, error: null });
+        setAreaError(set, 'studentOrders', null);
+        setLoading(set, 'studentOrders', true);
         try {
             const orders = await giftShopService.getOrders({ studentId });
-            set({ myOrders: orders, isLoading: false });
+            set({ myOrders: orders });
         } catch (error) {
-            set({
-                isLoading: false,
-                error: error instanceof Error ? error.message : 'Không thể tải lịch sử đổi quà.',
-            });
+            setAreaError(set, 'studentOrders', getErrorMessage(error, 'Không thể tải lịch sử đổi quà.'));
+        } finally {
+            setLoading(set, 'studentOrders', false);
         }
     },
 
     loadManagedOrders: async (query: GiftOrderQuery) => {
-        set({ isLoading: true, error: null });
+        setAreaError(set, 'managedOrders', null);
+        setLoading(set, 'managedOrders', true);
         try {
             const managedOrders = await giftShopService.getOrders(query);
-            set({ managedOrders, isLoading: false });
+            set({ managedOrders });
         } catch (error) {
-            set({
-                isLoading: false,
-                error: error instanceof Error ? error.message : 'Không thể tải danh sách đơn quà.',
-            });
+            setAreaError(set, 'managedOrders', getErrorMessage(error, 'Không thể tải danh sách đơn quà.'));
+        } finally {
+            setLoading(set, 'managedOrders', false);
         }
     },
 
     loadEventLogs: async () => {
-        set({ isLoading: true, error: null });
+        setAreaError(set, 'events', null);
+        setLoading(set, 'events', true);
         try {
             const logs = await giftShopService.getEventLogs();
-            set({ eventLogs: logs, isLoading: false });
+            set({ eventLogs: logs });
         } catch (error) {
-            set({
-                isLoading: false,
-                error: error instanceof Error ? error.message : 'Không thể tải nhật ký giao dịch.',
-            });
+            setAreaError(set, 'events', getErrorMessage(error, 'Không thể tải nhật ký giao dịch.'));
+        } finally {
+            setLoading(set, 'events', false);
         }
     },
 
     purchaseGift: async (args: PurchaseArgs) => {
-        set({ isLoading: true, error: null });
+        startAction(set, { type: 'purchase', targetId: args.itemId });
         try {
             const result = await giftShopService.purchase({
                 studentId: args.studentId,
@@ -130,89 +217,86 @@ export const useGiftShopStore = create<GiftShopStore>((set, get) => ({
             });
             syncGamificationCoins(result.newCoins);
             const myOrders = await giftShopService.getOrders({ studentId: args.studentId });
-            set({ lastPurchase: result, myOrders, isLoading: false });
+            set({ lastPurchase: result, myOrders });
             return result;
         } catch (error) {
-            set({
-                isLoading: false,
-                error: error instanceof Error ? error.message : 'Đổi quà thất bại.',
-            });
+            setAreaError(set, 'action', getErrorMessage(error, 'Đổi quà thất bại.'));
             return null;
+        } finally {
+            finishAction(set);
         }
     },
 
     deliverOrder: async (orderId: string, actor: GiftOrderActor, queryAfter?: GiftOrderQuery) => {
-        set({ isLoading: true, error: null });
+        startAction(set, { type: 'deliver', targetId: orderId });
         try {
             await giftShopService.deliverOrder(orderId, actor);
             const query = queryAfter || { status: 'VOUCHER_ISSUED' };
             const managedOrders = await giftShopService.getOrders(query);
-            set({ managedOrders, isLoading: false });
+            set({ managedOrders });
             return true;
         } catch (error) {
-            set({
-                isLoading: false,
-                error: error instanceof Error ? error.message : 'Không thể xác nhận trao quà.',
-            });
+            setAreaError(set, 'action', getErrorMessage(error, 'Không thể xác nhận trao quà.'));
             return false;
+        } finally {
+            finishAction(set);
         }
     },
 
     cancelOrder: async (orderId: string, actor: GiftOrderActor, reason: string, queryAfter?: GiftOrderQuery) => {
-        set({ isLoading: true, error: null });
+        startAction(set, { type: 'cancel', targetId: orderId });
         try {
             const result = await giftShopService.cancelOrder(orderId, actor, reason);
             const query = queryAfter || { status: 'VOUCHER_ISSUED' };
             const managedOrders = await giftShopService.getOrders(query);
-            const myOrders = get().myOrders.some((x) => x.studentId === result.order.studentId)
+            const activeStudentId = useClassroomStore.getState().studentSession?.studentId;
+            const isCurrentStudent = activeStudentId === result.order.studentId;
+            const myOrders = isCurrentStudent
                 ? await giftShopService.getOrders({ studentId: result.order.studentId })
                 : get().myOrders;
 
-            syncGamificationCoins(result.newCoins);
-            set({ managedOrders, myOrders, isLoading: false });
+            if (isCurrentStudent) syncGamificationCoins(result.newCoins);
+            set({ managedOrders, myOrders });
             return true;
         } catch (error) {
-            set({
-                isLoading: false,
-                error: error instanceof Error ? error.message : 'Không thể hủy đơn quà.',
-            });
+            setAreaError(set, 'action', getErrorMessage(error, 'Không thể hủy đơn quà.'));
             return false;
+        } finally {
+            finishAction(set);
         }
     },
 
     saveCatalogItem: async (input: GiftCatalogUpsertInput) => {
-        set({ isLoading: true, error: null });
+        startAction(set, { type: 'save-catalog', targetId: input.id });
         try {
             const savedItem = await giftShopService.upsertCatalogItem(input);
             const catalog = await giftShopService.getCatalog();
-            set({ catalog, isLoading: false });
+            set({ catalog });
             return savedItem;
         } catch (error) {
-            set({
-                isLoading: false,
-                error: error instanceof Error ? error.message : 'Không thể lưu danh mục quà.',
-            });
+            setAreaError(set, 'action', getErrorMessage(error, 'Không thể lưu danh mục quà.'));
             return null;
+        } finally {
+            finishAction(set);
         }
     },
 
     removeCatalogItem: async (input: GiftCatalogDeleteInput) => {
-        set({ isLoading: true, error: null });
+        startAction(set, { type: 'delete-catalog', targetId: input.id });
         try {
             await giftShopService.deleteCatalogItem(input);
             const catalog = await giftShopService.getCatalog();
-            set({ catalog, isLoading: false });
+            set({ catalog });
             return true;
         } catch (error) {
-            set({
-                isLoading: false,
-                error: error instanceof Error ? error.message : 'Không thể xóa vật phẩm.',
-            });
+            setAreaError(set, 'action', getErrorMessage(error, 'Không thể xóa vật phẩm.'));
             return false;
+        } finally {
+            finishAction(set);
         }
     },
 
     clearLastPurchase: () => set({ lastPurchase: null }),
 
-    clearError: () => set({ error: null }),
+    clearError: () => set({ errors: { ...EMPTY_ERRORS }, error: null }),
 }));

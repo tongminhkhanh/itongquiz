@@ -1,4 +1,5 @@
 import type { Env } from '../../types';
+import { requireTeacher } from '../../middleware/jwtAuth';
 import { errorResponse, jsonResponse } from '../../utils/response';
 import { getActorAccessFromUser, getAuthenticatedUser } from './auth';
 import { mapOrder } from './mappers';
@@ -8,20 +9,36 @@ import { normalizeStatus } from './values';
 
 export const handleOrderList = async (request: Request, env: Env): Promise<Response> => {
     const url = new URL(request.url);
-    const studentId = String(url.searchParams.get('studentId') || '').trim();
+    const requestedStudentId = String(url.searchParams.get('studentId') || '').trim();
     const classId = String(url.searchParams.get('classId') || '').trim();
     const userOrResponse = await getAuthenticatedUser(request, env);
     if (userOrResponse instanceof Response) return userOrResponse;
 
     const actorAccess = getActorAccessFromUser(userOrResponse);
     const status = normalizeStatus(url.searchParams.get('status'));
-    const hasStudentScope = Boolean(studentId);
-    const hasStaffScope = actorAccess.isAdmin || Boolean(actorAccess.teacherClass);
-    if (!hasStudentScope && !hasStaffScope) {
+    const isStudent = userOrResponse.role === 'student';
+    let studentId = requestedStudentId;
+
+    if (isStudent) {
+        const authenticatedStudentId = String(userOrResponse.id || '').trim();
+        if (!authenticatedStudentId) return errorResponse('Student identity not found', 403);
+        if (requestedStudentId && requestedStudentId !== authenticatedStudentId) {
+            return errorResponse('Forbidden', 403);
+        }
+        studentId = authenticatedStudentId;
+    } else if (!requireTeacher(userOrResponse)) {
+        return errorResponse('Forbidden', 403);
+    }
+
+    if (!isStudent && !actorAccess.isAdmin && !actorAccess.teacherClass) {
         return errorResponse('Teacher class assignment not found', 403);
     }
 
-    const effectiveClassScope = actorAccess.isAdmin ? classId : (actorAccess.teacherClass || '');
+    const effectiveClassScope = isStudent
+        ? ''
+        : actorAccess.isAdmin
+            ? classId
+            : (actorAccess.teacherClass || '');
     const conditions: string[] = [];
     const params: unknown[] = [];
 

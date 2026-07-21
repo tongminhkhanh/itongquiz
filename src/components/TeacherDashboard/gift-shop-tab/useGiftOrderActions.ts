@@ -11,9 +11,7 @@ export const useGiftOrderActions = ({ actor, query, deliverOrder, cancelOrder }:
   deliver: async (orderId: string) => {
     await deliverOrder(orderId, actor, query);
   },
-  cancel: async (orderId: string) => {
-    const reason = window.prompt('Nhập lý do hủy đơn (sẽ hoàn 100% xu):', 'Hủy thủ công bởi giáo viên');
-    if (!reason) return;
+  cancel: async (orderId: string, reason: string) => {
     await cancelOrder(orderId, actor, reason, query);
   },
 });

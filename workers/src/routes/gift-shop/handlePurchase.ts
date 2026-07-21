@@ -2,7 +2,7 @@ import type { Env } from '../../types';
 import { requireTeacher } from '../../middleware/jwtAuth';
 import { parseBody } from '../../utils/helpers';
 import { errorResponse, generateId } from '../../utils/response';
-import { getAuthenticatedUser } from './auth';
+import { getActorAccessFromUser, getAuthenticatedUser } from './auth';
 import { commitPurchase } from './commitPurchase';
 import { findOrderByIdempotency, getCoinsByStudentId, getOrderById } from './orderRepository';
 import { buildItemSnapshot, getActiveCatalogItem, getStudentForPurchase } from './purchaseRepository';
@@ -30,6 +30,19 @@ export const handlePurchase = async (request: Request, env: Env): Promise<Respon
         return errorResponse('Missing studentId, itemId, or idempotencyKey');
     }
 
+    const student = await getStudentForPurchase(env.DB, studentId);
+    if (!student) return errorResponse('Student not found', 404);
+
+    if (userOrResponse.role !== 'student') {
+        const actorAccess = getActorAccessFromUser(userOrResponse);
+        const teacherClass = String(actorAccess.teacherClass || '').trim();
+        const studentClassId = String(student.class_id || '').trim();
+        const studentClassName = String(student.class_name || '').trim();
+        if (!actorAccess.isAdmin && (!teacherClass || (teacherClass !== studentClassId && teacherClass !== studentClassName))) {
+            return errorResponse('Forbidden', 403);
+        }
+    }
+
     const existingOrder = await findOrderByIdempotency(env.DB, idempotencyKey, studentId);
     if (existingOrder) {
         const coins = await getCoinsByStudentId(env.DB, studentId);
@@ -38,9 +51,6 @@ export const handlePurchase = async (request: Request, env: Env): Promise<Respon
 
     const item = await getActiveCatalogItem(env.DB, itemId);
     if (!item) return errorResponse('Gift item not found', 404);
-
-    const student = await getStudentForPurchase(env.DB, studentId);
-    if (!student) return errorResponse('Student not found', 404);
 
     const currentCoins = Number(student.coins) || 0;
     const priceCoins = Number(item.price_coins) || 0;

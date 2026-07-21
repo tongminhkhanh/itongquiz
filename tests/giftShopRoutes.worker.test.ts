@@ -197,6 +197,28 @@ describe('Gift Shop worker route contracts', () => {
         expect(db.executed).toHaveLength(0);
     });
 
+    it('does not write an update event when the catalog item does not exist', async () => {
+        currentUser = { username: 'admin-1', role: 'admin' };
+        const db = new FakeDatabase(() => null);
+
+        const response = await handleGiftShopRoutes(
+            request('/api/gift-shop/catalog/missing-gift', 'PUT', {
+                name: 'Missing gift',
+                category: 'SUPPLY',
+                priceCoins: 100,
+                imageUrl: 'https://cdn.test/missing.png',
+                isActive: true,
+            }),
+            env(db),
+            '/api/gift-shop/catalog/missing-gift',
+            'PUT',
+        );
+
+        expect(response.status).toBe(404);
+        expect(db.executed.some((statement) => statement.sql.includes('UPDATE gift_catalog_items'))).toBe(false);
+        expect(db.executed.some((statement) => statement.sql.includes('INSERT INTO gift_order_events'))).toBe(false);
+    });
+
     it('scopes teacher order queries by JWT class name and maps order snapshots', async () => {
         currentUser = { username: 'teacher-3a', role: 'teacher', classId: '3A' };
         const db = new FakeDatabase(
@@ -241,7 +263,15 @@ describe('Gift Shop worker route contracts', () => {
         );
         expect(historyResponse.status).toBe(200);
         const historyQuery = db.executed.find((statement) => statement.sql.includes('FROM gift_orders o'));
-        expect(historyQuery?.bindings).toEqual(['student-1', 'class-3a', 'class-3a']);
+        expect(historyQuery?.bindings).toEqual(['student-1']);
+
+        const otherStudentHistory = await handleGiftShopRoutes(
+            request('/api/gift-shop/orders?studentId=student-2'),
+            env(db),
+            '/api/gift-shop/orders',
+            'GET',
+        );
+        expect(otherStudentHistory.status).toBe(403);
 
         const purchaseResponse = await handleGiftShopRoutes(
             request('/api/gift-shop/purchase', 'POST', {
@@ -254,9 +284,38 @@ describe('Gift Shop worker route contracts', () => {
         expect(purchaseResponse.status).toBe(403);
     });
 
+    it('prevents teachers from purchasing for students outside their assigned class', async () => {
+        currentUser = { username: 'teacher-3a', role: 'teacher', classId: '3A' };
+        const db = new FakeDatabase((sql) => {
+            if (sql.includes('FROM students s')) {
+                return {
+                    id: 'student-2', full_name: 'Student Two', username: 'student02',
+                    class_id: 'class-4b', class_name: '4B', coins: 500,
+                };
+            }
+            return null;
+        });
+
+        const response = await handleGiftShopRoutes(
+            request('/api/gift-shop/purchase', 'POST', {
+                studentId: 'student-2', itemId: 'gift-1', idempotencyKey: 'idem-cross-class',
+            }),
+            env(db),
+            '/api/gift-shop/purchase',
+            'POST',
+        );
+
+        expect(response.status).toBe(403);
+        expect(db.batches).toHaveLength(0);
+        expect(db.executed.some((statement) => statement.sql.includes('gift_catalog_items'))).toBe(false);
+    });
+
     it('replays an existing purchase idempotently without executing a batch', async () => {
         currentUser = { id: 'student-1', username: 'student01', role: 'student', classId: 'class-3a' };
         const db = new FakeDatabase((sql) => {
+            if (sql.includes('FROM students s')) {
+                return { id: 'student-1', full_name: 'Student One', username: 'student01', class_id: 'class-3a', class_name: '3A', coins: 375 };
+            }
             if (sql.includes('WHERE o.idempotency_key = ?')) return orderRow();
             if (sql.includes('SELECT coins FROM students')) return { coins: 375 };
             return null;
@@ -288,8 +347,8 @@ describe('Gift Shop worker route contracts', () => {
         db = new FakeDatabase((sql, bindings) => {
             if (sql.includes('WHERE o.idempotency_key = ?')) return null;
             if (sql.includes('FROM gift_catalog_items') && sql.includes('is_active = 1')) return catalogRow();
-            if (sql.includes('SELECT id, full_name, username, class_id, coins')) {
-                return { id: 'student-1', full_name: 'Student One', username: 'student01', class_id: 'class-3a', coins: 500 };
+            if (sql.includes('FROM students s')) {
+                return { id: 'student-1', full_name: 'Student One', username: 'student01', class_id: 'class-3a', class_name: '3A', coins: 500 };
             }
             if (sql.includes('WHERE o.id = ?')) return orderRow({ id: String(bindings[0]) });
             if (sql.includes('SELECT coins FROM students')) return { coins: 375 };

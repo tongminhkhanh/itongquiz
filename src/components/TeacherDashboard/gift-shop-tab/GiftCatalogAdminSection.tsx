@@ -9,8 +9,11 @@ interface Props {
 }
 
 export const GiftCatalogAdminSection = ({ catalog, editor }: Props) => (
-  <section className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5">
-    <h3 className="text-lg font-black text-slate-800 mb-3">Quản kho (Admin)</h3>
+  <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
+    <div className="mb-4">
+      <h3 className="text-lg font-bold text-slate-900">Kho quà</h3>
+      <p className="mt-1 text-sm text-slate-500">Thêm, chỉnh sửa hoặc ngừng hiển thị phần thưởng trong cửa hàng học sinh.</p>
+    </div>
     <GiftCatalogForm
       form={editor.form}
       setForm={editor.setForm}

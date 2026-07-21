@@ -6,9 +6,10 @@ export const getActiveCatalogItem = async (db: D1Database, itemId: string) => aw
 `).bind(itemId).first<any>();
 
 export const getStudentForPurchase = async (db: D1Database, studentId: string) => await db.prepare(`
-    SELECT id, full_name, username, class_id, coins
-    FROM students
-    WHERE id = ?
+    SELECT s.id, s.full_name, s.username, s.class_id, s.coins, c.name AS class_name
+    FROM students s
+    LEFT JOIN classes c ON c.id = s.class_id
+    WHERE s.id = ?
     LIMIT 1
 `).bind(studentId).first<any>();
 

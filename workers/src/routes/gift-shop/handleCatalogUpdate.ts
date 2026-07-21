@@ -22,6 +22,9 @@ export const handleCatalogUpdate = async (request: Request, env: Env, path: stri
     const payload = normalizeCatalogPayload(body);
     if (!isValidCatalogPayload(payload)) return errorResponse('Invalid catalog payload');
 
+    const existingItem = await getCatalogItemById(env.DB, itemId);
+    if (!existingItem) return errorResponse('Catalog item not found', 404);
+
     await updateCatalogItem(env.DB, itemId, payload);
     await appendEvent(env.DB, {
         type: 'CATALOG_UPDATED',

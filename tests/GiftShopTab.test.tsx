@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import GiftShopTab from '../src/components/TeacherDashboard/GiftShopTab';
 import { useAuthStore } from '../stores/authStore';
@@ -76,8 +76,23 @@ function resetStores(options: {
     myOrders: [],
     managedOrders: options.orders ?? [],
     eventLogs: options.events ?? [],
+    loading: {
+      catalog: false,
+      studentOrders: false,
+      managedOrders: options.isLoading ?? false,
+      events: false,
+      action: false,
+    },
+    errors: {
+      catalog: null,
+      studentOrders: null,
+      managedOrders: options.error ?? null,
+      events: null,
+      action: null,
+    },
     isLoading: options.isLoading ?? false,
     error: options.error ?? null,
+    pendingAction: null,
     lastPurchase: null,
     loadCatalog: vi.fn(async () => undefined),
     loadStudentOrders: vi.fn(async () => undefined),
@@ -120,8 +135,8 @@ describe('TeacherDashboard GiftShopTab contracts', () => {
     });
 
     expect(state.loadEventLogs).not.toHaveBeenCalled();
-    expect(screen.queryByPlaceholderText(/Lọc classId/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Audit log/i)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Tên lớp/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nhật ký hoạt động/i)).not.toBeInTheDocument();
   });
 
   it('loads admin audit data and refreshes orders when admin filters change', async () => {
@@ -139,30 +154,32 @@ describe('TeacherDashboard GiftShopTab contracts', () => {
       }));
     });
 
-    fireEvent.change(screen.getByPlaceholderText(/Lọc classId/i), { target: { value: 'class_4b' } });
+    fireEvent.change(screen.getByPlaceholderText(/Tên lớp/i), { target: { value: '4B' } });
     await waitFor(() => {
       expect(state.loadManagedOrders).toHaveBeenCalledWith(expect.objectContaining({
-        classId: 'class_4b',
+        classId: '4B',
         actorIsAdmin: true,
       }));
-    });
+    }, { timeout: 1500 });
 
-    expect(screen.getByText('ORDER_CREATED')).toBeInTheDocument();
-    expect(screen.getByText(/Audit log \(api\)/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Nhật ký$/i }));
+    expect(screen.getByText('Đã tạo đơn đổi quà')).toBeInTheDocument();
+    expect(screen.getByText(/Nhật ký hoạt động/i)).toBeInTheDocument();
   });
 
   it('validates catalog input, normalizes a valid payload, and resets the form', async () => {
     resetStores({ isAdmin: true, teacherClass: null });
     render(<GiftShopTab />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Thêm quà/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Thêm quà mới/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Thêm quà$/i }));
     expect(mockedShowError).toHaveBeenCalledWith('Vui lòng nhập đầy đủ tên, giá hợp lệ và link ảnh.');
 
     fireEvent.change(screen.getByPlaceholderText('Tên quà'), { target: { value: '  Vở ô ly  ' } });
-    fireEvent.change(screen.getByDisplayValue('Khu Ăn Vặt'), { target: { value: 'SUPPLY' } });
+    fireEvent.change(screen.getByDisplayValue('Ăn vặt'), { target: { value: 'SUPPLY' } });
     fireEvent.change(screen.getByPlaceholderText('Giá xu'), { target: { value: '125' } });
     fireEvent.change(screen.getByPlaceholderText(/Link ảnh/i), { target: { value: '  https://cdn.example.com/notebook.png  ' } });
-    fireEvent.click(screen.getByRole('button', { name: /Thêm quà/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Thêm quà$/i }));
 
     const saveCatalogItem = useGiftShopStore.getState().saveCatalogItem;
     await waitFor(() => {
@@ -184,6 +201,7 @@ describe('TeacherDashboard GiftShopTab contracts', () => {
   it('edits a catalog item and deletes it through the destructive confirmation contract', async () => {
     resetStores({ isAdmin: true, teacherClass: null, catalog: [catalogItem] });
     render(<GiftShopTab />);
+    fireEvent.click(screen.getByRole('button', { name: /^Kho quà$/i }));
 
     fireEvent.click(screen.getByRole('button', { name: /^Sửa$/i }));
     expect(screen.getByPlaceholderText('Tên quà')).toHaveValue('Bút chì');
@@ -200,7 +218,7 @@ describe('TeacherDashboard GiftShopTab contracts', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /^Sửa$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^Xóa$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Ngừng$/i }));
     expect(mockedShowConfirm).toHaveBeenCalledWith(expect.objectContaining({
       message: 'Xóa vật phẩm "Bút chì" khỏi danh mục?',
       confirmLabel: 'Xóa',
@@ -215,17 +233,16 @@ describe('TeacherDashboard GiftShopTab contracts', () => {
       actorIsAdmin: true,
       actorUsername: 'admin_01',
     });
-    expect(screen.getByRole('button', { name: /Thêm quà/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Thêm quà$/i })).toBeInTheDocument();
   });
 
   it('delivers and cancels an order with the current actor and active query', async () => {
     resetStores({ orders: [managedOrder] });
-    const promptSpy = vi.spyOn(window, 'prompt')
-      .mockReturnValueOnce(null)
-      .mockReturnValueOnce('Học sinh đổi ý');
     render(<GiftShopTab />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Đã trao quà/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Xác nhận đã trao/i }));
+    const deliverDialog = screen.getByRole('dialog', { name: /Đã trao quà/i });
+    fireEvent.click(within(deliverDialog).getByRole('button', { name: /Xác nhận đã trao/i }));
     await waitFor(() => {
       expect(useGiftShopStore.getState().deliverOrder).toHaveBeenCalledWith(
         'order-1',
@@ -234,10 +251,13 @@ describe('TeacherDashboard GiftShopTab contracts', () => {
       );
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Hủy & hoàn xu/i }));
-    expect(useGiftShopStore.getState().cancelOrder).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole('button', { name: /Hủy & hoàn xu/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Hủy và hoàn xu/i }));
+    const cancelDialog = screen.getByRole('dialog', { name: /Hủy đơn đổi quà/i });
+    expect(within(cancelDialog).getByRole('button', { name: /Hủy đơn và hoàn xu/i })).toBeDisabled();
+    fireEvent.change(within(cancelDialog).getByPlaceholderText(/Nhập lý do hủy đơn/i), {
+      target: { value: 'Học sinh đổi ý' },
+    });
+    fireEvent.click(within(cancelDialog).getByRole('button', { name: /Hủy đơn và hoàn xu/i }));
     await waitFor(() => {
       expect(useGiftShopStore.getState().cancelOrder).toHaveBeenCalledWith(
         'order-1',
@@ -246,17 +266,15 @@ describe('TeacherDashboard GiftShopTab contracts', () => {
         expect.objectContaining({ status: 'VOUCHER_ISSUED', classId: '3A' }),
       );
     });
-
-    promptSpy.mockRestore();
   });
 
-  it('dismisses the store error and exposes the global loading indicator', () => {
+  it('dismisses the store error and exposes the loading status', () => {
     resetStores({ error: 'Không tải được dữ liệu', isLoading: true });
     render(<GiftShopTab />);
 
     expect(screen.getByText('Không tải được dữ liệu')).toBeInTheDocument();
-    expect(screen.getByText('Đang xử lý...')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Đóng' }));
+    expect(screen.getByText('Đang tải dữ liệu tiệm tạp hóa')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Đóng thông báo lỗi' }));
     expect(useGiftShopStore.getState().clearError).toHaveBeenCalled();
   });
 });
