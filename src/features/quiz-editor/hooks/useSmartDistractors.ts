@@ -17,6 +17,12 @@ import { supportsDistractors } from '../utils/questionHelpers';
 // Types
 // ---------------------------------------------------------------------------
 
+export interface PendingDistractorProposal {
+    questionId: string;
+    previousOptions: string[];
+    proposedOptions: string[];
+}
+
 interface UseSmartDistractorsOptions {
     /** The current quiz. Required to look up question data. */
     quiz: Quiz | null;
@@ -30,6 +36,8 @@ interface UseSmartDistractorsOptions {
      * (i.e. updating the local draft options array inside the editor).
      */
     onUpdateEditOptions?: (options: string[]) => void;
+    /** Keep generated options pending until the teacher explicitly accepts them. */
+    requireConfirmation?: boolean;
 }
 
 interface UseSmartDistractorsReturn {
@@ -45,6 +53,9 @@ interface UseSmartDistractorsReturn {
     setShowDistractorPopover: (id: string | null) => void;
     /** Last error message, or null if none. */
     distractorError: string | null;
+    pendingDistractorProposal: PendingDistractorProposal | null;
+    acceptPendingDistractors: () => void;
+    rejectPendingDistractors: () => void;
     /**
      * Trigger distractor generation.
      * @param questionId - target question
@@ -66,12 +77,14 @@ export function useSmartDistractors({
     quiz,
     onUpdateQuestions,
     onUpdateEditOptions,
+    requireConfirmation = false,
 }: UseSmartDistractorsOptions): UseSmartDistractorsReturn {
     const [generatingDistractorId, setGeneratingDistractorId] = useState<string | null>(null);
     const [isGeneratingDistractors, setIsGeneratingDistractors] = useState(false);
     const [distractorCount, setDistractorCount] = useState(3);
     const [showDistractorPopover, setShowDistractorPopover] = useState<string | null>(null);
     const [distractorError, setDistractorError] = useState<string | null>(null);
+    const [pendingDistractorProposal, setPendingDistractorProposal] = useState<PendingDistractorProposal | null>(null);
 
     const generateDistractors = useCallback(
         async (questionId: string, count: number, isFromModal = false) => {
@@ -135,7 +148,13 @@ export function useSmartDistractors({
                     }
                 }
 
-                if (isFromModal) {
+                if (requireConfirmation) {
+                    setPendingDistractorProposal({
+                        questionId,
+                        previousOptions: [...options],
+                        proposedOptions: newOptions,
+                    });
+                } else if (isFromModal) {
                     onUpdateEditOptions?.(newOptions);
                 } else {
                     const updatedQuestions = quiz.questions.map((qq) => {
@@ -155,8 +174,21 @@ export function useSmartDistractors({
                 setIsGeneratingDistractors(false);
             }
         },
-        [quiz, onUpdateQuestions, onUpdateEditOptions],
+        [quiz, onUpdateQuestions, onUpdateEditOptions, requireConfirmation],
     );
+
+    const acceptPendingDistractors = useCallback(() => {
+        if (!quiz || !pendingDistractorProposal) return;
+        const updatedQuestions = quiz.questions.map((question) => question.id === pendingDistractorProposal.questionId
+            ? { ...question, options: [...pendingDistractorProposal.proposedOptions] } as Question
+            : question);
+        onUpdateQuestions?.(updatedQuestions);
+        setPendingDistractorProposal(null);
+    }, [onUpdateQuestions, pendingDistractorProposal, quiz]);
+
+    const rejectPendingDistractors = useCallback(() => {
+        setPendingDistractorProposal(null);
+    }, []);
 
     return {
         generatingDistractorId,
@@ -166,6 +198,9 @@ export function useSmartDistractors({
         showDistractorPopover,
         setShowDistractorPopover,
         distractorError,
+        pendingDistractorProposal,
+        acceptPendingDistractors,
+        rejectPendingDistractors,
         generateDistractors,
     };
 }

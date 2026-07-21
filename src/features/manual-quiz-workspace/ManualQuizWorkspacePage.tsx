@@ -190,6 +190,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
                         <QuestionNavigator
                             onOpenQuestionBank={() => setQuestionBankOpen(true)}
                             onOpenImport={() => setQuestionImportOpen(true)}
+                            teacherId={username || ''}
                         />
                     )}
                     <QuestionEditorPane />

@@ -22,6 +22,9 @@ interface QuestionNavigatorItemProps {
     index: number;
     total: number;
     selected: boolean;
+    selectionMode?: boolean;
+    bulkSelected?: boolean;
+    onToggleBulk?(): void;
     onSelect(): void;
     onMove(offset: -1 | 1): void;
     onDuplicate(): void;
@@ -33,12 +36,15 @@ const QuestionNavigatorItem: React.FC<QuestionNavigatorItemProps> = ({
     index,
     total,
     selected,
+    selectionMode = false,
+    bulkSelected = false,
+    onToggleBulk,
     onSelect,
     onMove,
     onDuplicate,
     onDelete,
 }) => {
-    const draggable = useDraggable({ id: question.id });
+    const draggable = useDraggable({ id: question.id, disabled: selectionMode });
     const droppable = useDroppable({ id: question.id });
     const setNodeRef = useCallback((node: HTMLElement | null) => {
         draggable.setNodeRef(node);
@@ -55,11 +61,25 @@ const QuestionNavigatorItem: React.FC<QuestionNavigatorItemProps> = ({
             style={style}
             data-question-id={question.id}
             className={`rounded-xl border bg-white p-2 transition ${
-                selected ? 'border-sky-500 bg-sky-50' : 'border-slate-200 hover:border-slate-300'
-            } ${droppable.isOver && !draggable.isDragging ? 'ring-2 ring-sky-300' : ''}`}
+                bulkSelected
+                    ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-100'
+                    : selected ? 'border-sky-500 bg-sky-50' : 'border-slate-200 hover:border-slate-300'
+            } ${droppable.isOver && !draggable.isDragging && !selectionMode ? 'ring-2 ring-sky-300' : ''}`}
         >
             <div className="flex items-start gap-1.5">
-                <button
+                {selectionMode && (
+                    <label className="grid h-11 w-8 shrink-0 place-items-center">
+                        <span className="sr-only">Chọn hàng loạt câu {index + 1}</span>
+                        <input
+                            type="checkbox"
+                            aria-label={`Chọn hàng loạt câu ${index + 1}`}
+                            checked={bulkSelected}
+                            onChange={onToggleBulk}
+                            className="h-5 w-5 rounded border-slate-300 accent-violet-600"
+                        />
+                    </label>
+                )}
+                {!selectionMode && <button
                     ref={draggable.setActivatorNodeRef}
                     type="button"
                     aria-label={`Kéo câu ${index + 1}`}
@@ -69,10 +89,10 @@ const QuestionNavigatorItem: React.FC<QuestionNavigatorItemProps> = ({
                     {...draggable.attributes}
                 >
                     <GripVertical className="h-4 w-4" />
-                </button>
+                </button>}
                 <button
                     type="button"
-                    onClick={onSelect}
+                    onClick={selectionMode ? onToggleBulk : onSelect}
                     aria-label={`Chọn câu ${index + 1}: ${getQuestionNavigatorLabel(question)}`}
                     className="flex min-w-0 flex-1 items-start gap-2 rounded-lg p-1.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500"
                 >
@@ -90,7 +110,7 @@ const QuestionNavigatorItem: React.FC<QuestionNavigatorItemProps> = ({
                 </button>
             </div>
 
-            <div className="mt-1 flex items-center justify-end gap-1 border-t border-slate-100 pt-1">
+            {!selectionMode && <div className="mt-1 flex items-center justify-end gap-1 border-t border-slate-100 pt-1">
                 <button
                     type="button"
                     disabled={index === 0}
@@ -129,7 +149,7 @@ const QuestionNavigatorItem: React.FC<QuestionNavigatorItemProps> = ({
                 >
                     <Trash2 className="h-4 w-4" />
                 </button>
-            </div>
+            </div>}
         </article>
     );
 };

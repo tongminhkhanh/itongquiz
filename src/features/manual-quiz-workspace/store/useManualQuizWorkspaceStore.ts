@@ -43,6 +43,11 @@ interface ManualQuizWorkspaceState {
     addQuestion(question: ManualQuizQuestion): void;
     addQuestions(questions: ManualQuizQuestion[]): void;
     removeQuestions(questionIds: string[]): void;
+    replaceQuestions(questions: ManualQuizQuestion[], selectedQuestionId?: string | null): void;
+    bulkUpdateQuestions(
+        questionIds: string[],
+        patch: Partial<Pick<ManualQuizQuestion, 'difficulty' | 'points' | 'explanation'>>,
+    ): void;
     updateQuestion(
         questionId: string,
         updater: (question: ManualQuizQuestion) => ManualQuizQuestion,
@@ -190,6 +195,37 @@ export const useManualQuizWorkspaceStore = create<ManualQuizWorkspaceState>((set
                     questions: [...state.envelope.quiz.questions, ...clones],
                 },
                 selectedQuestionId: clones[clones.length - 1].id,
+            }),
+            saveStatus: 'idle',
+            saveError: null,
+        };
+    }),
+
+    replaceQuestions: (questions, selectedQuestionId) => set((state) => state.envelope ? ({
+        envelope: touchEnvelope(state.envelope, {
+            quiz: {
+                ...state.envelope.quiz,
+                questions: questions.map((question) => ({ ...question })),
+            },
+            selectedQuestionId: selectedQuestionId === undefined
+                ? state.envelope.selectedQuestionId
+                : selectedQuestionId,
+        }),
+        saveStatus: 'idle',
+        saveError: null,
+    }) : state),
+
+    bulkUpdateQuestions: (questionIds, patch) => set((state) => {
+        if (!state.envelope || questionIds.length === 0) return state;
+        const idSet = new Set(questionIds);
+        return {
+            envelope: touchEnvelope(state.envelope, {
+                quiz: {
+                    ...state.envelope.quiz,
+                    questions: state.envelope.quiz.questions.map((question) => idSet.has(question.id)
+                        ? { ...question, ...patch }
+                        : question),
+                },
             }),
             saveStatus: 'idle',
             saveError: null,

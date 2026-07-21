@@ -8,7 +8,7 @@ import {
     useSensors,
     type DragEndEvent,
 } from '@dnd-kit/core';
-import { ChevronLeft, FileUp, Library, Plus, RotateCcw, Search } from 'lucide-react';
+import { CheckCheck, ChevronLeft, FileUp, Library, ListChecks, Plus, RotateCcw, Search, X } from 'lucide-react';
 import { QuestionType } from '../../../types';
 import {
     createManualQuestionDraft,
@@ -19,6 +19,8 @@ import type { ManualQuizQuestion } from '../types/manualQuizWorkspace.types';
 import QuestionNavigatorItem, { getQuestionNavigatorLabel } from './QuestionNavigatorItem';
 import { useQuestionUndo } from '../hooks/useQuestionUndo';
 import QuestionTypePicker from './QuestionTypePicker';
+import BulkQuestionActions from './BulkQuestionActions';
+import { useBulkQuestionSelection } from '../hooks/useBulkQuestionSelection';
 
 export const handleQuestionDragEnd = (
     event: Pick<DragEndEvent, 'active' | 'over'>,
@@ -33,9 +35,10 @@ export const handleQuestionDragEnd = (
 interface QuestionNavigatorProps {
     onOpenQuestionBank?: () => void;
     onOpenImport?: () => void;
+    teacherId?: string;
 }
 
-const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBank, onOpenImport }) => {
+const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBank, onOpenImport, teacherId = '' }) => {
     const [query, setQuery] = useState('');
     const [isTypePickerOpen, setTypePickerOpen] = useState(false);
     const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
@@ -51,6 +54,7 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBan
         useSensor(KeyboardSensor),
     );
     const questions = envelope?.quiz.questions ?? [];
+    const bulkSelection = useBulkQuestionSelection(questions.map((question) => question.id));
     const filteredQuestions = useMemo(() => {
         const normalized = query.trim().toLowerCase();
         if (!normalized) return questions;
@@ -75,6 +79,17 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBan
             <div className="border-b border-slate-200 p-4">
                 <div className="mb-3 flex items-center justify-between gap-2">
                     <h2 className="font-semibold text-[#172033]">Câu hỏi ({questions.length})</h2>
+                    <div className="flex items-center gap-1">
+                        {questions.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => bulkSelection.setSelectionMode(!bulkSelection.selectionMode)}
+                                aria-label={bulkSelection.selectionMode ? 'Thoát chọn nhiều câu hỏi' : 'Chọn nhiều câu hỏi'}
+                                className="grid h-10 w-10 place-items-center rounded-lg text-slate-500 hover:bg-white"
+                            >
+                                {bulkSelection.selectionMode ? <X className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
+                            </button>
+                        )}
                     <button
                         type="button"
                         onClick={() => setNavigatorCollapsed(true)}
@@ -83,7 +98,19 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBan
                     >
                         <ChevronLeft className="h-4 w-4" />
                     </button>
+                    </div>
                 </div>
+                {bulkSelection.selectionMode && (
+                    <button
+                        type="button"
+                        onClick={bulkSelection.selectedIds.size === questions.length ? bulkSelection.clear : bulkSelection.selectAll}
+                        aria-label={bulkSelection.selectedIds.size === questions.length ? 'Bỏ chọn tất cả câu hỏi' : 'Chọn tất cả câu hỏi'}
+                        className="mb-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 text-sm font-semibold text-violet-800"
+                    >
+                        <CheckCheck className="h-4 w-4" />
+                        {bulkSelection.selectedIds.size === questions.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                    </button>
+                )}
                 <label className="relative block">
                     <span className="sr-only">Tìm câu hỏi</span>
                     <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -117,6 +144,9 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBan
                                     index={index}
                                     total={questions.length}
                                     selected={envelope?.selectedQuestionId === question.id}
+                                    selectionMode={bulkSelection.selectionMode}
+                                    bulkSelected={bulkSelection.selectedIds.has(question.id)}
+                                    onToggleBulk={() => bulkSelection.toggle(question.id)}
                                     onSelect={() => selectQuestion(question.id)}
                                     onMove={(offset) => moveQuestion(question.id, offset)}
                                     onDuplicate={() => duplicateQuestion(question.id)}
@@ -127,6 +157,14 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBan
                     </div>
                 </DndContext>
             </div>
+
+            {bulkSelection.selectedIds.size > 0 && (
+                <BulkQuestionActions
+                    selectedIds={bulkSelection.selectedIds}
+                    teacherId={teacherId}
+                    onClear={bulkSelection.clear}
+                />
+            )}
 
             {undo.pendingDeletion && (
                 <div

@@ -85,6 +85,19 @@ describe('QuestionNavigator operations', () => {
         expect(useManualQuizWorkspaceStore.getState().envelope?.selectedQuestionId).toBe('q-2');
     });
 
+    it('enters multi-select mode and exposes bulk actions after checking questions', () => {
+        render(<QuestionNavigator teacherId="teacher-a" />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn nhiều câu hỏi' }));
+        expect(screen.queryByRole('button', { name: 'Kéo câu 1' })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Chọn hàng loạt câu 1' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Chọn hàng loạt câu 2' }));
+
+        expect(screen.getByRole('region', { name: 'Bảng thao tác hàng loạt' })).toHaveTextContent('Đã chọn 2 câu');
+        fireEvent.click(screen.getByRole('button', { name: 'Bỏ chọn tất cả' }));
+        expect(screen.queryByRole('region', { name: 'Bảng thao tác hàng loạt' })).not.toBeInTheDocument();
+    });
+
     it('expires the undo snapshot after eight seconds', () => {
         render(<QuestionNavigator />);
         fireEvent.click(screen.getByRole('button', { name: 'Xóa câu 2' }));
