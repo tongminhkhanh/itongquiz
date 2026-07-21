@@ -43,7 +43,7 @@ class Database {
             options: '1|2', correct_answer: 'B', items: '', text_field: '', blanks: '',
             distractors: '', sentence: '', words: '', correct_word_indexes: '', image: '',
             tags: '', subject: 'toan', skill_code: '', subskill_code: '', difficulty: 1,
-            math_format_version: 2, points: 2.5, explanation: 'Vì một cộng một bằng hai.',
+            math_format_version: 2, points: 2.5, explanation: 'Vì một cộng một bằng hai.', image_alt: 'Hai khối vuông.',
         }];
     }
     async batch(statements: Statement[]) {
@@ -62,7 +62,7 @@ const request = (path: string, method: string, body?: unknown) => new Request(`h
 const question = {
     id: 'q-1', type: 'MCQ', question: '1 + 1 = ?', options: ['1', '2'],
     correctAnswer: 'B', difficulty: 1, points: 2.5,
-    explanation: 'Vì một cộng một bằng hai.',
+    explanation: 'Vì một cộng một bằng hai.', imageAlt: 'Hai khối vuông.',
 };
 
 beforeEach(() => {
@@ -72,8 +72,8 @@ beforeEach(() => {
 describe('quiz authoring points and explanations', () => {
     it('maps points and explanation as the final persisted question fields', () => {
         const mapped = mapQuestionForSave(question, 'quiz-a');
-        expect(mapped).toHaveLength(22);
-        expect(mapped.slice(-2)).toEqual(['2.5', 'Vì một cộng một bằng hai.']);
+        expect(mapped).toHaveLength(23);
+        expect(mapped.slice(-3)).toEqual(['2.5', 'Vì một cộng một bằng hai.', 'Hai khối vuông.']);
     });
 
     it('persists authoring fields on quiz creation', async () => {
@@ -85,8 +85,8 @@ describe('quiz authoring points and explanations', () => {
 
         expect(response.status).toBe(200);
         const insert = db.executed.find((statement) => statement.sql.includes('INSERT INTO questions'));
-        expect(insert?.sql).toContain('points, explanation');
-        expect(insert?.bindings.slice(-2)).toEqual(['2.5', 'Vì một cộng một bằng hai.']);
+        expect(insert?.sql).toContain('points, explanation, image_alt');
+        expect(insert?.bindings.slice(-3)).toEqual(['2.5', 'Vì một cộng một bằng hai.', 'Hai khối vuông.']);
     });
 
     it('keeps authoring fields when duplicating a quiz', async () => {
@@ -100,7 +100,7 @@ describe('quiz authoring points and explanations', () => {
         const insert = db.executed.find((statement) =>
             statement.sql.includes('INSERT INTO questions') && statement.bindings.length > 0,
         );
-        expect(insert?.bindings.slice(-2)).toEqual(['2.5', 'Vì một cộng một bằng hai.']);
+        expect(insert?.bindings.slice(-3)).toEqual(['2.5', 'Vì một cộng một bằng hai.', 'Hai khối vuông.']);
     });
 
     it('hides explanations from students while keeping non-secret points', () => {
@@ -119,6 +119,6 @@ describe('quiz authoring points and explanations', () => {
         const mapped = mapQuestionForSave({
             id: 'q-old', type: 'MCQ', question: 'Câu cũ', options: ['A', 'B'], correctAnswer: 'A',
         }, 'quiz-a');
-        expect(mapped.slice(-2)).toEqual(['', '']);
+        expect(mapped.slice(-3)).toEqual(['', '', '']);
     });
 });

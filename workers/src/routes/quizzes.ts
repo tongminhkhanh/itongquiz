@@ -55,8 +55,8 @@ const buildQuestionInsertStatement = (db: D1Database) => db.prepare(
     `INSERT INTO questions (
         id, quiz_id, type, question, options, correct_answer, items, text_field,
         blanks, distractors, sentence, words, correct_word_indexes, image, tags,
-        subject, skill_code, subskill_code, difficulty, math_format_version, points, explanation
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        subject, skill_code, subskill_code, difficulty, math_format_version, points, explanation, image_alt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 );
 
 const mapQuestionBatch = (questions: unknown[], quizId: string): string[][] =>
@@ -111,6 +111,9 @@ const copiedQuestionValues = (
         String(CURRENT_MATH_FORMAT_VERSION),
         question.points === undefined || question.points === null ? '' : String(question.points),
         question.explanation || '',
+        String((question as import('../types').Question & { imageAlt?: string; image_alt?: string }).imageAlt
+            ?? (question as import('../types').Question & { imageAlt?: string; image_alt?: string }).image_alt
+            ?? ''),
     ];
 };
 

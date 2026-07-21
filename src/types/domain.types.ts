@@ -14,6 +14,7 @@ export interface QuestionMetadata extends QuestionSkillMetadataFields {
     points?: number;
     /** Lời giải/hướng dẫn, chỉ hiển thị theo policy sau khi học sinh nộp bài. */
     explanation?: string;
+    imageAlt?: string;
 }
 
 export enum QuestionType {

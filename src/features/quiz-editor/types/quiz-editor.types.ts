@@ -30,6 +30,7 @@ interface BaseEditorDraft {
     question: string;
     difficulty?: Difficulty;
     image?: string;
+    imageAlt?: string;
 }
 
 // ---------------------------------------------------------------------------

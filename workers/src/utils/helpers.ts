@@ -87,13 +87,16 @@ export function mapQuestionForSave(q: Partial<Question> & { type: string }, quiz
     const rawPoints = Number(anyQ.points);
     const pointsField = Number.isFinite(rawPoints) && rawPoints >= 0 ? rawPoints : '';
     const explanationField = typeof anyQ.explanation === 'string' ? anyQ.explanation : '';
+    const imageAltField = typeof anyQ.imageAlt === 'string'
+        ? anyQ.imageAlt
+        : (typeof anyQ.image_alt === 'string' ? anyQ.image_alt : '');
 
     const result = [
         normalizedQuestion.id || '', quizId, normalizedQuestion.type, questionText || '', options, correctAnswer,
         items, textField, blanksField, distractorsField, sentenceField,
         wordsField, correctWordIndexesField, imageField, tagsField,
         subjectField, skillCodeField, subskillCodeField, difficultyField,
-        CURRENT_MATH_FORMAT_VERSION, pointsField, explanationField,
+        CURRENT_MATH_FORMAT_VERSION, pointsField, explanationField, imageAltField,
     ];
 
     return result.map(v => (v === undefined || v === null) ? '' : String(v));

@@ -98,7 +98,8 @@ CREATE TABLE IF NOT EXISTS questions (
   difficulty INTEGER DEFAULT NULL,
   math_format_version INTEGER NOT NULL DEFAULT 1,
   points REAL,
-  explanation TEXT NOT NULL DEFAULT ''
+  explanation TEXT NOT NULL DEFAULT '',
+  image_alt TEXT NOT NULL DEFAULT ''
 );
 
 -- Results

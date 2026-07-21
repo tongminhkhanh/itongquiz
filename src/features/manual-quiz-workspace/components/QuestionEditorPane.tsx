@@ -25,6 +25,7 @@ const InlineQuestionEditor: React.FC<{ question: ManualQuizQuestion }> = ({ ques
             ...normalizedQuestion,
             points: current.points,
             explanation: current.explanation,
+            imageAlt: normalizedQuestion.imageAlt ?? current.imageAlt,
             showExplanation: current.showExplanation,
         }) as ManualQuizQuestion);
     };

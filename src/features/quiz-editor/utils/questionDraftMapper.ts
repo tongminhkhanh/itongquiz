@@ -50,6 +50,7 @@ export function questionToDraft(question: Question): AnyEditorDraft {
         question: String(q.question ?? q.mainQuestion ?? ''),
         difficulty: q.difficulty as Difficulty | undefined,
         image: typeof q.image === 'string' ? q.image : undefined,
+        imageAlt: typeof q.imageAlt === 'string' ? q.imageAlt : (typeof q.image_alt === 'string' ? q.image_alt : undefined),
     };
 
     switch (question.type) {
@@ -240,6 +241,7 @@ export function draftToQuestion(draft: AnyEditorDraft, original: Question): Ques
         id: original.id,
         type: original.type,
         difficulty: draft.difficulty,
+        imageAlt: (draft as { imageAlt?: string }).imageAlt,
     };
 
     switch (draft.type) {

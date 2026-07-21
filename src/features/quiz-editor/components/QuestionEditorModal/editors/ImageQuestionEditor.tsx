@@ -5,6 +5,7 @@
 import React from 'react';
 import type { ImageQuestionEditorDraft } from '../../../types/quiz-editor.types';
 import { FieldRow, TextInput } from './shared';
+import MediaDropzone from '../../../../manual-quiz-workspace/components/MediaDropzone';
 
 interface ImageQuestionEditorProps {
     draft: ImageQuestionEditorDraft;
@@ -15,23 +16,13 @@ const ImageQuestionEditor: React.FC<ImageQuestionEditorProps> = ({ draft, onChan
     <div className="space-y-4">
         {/* Main image */}
         <FieldRow label="🖼️ URL hình ảnh câu hỏi">
-            <TextInput
+            <MediaDropzone
+                label="Ảnh câu hỏi"
                 value={draft.image}
-                onChange={(e) => onChange({ ...draft, image: e.target.value })}
-                placeholder="Nhập URL hoặc Base64..."
-                showMathPreview={false}
-                showMathToolbar={false}
+                altText={draft.imageAlt ?? ''}
+                onChange={(image) => onChange({ ...draft, image })}
+                onAltTextChange={(imageAlt) => onChange({ ...draft, imageAlt })}
             />
-            {draft.image && (
-                <div className="mt-2">
-                    <img
-                        src={draft.image}
-                        alt="Preview"
-                        className="max-h-32 rounded-lg border"
-                        onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
-                    />
-                </div>
-            )}
         </FieldRow>
 
         {/* Option text + optional image URL */}

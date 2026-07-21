@@ -51,6 +51,7 @@ export interface Question {
     math_format_version?: number;
     points?: number | null;
     explanation?: string;
+    image_alt?: string;
 }
 
 export interface Assignment {

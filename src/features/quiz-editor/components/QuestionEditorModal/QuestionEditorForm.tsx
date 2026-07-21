@@ -17,6 +17,7 @@ import WordScrambleEditor from './editors/WordScrambleEditor';
 import RiddleEditor from './editors/RiddleEditor';
 import ErrorCorrectionEditor from './editors/ErrorCorrectionEditor';
 import { FieldRow, MathTextarea, TextInput } from './editors/shared';
+import MediaDropzone from '../../../manual-quiz-workspace/components/MediaDropzone';
 
 export interface QuestionEditorFormProps {
     editingQuestion: Question;
@@ -93,15 +94,12 @@ const SharedHeaderEditor: React.FC<{
                     && draft.type !== QuestionType.DROPDOWN && (
                     <div className="min-w-0 flex-1">
                         <FieldRow label="Ảnh đính kèm (tùy chọn)">
-                            <TextInput
+                            <MediaDropzone
+                                label="Ảnh đính kèm"
                                 value={(draft as { image?: string }).image ?? ''}
-                                onChange={(event) => onDraftChange((previous) => ({
-                                    ...previous,
-                                    image: event.target.value,
-                                }))}
-                                placeholder="Dán URL ảnh hoặc dùng nút tải ảnh"
-                                showMathPreview={false}
-                                showMathToolbar={false}
+                                altText={(draft as { imageAlt?: string }).imageAlt ?? ''}
+                                onChange={(image) => onDraftChange((previous) => ({ ...previous, image }))}
+                                onAltTextChange={(imageAlt) => onDraftChange((previous) => ({ ...previous, imageAlt }))}
                             />
                         </FieldRow>
                     </div>
