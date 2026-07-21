@@ -31,6 +31,7 @@ export function verifyToken(request: Request, _env: Env): Response | null {
         '/api/result-reports',
         '/api/validate',
         '/api/quizzes',
+        '/api/quiz-drafts',
         '/api/questions',
         '/api/game-loop',
         '/api/game-state',
