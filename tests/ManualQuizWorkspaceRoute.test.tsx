@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import { useAuthStore } from '../stores/authStore';
 import { useQuizStore } from '../stores/quizStore';
+import { useManualQuizWorkspaceStore } from '../src/features/manual-quiz-workspace/store/useManualQuizWorkspaceStore';
 
 vi.mock('../src/app/RootView', () => ({
     RootView: () => <div>root-view</div>,
@@ -34,6 +35,7 @@ const renderRoute = (entry: string) => render(
 
 describe('manual quiz workspace routes', () => {
     beforeEach(() => {
+        useManualQuizWorkspaceStore.getState().reset();
         useAuthStore.setState({
             ...originalAuth,
             isLoggedIn: true,
