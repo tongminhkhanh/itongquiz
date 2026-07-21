@@ -4,27 +4,22 @@ import { QuestionType } from '../../../types';
 import QuestionEditorForm from '../../quiz-editor/components/QuestionEditorModal/QuestionEditorForm';
 import type { AnyEditorDraft } from '../../quiz-editor/types/quiz-editor.types';
 import { draftToQuestion, questionToDraft } from '../../quiz-editor/utils/questionDraftMapper';
-import { normalizeQuestionMath, validateQuestionMath } from '../../../utils/questionMath';
-import { showError } from '../../../utils/toast';
+import { normalizeQuestionMath } from '../../../utils/questionMath';
 import { createManualQuestionDraft } from '../../../components/TeacherDashboard/quiz-preview/questionTypes';
 import { useManualQuizWorkspaceStore } from '../store/useManualQuizWorkspaceStore';
 import type { ManualQuizQuestion } from '../types/manualQuizWorkspace.types';
 import MathComposerPanel from '../math-composer/MathComposerPanel';
 import { MathComposerProvider } from '../math-composer/useMathComposer';
+import { useMathFieldValidation } from '../math-composer/useMathFieldValidation';
 
 const InlineQuestionEditor: React.FC<{ question: ManualQuizQuestion }> = ({ question }) => {
     const [draft, setDraft] = useState<AnyEditorDraft>(() => questionToDraft(question));
     const updateQuestion = useManualQuizWorkspaceStore((state) => state.updateQuestion);
+    const mathValidation = useMathFieldValidation(draft);
 
     const saveQuestion = () => {
         const rawQuestion = draftToQuestion(draft, question);
         const normalizedQuestion = normalizeQuestionMath(rawQuestion);
-        const mathIssues = validateQuestionMath(normalizedQuestion);
-        if (mathIssues.length > 0) {
-            const issue = mathIssues[0];
-            showError(`Công thức chưa hợp lệ tại ${issue.field || 'nội dung câu hỏi'}: ${issue.message}`, 6000);
-            return;
-        }
         updateQuestion(question.id, (current) => ({
             ...current,
             ...normalizedQuestion,
@@ -35,13 +30,37 @@ const InlineQuestionEditor: React.FC<{ question: ManualQuizQuestion }> = ({ ques
     };
 
     return (
-        <QuestionEditorForm
+        <div className="space-y-3">
+            {mathValidation.status === 'checking' && (
+                <div className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+                    Đang kiểm tra công thức toán…
+                </div>
+            )}
+            {mathValidation.status === 'invalid' && mathValidation.issues.length > 0 && (
+                <div
+                    role="status"
+                    aria-label="Cảnh báo công thức toán"
+                    className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+                >
+                    <p className="font-semibold">{mathValidation.issues[0].message}</p>
+                    <p className="mt-1 text-xs leading-5 text-amber-800">
+                        {mathValidation.issues[0].suggestion}
+                        {' '}Vị trí gần ký tự {mathValidation.issues[0].position}.
+                        {mathValidation.issues[0].field ? ` Trường: ${mathValidation.issues[0].field}.` : ''}
+                    </p>
+                    <p className="mt-1 text-xs text-amber-700">
+                        Có thể lưu bản nháp; lỗi này chỉ ngăn xuất bản khi chưa sửa.
+                    </p>
+                </div>
+            )}
+            <QuestionEditorForm
             editingQuestion={question}
             draft={draft}
             onDraftChange={(updater) => setDraft((current) => updater(current))}
             onSave={saveQuestion}
-            mode="inline"
-        />
+                mode="inline"
+            />
+        </div>
     );
 };
 

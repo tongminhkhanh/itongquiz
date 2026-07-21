@@ -11,7 +11,7 @@ export interface MathTextSegment {
 }
 
 export interface MathSyntaxIssue {
-  code: 'unclosed-delimiter' | 'unexpected-delimiter' | 'unbalanced-braces' | 'malformed-command';
+  code: 'unclosed-delimiter' | 'unexpected-delimiter' | 'unbalanced-braces' | 'malformed-command' | 'unsupported-command';
   message: string;
   index: number;
 }
@@ -19,7 +19,8 @@ export interface MathSyntaxIssue {
 const KNOWN_COMMANDS = [
   'frac', 'dfrac', 'tfrac', 'sqrt', 'times', 'div', 'cdot', 'le', 'leq', 'ge', 'geq',
   'neq', 'pm', 'dots', 'ldots', 'pi', 'angle', 'overline', 'underline', 'text', 'textbf',
-  'mathrm', 'mathbf', 'begin', 'end',
+  'mathrm', 'mathbf', 'begin', 'end', 'parallel', 'perp', 'circ', 'left', 'right',
+  'approx', 'infty', 'in', 'notin', 'cup', 'cap', 'to', 'Rightarrow', 'square',
 ].join('|');
 
 const FRACTION_COMMANDS = new Set(['frac', 'dfrac', 'tfrac']);
@@ -28,7 +29,10 @@ const ONE_ARGUMENT_COMMANDS = new Set([
 ]);
 const SYMBOL_COMMANDS = new Set([
   'times', 'div', 'cdot', 'le', 'leq', 'ge', 'geq', 'neq', 'pm', 'dots', 'ldots', 'pi', 'angle',
+  'parallel', 'perp', 'circ', 'left', 'right', 'approx', 'infty', 'in', 'notin', 'cup', 'cap',
+  'to', 'Rightarrow', 'square',
 ]);
+const SUPPORTED_COMMANDS = new Set(KNOWN_COMMANDS.split('|'));
 
 interface BalancedGroup {
   content: string;
@@ -331,6 +335,15 @@ const findMalformedCommands = (value: string, offset = 0): MathSyntaxIssue[] => 
   for (let i = 0; i < value.length; i++) {
     const command = getCommandAt(value, i);
     if (!command) continue;
+    if (!SUPPORTED_COMMANDS.has(command.name)) {
+      issues.push({
+        code: 'unsupported-command',
+        message: `\\${command.name} chưa được hỗ trợ.`,
+        index: offset + i,
+      });
+      i = Math.max(i, command.end - 1);
+      continue;
+    }
     const requiresArguments = FRACTION_COMMANDS.has(command.name)
       || command.name === 'sqrt'
       || ONE_ARGUMENT_COMMANDS.has(command.name);
