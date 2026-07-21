@@ -28,6 +28,7 @@ export function verifyToken(request: Request, _env: Env): Response | null {
         '/api/student-profile',
         '/api/assignments',
         '/api/results',
+        '/api/result-reports',
         '/api/validate',
         '/api/quizzes',
         '/api/questions',

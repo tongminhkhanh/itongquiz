@@ -84,6 +84,16 @@ describe('system security password storage', () => {
         expect(verifyToken(request, {} as any)).toBeNull();
     });
 
+    it('allows result-report routes to reach their role-aware JWT handlers', () => {
+        const cohort = new Request('https://quiz-api.thitong.site/api/result-reports/cohort', {
+            method: 'POST',
+        });
+        const studentReports = new Request('https://quiz-api.thitong.site/api/result-reports/mine');
+
+        expect(verifyToken(cohort, {} as any)).toBeNull();
+        expect(verifyToken(studentReports, {} as any)).toBeNull();
+    });
+
     it('returns a generic 500 response with requestId while logging the original error', async () => {
         const request = new Request('https://quiz-api.thitong.site/api/failing', {
             headers: { 'x-request-id': 'req-security-1' },
