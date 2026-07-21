@@ -48,6 +48,7 @@ interface ManualQuizWorkspaceState {
     duplicateQuestion(questionId: string): void;
     removeQuestion(questionId: string): void;
     reorderQuestion(activeId: string, overId: string): void;
+    setQuestionPoints(pointsByQuestionId: Record<string, number>): void;
     setTargetPoints(targetPoints: number): void;
     setSaveStatus(status: ManualQuizSaveStatus, error?: string | null): void;
     setNavigatorCollapsed(collapsed: boolean): void;
@@ -233,6 +234,22 @@ export const useManualQuizWorkspaceStore = create<ManualQuizWorkspaceState>((set
         if (activeIndex < 0 || overIndex < 0) return state;
         const [activeQuestion] = questions.splice(activeIndex, 1);
         questions.splice(overIndex, 0, activeQuestion);
+        return {
+            envelope: touchEnvelope(state.envelope, {
+                quiz: { ...state.envelope.quiz, questions },
+            }),
+            saveStatus: 'idle',
+            saveError: null,
+        };
+    }),
+
+    setQuestionPoints: (pointsByQuestionId) => set((state) => {
+        if (!state.envelope) return state;
+        const questions = state.envelope.quiz.questions.map((question) => (
+            Object.prototype.hasOwnProperty.call(pointsByQuestionId, question.id)
+                ? { ...question, points: Number(pointsByQuestionId[question.id]) }
+                : question
+        ));
         return {
             envelope: touchEnvelope(state.envelope, {
                 quiz: { ...state.envelope.quiz, questions },

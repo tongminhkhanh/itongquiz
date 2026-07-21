@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
@@ -10,12 +10,15 @@ import QuestionNavigator from './components/QuestionNavigator';
 import StudentPreviewPane from './components/StudentPreviewPane';
 import WorkspaceHeader from './components/WorkspaceHeader';
 import WorkspaceStatusBar from './components/WorkspaceStatusBar';
+import PublishValidationDrawer from './components/PublishValidationDrawer';
+import PointDistributionDialog from './components/PointDistributionDialog';
 import {
     findLatestLocalDraft,
     removeLocalDraft,
 } from './draft/manualQuizDraftRepository';
 import { useManualQuizAutosave } from './hooks/useManualQuizAutosave';
 import { useManualQuizWorkspaceStore } from './store/useManualQuizWorkspaceStore';
+import { validateManualQuiz } from './validation/manualQuizValidation';
 import type {
     ManualQuizDraftEnvelope,
     ManualQuizNavigationState,
@@ -44,14 +47,24 @@ const ManualQuizWorkspacePage: React.FC = () => {
     const initializeFromSeed = useManualQuizWorkspaceStore((state) => state.initializeFromSeed);
     const initializeFromQuiz = useManualQuizWorkspaceStore((state) => state.initializeFromQuiz);
     const hydrateEnvelope = useManualQuizWorkspaceStore((state) => state.hydrateEnvelope);
+    const selectQuestion = useManualQuizWorkspaceStore((state) => state.selectQuestion);
+    const updateQuiz = useManualQuizWorkspaceStore((state) => state.updateQuiz);
+    const setQuestionPoints = useManualQuizWorkspaceStore((state) => state.setQuestionPoints);
+    const setNavigatorCollapsed = useManualQuizWorkspaceStore((state) => state.setNavigatorCollapsed);
     const isNavigatorCollapsed = useManualQuizWorkspaceStore((state) => state.isNavigatorCollapsed);
     const isPreviewCollapsed = useManualQuizWorkspaceStore((state) => state.isPreviewCollapsed);
     const [pendingRecovery, setPendingRecovery] = useState<ManualQuizDraftEnvelope | null>(null);
     const [recoveryChecked, setRecoveryChecked] = useState(false);
+    const [isValidationOpen, setValidationOpen] = useState(false);
+    const [isPointDialogOpen, setPointDialogOpen] = useState(false);
+    const [previousPoints, setPreviousPoints] = useState<Record<string, number> | null>(null);
 
     const seed = navigationState?.manualQuizSeed ?? DEFAULT_SEED;
 
     const autosaveController = useManualQuizAutosave(envelope);
+    const validationIssues = useMemo(() => envelope
+        ? validateManualQuiz(envelope.quiz, { targetPoints: envelope.targetPoints })
+        : [], [envelope]);
 
     useEffect(() => {
         if (!username || envelope || pendingRecovery || recoveryChecked) return;
@@ -103,6 +116,34 @@ const ManualQuizWorkspacePage: React.FC = () => {
         }
     };
 
+    const goToQuestionIssue = (questionId: string, field?: string) => {
+        selectQuestion(questionId);
+        setNavigatorCollapsed(false);
+        setValidationOpen(false);
+        window.setTimeout(() => {
+            const editor = document.querySelector<HTMLElement>('[aria-label="Trình soạn câu hỏi"]');
+            const fieldSelector = field === 'points'
+                ? '[aria-label="Điểm câu hỏi"]'
+                : 'textarea, input:not([type="number"])';
+            editor?.querySelector<HTMLElement>(fieldSelector)?.focus();
+        }, 0);
+    };
+
+    const applyPointDistribution = (pointsByQuestionId: Record<string, number>) => {
+        if (!envelope) return;
+        setPreviousPoints(Object.fromEntries(
+            envelope.quiz.questions.map((question) => [question.id, Number(question.points || 0)]),
+        ));
+        setQuestionPoints(pointsByQuestionId);
+        setPointDialogOpen(false);
+    };
+
+    const undoPointDistribution = () => {
+        if (!previousPoints) return;
+        setQuestionPoints(previousPoints);
+        setPreviousPoints(null);
+    };
+
     const columnClass = isNavigatorCollapsed
         ? isPreviewCollapsed
             ? 'grid-cols-[minmax(0,1fr)]'
@@ -120,7 +161,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
                 className="flex h-screen min-h-[640px] flex-col overflow-hidden bg-[#FFFDF7] font-['Be_Vietnam_Pro',sans-serif] text-[#172033]"
             >
                 <h1 className="sr-only">Phòng soạn đề thủ công</h1>
-                <WorkspaceHeader />
+                <WorkspaceHeader onOpenValidation={() => setValidationOpen(true)} />
                 <div
                     data-testid="workspace-grid"
                     className={`grid min-h-0 flex-1 overflow-hidden ${columnClass}`}
@@ -129,7 +170,30 @@ const ManualQuizWorkspacePage: React.FC = () => {
                     <QuestionEditorPane />
                     {!isPreviewCollapsed && <StudentPreviewPane />}
                 </div>
-                <WorkspaceStatusBar />
+                <WorkspaceStatusBar onOpenValidation={() => setValidationOpen(true)} />
+                {envelope && (
+                    <PublishValidationDrawer
+                        open={isValidationOpen}
+                        issues={validationIssues}
+                        quiz={envelope.quiz}
+                        targetPoints={envelope.targetPoints}
+                        onClose={() => setValidationOpen(false)}
+                        onGoToQuestion={goToQuestionIssue}
+                        onFixPoints={() => setPointDialogOpen(true)}
+                        onFixTime={() => updateQuiz({ timeLimit: 30 })}
+                        onPublish={() => undefined}
+                        canUndoPoints={previousPoints !== null}
+                        onUndoPoints={undoPointDistribution}
+                    />
+                )}
+                {envelope && isPointDialogOpen && (
+                    <PointDistributionDialog
+                        questions={envelope.quiz.questions}
+                        targetPoints={envelope.targetPoints}
+                        onClose={() => setPointDialogOpen(false)}
+                        onApply={applyPointDistribution}
+                    />
+                )}
                 {autosaveController.conflict && envelope && (
                     <DraftConflictDialog
                         localDraft={envelope}

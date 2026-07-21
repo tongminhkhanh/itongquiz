@@ -13,7 +13,11 @@ const SAVE_STATUS_COPY = {
     error: 'Chưa thể lưu bản nháp',
 } as const;
 
-const WorkspaceHeader: React.FC = () => {
+interface WorkspaceHeaderProps {
+    onOpenValidation(): void;
+}
+
+const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onOpenValidation }) => {
     const navigate = useNavigate();
     const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
     const saveStatus = useManualQuizWorkspaceStore((state) => state.saveStatus);
@@ -88,6 +92,8 @@ const WorkspaceHeader: React.FC = () => {
                 </button>
                 <button
                     type="button"
+                    onClick={onOpenValidation}
+                    aria-label="Kiểm tra và xuất bản"
                     className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-sky-500 px-3 text-sm font-semibold text-white hover:bg-sky-600 lg:px-4"
                 >
                     <ShieldCheck className="h-4 w-4" />

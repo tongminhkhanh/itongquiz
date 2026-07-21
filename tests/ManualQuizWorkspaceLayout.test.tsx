@@ -50,6 +50,18 @@ describe('ManualQuizWorkspace desktop shell', () => {
         expect(screen.getByTestId('workspace-grid')).toHaveClass('min-h-0');
     });
 
+    it('opens publish validation from the header and status bar', async () => {
+        renderWorkspace();
+        await screen.findByRole('main', { name: 'Trình soạn câu hỏi' });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Kiểm tra và xuất bản' }));
+        expect(screen.getByRole('dialog', { name: 'Kiểm tra trước khi xuất bản' })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Đóng kiểm tra xuất bản' }));
+
+        fireEvent.click(screen.getByRole('button', { name: 'Xem lỗi' }));
+        expect(screen.getByRole('dialog', { name: 'Kiểm tra trước khi xuất bản' })).toBeInTheDocument();
+    });
+
     it('collapses navigator and preview without removing the editor', async () => {
         renderWorkspace();
         await screen.findByRole('main', { name: 'Trình soạn câu hỏi' });
