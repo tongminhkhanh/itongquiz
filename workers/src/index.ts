@@ -38,6 +38,7 @@ import { handleLiveExamRoutes } from './routes/liveExam';
 import { handleAdminCertificateRoutes } from './routes/adminCertificates';
 import { handleCertificateRoutes } from './routes/certificates';
 import { handlePhieuSubdomain, handlePublicPhieuApi, handlePhieuRoutes } from './routes/phieu';
+import { handleResultReportRoutes } from './routes/resultReports';
 import { Env } from './types';
 import { rateLimit } from './middleware/rateLimit';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
@@ -157,6 +158,8 @@ export default {
                 response = await handleHelpRagRoutes(request, env, path, method);
             } else if (path.startsWith('/api/system-settings')) {
                 response = await handleSystemSettingsRoutes(request, env, path, method);
+            } else if (path.startsWith('/api/result-reports')) {
+                response = await handleResultReportRoutes(request, env, path, method);
             } else if (path.startsWith('/api/phieu')) {
                 response = await handlePhieuRoutes(request, env, path, method);
             } else if (path.startsWith('/api/homework')) {
