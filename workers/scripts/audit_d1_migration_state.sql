@@ -145,7 +145,18 @@ WITH checks(migration, check_name, ok) AS (
             ) * 10.0 / total_questions, 1)
           ) > 0.001
         )
-    ))
+    )),
+
+    ('0032_add_result_report_delivery.sql', 'result report batch columns',
+      (SELECT COUNT(*)=7 FROM pragma_table_info('phieu_batch')
+       WHERE name IN ('request_id','quiz_id','attempt_policy','notify_students','create_parent_links','delivery_status','updated_at'))),
+    ('0032_add_result_report_delivery.sql', 'result report delivery table',
+      EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='result_report_delivery_items')),
+    ('0032_add_result_report_delivery.sql', 'result report delivery indexes',
+      (SELECT COUNT(*)=5 FROM sqlite_master WHERE type='index' AND name IN (
+        'idx_phieu_batch_teacher_request','idx_result_report_items_batch','idx_result_report_items_student',
+        'idx_result_report_items_notification','idx_result_report_items_public_link'
+      )))
 ), summary AS (
   SELECT
     migration,
