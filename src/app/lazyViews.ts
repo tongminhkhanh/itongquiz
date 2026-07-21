@@ -11,3 +11,4 @@ export const Footer = React.lazy(() => import('../components/common/Footer'));
 export const AboutPage = React.lazy(() => import('../components/schoolPage/AboutPage'));
 export const ContactPage = React.lazy(() => import('../components/schoolPage/ContactPage'));
 export const PhieuPublicPage = React.lazy(() => import('../pages/PhieuPublicPage'));
+export const ManualQuizWorkspacePage = React.lazy(() => import('../features/manual-quiz-workspace/ManualQuizWorkspacePage'));
