@@ -30,6 +30,8 @@ interface PublishValidationDrawerProps {
     canUndoPoints?: boolean;
     onUndoPoints?(): void;
     isPublishing?: boolean;
+    publishError?: string | null;
+    cleanupWarning?: string | null;
 }
 
 const GROUPS: Array<{
@@ -113,6 +115,8 @@ const PublishValidationDrawer: React.FC<PublishValidationDrawerProps> = ({
     canUndoPoints = false,
     onUndoPoints,
     isPublishing = false,
+    publishError = null,
+    cleanupWarning = null,
 }) => {
     const closeButtonRef = useRef<HTMLButtonElement>(null);
     const summary = summarizeManualQuizIssues(issues);
@@ -226,6 +230,16 @@ const PublishValidationDrawer: React.FC<PublishValidationDrawerProps> = ({
                 </div>
 
                 <footer className="border-t border-slate-200 bg-slate-50 px-5 py-4 lg:px-6">
+                    {publishError && (
+                        <p role="alert" className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+                            {publishError}
+                        </p>
+                    )}
+                    {cleanupWarning && (
+                        <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                            {cleanupWarning}
+                        </p>
+                    )}
                     <button
                         type="button"
                         disabled={hasErrors || isPublishing}

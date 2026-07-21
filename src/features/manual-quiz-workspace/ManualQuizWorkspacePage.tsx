@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
+import { useTeacherDashboardUIStore } from '../../stores/useTeacherDashboardUIStore';
 import ManualQuizWorkspaceGuard from './components/ManualQuizWorkspaceGuard';
 import DraftRecoveryDialog from './components/DraftRecoveryDialog';
 import DraftConflictDialog from './components/DraftConflictDialog';
@@ -17,6 +18,7 @@ import {
     removeLocalDraft,
 } from './draft/manualQuizDraftRepository';
 import { useManualQuizAutosave } from './hooks/useManualQuizAutosave';
+import { useManualQuizPublish } from './hooks/useManualQuizPublish';
 import { useManualQuizWorkspaceStore } from './store/useManualQuizWorkspaceStore';
 import { validateManualQuiz } from './validation/manualQuizValidation';
 import type {
@@ -38,11 +40,14 @@ const DEFAULT_SEED: ManualQuizSeed = {
 const ManualQuizWorkspacePage: React.FC = () => {
     const { quizId } = useParams<{ quizId?: string }>();
     const location = useLocation();
+    const navigate = useNavigate();
     const navigationState = location.state as ManualQuizNavigationState | null;
     const username = useAuthStore((state) => state.username);
     const availableQuiz = useQuizStore((state) =>
         quizId ? state.quizzes.find((quiz) => quiz.id === quizId) ?? null : null,
     );
+    const setView = useQuizStore((state) => state.setView);
+    const setActiveTab = useTeacherDashboardUIStore((state) => state.setActiveTab);
     const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
     const initializeFromSeed = useManualQuizWorkspaceStore((state) => state.initializeFromSeed);
     const initializeFromQuiz = useManualQuizWorkspaceStore((state) => state.initializeFromQuiz);
@@ -62,6 +67,16 @@ const ManualQuizWorkspacePage: React.FC = () => {
     const seed = navigationState?.manualQuizSeed ?? DEFAULT_SEED;
 
     const autosaveController = useManualQuizAutosave(envelope);
+    const handlePublishSuccess = useCallback(() => {
+        setActiveTab('manage');
+        setView('teacher_dash');
+        setValidationOpen(false);
+        navigate('/');
+    }, [navigate, setActiveTab, setView]);
+    const publishController = useManualQuizPublish({
+        envelope,
+        onSuccess: handlePublishSuccess,
+    });
     const validationIssues = useMemo(() => envelope
         ? validateManualQuiz(envelope.quiz, { targetPoints: envelope.targetPoints })
         : [], [envelope]);
@@ -181,7 +196,10 @@ const ManualQuizWorkspacePage: React.FC = () => {
                         onGoToQuestion={goToQuestionIssue}
                         onFixPoints={() => setPointDialogOpen(true)}
                         onFixTime={() => updateQuiz({ timeLimit: 30 })}
-                        onPublish={() => undefined}
+                        onPublish={() => void publishController.publish()}
+                        isPublishing={publishController.isPublishing}
+                        publishError={publishController.error}
+                        cleanupWarning={publishController.cleanupWarning}
                         canUndoPoints={previousPoints !== null}
                         onUndoPoints={undoPointDistribution}
                     />

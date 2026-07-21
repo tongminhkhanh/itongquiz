@@ -73,10 +73,12 @@ describe('server-owned math normalization and observability', () => {
       correctAnswer: 'A',
     } as any, 'quiz-1');
 
-    expect(values).toHaveLength(20);
+    expect(values).toHaveLength(22);
     expect(values[3]).toBe('So sánh $\\frac{1}{2}$ và $\\frac{2}{4}$');
     expect(values[4]).toBe('$\\frac{1}{2}$|$\\frac{2}{3}$');
     expect(values[19]).toBe('2');
+    expect(values[20]).toBe('');
+    expect(values[21]).toBe('');
   });
 
   it('rejects malformed TeX before returning D1 bindings', () => {

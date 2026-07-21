@@ -5,7 +5,7 @@ import type {
 } from '../../shared/manual-quiz-draft.contract';
 import type { ManualQuizDraftEnvelope } from '../features/manual-quiz-workspace/types/manualQuizWorkspace.types';
 import { getWorkersApiBaseUrl } from './api/config';
-import { normalizeNetworkError, toApiError } from './api/errors';
+import { ApiError, normalizeNetworkError, toApiError } from './api/errors';
 
 const draftUrl = (draftId: string): string =>
     `${getWorkersApiBaseUrl()}/api/quiz-drafts/${encodeURIComponent(draftId)}`;
@@ -81,4 +81,16 @@ export const deleteRemoteManualQuizDraft = async (
         method: 'DELETE',
         signal,
     });
+};
+
+export const deleteRemoteManualQuizDraftIfExists = async (
+    draftId: string,
+    signal?: AbortSignal,
+): Promise<void> => {
+    try {
+        await deleteRemoteManualQuizDraft(draftId, signal);
+    } catch (error) {
+        if (error instanceof ApiError && error.status === 404) return;
+        throw error;
+    }
 };

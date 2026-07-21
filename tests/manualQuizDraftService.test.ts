@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ManualQuizDraftEnvelope } from '../src/features/manual-quiz-workspace/types/manualQuizWorkspace.types';
 import {
     deleteRemoteManualQuizDraft,
+    deleteRemoteManualQuizDraftIfExists,
     getRemoteManualQuizDraft,
     ManualQuizDraftConflictError,
     putRemoteManualQuizDraft,
@@ -59,6 +60,14 @@ describe('manualQuizDraftService', () => {
         expect(fetchMock.mock.calls[0][0]).toBe('/api/quiz-drafts/draft%2F1');
         expect(fetchMock.mock.calls[0][1]).toEqual(expect.objectContaining({ signal: controller.signal }));
         expect(fetchMock.mock.calls[1][1]).toEqual(expect.objectContaining({ method: 'DELETE' }));
+    });
+
+    it('treats a missing remote draft as already cleaned up', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+            status: 'error', message: 'Không tìm thấy bản nháp.',
+        }), { status: 404, headers: { 'Content-Type': 'application/json' } }));
+
+        await expect(deleteRemoteManualQuizDraftIfExists('draft-1')).resolves.toBeUndefined();
     });
 
     it('throws a typed conflict carrying the current server draft', async () => {
