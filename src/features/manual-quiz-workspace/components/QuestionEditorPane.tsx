@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Trash2 } from 'lucide-react';
+import { Braces, Copy, Trash2 } from 'lucide-react';
 import { QuestionType } from '../../../types';
 import QuestionEditorForm from '../../quiz-editor/components/QuestionEditorModal/QuestionEditorForm';
 import type { AnyEditorDraft } from '../../quiz-editor/types/quiz-editor.types';
@@ -9,6 +9,8 @@ import { showError } from '../../../utils/toast';
 import { createManualQuestionDraft } from '../../../components/TeacherDashboard/quiz-preview/questionTypes';
 import { useManualQuizWorkspaceStore } from '../store/useManualQuizWorkspaceStore';
 import type { ManualQuizQuestion } from '../types/manualQuizWorkspace.types';
+import MathComposerPanel from '../math-composer/MathComposerPanel';
+import { MathComposerProvider } from '../math-composer/useMathComposer';
 
 const InlineQuestionEditor: React.FC<{ question: ManualQuizQuestion }> = ({ question }) => {
     const [draft, setDraft] = useState<AnyEditorDraft>(() => questionToDraft(question));
@@ -44,6 +46,7 @@ const InlineQuestionEditor: React.FC<{ question: ManualQuizQuestion }> = ({ ques
 };
 
 const QuestionEditorPane: React.FC = () => {
+    const [showMathComposer, setShowMathComposer] = useState(false);
     const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
     const addQuestion = useManualQuizWorkspaceStore((state) => state.addQuestion);
     const updateQuestion = useManualQuizWorkspaceStore((state) => state.updateQuestion);
@@ -77,7 +80,8 @@ const QuestionEditorPane: React.FC = () => {
 
     return (
         <main aria-label="Trình soạn câu hỏi" className="min-w-0 overflow-y-auto bg-white p-5 lg:p-8">
-            <div className="mx-auto max-w-4xl space-y-4 pb-24">
+            <MathComposerProvider>
+                <div className="mx-auto max-w-4xl space-y-4 pb-24">
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                     <label className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm">
                         <span>Điểm câu hỏi</span>
@@ -94,7 +98,15 @@ const QuestionEditorPane: React.FC = () => {
                             aria-label="Điểm câu hỏi"
                         />
                     </label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setShowMathComposer((current) => !current)}
+                            aria-expanded={showMathComposer}
+                            className="inline-flex h-10 items-center gap-2 rounded-lg border border-sky-200 bg-white px-3 text-sm font-medium text-sky-700"
+                        >
+                            <Braces className="h-4 w-4" /> Công thức toán
+                        </button>
                         <button
                             type="button"
                             onClick={() => duplicateQuestion(selected.id)}
@@ -112,8 +124,14 @@ const QuestionEditorPane: React.FC = () => {
                     </div>
                 </div>
 
+                <MathComposerPanel
+                    ownerUsername={envelope?.ownerUsername ?? ''}
+                    open={showMathComposer}
+                    onClose={() => setShowMathComposer(false)}
+                />
                 <InlineQuestionEditor key={selected.id} question={selected} />
-            </div>
+                </div>
+            </MathComposerProvider>
         </main>
     );
 };

@@ -7,6 +7,7 @@ import {
     type FormulaInsertionResult,
 } from '../../../../manual-quiz-workspace/math-composer/mathInsertion';
 import type { MathTemplateId } from '../../../../manual-quiz-workspace/math-composer/mathTemplates';
+import { useMathComposerField } from '../../../../manual-quiz-workspace/math-composer/useMathComposer';
 
 export const FieldRow: React.FC<{
     label: string;
@@ -185,6 +186,10 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(({
     showMathPreview = true,
     showMathToolbar = showMathPreview,
     onChange,
+    onFocus,
+    onSelect,
+    onClick,
+    onKeyUp,
     ...props
 }, forwardedRef) => {
     const localRef = useRef<HTMLInputElement>(null);
@@ -200,16 +205,41 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(({
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(target, nextValue);
         target.dispatchEvent(new Event('input', { bubbles: true }));
     }, [onChange]);
+    const composerField = useMathComposerField(
+        localRef,
+        updateValue,
+        String(props['aria-label'] || props.placeholder || 'Ô nhập công thức'),
+    );
 
     return (
         <div className="group/math w-full min-w-0">
             <input
                 {...props}
                 ref={setRef}
-                onChange={onChange}
+                onChange={(event) => {
+                    onChange?.(event);
+                    composerField.activate();
+                    composerField.capture();
+                }}
+                onFocus={(event) => {
+                    onFocus?.(event);
+                    composerField.activate();
+                }}
+                onSelect={(event) => {
+                    onSelect?.(event);
+                    composerField.capture();
+                }}
+                onClick={(event) => {
+                    onClick?.(event);
+                    composerField.capture();
+                }}
+                onKeyUp={(event) => {
+                    onKeyUp?.(event);
+                    composerField.capture();
+                }}
                 className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm ${props.className ?? ''}`}
             />
-            {showMathToolbar && (
+            {showMathToolbar && !composerField.hasVisualComposer && (
                 <MathFormulaToolbar value={props.value} targetRef={localRef} onValueChange={updateValue} />
             )}
             {showMathPreview && <MathFieldPreview value={props.value} />}
@@ -228,6 +258,10 @@ export const MathTextarea = React.forwardRef<HTMLTextAreaElement, MathTextareaPr
     showMathPreview = true,
     showMathToolbar = true,
     onChange,
+    onFocus,
+    onSelect,
+    onClick,
+    onKeyUp,
     ...props
 }, forwardedRef) => {
     const localRef = useRef<HTMLTextAreaElement>(null);
@@ -243,16 +277,41 @@ export const MathTextarea = React.forwardRef<HTMLTextAreaElement, MathTextareaPr
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(target, nextValue);
         target.dispatchEvent(new Event('input', { bubbles: true }));
     }, [onChange]);
+    const composerField = useMathComposerField(
+        localRef,
+        updateValue,
+        String(props['aria-label'] || props.placeholder || 'Ô nhập công thức'),
+    );
 
     return (
         <div className="group/math w-full min-w-0">
             <textarea
                 {...props}
                 ref={setRef}
-                onChange={onChange}
+                onChange={(event) => {
+                    onChange?.(event);
+                    composerField.activate();
+                    composerField.capture();
+                }}
+                onFocus={(event) => {
+                    onFocus?.(event);
+                    composerField.activate();
+                }}
+                onSelect={(event) => {
+                    onSelect?.(event);
+                    composerField.capture();
+                }}
+                onClick={(event) => {
+                    onClick?.(event);
+                    composerField.capture();
+                }}
+                onKeyUp={(event) => {
+                    onKeyUp?.(event);
+                    composerField.capture();
+                }}
                 className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm ${props.className ?? ''}`}
             />
-            {showMathToolbar && (
+            {showMathToolbar && !composerField.hasVisualComposer && (
                 <MathFormulaToolbar value={props.value} targetRef={localRef} onValueChange={updateValue} />
             )}
             {showMathPreview && <MathFieldPreview value={props.value} />}
