@@ -72,7 +72,7 @@ const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onOpenValidation }) =
                         aria-label="Mở danh sách câu hỏi"
                     >
                         <List className="h-4 w-4" />
-                        <span className="hidden 2xl:inline">Câu hỏi</span>
+                        <span className="hidden xl:inline">Câu hỏi</span>
                     </button>
                 )}
                 <button
@@ -88,7 +88,7 @@ const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onOpenValidation }) =
                     aria-label={isPreviewCollapsed ? 'Mở xem trước' : 'Thu gọn xem trước'}
                 >
                     <Eye className="h-4 w-4" />
-                    <span className="hidden 2xl:inline">Xem trước</span>
+                    <span className="hidden xl:inline">Xem trước</span>
                 </button>
                 <button
                     type="button"

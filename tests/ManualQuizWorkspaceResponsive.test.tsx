@@ -44,15 +44,15 @@ describe('ManualQuizWorkspace responsive layout', () => {
         expect(grid).toHaveClass(
             'grid-cols-1',
             'md:grid-cols-[280px_minmax(0,1fr)]',
-            '2xl:grid-cols-[280px_minmax(0,1fr)_380px]',
+            'xl:grid-cols-[280px_minmax(0,1fr)_380px]',
         );
         expect(navigator).toHaveClass('w-full', 'md:w-[280px]', 'min-w-0');
         expect(preview).toHaveClass(
             'w-full',
             'md:fixed',
             'md:w-[380px]',
-            '2xl:static',
-            '2xl:w-[380px]',
+            'xl:static',
+            'xl:w-[380px]',
         );
         expect(screen.getByRole('navigation', { name: 'Chuyển vùng soạn đề trên di động' })).toHaveClass('md:hidden');
     });

@@ -4,6 +4,7 @@ import {
     ManualQuizDraftConflictError,
     putRemoteManualQuizDraft,
 } from '../../../services/manualQuizDraftService';
+import { reportManualQuizTelemetry } from '../../../services/telemetryService';
 import type {
     ManualQuizDraftEnvelope,
     ManualQuizSaveStatus,
@@ -33,6 +34,15 @@ export const useDraftConflictResolution = ({
 
     const captureConflict = useCallback((error: ManualQuizDraftConflictError) => {
         if (!error.current) {
+            const localDraft = getLatestLocalDraft();
+            reportManualQuizTelemetry('conflict_detected', {
+                mode: localDraft?.quizId ? 'edit' : 'new',
+                saveTarget: 'remote',
+                outcome: 'blocked',
+                questionCount: localDraft?.quiz.questions.length,
+                conflictKind: 'missing_remote',
+                errorCode: 'REVISION_CONFLICT',
+            });
             setSaveStatus('error', 'Bản nháp trên hệ thống không còn tồn tại.');
             return;
         }

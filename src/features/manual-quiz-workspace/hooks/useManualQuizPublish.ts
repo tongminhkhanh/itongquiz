@@ -5,6 +5,7 @@ import { deleteRemoteManualQuizDraftIfExists } from '../../../services/manualQui
 import { removeLocalDraft } from '../draft/manualQuizDraftRepository';
 import { useManualQuizWorkspaceStore } from '../store/useManualQuizWorkspaceStore';
 import type { ManualQuizDraftEnvelope } from '../types/manualQuizWorkspace.types';
+import { reportManualQuizTelemetry } from '../../../services/telemetryService';
 import {
     hasBlockingManualQuizIssues,
     validateManualQuiz,
@@ -53,10 +54,18 @@ export const useManualQuizPublish = ({
         setCleanupWarning(null);
 
         if (hasBlockingManualQuizIssues(issues)) {
+            reportManualQuizTelemetry('validation_failed', {
+                mode: envelope.quizId ? 'edit' : 'new',
+                outcome: 'blocked',
+                questionCount: snapshot.questions.length,
+                issueCount: issues.filter((issue) => issue.severity === 'error').length,
+                errorCode: 'VALIDATION_ERROR',
+            });
             setError('Đề vẫn còn lỗi bắt buộc. Vui lòng kiểm tra và sửa trước khi xuất bản.');
             return false;
         }
 
+        const publishStartedAt = performance.now();
         publishLockRef.current = true;
         setPublishing(true);
         try {
@@ -81,11 +90,24 @@ export const useManualQuizPublish = ({
                 ));
             }
 
+            reportManualQuizTelemetry('publish_succeeded', {
+                mode: envelope.quizId ? 'edit' : 'new',
+                outcome: 'success',
+                durationMs: performance.now() - publishStartedAt,
+                questionCount: snapshot.questions.length,
+            });
             resetWorkspace();
             await onSuccess?.(snapshot);
             return true;
         } catch (caught) {
             const normalized = caught instanceof Error ? caught : new Error(String(caught));
+            reportManualQuizTelemetry('publish_failed', {
+                mode: envelope.quizId ? 'edit' : 'new',
+                outcome: 'failure',
+                durationMs: performance.now() - publishStartedAt,
+                questionCount: snapshot.questions.length,
+                errorCode: normalized.message,
+            });
             setError(normalized.message || 'Không thể xuất bản đề. Vui lòng thử lại.');
             return false;
         } finally {

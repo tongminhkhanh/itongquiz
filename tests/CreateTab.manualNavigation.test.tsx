@@ -64,6 +64,7 @@ const RouteStateProbe = () => {
 
 describe('CreateTab manual workspace navigation', () => {
     beforeEach(() => {
+        vi.unstubAllEnvs();
         vi.clearAllMocks();
         useQuizStore.setState({ ...originalQuizState, view: 'teacher_dash' }, true);
     });
@@ -90,5 +91,30 @@ describe('CreateTab manual workspace navigation', () => {
         expect(Date.parse(routeState.workspaceStartedAt)).not.toBeNaN();
         expect(useQuizStore.getState().view).toBe('teacher_dash');
         expect(logic.setGeneratedQuiz).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the legacy inline manual editor when the rollout flag is disabled', () => {
+        vi.stubEnv('VITE_FEATURE_MANUAL_QUIZ_WORKSPACE_V1', 'false');
+        render(
+            <MemoryRouter>
+                <CreateTab
+                    editingQuiz={null}
+                    onSaveQuiz={vi.fn(async () => undefined)}
+                    onUpdateQuiz={vi.fn(async () => undefined)}
+                    onSuccess={vi.fn()}
+                />
+                <RouteStateProbe />
+            </MemoryRouter>,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Mở phòng soạn thủ công' }));
+
+        expect(screen.getByTestId('pathname')).toHaveTextContent('/');
+        expect(logic.setGeneratedQuiz).toHaveBeenCalledWith(expect.objectContaining({
+            title: 'Đề Toán lớp 4',
+            classLevel: '4A',
+            questions: [],
+            timeLimit: 20,
+        }));
     });
 });

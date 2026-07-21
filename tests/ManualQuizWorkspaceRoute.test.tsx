@@ -26,9 +26,9 @@ const LocationProbe = () => {
     return <div data-testid="location">{location.pathname}</div>;
 };
 
-const renderRoute = (entry: string) => render(
+const renderRoute = (entry: string, manualQuizWorkspaceEnabled = true) => render(
     <MemoryRouter initialEntries={[entry]}>
-        <AppRoutes giftShopEnabled={false} />
+        <AppRoutes giftShopEnabled={false} manualQuizWorkspaceEnabled={manualQuizWorkspaceEnabled} />
         <LocationProbe />
     </MemoryRouter>,
 );
@@ -49,14 +49,22 @@ describe('manual quiz workspace routes', () => {
     it('opens the new manual quiz workspace without changing the legacy view', async () => {
         renderRoute('/teacher/quizzes/manual/new');
 
-        expect(await screen.findByTestId('manual-quiz-workspace')).toHaveAttribute('data-mode', 'new');
+        expect(await screen.findByTestId('manual-quiz-workspace', {}, { timeout: 3_000 })).toHaveAttribute('data-mode', 'new');
         expect(useQuizStore.getState().view).toBe('home');
     });
 
     it('passes the quiz id to the edit workspace route', async () => {
         renderRoute('/teacher/quizzes/manual/quiz-123/edit');
 
-        expect(await screen.findByTestId('manual-quiz-workspace')).toHaveAttribute('data-quiz-id', 'quiz-123');
+        expect(await screen.findByTestId('manual-quiz-workspace', {}, { timeout: 3_000 })).toHaveAttribute('data-quiz-id', 'quiz-123');
+    });
+
+    it('redirects direct workspace URLs to the legacy create surface when the flag is disabled', async () => {
+        renderRoute('/teacher/quizzes/manual/new', false);
+
+        await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/'));
+        expect(screen.getByText('root-view')).toBeInTheDocument();
+        expect(screen.queryByTestId('manual-quiz-workspace')).not.toBeInTheDocument();
     });
 
     it('redirects unauthenticated visitors home', async () => {

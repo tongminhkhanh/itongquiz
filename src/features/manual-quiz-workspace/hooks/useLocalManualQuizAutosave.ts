@@ -4,6 +4,7 @@ import { getManualQuizDraftHash } from '../draft/manualQuizDraftSerializer';
 import { useManualQuizWorkspaceStore } from '../store/useManualQuizWorkspaceStore';
 import type { ManualQuizDraftEnvelope } from '../types/manualQuizWorkspace.types';
 import { browserIsOnline } from './manualQuizAutosaveUtils';
+import { reportManualQuizTelemetry } from '../../../services/telemetryService';
 
 const LOCAL_AUTOSAVE_DELAY_MS = 600;
 
@@ -27,10 +28,32 @@ export const useLocalManualQuizAutosave = (
     }
 
     const persistImmediately = useCallback((draft: ManualQuizDraftEnvelope): string => {
-        const result = saveLocalDraft(draft);
-        lastSavedHashRef.current = result.hash;
-        hasUnsavedChangesRef.current = false;
-        return result.hash;
+        const startedAt = performance.now();
+        try {
+            const result = saveLocalDraft(draft);
+            lastSavedHashRef.current = result.hash;
+            hasUnsavedChangesRef.current = false;
+            reportManualQuizTelemetry('draft_save_succeeded', {
+                mode: draft.quizId ? 'edit' : 'new',
+                saveTarget: 'local',
+                outcome: 'success',
+                durationMs: performance.now() - startedAt,
+                questionCount: draft.quiz.questions.length,
+                online: browserIsOnline(),
+            });
+            return result.hash;
+        } catch (error) {
+            reportManualQuizTelemetry('draft_save_failed', {
+                mode: draft.quizId ? 'edit' : 'new',
+                saveTarget: 'local',
+                outcome: 'failure',
+                durationMs: performance.now() - startedAt,
+                questionCount: draft.quiz.questions.length,
+                online: browserIsOnline(),
+                errorCode: error instanceof Error ? error.message : 'LOCAL_STORAGE_ERROR',
+            });
+            throw error;
+        }
     }, []);
 
     useEffect(() => {
@@ -41,6 +64,14 @@ export const useLocalManualQuizAutosave = (
             currentHash = getManualQuizDraftHash(envelope);
         } catch (error) {
             hasUnsavedChangesRef.current = true;
+            reportManualQuizTelemetry('draft_save_failed', {
+                mode: envelope.quizId ? 'edit' : 'new',
+                saveTarget: 'local',
+                outcome: 'failure',
+                questionCount: envelope.quiz.questions.length,
+                online: browserIsOnline(),
+                errorCode: 'VALIDATION_ERROR',
+            });
             setSaveStatus(
                 'error',
                 error instanceof Error

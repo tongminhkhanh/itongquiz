@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuizStore } from '../../../stores/quizStore';
@@ -24,6 +24,7 @@ import { useManualQuizPublish } from './hooks/useManualQuizPublish';
 import { useWorkspaceKeyboardShortcuts } from './hooks/useWorkspaceKeyboardShortcuts';
 import { useManualQuizWorkspaceStore } from './store/useManualQuizWorkspaceStore';
 import { validateManualQuiz } from './validation/manualQuizValidation';
+import { reportManualQuizTelemetry } from '../../services/telemetryService';
 import type {
     ManualQuizDraftEnvelope,
     ManualQuizNavigationState,
@@ -72,6 +73,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
     const [isQuestionBankOpen, setQuestionBankOpen] = useState(false);
     const [isQuestionImportOpen, setQuestionImportOpen] = useState(false);
     const [mobilePane, setMobilePane] = useState<WorkspaceMobilePane>('editor');
+    const openedDraftRef = useRef<string | null>(null);
 
     const seed = navigationState?.manualQuizSeed ?? DEFAULT_SEED;
 
@@ -89,6 +91,31 @@ const ManualQuizWorkspacePage: React.FC = () => {
     const validationIssues = useMemo(() => envelope
         ? validateManualQuiz(envelope.quiz, { targetPoints: envelope.targetPoints })
         : [], [envelope]);
+
+    useEffect(() => {
+        if (!envelope || openedDraftRef.current === envelope.draftId) return;
+        openedDraftRef.current = envelope.draftId;
+        reportManualQuizTelemetry('workspace_opened', {
+            mode: envelope.quizId ? 'edit' : 'new',
+            outcome: 'success',
+            questionCount: envelope.quiz.questions.length,
+            online: typeof navigator === 'undefined' ? true : navigator.onLine,
+        });
+    }, [envelope]);
+
+    const openValidation = useCallback(() => {
+        const blockingCount = validationIssues.filter((issue) => issue.severity === 'error').length;
+        if (envelope && blockingCount > 0) {
+            reportManualQuizTelemetry('validation_failed', {
+                mode: envelope.quizId ? 'edit' : 'new',
+                outcome: 'blocked',
+                questionCount: envelope.quiz.questions.length,
+                issueCount: blockingCount,
+                errorCode: 'VALIDATION_ERROR',
+            });
+        }
+        setValidationOpen(true);
+    }, [envelope, validationIssues]);
 
     const closeActiveSurface = useCallback(() => {
         if (isValidationOpen) setValidationOpen(false);
@@ -191,11 +218,11 @@ const ManualQuizWorkspacePage: React.FC = () => {
 
     const desktopColumnClass = isNavigatorCollapsed
         ? isPreviewCollapsed
-            ? '2xl:grid-cols-[minmax(0,1fr)]'
-            : '2xl:grid-cols-[minmax(0,1fr)_380px]'
+            ? 'xl:grid-cols-[minmax(0,1fr)]'
+            : 'xl:grid-cols-[minmax(0,1fr)_380px]'
         : isPreviewCollapsed
-            ? '2xl:grid-cols-[280px_minmax(0,1fr)]'
-            : '2xl:grid-cols-[280px_minmax(0,1fr)_380px]';
+            ? 'xl:grid-cols-[280px_minmax(0,1fr)]'
+            : 'xl:grid-cols-[280px_minmax(0,1fr)_380px]';
     const tabletColumnClass = isNavigatorCollapsed
         ? 'md:grid-cols-[minmax(0,1fr)]'
         : 'md:grid-cols-[280px_minmax(0,1fr)]';
@@ -215,7 +242,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
                 className="flex h-[100dvh] min-h-[640px] max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-[#FFFDF7] font-['Be_Vietnam_Pro',sans-serif] text-[#172033]"
             >
                 <h1 className="sr-only">Phòng soạn đề thủ công</h1>
-                <WorkspaceHeader onOpenValidation={() => setValidationOpen(true)} />
+                <WorkspaceHeader onOpenValidation={openValidation} />
                 <div
                     data-testid="workspace-grid"
                     data-mobile-pane={mobilePane}
@@ -254,7 +281,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
                         </div>
                     )}
                 </div>
-                <WorkspaceStatusBar onOpenValidation={() => setValidationOpen(true)} />
+                <WorkspaceStatusBar onOpenValidation={openValidation} />
                 <WorkspaceMobileTabs activePane={mobilePane} onChange={changeMobilePane} />
                 {envelope && (
                     <PublishValidationDrawer

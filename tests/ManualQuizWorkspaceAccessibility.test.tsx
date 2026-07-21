@@ -63,6 +63,7 @@ describe('manual quiz keyboard shortcuts', () => {
 
 describe('ManualQuizWorkspace focus and screen-reader access', () => {
     beforeEach(() => {
+        localStorage.clear();
         useManualQuizWorkspaceStore.getState().reset();
         useAuthStore.setState({
             isLoggedIn: true,
@@ -93,6 +94,7 @@ describe('ManualQuizWorkspace focus and screen-reader access', () => {
     it('saves the current question, advances and restores editor focus with Ctrl+Enter', async () => {
         renderWorkspace();
         await screen.findByRole('main', { name: 'Trình soạn câu hỏi' });
+        await waitFor(() => expect(screen.getByLabelText('Tên đề kiểm tra')).toHaveValue('Đề accessibility'));
         act(() => {
             useManualQuizWorkspaceStore.getState().addQuestions([
                 {

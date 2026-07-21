@@ -16,6 +16,7 @@ import {
     type DraftConflictResolutionController,
 } from './useDraftConflictResolution';
 import type { LocalManualQuizAutosaveController } from './useLocalManualQuizAutosave';
+import { reportManualQuizTelemetry } from '../../../services/telemetryService';
 
 export interface RemoteManualQuizAutosaveController extends DraftConflictResolutionController {
     saveNow(): void;
@@ -135,6 +136,7 @@ export const useRemoteManualQuizAutosave = (
             controllersRef.current.add(controller);
             setSaveStatus('saving-remote');
             let hadConflict = false;
+            const remoteStartedAt = performance.now();
 
             try {
                 const record = await putRemoteManualQuizDraft(
@@ -156,6 +158,14 @@ export const useRemoteManualQuizAutosave = (
                     record.revision,
                     responseIsLatest ? record.updatedAt : undefined,
                 );
+                reportManualQuizTelemetry('draft_save_succeeded', {
+                    mode: current.quizId ? 'edit' : 'new',
+                    saveTarget: 'remote',
+                    outcome: 'success',
+                    durationMs: performance.now() - remoteStartedAt,
+                    questionCount: current.quiz.questions.length,
+                    online: true,
+                });
                 if (responseIsLatest) {
                     setSaveStatus('saved');
                 } else {
@@ -165,8 +175,26 @@ export const useRemoteManualQuizAutosave = (
             } catch (error) {
                 if (error instanceof ManualQuizDraftConflictError) {
                     hadConflict = true;
+                    reportManualQuizTelemetry('conflict_detected', {
+                        mode: current.quizId ? 'edit' : 'new',
+                        saveTarget: 'remote',
+                        outcome: 'blocked',
+                        durationMs: performance.now() - remoteStartedAt,
+                        questionCount: current.quiz.questions.length,
+                        conflictKind: error.current ? 'revision' : 'missing_remote',
+                        errorCode: 'REVISION_CONFLICT',
+                    });
                     conflictController.captureConflict(error);
                 } else if (!controller.signal.aborted) {
+                    reportManualQuizTelemetry('draft_save_failed', {
+                        mode: current.quizId ? 'edit' : 'new',
+                        saveTarget: 'remote',
+                        outcome: 'failure',
+                        durationMs: performance.now() - remoteStartedAt,
+                        questionCount: current.quiz.questions.length,
+                        online: browserIsOnline(),
+                        errorCode: error instanceof Error ? error.message : 'NETWORK_ERROR',
+                    });
                     setSaveStatus(
                         browserIsOnline() ? 'error' : 'offline',
                         browserIsOnline() && error instanceof Error ? error.message : null,

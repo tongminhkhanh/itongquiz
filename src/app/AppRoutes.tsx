@@ -6,8 +6,17 @@ import { PageLoading } from './PageLoading';
 import { PublicPageLayout } from './PublicPageLayout';
 import { RootView } from './RootView';
 import type { RoutePath } from './routeTypes';
+import { isManualQuizWorkspaceEnabled } from '../config/featureFlags';
 
-export const AppRoutes: React.FC<{ giftShopEnabled: boolean }> = ({ giftShopEnabled }) => {
+interface AppRoutesProps {
+    giftShopEnabled: boolean;
+    manualQuizWorkspaceEnabled?: boolean;
+}
+
+export const AppRoutes: React.FC<AppRoutesProps> = ({
+    giftShopEnabled,
+    manualQuizWorkspaceEnabled = isManualQuizWorkspaceEnabled(),
+}) => {
     const quizStore = useQuizStore();
     const navigate = useNavigate();
     const onNavigate = (path: RoutePath) => navigate(path);
@@ -22,8 +31,18 @@ export const AppRoutes: React.FC<{ giftShopEnabled: boolean }> = ({ giftShopEnab
             <Route path="/" element={<RootView giftShopEnabled={giftShopEnabled} />} />
             <Route path="/student/practice/:subjectId" element={<RootView giftShopEnabled={giftShopEnabled} />} />
             <Route path="/teacher/results/:resultId" element={suspended(<TeacherResultDetailPage />)} />
-            <Route path="/teacher/quizzes/manual/new" element={suspended(<ManualQuizWorkspacePage />)} />
-            <Route path="/teacher/quizzes/manual/:quizId/edit" element={suspended(<ManualQuizWorkspacePage />)} />
+            <Route
+                path="/teacher/quizzes/manual/new"
+                element={manualQuizWorkspaceEnabled
+                    ? suspended(<ManualQuizWorkspacePage />)
+                    : <Navigate to="/" replace state={{ manualQuizWorkspaceFallback: true }} />}
+            />
+            <Route
+                path="/teacher/quizzes/manual/:quizId/edit"
+                element={manualQuizWorkspaceEnabled
+                    ? suspended(<ManualQuizWorkspacePage />)
+                    : <Navigate to="/" replace state={{ manualQuizWorkspaceFallback: true }} />}
+            />
             <Route path="/about" element={suspended(<PublicPageLayout onNavigate={onNavigate}><AboutPage /></PublicPageLayout>)} />
             <Route path="/contact" element={suspended(<PublicPageLayout onNavigate={onNavigate}><ContactPage /></PublicPageLayout>)} />
             <Route path="/phieu/p/:publicToken" element={suspended(<PhieuPublicPage />)} />

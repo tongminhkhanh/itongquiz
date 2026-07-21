@@ -6,6 +6,7 @@ import { FileText, Sparkles, Search, Zap, Edit3, Wand2 } from 'lucide-react';
 import QuizPreview from './QuizPreview';
 import { useCreateQuizLogic } from '../../features/quiz-generator/hooks/useCreateQuizLogic';
 import { buildManualQuizSeed } from '../../features/manual-quiz-workspace/domain/manualQuizSeed';
+import { isManualQuizWorkspaceEnabled } from '../../config/featureFlags';
 
 // Sub-components
 import GeneralInfoSection from '../../features/quiz-generator/components/GeneralInfoSection';
@@ -38,6 +39,23 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
             accessCode: logic.accessCode,
             showOnHome: logic.showOnHome,
         });
+        if (!isManualQuizWorkspaceEnabled()) {
+            logic.setGeneratedQuiz({
+                id: `manual-legacy-${Date.now()}`,
+                title: manualQuizSeed.title,
+                topic: manualQuizSeed.category,
+                classLevel: manualQuizSeed.classLevel,
+                category: manualQuizSeed.category,
+                tags: [...manualQuizSeed.tags],
+                timeLimit: manualQuizSeed.timeLimit,
+                questions: [],
+                createdAt: new Date().toISOString(),
+                requireCode: manualQuizSeed.requireCode,
+                accessCode: manualQuizSeed.accessCode,
+                showOnHome: manualQuizSeed.showOnHome,
+            });
+            return;
+        }
         navigate('/teacher/quizzes/manual/new', {
             state: {
                 manualQuizSeed,
