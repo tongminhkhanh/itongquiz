@@ -14,6 +14,7 @@ import WorkspaceStatusBar from './components/WorkspaceStatusBar';
 import PublishValidationDrawer from './components/PublishValidationDrawer';
 import PointDistributionDialog from './components/PointDistributionDialog';
 import QuestionBankDrawer from './components/QuestionBankDrawer';
+import WorkspaceMobileTabs, { type WorkspaceMobilePane } from './components/WorkspaceMobileTabs';
 import {
     findLatestLocalDraft,
     removeLocalDraft,
@@ -68,6 +69,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
     const [previousPoints, setPreviousPoints] = useState<Record<string, number> | null>(null);
     const [isQuestionBankOpen, setQuestionBankOpen] = useState(false);
     const [isQuestionImportOpen, setQuestionImportOpen] = useState(false);
+    const [mobilePane, setMobilePane] = useState<WorkspaceMobilePane>('editor');
 
     const seed = navigationState?.manualQuizSeed ?? DEFAULT_SEED;
 
@@ -164,13 +166,22 @@ const ManualQuizWorkspacePage: React.FC = () => {
         setPreviousPoints(null);
     };
 
-    const columnClass = isNavigatorCollapsed
+    const desktopColumnClass = isNavigatorCollapsed
         ? isPreviewCollapsed
-            ? 'grid-cols-[minmax(0,1fr)]'
-            : 'grid-cols-[minmax(0,1fr)_380px]'
+            ? '2xl:grid-cols-[minmax(0,1fr)]'
+            : '2xl:grid-cols-[minmax(0,1fr)_380px]'
         : isPreviewCollapsed
-            ? 'grid-cols-[280px_minmax(0,1fr)]'
-            : 'grid-cols-[280px_minmax(0,1fr)_380px]';
+            ? '2xl:grid-cols-[280px_minmax(0,1fr)]'
+            : '2xl:grid-cols-[280px_minmax(0,1fr)_380px]';
+    const tabletColumnClass = isNavigatorCollapsed
+        ? 'md:grid-cols-[minmax(0,1fr)]'
+        : 'md:grid-cols-[280px_minmax(0,1fr)]';
+
+    const changeMobilePane = (pane: WorkspaceMobilePane) => {
+        setMobilePane(pane);
+        if (pane === 'list') setNavigatorCollapsed(false);
+        if (pane === 'preview') useManualQuizWorkspaceStore.getState().setPreviewCollapsed(false);
+    };
 
     return (
         <ManualQuizWorkspaceGuard>
@@ -178,25 +189,50 @@ const ManualQuizWorkspacePage: React.FC = () => {
                 data-testid="manual-quiz-workspace"
                 data-mode={quizId ? 'edit' : 'new'}
                 data-quiz-id={quizId || undefined}
-                className="flex h-screen min-h-[640px] flex-col overflow-hidden bg-[#FFFDF7] font-['Be_Vietnam_Pro',sans-serif] text-[#172033]"
+                className="flex h-[100dvh] min-h-[640px] max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-[#FFFDF7] font-['Be_Vietnam_Pro',sans-serif] text-[#172033]"
             >
                 <h1 className="sr-only">Phòng soạn đề thủ công</h1>
                 <WorkspaceHeader onOpenValidation={() => setValidationOpen(true)} />
                 <div
                     data-testid="workspace-grid"
-                    className={`grid min-h-0 flex-1 overflow-hidden ${columnClass}`}
+                    data-mobile-pane={mobilePane}
+                    className={`relative grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden ${tabletColumnClass} ${desktopColumnClass}`}
                 >
                     {!isNavigatorCollapsed && (
-                        <QuestionNavigator
-                            onOpenQuestionBank={() => setQuestionBankOpen(true)}
-                            onOpenImport={() => setQuestionImportOpen(true)}
-                            teacherId={username || ''}
-                        />
+                        <div
+                            id="workspace-pane-list"
+                            data-testid="workspace-pane-list"
+                            data-mobile-visible={mobilePane === 'list'}
+                            className={`min-h-0 min-w-0 overflow-hidden ${mobilePane === 'list' ? 'block' : 'hidden'} md:block`}
+                        >
+                            <QuestionNavigator
+                                onOpenQuestionBank={() => setQuestionBankOpen(true)}
+                                onOpenImport={() => setQuestionImportOpen(true)}
+                                teacherId={username || ''}
+                            />
+                        </div>
                     )}
-                    <QuestionEditorPane />
-                    {!isPreviewCollapsed && <StudentPreviewPane />}
+                    <div
+                        id="workspace-pane-editor"
+                        data-testid="workspace-pane-editor"
+                        data-mobile-visible={mobilePane === 'editor'}
+                        className={`min-h-0 min-w-0 overflow-hidden ${mobilePane === 'editor' ? 'block' : 'hidden'} md:block`}
+                    >
+                        <QuestionEditorPane />
+                    </div>
+                    {!isPreviewCollapsed && (
+                        <div
+                            id="workspace-pane-preview"
+                            data-testid="workspace-pane-preview"
+                            data-mobile-visible={mobilePane === 'preview'}
+                            className={`min-h-0 min-w-0 overflow-hidden ${mobilePane === 'preview' ? 'block' : 'hidden'} md:block`}
+                        >
+                            <StudentPreviewPane />
+                        </div>
+                    )}
                 </div>
                 <WorkspaceStatusBar onOpenValidation={() => setValidationOpen(true)} />
+                <WorkspaceMobileTabs activePane={mobilePane} onChange={changeMobilePane} />
                 {envelope && (
                     <PublishValidationDrawer
                         open={isValidationOpen}

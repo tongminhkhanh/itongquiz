@@ -24,9 +24,9 @@ const WorkspaceStatusBar: React.FC<WorkspaceStatusBarProps> = ({ onOpenValidatio
             role="status"
             aria-label="Trạng thái đề kiểm tra"
             aria-live="polite"
-            className="sticky bottom-0 z-20 flex min-h-12 items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 py-2 text-sm lg:px-6"
+            className="sticky bottom-0 z-20 flex min-h-12 max-w-full items-center justify-between gap-2 overflow-hidden border-t border-slate-200 bg-white px-3 py-2 text-xs sm:px-4 sm:text-sm lg:px-6"
         >
-            <p className="text-slate-600">
+            <p className="min-w-0 truncate text-slate-600">
                 <strong className="text-slate-800">{questionCount} câu</strong>
                 {' • '}Tổng {totalPoints}/{targetPoints} điểm
                 {' • '}{summary.errorCount + summary.warningCount} mục cần kiểm tra
@@ -34,7 +34,7 @@ const WorkspaceStatusBar: React.FC<WorkspaceStatusBarProps> = ({ onOpenValidatio
             <button
                 type="button"
                 onClick={onOpenValidation}
-                className="inline-flex h-9 items-center gap-2 rounded-lg px-3 font-medium text-rose-700 hover:bg-rose-50"
+                className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-2 font-medium text-rose-700 hover:bg-rose-50 sm:px-3"
             >
                 <AlertCircle className="h-4 w-4" /> Xem lỗi
             </button>

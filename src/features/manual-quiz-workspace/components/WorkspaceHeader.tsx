@@ -32,7 +32,7 @@ const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onOpenValidation }) =
         <header
             role="banner"
             aria-label="Thanh công cụ phòng soạn đề"
-            className="sticky top-0 z-30 flex h-[72px] items-center gap-3 border-b border-slate-200 bg-white px-4 lg:px-6"
+            className="sticky top-0 z-30 flex min-h-[72px] max-w-full items-center gap-2 overflow-hidden border-b border-slate-200 bg-white px-2 sm:gap-3 sm:px-4 lg:px-6"
         >
             <button
                 type="button"
@@ -68,7 +68,7 @@ const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onOpenValidation }) =
                     <button
                         type="button"
                         onClick={() => setNavigatorCollapsed(false)}
-                        className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-slate-200 px-3 text-sm font-medium"
+                        className="hidden h-11 items-center gap-2 rounded-[10px] border border-slate-200 px-3 text-sm font-medium md:inline-flex"
                         aria-label="Mở danh sách câu hỏi"
                     >
                         <List className="h-4 w-4" />

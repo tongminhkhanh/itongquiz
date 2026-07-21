@@ -74,7 +74,7 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBan
         <nav
             aria-label="Danh sách câu hỏi"
             data-pane-width="280"
-            className="flex min-h-0 w-[280px] flex-col border-r border-slate-200 bg-slate-50"
+            className="flex min-h-0 w-full min-w-0 flex-col border-r border-slate-200 bg-slate-50 md:w-[280px]"
         >
             <div className="border-b border-slate-200 p-4">
                 <div className="mb-3 flex items-center justify-between gap-2">

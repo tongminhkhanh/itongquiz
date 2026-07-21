@@ -17,7 +17,7 @@ const StudentPreviewPane: React.FC = () => {
         <aside
             aria-label="Xem trước học sinh"
             data-pane-width="380"
-            className="flex min-h-0 w-[380px] flex-col border-l border-slate-200 bg-slate-50"
+            className="flex min-h-0 w-full min-w-0 flex-col border-l border-slate-200 bg-slate-50 md:fixed md:bottom-12 md:right-0 md:top-[72px] md:z-40 md:w-[380px] md:max-w-[min(380px,100vw)] md:shadow-2xl 2xl:static 2xl:z-auto 2xl:w-[380px] 2xl:shadow-none"
         >
             <div className="flex h-16 items-center justify-between gap-2 border-b border-slate-200 px-4">
                 <div>
