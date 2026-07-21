@@ -13,6 +13,7 @@ import WorkspaceHeader from './components/WorkspaceHeader';
 import WorkspaceStatusBar from './components/WorkspaceStatusBar';
 import PublishValidationDrawer from './components/PublishValidationDrawer';
 import PointDistributionDialog from './components/PointDistributionDialog';
+import QuestionBankDrawer from './components/QuestionBankDrawer';
 import {
     findLatestLocalDraft,
     removeLocalDraft,
@@ -63,6 +64,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
     const [isValidationOpen, setValidationOpen] = useState(false);
     const [isPointDialogOpen, setPointDialogOpen] = useState(false);
     const [previousPoints, setPreviousPoints] = useState<Record<string, number> | null>(null);
+    const [isQuestionBankOpen, setQuestionBankOpen] = useState(false);
 
     const seed = navigationState?.manualQuizSeed ?? DEFAULT_SEED;
 
@@ -181,7 +183,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
                     data-testid="workspace-grid"
                     className={`grid min-h-0 flex-1 overflow-hidden ${columnClass}`}
                 >
-                    {!isNavigatorCollapsed && <QuestionNavigator />}
+                    {!isNavigatorCollapsed && <QuestionNavigator onOpenQuestionBank={() => setQuestionBankOpen(true)} />}
                     <QuestionEditorPane />
                     {!isPreviewCollapsed && <StudentPreviewPane />}
                 </div>
@@ -202,6 +204,13 @@ const ManualQuizWorkspacePage: React.FC = () => {
                         cleanupWarning={publishController.cleanupWarning}
                         canUndoPoints={previousPoints !== null}
                         onUndoPoints={undoPointDistribution}
+                    />
+                )}
+                {username && (
+                    <QuestionBankDrawer
+                        open={isQuestionBankOpen}
+                        teacherId={username}
+                        onClose={() => setQuestionBankOpen(false)}
                     />
                 )}
                 {envelope && isPointDialogOpen && (

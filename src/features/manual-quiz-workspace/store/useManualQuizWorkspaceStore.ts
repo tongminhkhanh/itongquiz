@@ -41,6 +41,7 @@ interface ManualQuizWorkspaceState {
     updateQuiz(patch: Partial<ManualQuizDraftEnvelope['quiz']>): void;
     selectQuestion(questionId: string | null): void;
     addQuestion(question: ManualQuizQuestion): void;
+    addQuestions(questions: ManualQuizQuestion[]): void;
     updateQuestion(
         questionId: string,
         updater: (question: ManualQuizQuestion) => ManualQuizQuestion,
@@ -177,6 +178,22 @@ export const useManualQuizWorkspaceStore = create<ManualQuizWorkspaceState>((set
         saveStatus: 'idle',
         saveError: null,
     }) : state),
+
+    addQuestions: (questions) => set((state) => {
+        if (!state.envelope || questions.length === 0) return state;
+        const clones = questions.map((question) => ({ ...question }));
+        return {
+            envelope: touchEnvelope(state.envelope, {
+                quiz: {
+                    ...state.envelope.quiz,
+                    questions: [...state.envelope.quiz.questions, ...clones],
+                },
+                selectedQuestionId: clones[clones.length - 1].id,
+            }),
+            saveStatus: 'idle',
+            saveError: null,
+        };
+    }),
 
     updateQuestion: (questionId, updater) => set((state) => {
         if (!state.envelope) return state;

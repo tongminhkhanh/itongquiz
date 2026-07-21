@@ -1,159 +1,79 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { X, Search, Plus, Trash2, Library, CheckCircle2 } from 'lucide-react';
-import { testBankService, TestBankItem } from '../../../services/testBankService';
+import { Library, Plus, X } from 'lucide-react';
+import { testBankService, type TestBankItem } from '../../../services/testBankService';
 import type { Question } from '../../../types';
-import MathSpan from '../../../components/common/MathSpan';
+import TestBankBrowser, { cloneQuestionFromBank } from './TestBankBrowser';
 
 interface TestBankModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAddQuestion: (q: Question) => void;
+    onAddQuestion: (question: Question) => void;
     teacherId: string;
 }
 
 export const TestBankModal: React.FC<TestBankModalProps> = ({ isOpen, onClose, onAddQuestion, teacherId }) => {
     const [items, setItems] = useState<TestBankItem[]>([]);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+    const selectedItems = useMemo(() => items.filter((item) => selectedIds.has(item.id)), [items, selectedIds]);
 
     useEffect(() => {
-        if (isOpen && teacherId) {
-            loadBank();
-        }
+        if (!isOpen || !teacherId) return;
+        let active = true;
+        setLoading(true);
+        testBankService.getTestBank(teacherId)
+            .then((data) => { if (active) setItems(data); })
+            .catch(() => toast.error('Không thể tải ngân hàng câu hỏi'))
+            .finally(() => { if (active) setLoading(false); });
+        return () => { active = false; };
     }, [isOpen, teacherId]);
 
-    const loadBank = async () => {
-        try {
-            setLoading(true);
-            const data = await testBankService.getTestBank(teacherId);
-            setItems(data);
-        } catch (e) {
-            console.error('Failed to load test bank', e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (!isOpen) return null;
 
-    const handleDelete = async (id: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!confirm('Bạn có chắc muốn xóa câu hỏi này khỏi ngân hàng?')) return;
+    const toggle = (id: string) => setSelectedIds((current) => {
+        const next = new Set(current);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+    });
+
+    const remove = async (item: TestBankItem) => {
+        if (!globalThis.confirm('Bạn có chắc muốn xóa câu hỏi này khỏi ngân hàng?')) return;
         try {
-            await testBankService.deleteQuestion(id);
-            setItems(items.filter(item => item.id !== id));
-        } catch (e) {
+            await testBankService.deleteQuestion(item.id);
+            setItems((current) => current.filter((entry) => entry.id !== item.id));
+            setSelectedIds((current) => {
+                const next = new Set(current);
+                next.delete(item.id);
+                return next;
+            });
+        } catch {
             toast.error('Không thể xóa câu hỏi');
         }
     };
 
-    const handleAdd = (item: TestBankItem, e: React.MouseEvent) => {
-        e.stopPropagation();
-        // Cấp ID mới cho câu hỏi trước khi add vào list quiz hiện tại
-        const newQ = { 
-            ...item.question_data, 
-            id: 'qa_' + Math.random().toString(36).substring(2, 9) 
-        };
-        onAddQuestion(newQ);
-        const newSet = new Set(addedIds);
-        newSet.add(item.id);
-        setAddedIds(newSet);
+    const addSelected = () => {
+        selectedItems.forEach((item) => onAddQuestion(cloneQuestionFromBank(item.question_data)));
+        setSelectedIds(new Set());
     };
 
-    if (!isOpen) return null;
-
-    const filteredItems = items.filter(i => {
-        // Simple search on question text (JSON dump is fine enough for basic search)
-        const txt = JSON.stringify(i.question_data).toLowerCase();
-        return txt.includes(searchTerm.toLowerCase());
-    });
-
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl shadow-2xl flex flex-col max-w-4xl w-full max-h-[90vh] overflow-hidden ml-64" onClick={(e) => e.stopPropagation()}>
-                {/* Header */}
-                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                            <Library className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-800 tracking-tight">Ngân Hàng Câu Hỏi Cá Nhân</h2>
-                            <p className="text-sm text-slate-500 font-medium">Kho tài nguyên lưu trữ của riêng bạn</p>
-                        </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
+            <section role="dialog" aria-modal="true" aria-label="Ngân hàng câu hỏi cá nhân" className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+                <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 lg:px-6">
+                    <div className="flex items-start gap-3">
+                        <span className="grid h-11 w-11 place-items-center rounded-xl bg-indigo-50 text-indigo-700"><Library className="h-5 w-5" /></span>
+                        <div><h2 className="text-xl font-semibold text-slate-900">Ngân hàng câu hỏi cá nhân</h2><p className="mt-1 text-sm text-slate-600">Tìm, lọc và chọn nhiều câu hỏi đã lưu.</p></div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
-
-                {/* Toolbar */}
-                <div className="p-4 border-b border-slate-100 bg-slate-50 shrink-0 flex gap-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Tìm kiếm câu hỏi đang lưu trong kho..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all font-medium"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                {/* List Container */}
-                <div className="flex-1 overflow-y-auto p-4 bg-slate-50/50">
-                    {loading ? (
-                        <div className="flex items-center justify-center h-48">
-                            <div className="animate-spin rounded-full h-8 w-8 border border-indigo-600"></div>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {filteredItems.map(item => {
-                                const q = item.question_data as any;
-                                const isAdded = addedIds.has(item.id);
-                                return (
-                                    <div key={item.id} className="group bg-white rounded-2xl border border-slate-200 p-4 hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100/50 transition-all flex flex-col">
-                                        <div className="flex-1 mb-4">
-                                            <div className="flex items-start justify-between gap-3 mb-2">
-                                                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
-                                                    {q.type}
-                                                </span>
-                                                <button onClick={(e) => handleDelete(item.id, e)} className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                            <MathSpan
-                                                content={q.mainQuestion || q.question || '[Chưa rõ tiêu đề câu hỏi]'}
-                                                as="p"
-                                                className="line-clamp-3 text-sm font-medium text-slate-700"
-                                            />
-                                        </div>
-                                        <button 
-                                            disabled={isAdded}
-                                            onClick={(e) => handleAdd(item, e)}
-                                            className={'w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ' + (
-                                            isAdded ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-slate-50 text-emerald-900 border border-slate-200 hover:bg-indigo-50 hover:text-blue-700 hover:border-indigo-200'
-                                        )}>
-                                            {isAdded ? (
-                                                <><CheckCircle2 className="w-4 h-4" /> Đã thêm vào đề</>
-                                            ) : (
-                                                <><Plus className="w-4 h-4" /> Bốc vào đề</>
-                                            )}
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                            {filteredItems.length === 0 && (
-                                <div className="col-span-1 md:col-span-2 py-12 flex flex-col items-center justify-center text-slate-400">
-                                    <Library className="w-12 h-12 mb-3 opacity-20" />
-                                    <p className="font-medium">Chưa có câu hỏi nào trong kho dữ liệu.</p>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
+                    <button type="button" aria-label="Đóng ngân hàng câu hỏi" onClick={onClose} className="grid h-11 w-11 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+                </header>
+                <TestBankBrowser items={items} loading={loading} selectedIds={selectedIds} onToggle={toggle} onDelete={(item) => void remove(item)} />
+                <footer className="flex items-center justify-between gap-4 border-t border-slate-200 px-5 py-4 lg:px-6">
+                    <p className="text-sm text-slate-600">Đã chọn <strong>{selectedItems.length}</strong> câu</p>
+                    <button type="button" disabled={selectedItems.length === 0} onClick={addSelected} className="inline-flex min-h-11 items-center gap-2 rounded-[10px] bg-indigo-600 px-5 text-sm font-semibold text-white disabled:opacity-50"><Plus className="h-4 w-4" /> Bốc {selectedItems.length} câu vào đề</button>
+                </footer>
+            </section>
         </div>
     );
 };

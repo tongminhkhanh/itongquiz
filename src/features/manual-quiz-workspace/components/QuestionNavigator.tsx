@@ -30,7 +30,11 @@ export const handleQuestionDragEnd = (
     reorderQuestion(activeId, overId);
 };
 
-const QuestionNavigator: React.FC = () => {
+interface QuestionNavigatorProps {
+    onOpenQuestionBank?: () => void;
+}
+
+const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBank }) => {
     const [query, setQuery] = useState('');
     const [isTypePickerOpen, setTypePickerOpen] = useState(false);
     const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
@@ -167,6 +171,7 @@ const QuestionNavigator: React.FC = () => {
                 </button>
                 <button
                     type="button"
+                    onClick={onOpenQuestionBank}
                     className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-slate-200 bg-white px-3 text-sm font-medium"
                 >
                     <Library className="h-4 w-4" /> Mở kho câu hỏi
