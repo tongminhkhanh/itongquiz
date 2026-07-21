@@ -34,6 +34,6 @@ describe('D1 migration layout', () => {
     expect(registered).toHaveLength(25);
     const numericPrefixes = migrations.map((name) => name.slice(0, 4));
     expect(new Set(numericPrefixes).size).toBe(numericPrefixes.length);
-    expect(migrations.at(-1)).toBe('0035_add_question_image_alt.sql');
+    expect(migrations.at(-1)).toBe('0036_seed_itong_certificate_templates.sql');
   });
 });

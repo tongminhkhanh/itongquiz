@@ -156,7 +156,36 @@ WITH checks(migration, check_name, ok) AS (
       (SELECT COUNT(*)=5 FROM sqlite_master WHERE type='index' AND name IN (
         'idx_phieu_batch_teacher_request','idx_result_report_items_batch','idx_result_report_items_student',
         'idx_result_report_items_notification','idx_result_report_items_public_link'
-      )))
+      ))),
+
+    ('0036_seed_itong_certificate_templates.sql', 'five Ít Ong templates seeded',
+      (SELECT COUNT(*)=5 FROM certificate_templates WHERE id IN (
+        'itong-classic-red-navy-2026',
+        'itong-modern-color-2026',
+        'itong-formal-blue-2026',
+        'itong-kids-learning-2026',
+        'itong-geometric-navy-orange-2026'
+      ))),
+    ('0036_seed_itong_certificate_templates.sql', 'Ít Ong template canvas and dynamic fields',
+      NOT EXISTS(
+        SELECT 1 FROM certificate_templates
+        WHERE id IN (
+          'itong-classic-red-navy-2026',
+          'itong-modern-color-2026',
+          'itong-formal-blue-2026',
+          'itong-kids-learning-2026',
+          'itong-geometric-navy-orange-2026'
+        )
+        AND (
+          canvas_width <> 1270 OR canvas_height <> 698
+          OR json_valid(fields_config) = 0
+          OR NOT EXISTS (SELECT 1 FROM json_each(certificate_templates.fields_config) WHERE json_extract(value, '$.key')='student_name')
+          OR NOT EXISTS (SELECT 1 FROM json_each(certificate_templates.fields_config) WHERE json_extract(value, '$.key')='quiz_title')
+          OR NOT EXISTS (SELECT 1 FROM json_each(certificate_templates.fields_config) WHERE json_extract(value, '$.key')='score')
+          OR NOT EXISTS (SELECT 1 FROM json_each(certificate_templates.fields_config) WHERE json_extract(value, '$.key')='date')
+          OR NOT EXISTS (SELECT 1 FROM json_each(certificate_templates.fields_config) WHERE json_extract(value, '$.key')='teacher_name')
+        )
+      ))
 ), summary AS (
   SELECT
     migration,
