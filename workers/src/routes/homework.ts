@@ -2,6 +2,10 @@ import { Env } from '../types';
 import { verifyJWTMiddleware, isStudent, requireTeacher } from '../middleware/jwtAuth';
 import { errorResponse, jsonResponse } from '../utils/response';
 import { JWTPayload } from '../utils/jwt';
+import {
+    createParentNotification,
+    fanOutParentNotificationToClass,
+} from '../parentPortal/notificationService';
 
 type AssignmentRow = Record<string, any>;
 
@@ -139,6 +143,23 @@ async function createAssignment(db: D1Database, user: JWTPayload, body: Record<s
         status, maxAttempts, status === 'OPEN' ? now : null, now,
         String(body.sourceOcrText || body.source_ocr_text || body.aiContent || body.ai_content || ''), JSON.stringify(rubric), now,
     ).run();
+    if (status === 'OPEN') {
+        try {
+            await fanOutParentNotificationToClass(db, {
+                classId,
+                kind: 'homework_assigned',
+                sourceType: 'homework',
+                sourceId: `${id}:published`,
+                title: 'Có bài tập mới',
+                body: `${title} – hạn nộp ${new Date(deadlineMs).toLocaleString('vi-VN')}.`,
+                payload: { assignmentId: id, subject: String(body.subject || ''), deadline: new Date(deadlineMs).toISOString() },
+                publishedAt: now,
+                createdBy: user.username,
+            });
+        } catch (error) {
+            console.error('[ParentNotification] homework assignment notification failed', error);
+        }
+    }
     return jsonResponse({ status: 'success', data: { id } }, 201);
 }
 
@@ -155,16 +176,36 @@ async function updateAssignment(db: D1Database, user: JWTPayload, assignmentId: 
     const status = ASSIGNMENT_STATUSES.has(body.status) ? body.status : current.status;
     const maxAttempts = Math.min(10, Math.max(1, Number(body.maxAttempts || body.max_attempts || current.max_attempts || 1)));
     const rubric = body.rubric !== undefined ? body.rubric : parseJson(current.rubric_json, []);
+    const now = new Date().toISOString();
+    const title = String(body.title ?? current.title);
+    const subject = String(body.subject ?? current.subject);
     await db.prepare(`
       UPDATE hw_assignments SET title=?, description=?, subject=?, deadline=?, class_id=?, file_url=?,
         status=?, max_attempts=?, published_at=?, updated_at=?, source_ocr_text=?, rubric_json=? WHERE id=?
     `).bind(
-        String(body.title ?? current.title), String(body.description ?? current.description), String(body.subject ?? current.subject),
+        title, String(body.description ?? current.description), subject,
         new Date(deadlineMs).toISOString(), targetClassId, String(body.fileUrl || body.file_url || current.file_url), status,
-        maxAttempts, status === 'OPEN' ? (current.published_at || new Date().toISOString()) : current.published_at,
-        new Date().toISOString(), String(body.sourceOcrText ?? body.source_ocr_text ?? current.source_ocr_text),
+        maxAttempts, status === 'OPEN' ? (current.published_at || now) : current.published_at,
+        now, String(body.sourceOcrText ?? body.source_ocr_text ?? current.source_ocr_text),
         JSON.stringify(Array.isArray(rubric) ? rubric : []), assignmentId,
     ).run();
+    if (String(current.status) !== 'OPEN' && status === 'OPEN') {
+        try {
+            await fanOutParentNotificationToClass(db, {
+                classId: targetClassId,
+                kind: 'homework_assigned',
+                sourceType: 'homework',
+                sourceId: `${assignmentId}:published`,
+                title: 'Có bài tập mới',
+                body: `${title} – hạn nộp ${new Date(deadlineMs).toLocaleString('vi-VN')}.`,
+                payload: { assignmentId, subject, deadline: new Date(deadlineMs).toISOString() },
+                publishedAt: now,
+                createdBy: user.username,
+            });
+        } catch (error) {
+            console.error('[ParentNotification] homework publish notification failed', error);
+        }
+    }
     return jsonResponse({ status: 'success', data: { id: assignmentId } });
 }
 
@@ -337,7 +378,7 @@ async function suggestGrade(db: D1Database, env: Env, user: JWTPayload, submissi
 }
 
 async function publishGrade(db: D1Database, user: JWTPayload, submissionId: string, body: Record<string, any>): Promise<Response> {
-    const row = await db.prepare(`SELECT hs.*, ha.class_id, c.teacher_username FROM hw_submissions hs JOIN hw_assignments ha ON ha.id=hs.assignment_id JOIN classes c ON c.id=ha.class_id WHERE hs.id=?`)
+    const row = await db.prepare(`SELECT hs.*, ha.class_id, ha.title AS assignment_title, ha.subject, c.teacher_username FROM hw_submissions hs JOIN hw_assignments ha ON ha.id=hs.assignment_id JOIN classes c ON c.id=ha.class_id WHERE hs.id=?`)
         .bind(submissionId).first<any>();
     if (!row) return errorResponse('Submission not found', 404);
     if (!teacherOwnsAssignment(user, row)) return errorResponse('Forbidden', 403);
@@ -345,10 +386,31 @@ async function publishGrade(db: D1Database, user: JWTPayload, submissionId: stri
     if (!Number.isFinite(score) || score < 0 || score > 10) return errorResponse('Score must be between 0 and 10', 400);
     const breakdown = normalizeBreakdown(body.gradingBreakdown || body.criteriaBreakdown || parseJson(row.grading_breakdown_json, []));
     const now = new Date().toISOString();
+    const feedback = String(body.feedback || body.teacher_feedback || '').slice(0, 5000);
     await db.prepare(`UPDATE hw_submissions SET status='GRADED', score=?, teacher_feedback=?, grading_breakdown_json=?, analytics_json=?, graded_by=?, graded_at=?, published_at=? WHERE id=?`)
-        .bind(score, String(body.feedback || body.teacher_feedback || '').slice(0, 5000), JSON.stringify(breakdown),
+        .bind(score, feedback, JSON.stringify(breakdown),
             JSON.stringify(breakdown.map((x: any) => ({ questionId: x.questionId, label: x.label, score: x.score / x.maxScore }))),
             user.username, now, now, submissionId).run();
+    try {
+        await createParentNotification(db, {
+            studentId: String(row.student_id),
+            kind: 'homework_graded',
+            sourceType: 'homework_grade',
+            sourceId: submissionId,
+            title: 'Bài tập đã được chấm',
+            body: `${row.assignment_title || 'Bài tập'}: ${score.toFixed(1)}/10${feedback ? ` – ${feedback.slice(0, 240)}` : ''}`,
+            payload: {
+                assignmentId: String(row.assignment_id),
+                submissionId,
+                subject: String(row.subject || ''),
+                score,
+            },
+            publishedAt: now,
+            createdBy: user.username,
+        });
+    } catch (error) {
+        console.error('[ParentNotification] homework grade notification failed', error);
+    }
     return jsonResponse({ status: 'success', data: { id: submissionId, score, publishedAt: now } });
 }
 

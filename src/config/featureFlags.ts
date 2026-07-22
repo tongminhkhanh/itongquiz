@@ -21,3 +21,8 @@ export const isManualQuizWorkspaceEnabled = (): boolean => resolveFeatureFlag(
     import.meta.env.VITE_FEATURE_MANUAL_QUIZ_WORKSPACE_V1,
     true,
 );
+
+export const isParentPortalEnabled = (): boolean => resolveFeatureFlag(
+    import.meta.env.VITE_FEATURE_PARENT_PORTAL_V1,
+    false,
+);

@@ -3,6 +3,7 @@ import type {
   ResultReportDeliveryItem,
 } from '../../../../shared/result-reports.contract';
 import type { Env } from '../../types';
+import { createParentNotification } from '../../parentPortal/notificationService';
 import type { JWTPayload } from '../../utils/jwt';
 import { handleUpsertPhieu } from '../phieu/phieuUpsertService';
 import { resultSubmissionKey } from '../phieu/phieuRepository';
@@ -66,6 +67,15 @@ export interface ResultReportDeliveryRuntime {
     score: number;
     teacherName: string;
   }): Promise<string>;
+  insertParentNotification?(input: {
+    studentId: string;
+    phieuId: string;
+    resultId: string;
+    batchId: string;
+    quizId: string;
+    quizTitle: string;
+    teacherName: string;
+  }): Promise<void>;
 }
 
 const addDays = (value: string, days: number): string => {
@@ -174,6 +184,22 @@ export async function processResultReportBatch(
     }
 
     const errors: string[] = [];
+    if (runtime.insertParentNotification) {
+      try {
+        await runtime.insertParentNotification({
+          studentId: canonical.student.id,
+          phieuId,
+          resultId: item.resultId,
+          batchId,
+          quizId: batch.quizId,
+          quizTitle: batch.quizTitle,
+          teacherName: batch.teacherId,
+        });
+      } catch (error) {
+        errors.push(`Parent notification: ${errorText(error)}`);
+      }
+    }
+
     if (batch.createParentLinks
       && !['link_created', 'opened', 'revoked'].includes(item.parentStatus)) {
       try {
@@ -310,6 +336,23 @@ export function createResultReportDeliveryRuntime(
         }),
       ).run();
       return input.notificationId;
+    },
+    insertParentNotification: async (input) => {
+      await createParentNotification(env.DB, {
+        studentId: input.studentId,
+        kind: 'result_report',
+        sourceType: 'result_report',
+        sourceId: input.phieuId,
+        title: 'Có phiếu kết quả và nhận xét mới',
+        body: `${user.fullName || input.teacherName} đã gửi nhận xét bài “${input.quizTitle}”.`,
+        payload: {
+          phieuId: input.phieuId,
+          resultId: input.resultId,
+          quizId: input.quizId,
+        },
+        publishedAt: new Date().toISOString(),
+        createdBy: user.username,
+      });
     },
   };
 }

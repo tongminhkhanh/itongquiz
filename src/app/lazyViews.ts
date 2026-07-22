@@ -12,3 +12,4 @@ export const AboutPage = React.lazy(() => import('../components/schoolPage/About
 export const ContactPage = React.lazy(() => import('../components/schoolPage/ContactPage'));
 export const PhieuPublicPage = React.lazy(() => import('../pages/PhieuPublicPage'));
 export const ManualQuizWorkspacePage = React.lazy(() => import('../features/manual-quiz-workspace/ManualQuizWorkspacePage'));
+export const ParentPortalApp = React.lazy(() => import('../features/parent-portal/ParentPortalApp'));

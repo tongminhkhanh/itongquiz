@@ -39,7 +39,8 @@ ANNOUNCEMENT_IMAGE_HOSTS = "thitong.site,www.thitong.site,r2.thitong.site"
 [triggers]
 crons = [
     "0 0 * * 1",  # Every Monday at 00:00 UTC (7:00 AM ICT) - Weekly leaderboard rewards
-    "* * * * *"   # Every minute - Auto-close expired live exams
+    "* * * * *",  # Every minute - Auto-close expired live exams
+    "0 23 * * *"  # Every day at 23:00 UTC (06:00 ICT) - Parent homework reminders
 ]
 # ========================
 # Cloudflare Queues - Certificate

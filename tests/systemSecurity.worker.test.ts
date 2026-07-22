@@ -148,6 +148,9 @@ describe('system security password storage', () => {
         const apiOrigin = new Request('https://phieu.thitong.site/api/health', {
             headers: { Origin: 'https://phieu.thitong.site' },
         });
+        const parentOrigin = new Request('https://phieu.thitong.site/api/health', {
+            headers: { Origin: 'https://phuhuynh.thitong.site' },
+        });
         const fakePreview = new Request('https://phieu.thitong.site/api/health', {
             headers: { Origin: 'https://itongquiz1-abc123-attacker.vercel.app' },
         });
@@ -159,6 +162,7 @@ describe('system security password storage', () => {
         expect(corsHeaders(preview, production)['Access-Control-Allow-Origin']).toBe(preview.headers.get('Origin'));
         expect(corsHeaders(productionAlias, production)['Access-Control-Allow-Origin']).toBe(productionAlias.headers.get('Origin'));
         expect(corsHeaders(apiOrigin, production)['Access-Control-Allow-Origin']).toBe('https://phieu.thitong.site');
+        expect(corsHeaders(parentOrigin, production)['Access-Control-Allow-Origin']).toBe('https://phuhuynh.thitong.site');
         expect(corsHeaders(fakePreview, production)['Access-Control-Allow-Origin']).toBeUndefined();
         expect(corsHeaders(localhost, production)['Access-Control-Allow-Origin']).toBeUndefined();
     });
