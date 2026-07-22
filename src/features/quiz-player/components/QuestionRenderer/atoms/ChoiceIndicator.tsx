@@ -10,7 +10,7 @@ const ChoiceIndicator: React.FC<ChoiceIndicatorProps> = ({ label, isSelected }) 
   <span
     className={`mr-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border text-xs font-semibold transition-colors ${
       isSelected
-        ? 'border-sky-500 bg-sky-500 text-white'
+        ? 'border-emerald-500 bg-emerald-500 text-white'
         : 'border-slate-300 bg-white text-slate-500'
     }`}
   >

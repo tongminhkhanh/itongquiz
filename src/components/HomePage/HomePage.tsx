@@ -296,7 +296,7 @@ const HomePage: React.FC = () => {
         return (
             <React.Suspense fallback={(
                 <div className="min-h-dvh bg-[#F4F7FC] flex items-center justify-center text-slate-500 font-semibold">
-                    ?ang t?i kh?ng gian h?c t?p...
+                    Đang tải không gian học tập...
                 </div>
             )}>
                 <StudentDashboardUI />

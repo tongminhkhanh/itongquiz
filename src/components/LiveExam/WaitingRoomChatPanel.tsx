@@ -43,9 +43,9 @@ export const WaitingRoomChatPanel: React.FC<WaitingRoomChatPanelProps> = ({
                         <MessageCircle className="w-5 h-5" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-black text-slate-800">Chat phong cho</h3>
+                        <h3 className="text-lg font-black text-slate-800">Trò chuyện trong phòng chờ</h3>
                         <p className="text-sm text-slate-500">
-                            {chatEnabled ? 'Hoc sinh co the nhan tin trong luc cho.' : 'Giao vien da tat chat phong cho.'}
+                            {chatEnabled ? 'Học sinh có thể nhắn tin trong lúc chờ.' : 'Giáo viên đã tắt trò chuyện trong phòng chờ.'}
                         </p>
                     </div>
                 </div>
@@ -54,13 +54,13 @@ export const WaitingRoomChatPanel: React.FC<WaitingRoomChatPanelProps> = ({
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-slate-50/60">
                 {isLoading ? (
                     <div className="h-full min-h-[240px] flex items-center justify-center text-slate-500">
-                        <Loader2 className="w-6 h-6 animate-spin mr-2" /> Dang tai chat...
+                        <Loader2 className="w-6 h-6 animate-spin mr-2" /> Đang tải tin nhắn...
                     </div>
                 ) : sortedMessages.length === 0 ? (
                     <div className="h-full min-h-[240px] flex flex-col items-center justify-center text-center text-slate-500 px-6">
                         <MessageCircle className="w-10 h-10 text-blue-300 mb-3" />
-                        <p className="font-semibold">Chua co tin nhan nao trong phong cho.</p>
-                        <p className="text-sm mt-1">Hay gui mot loi nhan ngan de bat dau.</p>
+                        <p className="font-semibold">Chưa có tin nhắn nào trong phòng chờ.</p>
+                        <p className="text-sm mt-1">Hãy gửi một lời nhắn ngắn để bắt đầu.</p>
                     </div>
                 ) : (
                     sortedMessages.map((message) => {
@@ -89,7 +89,7 @@ export const WaitingRoomChatPanel: React.FC<WaitingRoomChatPanelProps> = ({
                                             : 'bg-white border border-slate-200 text-slate-800'
                                 }`}>
                                     <div className={`text-[11px] font-black mb-1 ${isMine ? 'text-blue-100' : 'text-slate-500'}`}>
-                                        {isAnnouncement ? `Thong bao - ${message.senderName}` : message.senderName}
+                                        {isAnnouncement ? `Thông báo - ${message.senderName}` : message.senderName}
                                     </div>
                                     <NewlineMathText
                                         content={message.content}
@@ -109,14 +109,14 @@ export const WaitingRoomChatPanel: React.FC<WaitingRoomChatPanelProps> = ({
             <div className="border-t border-slate-100 bg-white px-4 py-4">
                 {!chatEnabled && (
                     <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm font-semibold px-3 py-2 flex items-center gap-2">
-                        <ShieldAlert className="w-4 h-4" /> Giao vien da tam tat chat phong cho.
+                        <ShieldAlert className="w-4 h-4" /> Giáo viên đã tạm tắt trò chuyện trong phòng chờ.
                     </div>
                 )}
                 <form onSubmit={handleSubmit} className="flex items-end gap-3">
                     <textarea
                         value={draft}
                         onChange={(e) => setDraft(e.target.value.slice(0, 160))}
-                        placeholder={chatEnabled ? 'Nhan tin voi ca phong...' : 'Chat dang tam khoa'}
+                        placeholder={chatEnabled ? 'Nhắn tin với cả phòng...' : 'Trò chuyện đang tạm khóa'}
                         disabled={!chatEnabled || isSending}
                         rows={3}
                         className="flex-1 resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
@@ -127,7 +127,7 @@ export const WaitingRoomChatPanel: React.FC<WaitingRoomChatPanelProps> = ({
                         className="h-12 px-4 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed inline-flex items-center gap-2"
                     >
                         {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                        Gui
+                        Gửi
                     </button>
                 </form>
             </div>

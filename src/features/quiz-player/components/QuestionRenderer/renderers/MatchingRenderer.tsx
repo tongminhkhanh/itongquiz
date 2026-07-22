@@ -99,7 +99,7 @@ const MatchingRenderer: React.FC<BaseRendererProps> = ({
               onClick={() => onMatchingClick?.(question.id, item.id, 'left')}
               className={`relative flex min-h-[68px] w-full items-center rounded-[10px] border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 md:p-4 ${
                 isPaired
-                  ? 'border-sky-300 bg-sky-50 text-sky-950'
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
                   : isSelected
                     ? 'border-sky-500 bg-sky-50 text-sky-950'
                     : 'border-slate-200 bg-white text-slate-800 hover:border-sky-300'
@@ -109,7 +109,7 @@ const MatchingRenderer: React.FC<BaseRendererProps> = ({
                 <MathSpan content={item.content} className="text-sm leading-snug md:text-base" />
               </span>
               {isPaired ? (
-                <span className="shrink-0 rounded-[6px] bg-white px-2 py-1 text-[10px] font-semibold text-sky-700">
+                <span className="shrink-0 rounded-[6px] bg-white px-2 py-1 text-[10px] font-semibold text-emerald-700">
                   Cặp {pairNumber}
                 </span>
               ) : isSelected ? (
@@ -133,12 +133,12 @@ const MatchingRenderer: React.FC<BaseRendererProps> = ({
               onClick={() => onMatchingClick?.(question.id, item.id, 'right')}
               className={`relative flex min-h-[68px] w-full items-center rounded-[10px] border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 md:p-4 ${
                 isPaired
-                  ? 'border-sky-300 bg-sky-50 text-sky-950'
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
                   : 'border-slate-200 bg-white text-slate-800 hover:border-sky-300'
               }`}
             >
               {isPaired ? (
-                <span className="mr-2 shrink-0 rounded-[6px] bg-white px-2 py-1 text-[10px] font-semibold text-sky-700">
+                <span className="mr-2 shrink-0 rounded-[6px] bg-white px-2 py-1 text-[10px] font-semibold text-emerald-700">
                   Cặp {pairNumber}
                 </span>
               ) : null}

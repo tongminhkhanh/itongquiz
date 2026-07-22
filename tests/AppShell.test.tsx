@@ -174,11 +174,11 @@ describe('App shell routing contracts', () => {
 
         renderApp();
 
-        expect(await screen.findByText('Dang tai cau hoi...')).toBeInTheDocument();
+        expect(await screen.findByText('Chưa tải được câu hỏi')).toBeInTheDocument();
         expect(screen.getByText('Question load failed')).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Thu lai' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
         expect(loadQuizQuestions).toHaveBeenCalledWith('quiz-1');
-        fireEvent.click(screen.getByRole('button', { name: 'Ve trang chu' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Về trang chủ' }));
         expect(goHome).toHaveBeenCalledTimes(1);
     });
 
