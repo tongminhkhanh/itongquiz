@@ -74,6 +74,17 @@ export default {
             if (rateLimitRes) return addCors(rateLimitRes, request, env);
         }
 
+        const isParentLoginAttempt = method === 'POST'
+            && (path === '/api/parent/activate' || path === '/api/parent/login');
+        if (isParentLoginAttempt) {
+            const rateLimitRes = await rateLimit(request, env, {
+                windowMs: 5 * 60 * 1000,
+                maxRequests: 10,
+                failureMode: 'closed',
+            });
+            if (rateLimitRes) return addCors(rateLimitRes, request, env);
+        }
+
         const isAdminMutation = isUnsafeMethod && (
             path.startsWith('/api/admin/')
             || path === '/api/teachers'

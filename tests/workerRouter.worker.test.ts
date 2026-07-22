@@ -122,6 +122,22 @@ describe('Worker root route dispatch', () => {
     );
   });
 
+  it('fails closed for parent activation and login when limiter storage is unavailable', async () => {
+    rateLimitMock.mockResolvedValueOnce(unavailable());
+    const response = await worker.fetch(request('/api/parent/login', 'POST'), env);
+
+    expect(response.status).toBe(503);
+    expect(rateLimitMock).toHaveBeenCalledWith(
+      expect.any(Request),
+      env,
+      expect.objectContaining({
+        windowMs: 5 * 60 * 1000,
+        maxRequests: 10,
+        failureMode: 'closed',
+      }),
+    );
+  });
+
   it('fails closed for student login when limiter storage is unavailable', async () => {
     rateLimitMock.mockResolvedValueOnce(unavailable());
     const response = await worker.fetch(request('/api/student-login', 'POST'), env);
