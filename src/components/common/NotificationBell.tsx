@@ -38,7 +38,7 @@ export default function NotificationBell({
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
+        className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
         aria-label={`Thông báo${unreadCount ? `, ${unreadCount} chưa đọc` : ''}`}
         aria-expanded={isOpen}
       >

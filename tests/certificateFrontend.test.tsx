@@ -56,7 +56,9 @@ describe('certificate frontend', () => {
     const openCertificate = vi.fn();
     render(<NotificationBell userId="student-1" onOpenCertificate={openCertificate} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Thông báo, 1 chưa đọc/i }));
+    const notificationButton = screen.getByRole('button', { name: /Thông báo, 1 chưa đọc/i });
+    expect(notificationButton).toHaveClass('inline-flex', 'min-h-11', 'min-w-11');
+    fireEvent.click(notificationButton);
     fireEvent.click(screen.getByRole('button', { name: /Bạn có chứng nhận mới/i }));
 
     await waitFor(() => expect(markAsReadMock).toHaveBeenCalledWith('notification-1'));
