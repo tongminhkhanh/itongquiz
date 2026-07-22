@@ -132,6 +132,7 @@ describe('parent activation preview and activation', () => {
     const payload = await response!.json() as any;
 
     expect(response?.status).toBe(200);
+    expect(response?.headers.get('Cache-Control')).toBe('no-store');
     expect(payload.data).toEqual({
       student: { fullName: 'Nguyễn Văn An', className: '4A9', avatar: '' },
       expiresAt: '2026-07-29T00:00:00.000Z',

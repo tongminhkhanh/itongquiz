@@ -24,11 +24,17 @@ export interface ParentAuthRouteRuntime {
   invalidDelay: () => Promise<void>;
 }
 
+const noStore = (response: Response): Response => {
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('Pragma', 'no-cache');
+  return response;
+};
+
 const parentError = (code: string, message: string, status: number): Response => (
-  jsonResponse({ error: { code, message } }, status)
+  noStore(jsonResponse({ error: { code, message } }, status))
 );
 
-const parentSuccess = <T>(data: T, status = 200): Response => jsonResponse({ data }, status);
+const parentSuccess = <T>(data: T, status = 200): Response => noStore(jsonResponse({ data }, status));
 
 const readJson = async (request: Request): Promise<Record<string, unknown> | null> => {
   try {
@@ -253,7 +259,11 @@ export async function handleParentAuthRoutes(
   if (path === '/api/parent/logout' && method === 'POST') {
     return new Response(null, {
       status: 204,
-      headers: { 'Set-Cookie': clearParentCookie() },
+      headers: {
+        'Set-Cookie': clearParentCookie(),
+        'Cache-Control': 'no-store',
+        Pragma: 'no-cache',
+      },
     });
   }
 

@@ -21,10 +21,40 @@ const ProtectedPage: React.FC<React.PropsWithChildren> = ({ children }) => (
   <ProtectedRoute><ParentPortalLayout>{children}</ParentPortalLayout></ProtectedRoute>
 );
 
+const setMetaContent = (name: string, content: string): (() => void) => {
+  let element = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+  const existed = Boolean(element);
+  const previous = element?.getAttribute('content') ?? null;
+  if (!element) {
+    element = document.createElement('meta');
+    element.name = name;
+    document.head.appendChild(element);
+  }
+  element.content = content;
+  return () => {
+    if (!element) return;
+    if (!existed) element.remove();
+    else if (previous === null) element.removeAttribute('content');
+    else element.setAttribute('content', previous);
+  };
+};
+
 export default function ParentPortalApp() {
   const restoreSession = useParentPortalStore(state => state.restoreSession);
   const session = useParentPortalStore(state => state.session);
   const [restoreComplete, setRestoreComplete] = useState(false);
+
+  useEffect(() => {
+    const previousTitle = document.title;
+    const restoreRobots = setMetaContent('robots', 'noindex,nofollow');
+    const restoreReferrer = setMetaContent('referrer', 'no-referrer');
+    document.title = 'Cổng phụ huynh - iTongQuiz';
+    return () => {
+      restoreRobots();
+      restoreReferrer();
+      document.title = previousTitle;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
