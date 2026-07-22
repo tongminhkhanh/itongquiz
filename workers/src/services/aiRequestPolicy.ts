@@ -111,7 +111,10 @@ const readAction = async (
   LIMIT 1
 `).bind(actionId, username).first<AiActionPolicyRow>();
 
-const assertActionCanRun = (action: AiActionPolicyRow | null, meta: AiRequestMeta): asserts action is AiActionPolicyRow => {
+function assertActionCanRun(
+  action: AiActionPolicyRow | null,
+  meta: AiRequestMeta,
+): asserts action is AiActionPolicyRow {
   if (!action || action.workflow !== meta.workflow) {
     throw new AiRequestPolicyError('AI_STAGE_CONFLICT');
   }
