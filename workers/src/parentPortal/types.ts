@@ -53,6 +53,11 @@ export interface ParentLinkRepository {
   findByAccessCode(accessCode: string): Promise<ParentLinkRecord | null>;
   findActivationByHash(tokenHash: string): Promise<ParentActivationRecord | null>;
   createLink(input: CreateParentLinkRecord): Promise<ParentLinkRecord>;
+  reissueLink(
+    linkId: string,
+    activation: CreateParentLinkRecord['activation'],
+    now: string,
+  ): Promise<ParentLinkRecord>;
   activateLink(linkId: string, pinHash: string, consumedTokenId: string, now: string): Promise<void>;
   revokeLink(linkId: string, now: string): Promise<void>;
   touchLastAccessed(linkId: string, now: string): Promise<void>;

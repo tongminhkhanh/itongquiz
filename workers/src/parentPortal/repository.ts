@@ -119,6 +119,36 @@ export function createParentLinkRepository(db: D1Database): ParentLinkRepository
       return created;
     },
 
+    async reissueLink(linkId, activation, now) {
+      await db.batch([
+        db.prepare(`
+          UPDATE parent_activation_tokens
+          SET consumed_at = ?
+          WHERE link_id = ? AND consumed_at IS NULL
+        `).bind(now, linkId),
+        db.prepare(`
+          UPDATE parent_links
+          SET pin_hash = NULL, status = 'PENDING', activated_at = NULL,
+              revoked_at = NULL, token_version = token_version + 1
+          WHERE id = ?
+        `).bind(linkId),
+        db.prepare(`
+          INSERT INTO parent_activation_tokens (
+            id, link_id, token_hash, expires_at, created_at
+          ) VALUES (?, ?, ?, ?, ?)
+        `).bind(
+          activation.id,
+          linkId,
+          activation.tokenHash,
+          activation.expiresAt,
+          activation.createdAt,
+        ),
+      ]);
+      const updated = await findById(linkId);
+      if (!updated) throw new Error('Parent link reissue failed');
+      return updated;
+    },
+
     async activateLink(linkId, pinHash, consumedTokenId, now) {
       await db.batch([
         db.prepare(`

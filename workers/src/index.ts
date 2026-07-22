@@ -40,6 +40,7 @@ import { handleAdminCertificateRoutes } from './routes/adminCertificates';
 import { handleCertificateRoutes } from './routes/certificates';
 import { handlePhieuSubdomain, handlePublicPhieuApi, handlePhieuRoutes } from './routes/phieu';
 import { handleResultReportRoutes } from './routes/resultReports';
+import { handleParentPortalRoutes } from './routes/parentPortal';
 import { Env } from './types';
 import { rateLimit } from './middleware/rateLimit';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
@@ -118,6 +119,15 @@ export default {
 
         const publicPhieuResponse = await handlePublicPhieuApi(env.DB, path, method);
         if (publicPhieuResponse) return addCors(publicPhieuResponse, request, env);
+
+        const isParentRoute = path.startsWith('/api/parent/')
+            || path.startsWith('/api/parent-links')
+            || path.startsWith('/api/parent-announcements')
+            || path.startsWith('/api/parent-delivery');
+        if (isParentRoute) {
+            const parentResponse = await handleParentPortalRoutes(request, env, path, method);
+            return addCors(parentResponse, request, env);
+        }
 
         // Auth check from header
         const authError = verifyToken(request, env);
