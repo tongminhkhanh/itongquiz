@@ -1,4 +1,5 @@
 import { getWorkersApiBaseUrl } from '../api/config';
+import { type AiActionOptions, resolveAiActionMeta } from './aiAction';
 import { extractAIContent, extractAIErrorMessage } from './utils/aiResponseParser';
 
 export interface WorkerAiRequest extends Record<string, unknown> {
@@ -11,8 +12,9 @@ export interface WorkerAiResult {
   payloads: unknown[];
 }
 
-export interface WorkerAiRequestOptions {
+export interface WorkerAiRequestOptions extends AiActionOptions {
   timeoutMs?: number;
+  signal?: AbortSignal;
 }
 
 const appendChunk = (current: string, chunk: string): string => {
@@ -69,7 +71,20 @@ export const requestWorkerAi = async (
 ): Promise<WorkerAiResult> => {
   const path = '/api/ai/chat';
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs ?? 300_000);
+  const actionMeta = resolveAiActionMeta(options);
+  let timedOut = false;
+
+  const abortFromCaller = () => controller.abort(options.signal?.reason);
+  if (options.signal?.aborted) {
+    abortFromCaller();
+  } else {
+    options.signal?.addEventListener('abort', abortFromCaller, { once: true });
+  }
+
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, options.timeoutMs ?? 300_000);
 
   try {
     const response = await fetch(`${getWorkersApiBaseUrl()}${path}`, {
@@ -78,7 +93,10 @@ export const requestWorkerAi = async (
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        ...requestBody,
+        _meta: actionMeta,
+      }),
       signal: controller.signal,
     });
 
@@ -98,12 +116,19 @@ export const requestWorkerAi = async (
     if (aiError) throw new Error(aiError);
     return { text: extractAIContent(payload).trim(), payloads: [payload] };
   } catch (error: unknown) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Y?u c?u AI qu? th?i gian. Vui l?ng th? l?i.');
+    const errorName = typeof error === 'object' && error !== null && 'name' in error
+      ? String(error.name)
+      : '';
+    if (errorName === 'AbortError') {
+      if (timedOut) {
+        throw new Error('Yêu cầu AI quá thời gian. Vui lòng thử lại.');
+      }
+      throw new Error('Đã hủy yêu cầu AI.');
     }
     throw error;
   } finally {
     clearTimeout(timeoutId);
+    options.signal?.removeEventListener('abort', abortFromCaller);
   }
 };
 
@@ -112,6 +137,6 @@ export const requestWorkerAiText = async (
   options?: WorkerAiRequestOptions,
 ): Promise<string> => {
   const result = await requestWorkerAi(requestBody, options);
-  if (!result.text) throw new Error('AI kh?ng tr? v? n?i dung.');
+  if (!result.text) throw new Error('AI không trả về nội dung.');
   return result.text;
 };
