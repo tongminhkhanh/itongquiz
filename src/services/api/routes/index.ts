@@ -12,6 +12,7 @@ import { phieuRoutes } from './phieu';
 import { resultReportRoutes } from './resultReports';
 import { systemRoutes } from './system';
 import { homeworkRoutes } from './homework';
+import { parentRoutes } from './parents';
 
 export const routes: RouteRegistry = {
     ...teacherRoutes,
@@ -27,4 +28,5 @@ export const routes: RouteRegistry = {
     ...resultReportRoutes,
     ...systemRoutes,
     ...homeworkRoutes,
+    ...parentRoutes,
 };
