@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Quiz, Question } from '../../../types';
 import { QuestionType } from '../../../types';
 import {
@@ -16,6 +16,7 @@ import { MAX_OCR_CONTENT_LENGTH } from '../domain/quizCreationDefaults';
 import { validateQuizGenerationInput } from '../domain/quizCreationValidation';
 import type { GenerationStep, QuizMode } from '../domain/quizCreation.types';
 import type { useQuizFormState } from './useQuizFormState';
+import { createAiAction } from '../../../services/ai/aiAction';
 import { useTeacherAiQuota } from './useTeacherAiQuota';
 
 interface UseQuizGenerationOptions {
@@ -35,6 +36,7 @@ export const useQuizGeneration = ({
 }: UseQuizGenerationOptions) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStep, setGenerationStep] = useState<GenerationStep>('idle');
+    const activeGenerationRef = useRef<{ actionId: string; controller: AbortController } | null>(null);
     const quota = useTeacherAiQuota({ isTeacherAccount, username });
 
     const createQuizFromResult = (
@@ -85,12 +87,14 @@ export const useQuizGeneration = ({
             showError(validation.error);
             return;
         }
-        if (!(await quota.consume())) return;
-
         setIsGenerating(true);
         form.setAiDetectedCategory(null);
         form.setAiDetectedLesson('');
         form.setAiSuggestedTags([]);
+
+        const action = createAiAction('QUIZ_CREATE');
+        const controller = new AbortController();
+        activeGenerationRef.current = { actionId: action.actionId, controller };
 
         try {
             if (form.category === 'trang-nguyen') {
@@ -152,7 +156,11 @@ export const useQuizGeneration = ({
                 ].includes(form.aiProvider)
                     ? form.aiProvider
                     : 'llm-mux';
-                const extractedText = await extractTextFromPdf(form.uploadedFile, ocrProvider);
+                const extractedText = await extractTextFromPdf(form.uploadedFile, ocrProvider, {
+                    action,
+                    stage: 'OCR',
+                    signal: controller.signal,
+                });
                 const normalizedOcr = extractedText?.trim();
                 if (!normalizedOcr || normalizedOcr.length < 120) {
                     throw new Error(
@@ -169,6 +177,7 @@ export const useQuizGeneration = ({
                     }\n=== HẾT NỘI DUNG OCR ===`,
                 ].filter(Boolean).join('\n\n');
                 generationTopic = form.topic || form.uploadedFile.name.replace(/\.[^/.]+$/, '');
+                generationFile = undefined;
             }
 
             const options = buildQuizGenerationOptions({
@@ -195,6 +204,11 @@ export const useQuizGeneration = ({
                 undefined,
                 form.aiProvider,
                 setGenerationStep,
+                {
+                    action,
+                    stage: 'GENERATE',
+                    signal: controller.signal,
+                },
             ) as Record<string, unknown>;
 
             const detectedCategory = normalizeAiCategory(result.detectedCategory);
@@ -215,15 +229,23 @@ export const useQuizGeneration = ({
             ));
             setGenerationStep('completed');
         } catch (error: unknown) {
-            const normalizedError = error instanceof Error ? error : new Error(String(error));
-            showError(normalizedError.message || 'Đã xảy ra lỗi khi tạo đề');
+            if (!controller.signal.aborted) {
+                const normalizedError = error instanceof Error ? error : new Error(String(error));
+                showError(normalizedError.message || 'Đã xảy ra lỗi khi tạo đề');
+            }
             setGenerationStep('idle');
         } finally {
+            if (activeGenerationRef.current?.actionId === action.actionId) {
+                activeGenerationRef.current = null;
+            }
             setIsGenerating(false);
+            void quota.refresh();
         }
     };
 
     const handleRegenerateSingle = async (question: Question): Promise<Question | null> => {
+        const action = createAiAction('QUESTION_REGENERATE');
+        const controller = new AbortController();
         try {
             const prompt = `Yêu cầu: Sinh lại câu hỏi dựa trên: ${JSON.stringify(question)}`;
             const result = await generateQuiz(
@@ -247,6 +269,12 @@ export const useQuizGeneration = ({
                 }),
                 undefined,
                 form.aiProvider,
+                undefined,
+                {
+                    action,
+                    stage: 'REGENERATE',
+                    signal: controller.signal,
+                },
             ) as Record<string, unknown>;
             const questions = Array.isArray(result.questions) ? result.questions : [];
             return questions.length > 0
@@ -267,5 +295,6 @@ export const useQuizGeneration = ({
         dailyAiLimit: quota.dailyAiLimit,
         handleGenerate,
         handleRegenerateSingle,
+        cancelGeneration: () => activeGenerationRef.current?.controller.abort(),
     };
 };

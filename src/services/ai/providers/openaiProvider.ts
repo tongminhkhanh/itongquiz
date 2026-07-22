@@ -4,6 +4,7 @@
  */
 
 import { SYSTEM_INSTRUCTION } from '../../../config/constants';
+import type { QuizAiExecutionContext } from '../aiAction';
 import { shouldTryNextModel } from '../utils/aiResponseParser';
 import { parseAndRepairJSON, validateAndFixQuiz } from '../utils/jsonRepair';
 import { fileToBase64 } from '../utils/networkHelpers';
@@ -46,14 +47,14 @@ const buildUserContent = async (
   if (file) {
     const base64Data = await fileToBase64(file);
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    userContent.unshift({ type: 'text', text: 'T?I LI?U ??NH K?M - ?u ti?n n?i dung file.' });
+    userContent.unshift({ type: 'text', text: 'TÀI LIỆU ĐÍNH KÈM - ưu tiên nội dung file.' });
     userContent.splice(1, 0, isPdf
       ? { type: 'input_file', file_data: `data:${file.type};base64,${base64Data}`, filename: file.name }
       : { type: 'image_url', image_url: { url: `data:${file.type};base64,${base64Data}` } });
   }
 
   if (imageLibrary.length > 0) {
-    userContent.push({ type: 'text', text: 'TH? VI?N H?NH ?NH:' });
+    userContent.push({ type: 'text', text: 'THƯ VIỆN HÌNH ẢNH:' });
     for (const image of imageLibrary) {
       if (image.data?.startsWith('http')) {
         userContent.push({ type: 'text', text: `Image ID: ${image.id} (${image.name})` });
@@ -64,6 +65,14 @@ const buildUserContent = async (
   return userContent;
 };
 
+const toWorkerOptions = (execution?: QuizAiExecutionContext) => execution ? {
+  action: {
+    ...execution.action,
+    stage: execution.stage,
+  },
+  signal: execution.signal,
+} : undefined;
+
 export const generateWithOpenAIResilient = async (
   promptText: string,
   _apiKey: string,
@@ -71,11 +80,13 @@ export const generateWithOpenAIResilient = async (
   imageLibrary?: ImageLibraryItem[],
   baseUrl: string = 'https://api.thitong.site/v1',
   onStepChange?: StepCallback,
+  execution?: QuizAiExecutionContext,
 ): Promise<unknown> => {
   const isMux = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('thitong.site');
-  const modelCandidates = isMux
+  const allModelCandidates = isMux
     ? ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3-flash-preview']
     : ['gpt-4o'];
+  const modelCandidates = execution ? allModelCandidates.slice(0, 1) : allModelCandidates;
   const imageLibraryItems = imageLibrary || [];
   const userContent = await buildUserContent(promptText, file, imageLibraryItems);
   const messages = [
@@ -92,13 +103,14 @@ export const generateWithOpenAIResilient = async (
         messages,
         temperature: 0.4,
         response_format: { type: 'json_object' },
-      });
+      }, toWorkerOptions(execution));
       const draft = validateAndFixQuiz(parseAndRepairJSON(formatMathSigns(text))) as Record<string, unknown>;
       let finalQuiz = draft;
       if (onStepChange) {
         onStepChange('reviewing');
+        const reviewExecution = execution ? { ...execution, stage: 'REVIEW' as const } : undefined;
         try {
-          finalQuiz = validateAndFixQuiz(await validateQuizWithAI(draft, '')) as Record<string, unknown>;
+          finalQuiz = validateAndFixQuiz(await validateQuizWithAI(draft, '', reviewExecution)) as Record<string, unknown>;
         } catch (reviewError) {
           console.warn('[openaiProvider] Reviewer failed, using generator draft.', reviewError);
         }
@@ -110,5 +122,5 @@ export const generateWithOpenAIResilient = async (
       if (!canTryNext) throw error;
     }
   }
-  throw lastError instanceof Error ? lastError : new Error('AI kh?ng tr? v? k?t qu? n?o.');
+  throw lastError instanceof Error ? lastError : new Error('AI không trả về kết quả nào.');
 };

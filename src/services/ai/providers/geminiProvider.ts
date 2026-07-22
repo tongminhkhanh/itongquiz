@@ -4,6 +4,7 @@
  */
 
 import { SYSTEM_INSTRUCTION } from '../../../config/constants';
+import type { QuizAiExecutionContext } from '../aiAction';
 import { parseAndRepairJSON, validateAndFixQuiz } from '../utils/jsonRepair';
 import { fileToBase64, urlToBase64 } from '../utils/networkHelpers';
 import { requestWorkerAiText } from '../workerAiClient';
@@ -34,12 +35,21 @@ const resolveImageLibrary = (
   return { ...quiz, questions };
 };
 
+const toWorkerOptions = (execution?: QuizAiExecutionContext) => execution ? {
+  action: {
+    ...execution.action,
+    stage: execution.stage,
+  },
+  signal: execution.signal,
+} : undefined;
+
 export const generateWithGemini = async (
   promptText: string,
   _apiKey: string,
   file?: File | null,
   imageLibrary?: ImageLibraryItem[],
   onStepChange?: (step: 'generating' | 'reviewing' | 'completed') => void,
+  execution?: QuizAiExecutionContext,
 ): Promise<unknown> => {
   const userContent: Record<string, unknown>[] = [{ type: 'text', text: promptText }];
 
@@ -48,7 +58,7 @@ export const generateWithGemini = async (
     const isPdf = file.type === 'application/pdf';
     userContent.unshift({
       type: 'text',
-      text: `T?I LI?U ??NH K?M - ?u ti?n n?i dung trong ${isPdf ? 'PDF' : 'h?nh ?nh'} ${file.name}.`,
+      text: `TÀI LIỆU ĐÍNH KÈM - ưu tiên nội dung trong ${isPdf ? 'PDF' : 'hình ảnh'} ${file.name}.`,
     });
     userContent.splice(1, 0, isPdf
       ? { type: 'input_file', file_data: `data:${file.type};base64,${base64Data}`, filename: file.name }
@@ -56,15 +66,15 @@ export const generateWithGemini = async (
   }
 
   if (imageLibrary?.length) {
-    userContent.push({ type: 'text', text: 'TH? VI?N H?NH ?NH:' });
+    userContent.push({ type: 'text', text: 'THƯ VIỆN HÌNH ẢNH:' });
     for (const image of imageLibrary) {
       if (image.data?.startsWith('http')) {
         try {
           const { data, mimeType } = await urlToBase64(image.data);
           userContent.push({ type: 'text', text: `Image ID: ${image.id} (${image.name})` });
           userContent.push({ type: 'image_url', image_url: { url: `data:${mimeType};base64,${data}` } });
-        } catch (error) {
-          console.warn(`Kh?ng t?i ???c h?nh ${image.id}:`, error);
+        } catch {
+          console.warn(`[generateWithGemini] Không tải được hình ${image.id}.`);
         }
       }
     }
@@ -75,7 +85,7 @@ export const generateWithGemini = async (
     { role: 'user', content: userContent },
   ];
 
-  const maxRetries = 3;
+  const maxRetries = execution ? 1 : 3;
   let lastError: unknown;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -84,14 +94,15 @@ export const generateWithGemini = async (
         messages,
         temperature: 0.4,
         response_format: { type: 'json_object' },
-      });
+      }, toWorkerOptions(execution));
       const quizData = validateAndFixQuiz(parseAndRepairJSON(formatMathSigns(text))) as Record<string, unknown>;
 
       let finalQuiz = quizData;
       if (onStepChange) {
         onStepChange('reviewing');
+        const reviewExecution = execution ? { ...execution, stage: 'REVIEW' as const } : undefined;
         try {
-          finalQuiz = validateAndFixQuiz(await validateQuizWithAI(quizData, '')) as Record<string, unknown>;
+          finalQuiz = validateAndFixQuiz(await validateQuizWithAI(quizData, '', reviewExecution)) as Record<string, unknown>;
         } catch (reviewError) {
           console.warn('[generateWithGemini] Reviewer failed, using generator draft.', reviewError);
         }
@@ -102,5 +113,5 @@ export const generateWithGemini = async (
       if (attempt < maxRetries) await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** attempt));
     }
   }
-  throw lastError instanceof Error ? lastError : new Error('Kh?ng th? t?o ?? b?ng AI.');
+  throw lastError instanceof Error ? lastError : new Error('Không thể tạo đề bằng AI.');
 };

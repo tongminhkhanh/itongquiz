@@ -4,12 +4,14 @@
  */
 
 import { SYSTEM_INSTRUCTION } from '../../../config/constants';
+import type { QuizAiExecutionContext } from '../aiAction';
 import { parseAndRepairJSON, validateAndFixQuiz } from '../utils/jsonRepair';
 import { requestWorkerAiText } from '../workerAiClient';
 
 export const generateWithPerplexity = async (
   promptText: string,
   _apiKey: string,
+  execution?: QuizAiExecutionContext,
 ): Promise<unknown> => {
   const text = await requestWorkerAiText({
     model: 'sonar',
@@ -19,7 +21,13 @@ export const generateWithPerplexity = async (
     ],
     temperature: 0.4,
     max_tokens: 8192,
-  });
+  }, execution ? {
+    action: {
+      ...execution.action,
+      stage: execution.stage,
+    },
+    signal: execution.signal,
+  } : undefined);
 
   return validateAndFixQuiz(parseAndRepairJSON(text));
 };

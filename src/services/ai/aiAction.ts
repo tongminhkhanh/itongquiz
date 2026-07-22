@@ -10,6 +10,12 @@ export interface AiActionMeta extends ClientAiAction {
   stage: AiStage;
 }
 
+export interface QuizAiExecutionContext {
+  action: ClientAiAction;
+  stage: AiStage;
+  signal?: AbortSignal;
+}
+
 export interface AiActionOptions {
   action?: AiActionMeta;
   actionId?: string;
