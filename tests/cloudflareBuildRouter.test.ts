@@ -20,6 +20,12 @@ describe('Cloudflare build router', () => {
     expect(createRootApiWranglerToml(source)).toContain('main = "workers/src/index.ts"');
   });
 
+  it('declares authentication and AI proxy secrets as required for deployment', () => {
+    const config = readFileSync(join(process.cwd(), 'workers', 'wrangler.toml'), 'utf8');
+    expect(config).toContain('[secrets]');
+    expect(config).toMatch(/required\s*=\s*\[[^\]]*"JWT_SECRET"[^\]]*"CLIPROXY_TOKEN"[^\]]*\]/s);
+  });
+
   it('replaces the root frontend config with the API config in an ephemeral build workspace', () => {
     const root = mkdtempSync(join(tmpdir(), 'itongquiz-build-router-'));
     const workersDirectory = join(root, 'workers');
