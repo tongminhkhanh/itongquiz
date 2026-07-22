@@ -13,6 +13,10 @@ import type {
   ParentLinkRecord,
   ParentLinkRepository,
 } from '../../parentPortal/types';
+import {
+  parentPortalLogger,
+  type ParentPortalEventLogger,
+} from '../../parentPortal/observability';
 import type { Env } from '../../types';
 import type { JWTPayload } from '../../utils/jwt';
 import { errorResponse, jsonResponse } from '../../utils/response';
@@ -35,6 +39,7 @@ export interface TeacherLinkRouteRuntime {
     studentId: string,
   ) => Promise<AuthorizedParentStudent | Response>;
   audit: (input: ParentAuditInput) => Promise<void>;
+  logger?: ParentPortalEventLogger;
   now: () => Date;
 }
 
@@ -85,6 +90,7 @@ const makeRuntime = (env: Env): TeacherLinkRouteRuntime => ({
   repository: createParentLinkRepository(env.DB),
   authorize: requireTeacherForParentStudent,
   audit: defaultAudit(env),
+  logger: parentPortalLogger,
   now: () => new Date(),
 });
 
@@ -157,6 +163,12 @@ export async function handleTeacherLinkRoutes(
       actorUsername: auth.user.username,
       requestId,
     });
+    runtime.logger?.info('link_created', {
+      linkId: link.id,
+      studentId,
+      actor: auth.user.username,
+      requestId,
+    });
     return jsonResponse({ data: { link: safeLink(link), activationUrl: activationUrl(rawToken) } }, 201);
   }
 
@@ -182,6 +194,12 @@ export async function handleTeacherLinkRoutes(
       actorUsername: auth.user.username,
       requestId,
     });
+    runtime.logger?.info('link_reissued', {
+      linkId: link.id,
+      studentId: link.studentId,
+      actor: auth.user.username,
+      requestId,
+    });
     return jsonResponse({ data: { link: safeLink(updated), activationUrl: activationUrl(rawToken) } });
   }
 
@@ -197,6 +215,12 @@ export async function handleTeacherLinkRoutes(
       linkId: link.id,
       studentId: link.studentId,
       actorUsername: auth.user.username,
+      requestId,
+    });
+    runtime.logger?.info('link_revoked', {
+      linkId: link.id,
+      studentId: link.studentId,
+      actor: auth.user.username,
       requestId,
     });
     return jsonResponse({ data: { id: link.id, status: 'REVOKED' } });

@@ -1,4 +1,8 @@
 import type { ParentNotificationKind } from '../../../shared/parent-portal.contract';
+import {
+  parentPortalLogger,
+  type ParentPortalEventLogger,
+} from './observability';
 
 const BLOCKED_PAYLOAD_KEYS = new Set([
   'answers',
@@ -40,6 +44,7 @@ const sanitizePayload = (value: unknown): unknown => {
 export async function createParentNotification(
   db: D1Database,
   input: CreateParentNotificationInput,
+  logger: ParentPortalEventLogger = parentPortalLogger,
 ): Promise<{ id: string; created: boolean }> {
   const id = `pn-${crypto.randomUUID()}`;
   const result = await db.prepare(`
@@ -62,7 +67,15 @@ export async function createParentNotification(
     input.createdBy || 'system',
     input.publishedAt,
   ).run();
-  return { id, created: Number(result?.meta?.changes || 0) === 1 };
+  const created = Number(result?.meta?.changes || 0) === 1;
+  if (created) logger.info('notification_created', {
+    notificationId: id,
+    kind: input.kind,
+    sourceType: input.sourceType,
+    sourceId: input.sourceId,
+    studentId: input.studentId,
+  });
+  return { id, created };
 }
 
 export async function fanOutParentNotificationToClass(

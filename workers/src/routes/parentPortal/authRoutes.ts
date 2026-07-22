@@ -15,6 +15,10 @@ import type {
   ParentActivationRecord,
   ParentLinkRepository,
 } from '../../parentPortal/types';
+import {
+  parentPortalLogger,
+  type ParentPortalEventLogger,
+} from '../../parentPortal/observability';
 import type { Env } from '../../types';
 import { jsonResponse } from '../../utils/response';
 
@@ -22,6 +26,7 @@ export interface ParentAuthRouteRuntime {
   repository: ParentLinkRepository;
   now: () => Date;
   invalidDelay: () => Promise<void>;
+  logger?: ParentPortalEventLogger;
 }
 
 const noStore = (response: Response): Response => {
@@ -54,6 +59,7 @@ const makeRuntime = (env: Env): ParentAuthRouteRuntime => ({
   repository: createParentLinkRepository(env.DB),
   now: () => new Date(),
   invalidDelay: defaultInvalidDelay,
+  logger: parentPortalLogger,
 });
 
 const safePreviewStudent = (profile: {
@@ -117,6 +123,7 @@ const authenticatedResponse = async (
     tokenVersion: number;
     accessCode: string;
   },
+  event?: 'activated' | 'login_success',
 ): Promise<Response> => {
   if (!env.JWT_SECRET) {
     return parentError(
@@ -137,11 +144,13 @@ const authenticatedResponse = async (
   }, env.JWT_SECRET);
   const response = parentSuccess({ student: profile, accessCodeMasked: maskAccessCode(link.accessCode) });
   response.headers.set('Set-Cookie', createParentCookie(token));
+  if (event) runtime.logger?.info(event, { linkId: link.id, studentId: link.studentId });
   return response;
 };
 
 const invalidLogin = async (runtime: ParentAuthRouteRuntime): Promise<Response> => {
   await runtime.invalidDelay();
+  runtime.logger?.warn('login_failed', { reason: 'invalid_credentials' });
   return parentError(
     'PARENT_LOGIN_INVALID',
     'Thông tin đăng nhập không đúng.',
@@ -207,7 +216,7 @@ export async function handleParentAuthRoutes(
         409,
       );
     }
-    return authenticatedResponse(env, runtime, link);
+    return authenticatedResponse(env, runtime, link, 'activated');
   }
 
   if (path === '/api/parent/login' && method === 'POST') {
@@ -221,7 +230,7 @@ export async function handleParentAuthRoutes(
     const link = await runtime.repository.findByAccessCode(accessCode);
     if (!link || link.status !== 'ACTIVE' || !link.pinHash) return invalidLogin(runtime);
     if (!(await verifyParentPin(pin, link.pinHash))) return invalidLogin(runtime);
-    return authenticatedResponse(env, runtime, link);
+    return authenticatedResponse(env, runtime, link, 'login_success');
   }
 
   if (path === '/api/parent/session' && method === 'GET') {
