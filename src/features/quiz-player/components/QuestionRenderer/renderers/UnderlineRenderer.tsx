@@ -40,14 +40,14 @@ const UnderlineRenderer: React.FC<BaseRendererProps> = ({
               onClick={() => handleToggle(index)}
               className={`rounded-[8px] border px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${
                 isSelected
-                  ? 'border-sky-500 bg-sky-50 text-sky-900'
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-900'
                   : 'border-slate-200 bg-white text-slate-800 hover:border-sky-300'
               }`}
             >
               <MathSpan
                 content={word}
                 className={`text-lg font-medium md:text-xl ${
-                  isSelected ? 'underline decoration-2 underline-offset-8' : ''
+                  isSelected ? 'underline decoration-2 decoration-emerald-500 underline-offset-8' : ''
                 }`}
               />
             </button>

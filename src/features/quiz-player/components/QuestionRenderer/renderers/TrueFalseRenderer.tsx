@@ -28,7 +28,7 @@ const TrueFalseRenderer: React.FC<BaseRendererProps> = ({
                 aria-pressed={value === true}
                 className={`min-h-10 min-w-16 rounded-[8px] border px-3 text-sm font-semibold transition-colors ${
                   value === true
-                    ? 'border-sky-500 bg-sky-50 text-sky-700'
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                     : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
                 }`}
               >
@@ -40,7 +40,7 @@ const TrueFalseRenderer: React.FC<BaseRendererProps> = ({
                 aria-pressed={value === false}
                 className={`min-h-10 min-w-16 rounded-[8px] border px-3 text-sm font-semibold transition-colors ${
                   value === false
-                    ? 'border-sky-500 bg-sky-50 text-sky-700'
+                    ? 'border-red-500 bg-red-50 text-red-700'
                     : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
                 }`}
               >

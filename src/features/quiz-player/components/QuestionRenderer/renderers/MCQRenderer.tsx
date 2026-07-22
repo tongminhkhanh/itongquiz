@@ -29,10 +29,11 @@ const MCQRenderer: React.FC<BaseRendererProps> = ({
                   <button
                     key={optionIndex}
                     type="button"
+                    aria-pressed={isSelected}
                     onClick={() => onAnswerChange(answerKey, `${groupIndex}-${label}`)}
                     className={`flex min-h-14 items-center rounded-[12px] border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${
                       isSelected
-                        ? 'border-sky-500 bg-sky-50 text-sky-950'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-950'
                         : 'border-slate-200 bg-white text-slate-800 hover:border-sky-300 hover:bg-slate-50'
                     }`}
                   >
@@ -61,10 +62,11 @@ const MCQRenderer: React.FC<BaseRendererProps> = ({
           <button
             key={index}
             type="button"
+            aria-pressed={isSelected}
             onClick={() => onAnswerChange(question.id, label)}
             className={`group flex min-h-16 items-center rounded-[12px] border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${
               isSelected
-                ? 'border-sky-500 bg-sky-50 text-sky-950'
+                ? 'border-emerald-500 bg-emerald-50 text-emerald-950'
                 : 'border-slate-200 bg-white text-slate-800 hover:border-sky-300 hover:bg-slate-50'
             }`}
           >
