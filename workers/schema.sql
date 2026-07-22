@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS quizzes (
   tags TEXT DEFAULT '[]'
 );
 
+CREATE INDEX IF NOT EXISTS idx_quizzes_created_by ON quizzes(created_by);
+
 -- Teacher-owned manual quiz drafts with optimistic revision control
 CREATE TABLE IF NOT EXISTS quiz_drafts (
   id TEXT PRIMARY KEY,

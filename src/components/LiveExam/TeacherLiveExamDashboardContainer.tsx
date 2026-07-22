@@ -15,6 +15,7 @@ import { useClassStore } from '../../stores/useClassStore';
 import { showError, showSuccess } from '../../utils/toast';
 import type { LiveExamSession } from '../../types/liveExam.types';
 import { useWaitingRoomChat } from '../../hooks/useWaitingRoomChat';
+import { isQuizOwnedByCurrentTeacher } from './quizOwnership';
 
 export const TeacherLiveExamDashboardContainer: React.FC = () => {
     const [sessions, setSessions] = useState<LiveExamSession[]>([]);
@@ -25,6 +26,7 @@ export const TeacherLiveExamDashboardContainer: React.FC = () => {
 
     const quizzes = useQuizStore((state) => state.quizzes);
     const username = useAuthStore((state) => state.username);
+    const teacherName = useAuthStore((state) => state.teacherName);
     const isAdmin = useAuthStore((state) => state.isAdmin);
     const classes = useClassStore((state) => state.classes);
     const fetchClasses = useClassStore((state) => state.fetchClasses);
@@ -139,9 +141,13 @@ export const TeacherLiveExamDashboardContainer: React.FC = () => {
     };
 
     const availableQuizzes = useMemo(() => quizzes
-        .filter((quiz) => isAdmin || quiz.createdBy === username)
+        .filter((quiz) => isQuizOwnedByCurrentTeacher(quiz.createdBy, {
+            username,
+            teacherName,
+            isAdmin,
+        }))
         .map((quiz) => ({ id: quiz.id, title: quiz.title, questionCount: quiz.questions.length })),
-    [isAdmin, quizzes, username]);
+    [isAdmin, quizzes, teacherName, username]);
 
     const availableClasses = useMemo(() => classes.map((classroom) => ({
         id: classroom.id,
