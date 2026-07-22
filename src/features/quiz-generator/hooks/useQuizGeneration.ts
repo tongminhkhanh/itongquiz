@@ -192,6 +192,9 @@ export const useQuizGeneration = ({
                 promptProfile: form.promptProfile,
                 imageLibrary: form.imageLibrary,
                 customPrompt: form.customPrompt,
+                quizMode: activeQuizMode,
+                intent: activeQuizMode === 'exam' ? 'EXAM' : 'PRACTICE',
+                sourceMode: isPdfMode ? 'DOCUMENT' : 'TOPIC',
                 isPdfMode,
             });
 
@@ -265,6 +268,9 @@ export const useQuizGeneration = ({
                     promptProfile: form.promptProfile,
                     imageLibrary: form.imageLibrary,
                     customPrompt: prompt,
+                    quizMode: form.quizMode,
+                    intent: form.quizMode === 'exam' ? 'EXAM' : 'PRACTICE',
+                    sourceMode: form.quizMode === 'pdf' ? 'DOCUMENT' : 'TOPIC',
                     isPdfMode: false,
                 }),
                 undefined,

@@ -13,6 +13,7 @@ import { generateWithOpenAIResilient } from './ai/providers/openaiProvider';
 import { generateWithPerplexity } from './ai/providers/perplexityProvider';
 import { requestWorkerAiText } from './ai/workerAiClient';
 import type { QuizAiExecutionContext } from './ai/aiAction';
+import type { QuizBlueprint } from '../features/quiz-generator/domain/quizBlueprint';
 
 export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux' | 'localhost' | 'native-ocr';
 export type LearnerPromptMode = 'default' | 'gifted' | 'remedial';
@@ -32,6 +33,7 @@ export const AI_CORE_SUBJECT_IDS = [
 
 export interface QuizGenerationOptions {
   title: string;
+  blueprint?: QuizBlueprint;
   questionCount: number;
   questionTypes: QuestionType[];
   difficultyLevels?: { level1: number; level2: number; level3: number };
@@ -87,7 +89,7 @@ export const generateQuiz = async (
 ): Promise<any> => {
   onStepChange?.('generating');
   const promptText = buildPrompt(topic, classLevel, content, options);
-  const requestedCount = options?.questionCount || 10;
+  const requestedCount = options?.blueprint?.totalQuestions ?? options?.questionCount ?? 10;
   let result: unknown;
 
   if (provider === 'perplexity') {
