@@ -9,10 +9,9 @@ import { shouldTryNextModel } from '../utils/aiResponseParser';
 import { parseAndRepairJSON, validateAndFixQuiz } from '../utils/jsonRepair';
 import { fileToBase64 } from '../utils/networkHelpers';
 import { requestWorkerAiText } from '../workerAiClient';
-import { validateQuizWithAI } from '../../geminiService';
 
 type ImageLibraryItem = { id: string; name: string; data?: string };
-type StepCallback = (step: 'generating' | 'reviewing' | 'completed') => void;
+type StepCallback = (step: 'generating' | 'reviewing' | 'repairing' | 'completed') => void;
 
 const formatMathSigns = (text: string): string =>
   text
@@ -79,7 +78,7 @@ export const generateWithOpenAIResilient = async (
   file?: File | null,
   imageLibrary?: ImageLibraryItem[],
   baseUrl: string = 'https://api.thitong.site/v1',
-  onStepChange?: StepCallback,
+  _onStepChange?: StepCallback,
   execution?: QuizAiExecutionContext,
 ): Promise<unknown> => {
   const isMux = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('thitong.site');
@@ -105,17 +104,7 @@ export const generateWithOpenAIResilient = async (
         response_format: { type: 'json_object' },
       }, toWorkerOptions(execution));
       const draft = validateAndFixQuiz(parseAndRepairJSON(formatMathSigns(text))) as Record<string, unknown>;
-      let finalQuiz = draft;
-      if (onStepChange) {
-        onStepChange('reviewing');
-        const reviewExecution = execution ? { ...execution, stage: 'REVIEW' as const } : undefined;
-        try {
-          finalQuiz = validateAndFixQuiz(await validateQuizWithAI(draft, '', reviewExecution)) as Record<string, unknown>;
-        } catch (reviewError) {
-          console.warn('[openaiProvider] Reviewer failed, using generator draft.', reviewError);
-        }
-      }
-      return resolveImageLibrary(finalQuiz, imageLibraryItems);
+      return resolveImageLibrary(draft, imageLibraryItems);
     } catch (error) {
       lastError = error;
       const canTryNext = modelIndex < modelCandidates.length - 1 && shouldTryNextModel(error);

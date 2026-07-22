@@ -14,9 +14,21 @@ import { generateWithPerplexity } from './ai/providers/perplexityProvider';
 import { requestWorkerAiText } from './ai/workerAiClient';
 import type { QuizAiExecutionContext } from './ai/aiAction';
 import type { QuizBlueprint } from '../features/quiz-generator/domain/quizBlueprint';
+import { auditGeneratedQuiz } from './ai/quizAudit';
+import {
+  buildQuizRepairPrompt,
+  createQuizRepairPlan,
+  mergeRepairedQuestions,
+  QuizGenerationValidationError,
+} from './ai/quizRepair';
+import {
+  parseGeneratedQuiz,
+  type GeneratedQuizPayload,
+} from './ai/schemas/quizGenerationSchema';
 
 export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux' | 'localhost' | 'native-ocr';
 export type LearnerPromptMode = 'default' | 'gifted' | 'remedial';
+export type QuizGenerationStep = 'generating' | 'reviewing' | 'repairing' | 'completed';
 
 export interface PromptProfileOptions {
   useThongTu27: boolean;
@@ -71,9 +83,116 @@ export const validateQuizWithAI = async (
     }, toWorkerOptions(execution));
     return validateAndFixQuiz(parseAndRepairJSON(text));
   } catch (error) {
-    console.warn('[AI Validation Chain] Reviewer unavailable; using validated draft.', error);
+    const message = error instanceof Error ? error.message : 'Unknown reviewer error';
+    console.warn(`[AI Validation Chain] Reviewer unavailable; using validated draft. ${message}`);
     return validateAndFixQuiz(quizJson);
   }
+};
+
+const runDeterministicQualityPipeline = async (
+  result: unknown,
+  blueprint: QuizBlueprint,
+  execution: QuizAiExecutionContext | undefined,
+  onStepChange?: (step: QuizGenerationStep) => void,
+): Promise<GeneratedQuizPayload> => {
+  const parsedDraft = parseGeneratedQuiz(validateAndFixQuiz(result));
+  let finalQuiz = parsedDraft;
+  let issues = auditGeneratedQuiz(finalQuiz, blueprint);
+
+  if (issues.some((issue) => !issue.repairable)) {
+    throw new QuizGenerationValidationError(issues);
+  }
+
+  const canUseAuxiliaryStages = execution?.action.workflow === 'QUIZ_CREATE';
+  if (issues.length > 0) {
+    if (!canUseAuxiliaryStages) {
+      throw new QuizGenerationValidationError(issues);
+    }
+
+    const repairInput = { blueprint, quiz: finalQuiz, issues };
+    const repairPlan = createQuizRepairPlan(repairInput);
+    let repairedQuiz: GeneratedQuizPayload;
+
+    if (repairPlan.requestedCount > 0) {
+      onStepChange?.('repairing');
+      const repairedText = await requestWorkerAiText({
+        model: 'gemini-2.5-flash',
+        messages: [
+          {
+            role: 'system',
+            content: 'Bạn sửa đúng các câu bị lỗi trong đề. Chỉ trả về JSON hợp lệ.',
+          },
+          {
+            role: 'user',
+            content: buildQuizRepairPrompt(repairInput),
+          },
+        ],
+        temperature: 0.2,
+        response_format: { type: 'json_object' },
+      }, toWorkerOptions({ ...execution, stage: 'REPAIR' }));
+      repairedQuiz = parseGeneratedQuiz(
+        validateAndFixQuiz(parseAndRepairJSON(repairedText)),
+      );
+    } else {
+      repairedQuiz = { ...finalQuiz, questions: [] };
+    }
+
+    finalQuiz = mergeRepairedQuestions(finalQuiz, repairedQuiz, issues);
+    issues = auditGeneratedQuiz(finalQuiz, blueprint);
+    if (issues.length > 0) {
+      throw new QuizGenerationValidationError(issues);
+    }
+  }
+
+  if (canUseAuxiliaryStages) {
+    onStepChange?.('reviewing');
+    try {
+      const reviewedRaw = await validateQuizWithAI(
+        finalQuiz,
+        '',
+        { ...execution, stage: 'REVIEW' },
+      );
+      const reviewedQuiz = parseGeneratedQuiz(reviewedRaw);
+      if (auditGeneratedQuiz(reviewedQuiz, blueprint).length === 0) {
+        finalQuiz = reviewedQuiz;
+      }
+    } catch (error) {
+      console.warn('[AI Validation Chain] Reviewer output was ignored.', error);
+    }
+  }
+
+  return finalQuiz;
+};
+
+const resolveGeneratedImages = async (result: unknown): Promise<unknown> => {
+  if (!result || typeof result !== 'object') return result;
+  const resultObject = result as Record<string, unknown>;
+  if (!Array.isArray(resultObject.questions)) return result;
+
+  const imageQuestions = (resultObject.questions as Record<string, unknown>[]).filter(
+    (question) => question.type === 'IMAGE_QUESTION'
+      && typeof question.image === 'string'
+      && question.image.startsWith('IMAGE_PROMPT:'),
+  );
+
+  if (imageQuestions.length === 0) return resultObject;
+  const imageServiceAvailable = await checkImageServiceAvailability();
+  for (const question of resultObject.questions as Record<string, unknown>[]) {
+    if (question.type !== 'IMAGE_QUESTION'
+      || typeof question.image !== 'string'
+      || !question.image.startsWith('IMAGE_PROMPT:')) continue;
+
+    const prompt = question.image.replace('IMAGE_PROMPT:', '').trim();
+    if (imageServiceAvailable) {
+      const generated = await generateImage(prompt);
+      question.image = generated.success && generated.data
+        ? generated.data
+        : `https://placehold.co/600x400?text=${encodeURIComponent(prompt.slice(0, 20))}`;
+    } else {
+      question.image = `https://placehold.co/600x400?text=${encodeURIComponent(prompt.slice(0, 20))}`;
+    }
+  }
+  return resultObject;
 };
 
 export const generateQuiz = async (
@@ -84,7 +203,7 @@ export const generateQuiz = async (
   options?: QuizGenerationOptions,
   _customApiKey?: string,
   provider: AIProvider = 'llm-mux',
-  onStepChange?: (step: 'generating' | 'reviewing' | 'completed') => void,
+  onStepChange?: (step: QuizGenerationStep) => void,
   execution?: QuizAiExecutionContext,
 ): Promise<any> => {
   onStepChange?.('generating');
@@ -125,38 +244,21 @@ export const generateQuiz = async (
     );
   }
 
-  const resultObject = result as Record<string, unknown>;
-  if (Array.isArray(resultObject?.questions) && resultObject.questions.length > requestedCount) {
-    resultObject.questions = resultObject.questions.slice(0, requestedCount);
-  }
-
-  if (Array.isArray(resultObject?.questions)) {
-    const imageQuestions = (resultObject.questions as Record<string, unknown>[]).filter(
-      (question) => question.type === 'IMAGE_QUESTION'
-        && typeof question.image === 'string'
-        && question.image.startsWith('IMAGE_PROMPT:'),
+  if (options?.blueprint) {
+    result = await runDeterministicQualityPipeline(
+      result,
+      options.blueprint,
+      execution,
+      onStepChange,
     );
-
-    if (imageQuestions.length > 0) {
-      const imageServiceAvailable = await checkImageServiceAvailability();
-      for (const question of resultObject.questions as Record<string, unknown>[]) {
-        if (question.type !== 'IMAGE_QUESTION'
-          || typeof question.image !== 'string'
-          || !question.image.startsWith('IMAGE_PROMPT:')) continue;
-
-        const prompt = question.image.replace('IMAGE_PROMPT:', '').trim();
-        if (imageServiceAvailable) {
-          const generated = await generateImage(prompt);
-          question.image = generated.success && generated.data
-            ? generated.data
-            : `https://placehold.co/600x400?text=${encodeURIComponent(prompt.slice(0, 20))}`;
-        } else {
-          question.image = `https://placehold.co/600x400?text=${encodeURIComponent(prompt.slice(0, 20))}`;
-        }
-      }
+  } else if (result && typeof result === 'object') {
+    const legacyResult = result as Record<string, unknown>;
+    if (Array.isArray(legacyResult.questions) && legacyResult.questions.length > requestedCount) {
+      legacyResult.questions = legacyResult.questions.slice(0, requestedCount);
     }
   }
 
+  result = await resolveGeneratedImages(result);
   onStepChange?.('completed');
   return result;
 };

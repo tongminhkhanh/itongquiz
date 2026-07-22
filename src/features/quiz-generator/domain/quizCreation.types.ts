@@ -3,7 +3,7 @@ import type { AIProvider, PromptProfileOptions } from '../../../services/geminiS
 import type { QuizIntent, QuizSourceMode } from './quizBlueprint';
 
 export type QuizMode = 'exam' | 'practice' | 'pdf';
-export type GenerationStep = 'idle' | 'generating' | 'reviewing' | 'completed';
+export type GenerationStep = 'idle' | 'generating' | 'reviewing' | 'repairing' | 'completed';
 export type TrangNguyenSearchMode = 'search' | 'quick';
 
 export interface DifficultyLevels {

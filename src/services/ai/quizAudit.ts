@@ -89,7 +89,7 @@ export function auditGeneratedQuiz(
     if (indexes.length !== allocation.count) {
       issues.push({
         code: 'TYPE_COUNT_MISMATCH',
-        questionIndexes: indexes,
+        questionIndexes: indexes.length > allocation.count ? indexes.slice(allocation.count) : [],
         message: `${allocation.type} có ${indexes.length} câu, blueprint yêu cầu ${allocation.count} câu.`,
         repairable: true,
       });
@@ -121,7 +121,9 @@ export function auditGeneratedQuiz(
     if (indexes.length !== difficultyExpected[level - 1]) {
       issues.push({
         code: 'DIFFICULTY_COUNT_MISMATCH',
-        questionIndexes: indexes,
+        questionIndexes: indexes.length > difficultyExpected[level - 1]
+          ? indexes.slice(difficultyExpected[level - 1])
+          : [],
         message: `Mức độ ${level} có ${indexes.length} câu, blueprint yêu cầu ${difficultyExpected[level - 1]} câu.`,
         repairable: true,
       });
@@ -133,7 +135,7 @@ export function auditGeneratedQuiz(
       if (similarity(questionText(questions[leftIndex]), questionText(questions[rightIndex])) >= 0.88) {
         issues.push({
           code: 'DUPLICATE_QUESTION',
-          questionIndexes: [leftIndex, rightIndex],
+          questionIndexes: [rightIndex],
           message: `Câu ${leftIndex + 1} và câu ${rightIndex + 1} có nội dung gần trùng nhau.`,
           repairable: true,
         });

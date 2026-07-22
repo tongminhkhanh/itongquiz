@@ -49,7 +49,7 @@ describe('generated quiz audit', () => {
 
     expect(issues).toContainEqual(expect.objectContaining({
       code: 'DUPLICATE_QUESTION',
-      questionIndexes: [0, 1],
+      questionIndexes: [1],
       repairable: true,
     }));
   });

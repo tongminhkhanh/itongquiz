@@ -8,7 +8,6 @@ import type { QuizAiExecutionContext } from '../aiAction';
 import { parseAndRepairJSON, validateAndFixQuiz } from '../utils/jsonRepair';
 import { fileToBase64, urlToBase64 } from '../utils/networkHelpers';
 import { requestWorkerAiText } from '../workerAiClient';
-import { validateQuizWithAI } from '../../geminiService';
 
 type ImageLibraryItem = { id: string; name: string; data?: string };
 
@@ -48,7 +47,7 @@ export const generateWithGemini = async (
   _apiKey: string,
   file?: File | null,
   imageLibrary?: ImageLibraryItem[],
-  onStepChange?: (step: 'generating' | 'reviewing' | 'completed') => void,
+  _onStepChange?: (step: 'generating' | 'reviewing' | 'repairing' | 'completed') => void,
   execution?: QuizAiExecutionContext,
 ): Promise<unknown> => {
   const userContent: Record<string, unknown>[] = [{ type: 'text', text: promptText }];
@@ -96,18 +95,7 @@ export const generateWithGemini = async (
         response_format: { type: 'json_object' },
       }, toWorkerOptions(execution));
       const quizData = validateAndFixQuiz(parseAndRepairJSON(formatMathSigns(text))) as Record<string, unknown>;
-
-      let finalQuiz = quizData;
-      if (onStepChange) {
-        onStepChange('reviewing');
-        const reviewExecution = execution ? { ...execution, stage: 'REVIEW' as const } : undefined;
-        try {
-          finalQuiz = validateAndFixQuiz(await validateQuizWithAI(quizData, '', reviewExecution)) as Record<string, unknown>;
-        } catch (reviewError) {
-          console.warn('[generateWithGemini] Reviewer failed, using generator draft.', reviewError);
-        }
-      }
-      return resolveImageLibrary(finalQuiz, imageLibrary || []);
+      return resolveImageLibrary(quizData, imageLibrary || []);
     } catch (error) {
       lastError = error;
       if (attempt < maxRetries) await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** attempt));
