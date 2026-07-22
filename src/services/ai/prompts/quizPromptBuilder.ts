@@ -47,6 +47,20 @@ const REMEDIAL_LEARNER_PROMPT = `
     - Tao cam giac hoc duoc, lam duoc, xay dung tu tin hoc tap cho hoc sinh.
 `;
 
+const INTENT_PROMPTS = {
+  EXAM: `
+    [INTENT: EXAM]
+    - Câu hỏi ngắn gọn, trung lập. Không đưa gợi ý trong nội dung câu hỏi.
+    - Không lặp cùng một kỹ năng bằng cách đổi số đơn giản.
+    - Phương án nhiễu phải hợp lý nhưng chỉ có đúng số đáp án theo schema.
+    - explanation vẫn phải đầy đủ để giáo viên duyệt, nhưng không xuất hiện khi học sinh đang làm bài.`,
+  PRACTICE: `
+    [INTENT: PRACTICE]
+    - Sắp xếp từ kiến thức cốt lõi đến vận dụng.
+    - Lời giải phải hướng dẫn từng bước, nêu lỗi sai thường gặp và một mẹo nhớ ngắn.
+    - Ngôn ngữ khuyến khích, không gây áp lực.`,
+} as const;
+
 const buildTypeDescriptions = (options?: QuizGenerationOptions): Record<string, string> => ({
   MCQ: 'MCQ (Trac nghiem chon 1 dap an dung. Format: {"type":"MCQ","question":"Noi dung cau hoi 1 dong","options":["A...","B...","C...","D..."],"correctAnswer":"A","explanation":"..."} )',
   TRUE_FALSE: 'TRUE_FALSE (Dung sai. Format: {"type":"TRUE_FALSE","mainQuestion":"Cau hoi chinh","items":[{"statement":"Y 1","isCorrect":true},{"statement":"Y 2","isCorrect":false}]})',
@@ -92,12 +106,23 @@ export const buildPrompt = (
   content: string,
   options?: QuizGenerationOptions
 ): string => {
+  const blueprint = options?.blueprint;
   const title = options?.title || `Kiem tra: ${topic}`;
-  const count = options?.questionCount || 10;
-  const types = options?.questionTypes || [];
-  const levels = options?.difficultyLevels;
+  const count = blueprint?.totalQuestions ?? options?.questionCount ?? 10;
+  const types = blueprint
+    ? blueprint.typeAllocations.filter(({ count: allocationCount }) => allocationCount > 0).map(({ type }) => type)
+    : options?.questionTypes || [];
+  const levels = blueprint?.difficultyLevels ?? options?.difficultyLevels;
   const customPrompt = options?.customPrompt?.trim();
   const images = options?.imageLibrary || [];
+  const intentSection = blueprint ? INTENT_PROMPTS[blueprint.intent] : '';
+  const typeAllocationSection = blueprint
+    ? `
+    TYPE ALLOCATION - BẮT BUỘC ĐÚNG CHÍNH XÁC:
+    ${blueprint.typeAllocations.map(({ type, count: allocationCount }) => `${type}: ${allocationCount} câu`).join('\r\n    ')}
+    Tổng các dòng trên phải bằng đúng ${blueprint.totalQuestions} câu.`
+    : '';
+  const isDocumentSource = blueprint?.sourceMode === 'DOCUMENT' || (!blueprint && options?.isPdfMode);
 
   const typeDescriptions = buildTypeDescriptions(options);
   const typesDescription = types.map((t) => typeDescriptions[t] || t).join('\n    - ');
@@ -148,6 +173,7 @@ export const buildPrompt = (
 
     ${SCIENTIFIC_GROUNDING_PROMPT}
     ${PEDAGOGICAL_EXPLANATION_PROMPT}
+    ${intentSection}
     ${pedagogicalPolicySection}
     ${learnerProfileSection}
 
@@ -161,13 +187,14 @@ export const buildPrompt = (
     - detectedLesson: Ten bai hoc tom tat gon
     - suggestedTags: Mang 3-5 hashtag (chu thuong, khong dau, dung "_")
 
+    ${typeAllocationSection}
     ${difficultyInstructions}
     ${imageInstructions}
 
     CHI DUOC PHEP SU DUNG CAC DANG CAU HOI SAU:
     - ${typesDescription}
 
-    ${options?.isPdfMode ? `
+    ${isDocumentSource ? `
     [PDF MODE - OCR FIRST]
     - Dung noi dung OCR ben duoi la NGUON CHINH.
     OCR CONTENT FROM FILE:
