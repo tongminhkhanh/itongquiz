@@ -98,16 +98,12 @@ describe('Worker root route dispatch', () => {
     expect(rateLimitMock).not.toHaveBeenCalled();
   });
 
-  it('fails closed for AI endpoints when limiter storage is unavailable', async () => {
+  it('authenticates AI endpoints before applying the role-aware limiter', async () => {
     rateLimitMock.mockResolvedValueOnce(unavailable());
     const response = await worker.fetch(request('/api/ai/chat', 'POST'), env);
 
-    expect(response.status).toBe(503);
-    expect(rateLimitMock).toHaveBeenCalledWith(
-      expect.any(Request),
-      env,
-      expect.objectContaining({ failureMode: 'closed', maxRequests: 10 }),
-    );
+    expect(response.status).toBe(401);
+    expect(rateLimitMock).not.toHaveBeenCalled();
   });
 
   it('fails closed for student login when limiter storage is unavailable', async () => {

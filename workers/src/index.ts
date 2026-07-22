@@ -148,8 +148,6 @@ export default {
                 if (rateLimitRes) return addCors(rateLimitRes, request, env);
                 response = await handleAiTutorRoutes(request, env, path, method);
             } else if (path.startsWith('/api/ai/')) {
-                const rateLimitRes = await rateLimit(request, env, { windowMs: 60 * 1000, maxRequests: 10, failureMode: 'closed' });
-                if (rateLimitRes) return addCors(rateLimitRes, request, env);
                 response = await handleAiProxy(request, env, path, method);
             } else if (path.startsWith('/api/practice')) {
                 response = await handlePracticeRoutes(request, env, path, method);
