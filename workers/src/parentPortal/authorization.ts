@@ -8,6 +8,38 @@ export interface AuthorizedParentStudent {
   fullName: string;
 }
 
+export interface AuthorizedParentClass {
+  classId: string;
+  className: string;
+  teacherUsername: string;
+}
+
+export async function requireTeacherForParentClass(
+  db: D1Database,
+  user: JWTPayload,
+  classId: string,
+): Promise<AuthorizedParentClass | Response> {
+  const row = await db.prepare(`
+    SELECT id, name, teacher_username
+    FROM classes
+    WHERE id = ? AND COALESCE(archived_at, '') = ''
+    LIMIT 1
+  `).bind(classId).first<{
+    id: string;
+    name: string;
+    teacher_username: string;
+  }>();
+  if (!row) return errorResponse('Class not found', 404);
+  if (user.role !== 'admin' && row.teacher_username !== user.username) {
+    return errorResponse('Forbidden', 403);
+  }
+  return {
+    classId: row.id,
+    className: row.name,
+    teacherUsername: row.teacher_username,
+  };
+}
+
 export async function requireTeacherForParentStudent(
   db: D1Database,
   user: JWTPayload,

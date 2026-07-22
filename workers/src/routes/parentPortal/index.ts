@@ -1,6 +1,7 @@
 import type { Env } from '../../types';
 import { errorResponse } from '../../utils/response';
 import { handleParentAuthRoutes } from './authRoutes';
+import { handleTeacherAnnouncementRoutes } from './teacherAnnouncementRoutes';
 import { handleTeacherLinkRoutes } from './teacherLinkRoutes';
 
 export async function handleParentPortalRoutes(
@@ -14,5 +15,9 @@ export async function handleParentPortalRoutes(
 
   const teacherLinkResponse = await handleTeacherLinkRoutes(request, env, path, method);
   if (teacherLinkResponse) return teacherLinkResponse;
+
+  const announcementResponse = await handleTeacherAnnouncementRoutes(request, env, path, method);
+  if (announcementResponse) return announcementResponse;
+
   return errorResponse('Parent Portal route not found', 404);
 }
