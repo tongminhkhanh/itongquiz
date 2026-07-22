@@ -1,6 +1,7 @@
 import type { Env } from '../types';
 import type { FieldConfig } from '../types/certificates';
 import { renderCertificate } from './certificateRenderer';
+import { createParentNotification } from '../parentPortal/notificationService';
 
 const CERTIFICATE_RENDER_CONCURRENCY = 4;
 
@@ -158,6 +159,20 @@ export async function processBatch(
         ).run();
       } catch (error) {
         console.error(`[CertificateProcessor] notification failed certificate=${student.certificate_id}`, error);
+      }
+      try {
+        await createParentNotification(env.DB, {
+          studentId: student.student_id,
+          kind: 'certificate_issued',
+          sourceType: 'certificate',
+          sourceId: student.certificate_id,
+          title: 'Con có chứng nhận mới',
+          body: `Đã nhận chứng nhận: ${batchTitle}`,
+          payload: { certificateId: student.certificate_id, batchId },
+          publishedAt: now,
+        });
+      } catch (error) {
+        console.error(`[CertificateProcessor] parent notification failed certificate=${student.certificate_id}`, error);
       }
     }
   } catch (error) {

@@ -9,6 +9,7 @@ import { handleValidateAnswers, parseBody } from '../utils/helpers';
 import { JWTPayload } from '../utils/jwt';
 import { verifyJWTMiddleware, requireAdmin, requireTeacher, isStudent } from '../middleware/jwtAuth';
 import { withD1Retry } from '../utils/d1';
+import { createParentNotification } from '../parentPortal/notificationService';
 import {
     buildResultSkillBreakdownFromData,
     buildWeaknessProfileFromData,
@@ -398,6 +399,7 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
 
         const canonicalStudentId = studentContext?.id
             || await resolveUniqueStudentId(db, studentName, className);
+        const submittedAt = new Date().toISOString();
         const insertResult = await db.prepare(`
             INSERT INTO results (
                 student_id, student_name, class_name, quiz_id, quiz_title,
@@ -407,11 +409,27 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
             canonicalStudentId, studentName, className, quizId,
             body.quizTitle || '', score, correctCount,
             totalQuestions, body.timeTaken || 0,
-            new Date().toISOString(),
+            submittedAt,
             JSON.stringify(body.answers || {}),
         ).run();
 
         const resultId = insertResult.meta.last_row_id;
+        if (canonicalStudentId) {
+            try {
+                await createParentNotification(db, {
+                    studentId: canonicalStudentId,
+                    kind: 'quiz_result',
+                    sourceType: 'result',
+                    sourceId: String(resultId),
+                    title: 'Có kết quả bài kiểm tra mới',
+                    body: `${body.quizTitle || 'Bài kiểm tra'}: ${score.toFixed(1)}/10, đúng ${correctCount}/${totalQuestions} câu.`,
+                    payload: { resultId: String(resultId), quizId, score, correctCount, totalQuestions },
+                    publishedAt: submittedAt,
+                });
+            } catch (error) {
+                console.error('[ParentNotification] quiz result notification failed', error);
+            }
+        }
         return jsonResponse({ status: 'success', resultId });
     }
 

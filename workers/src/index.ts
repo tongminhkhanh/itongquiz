@@ -45,6 +45,7 @@ import { Env } from './types';
 import { rateLimit } from './middleware/rateLimit';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
 import { checkAndAutoCloseExpiredExams } from './services/liveExamService';
+import { createDueHomeworkReminders } from './parentPortal/deadlineReminderService';
 
 export default {
     async fetch(request: Request, env: Env): Promise<Response> {
@@ -214,13 +215,16 @@ export default {
         }
     },
 
-    // Week 2: Scheduled handler for weekly leaderboard rewards
+    // Scheduled maintenance, reminders, and weekly leaderboard rewards.
     async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-        console.log('[Cron] Running weekly leaderboard rewards...');
-        
+        if (event.cron === '0 23 * * *') {
+            await createDueHomeworkReminders(env.DB, new Date());
+            return;
+        }
+
         try {
             await checkAndAutoCloseExpiredExams(env.DB);
-
+            if (event.cron !== '0 0 * * 1') return;
             const db = env.DB;
             const lastWeekKey = getLastWeekKey();
             
