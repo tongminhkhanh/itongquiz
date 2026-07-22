@@ -18,6 +18,7 @@ import type {
 
 export interface ParentSessionResponse {
   student: ParentStudentProfile;
+  accessCodeMasked?: string;
 }
 
 export interface ParentActivationPreview {

@@ -97,6 +97,11 @@ const validateActivation = async (
   return activation;
 };
 
+const maskAccessCode = (accessCode: string): string => {
+  const visible = accessCode.slice(-4);
+  return `${'•'.repeat(Math.max(0, accessCode.length - visible.length))}${visible}`;
+};
+
 const authenticatedResponse = async (
   env: Env,
   runtime: ParentAuthRouteRuntime,
@@ -104,6 +109,7 @@ const authenticatedResponse = async (
     id: string;
     studentId: string;
     tokenVersion: number;
+    accessCode: string;
   },
 ): Promise<Response> => {
   if (!env.JWT_SECRET) {
@@ -123,7 +129,7 @@ const authenticatedResponse = async (
     tokenVersion: link.tokenVersion,
     purpose: 'parent_session',
   }, env.JWT_SECRET);
-  const response = parentSuccess({ student: profile });
+  const response = parentSuccess({ student: profile, accessCodeMasked: maskAccessCode(link.accessCode) });
   response.headers.set('Set-Cookie', createParentCookie(token));
   return response;
 };
@@ -241,7 +247,7 @@ export async function handleParentAuthRoutes(
     if (!profile) {
       return parentError('PARENT_STUDENT_NOT_FOUND', 'Không tìm thấy học sinh.', 404);
     }
-    return parentSuccess({ student: profile });
+    return parentSuccess({ student: profile, accessCodeMasked: maskAccessCode(link.accessCode) });
   }
 
   if (path === '/api/parent/logout' && method === 'POST') {

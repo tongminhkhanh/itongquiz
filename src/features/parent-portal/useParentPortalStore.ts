@@ -10,6 +10,7 @@ import * as parentPortalService from './parentPortalService';
 export interface ParentPortalState {
   session: ParentStudentProfile | null;
   dashboard: ParentDashboardPayload | null;
+  accessCodeMasked: string | null;
   notifications: ParentNotificationItem[];
   unreadCount: number;
   isRestoring: boolean;
@@ -27,6 +28,7 @@ export interface ParentPortalState {
 const clearedProtectedState = {
   session: null,
   dashboard: null,
+  accessCodeMasked: null,
   notifications: [] as ParentNotificationItem[],
   unreadCount: 0,
 };
@@ -46,7 +48,7 @@ export const useParentPortalStore = create<ParentPortalState>((set) => ({
     set({ isRestoring: true, error: null });
     try {
       const response = await parentPortalService.getSession();
-      set({ session: response.student, isRestoring: false });
+      set({ session: response.student, accessCodeMasked: response.accessCodeMasked || null, isRestoring: false });
     } catch (error) {
       set({ ...clearedProtectedState, isRestoring: false, error: isUnauthorized(error) ? null : messageOf(error) });
     }
@@ -56,7 +58,7 @@ export const useParentPortalStore = create<ParentPortalState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await parentPortalService.login(accessCode, pin);
-      set({ session: response.student, isLoading: false });
+      set({ session: response.student, accessCodeMasked: response.accessCodeMasked || null, isLoading: false });
       return true;
     } catch (error) {
       set({ ...clearedProtectedState, isLoading: false, error: messageOf(error) });
@@ -68,7 +70,7 @@ export const useParentPortalStore = create<ParentPortalState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await parentPortalService.activate(token, pin);
-      set({ session: response.student, isLoading: false });
+      set({ session: response.student, accessCodeMasked: response.accessCodeMasked || null, isLoading: false });
       return true;
     } catch (error) {
       set({ ...clearedProtectedState, isLoading: false, error: messageOf(error) });
