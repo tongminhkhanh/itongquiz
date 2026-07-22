@@ -145,6 +145,24 @@ const canTeacherAccessClassName = async (db: D1Database, user: JWTPayload, class
     return !!classroom;
 };
 
+const resolveUniqueStudentId = async (
+    db: D1Database,
+    studentName: string,
+    className: string,
+): Promise<string | null> => {
+    const rows = await db.prepare(`
+        SELECT s.id
+        FROM students s
+        JOIN classes c ON c.id = s.class_id
+        WHERE LOWER(TRIM(s.full_name)) = ?
+          AND LOWER(TRIM(c.name)) = ?
+          AND COALESCE(s.archived_at, '') = ''
+        LIMIT 2
+    `).bind(normalizeName(studentName), normalizeName(className)).all<{ id: string }>();
+
+    return rows.results.length === 1 ? String(rows.results[0].id) : null;
+};
+
 const canAccessResult = async (db: D1Database, user: JWTPayload, result: any): Promise<boolean> => {
     if (requireAdmin(user)) return true;
     if (user.role === 'teacher') {
@@ -378,15 +396,19 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
         const totalQuestions = derivedMetrics?.totalQuestions
             ?? (Number.isFinite(submittedTotalQuestions) ? submittedTotalQuestions : 0);
 
-        const insertResult = await db.prepare(
-            `INSERT INTO results (student_name, class_name, quiz_id, quiz_title, score, correct_count, total_questions, time_taken, submitted_at, answers)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(
-            studentName, className, quizId,
+        const canonicalStudentId = studentContext?.id
+            || await resolveUniqueStudentId(db, studentName, className);
+        const insertResult = await db.prepare(`
+            INSERT INTO results (
+                student_id, student_name, class_name, quiz_id, quiz_title,
+                score, correct_count, total_questions, time_taken, submitted_at, answers
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+            canonicalStudentId, studentName, className, quizId,
             body.quizTitle || '', score, correctCount,
             totalQuestions, body.timeTaken || 0,
             new Date().toISOString(),
-            JSON.stringify(body.answers || {})
+            JSON.stringify(body.answers || {}),
         ).run();
 
         const resultId = insertResult.meta.last_row_id;
