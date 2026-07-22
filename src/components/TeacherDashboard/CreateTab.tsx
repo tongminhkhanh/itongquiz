@@ -13,6 +13,7 @@ import GeneralInfoSection from '../../features/quiz-generator/components/General
 import QuestionSettingsSection from '../../features/quiz-generator/components/QuestionSettingsSection';
 import PedagogicalProfileSection from '../../features/quiz-generator/components/PedagogicalProfileSection';
 import ContentSourceSection from '../../features/quiz-generator/components/ContentSourceSection';
+import OcrPreviewSection from '../../features/quiz-generator/components/OcrPreviewSection';
 import AdvancedSettingsSection from '../../features/quiz-generator/components/AdvancedSettingsSection';
 import AssignmentSection from '../../features/quiz-generator/components/AssignmentSection';
 import GenerationProgressPanel from '../../features/quiz-generator/components/GenerationProgressPanel';
@@ -141,6 +142,14 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     onToggle={logic.toggleSection}
                 />
 
+                {logic.ocrDocument && (
+                    <OcrPreviewSection
+                        document={logic.ocrDocument}
+                        selectedPageNumbers={logic.selectedOcrPageNumbers}
+                        onChange={logic.setSelectedOcrPageNumbers}
+                    />
+                )}
+
                 <AdvancedSettingsSection
                     requireCode={logic.requireCode}
                     setRequireCode={logic.setRequireCode}
@@ -227,13 +236,21 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                                 <Button
                                     onClick={() => logic.handleGenerate('pdf')}
                                     loading={logic.isGenerating && logic.quizMode === 'pdf'}
-                                    disabled={!logic.uploadedFile || questionCount === 0 || !logic.isBlueprintValid || (logic.isTeacherAccount && !logic.hasAiQuota)}
+                                    disabled={
+                                        !logic.uploadedFile
+                                        || questionCount === 0
+                                        || !logic.isBlueprintValid
+                                        || (logic.ocrDocument && logic.selectedOcrPageNumbers.length === 0)
+                                        || (logic.isTeacherAccount && !logic.hasAiQuota)
+                                    }
                                     className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                                     size="lg"
                                     variant="primary"
                                     icon={<FileText className="w-5 h-5" />}
                                 >
-                                    {logic.isGenerating && logic.quizMode === 'pdf' ? (logic.generationStep === 'reviewing' ? '🤖 Đang duyệt...' : 'Đang đọc PDF...') : `📄 TẠO ĐỀ TỪ FILE: ${logic.uploadedFile.name.substring(0, 20)}...`}
+                                    {logic.ocrDocument
+                                        ? `📄 TẠO ĐỀ TỪ ${logic.selectedOcrPageNumbers.length} TRANG ĐÃ CHỌN`
+                                        : `📖 ĐỌC VÀ XEM TRƯỚC: ${logic.uploadedFile.name.substring(0, 20)}...`}
                                 </Button>
                             )}
                             <div className="grid grid-cols-2 gap-3">

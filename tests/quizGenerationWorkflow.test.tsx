@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuestionType, type Question } from '../src/types';
 import { useQuizGeneration } from '../src/features/quiz-generator/hooks/useQuizGeneration';
+import type { OcrDocument } from '../src/services/ai/schemas/ocrDocumentSchema';
 
 const aiMocks = vi.hoisted(() => ({
   extractTextFromPdf: vi.fn(),
@@ -26,7 +27,6 @@ vi.mock('../src/features/quiz-generator/hooks/useTeacherAiQuota', () => ({
     aiUsageRemaining: 5,
     hasAiQuota: true,
     dailyAiLimit: 5,
-    consume: vi.fn(async () => true),
     refresh: quotaMocks.refresh,
   }),
 }));
@@ -43,35 +43,58 @@ vi.mock('../src/utils/toast', () => ({
   showError: vi.fn(),
 }));
 
-const makeForm = (uploadedFile: File | null = null) => ({
-  quizMode: uploadedFile ? 'pdf' : 'exam',
-  setQuizMode: vi.fn(),
-  quizIntent: 'EXAM',
-  setQuizIntent: vi.fn(),
-  uploadedFile,
-  topic: 'Phân số',
-  classLevel: '4',
-  selectedTypes: { [QuestionType.MCQ]: true },
-  questionTypeAllocations: [{ type: QuestionType.MCQ, count: 1 }],
-  difficultyLevels: { level1: 1, level2: 0, level3: 0 },
-  category: 'toan',
-  content: 'Yêu cầu của giáo viên',
-  aiProvider: 'llm-mux',
-  quizTitle: 'Đề kiểm tra',
-  promptProfile: { useThongTu27: true, learnerMode: 'default' },
-  imageLibrary: [],
-  customPrompt: '',
-  manualTimeLimit: 15,
-  requireCode: false,
-  accessCode: '',
-  showOnHome: false,
-  tags: [],
-  generatedQuiz: null,
-  setAiDetectedCategory: vi.fn(),
-  setAiDetectedLesson: vi.fn(),
-  setAiSuggestedTags: vi.fn(),
-  setGeneratedQuiz: vi.fn(),
+const makeOcrDocument = (): OcrDocument => ({
+  pages: [
+    { pageNumber: 1, text: `NỘI DUNG OCR TRANG 1 ${'đủ dài '.repeat(20)}` },
+    { pageNumber: 2, text: `NỘI DUNG OCR TRANG 2 ${'bổ sung '.repeat(20)}` },
+    { pageNumber: 3, text: `NỘI DUNG OCR TRANG 3 ${'kiến thức '.repeat(20)}` },
+  ],
+  warnings: [],
+  wasTruncated: false,
 });
+
+const makeForm = (uploadedFile: File | null = null) => {
+  const form = {
+    quizMode: uploadedFile ? 'pdf' : 'exam',
+    setQuizMode: vi.fn(),
+    quizIntent: 'EXAM',
+    setQuizIntent: vi.fn(),
+    uploadedFile,
+    ocrDocument: null as OcrDocument | null,
+    selectedOcrPageNumbers: [] as number[],
+    applyOcrDocument: vi.fn((document: OcrDocument) => {
+      form.ocrDocument = document;
+      form.selectedOcrPageNumbers = document.pages.map((page) => page.pageNumber);
+    }),
+    clearOcrDocument: vi.fn(() => {
+      form.ocrDocument = null;
+      form.selectedOcrPageNumbers = [];
+    }),
+    topic: 'Phân số',
+    classLevel: '4',
+    selectedTypes: { [QuestionType.MCQ]: true },
+    questionTypeAllocations: [{ type: QuestionType.MCQ, count: 1 }],
+    difficultyLevels: { level1: 1, level2: 0, level3: 0 },
+    category: 'toan',
+    content: 'Yêu cầu của giáo viên',
+    aiProvider: 'llm-mux',
+    quizTitle: 'Đề kiểm tra',
+    promptProfile: { useThongTu27: true, learnerMode: 'default' },
+    imageLibrary: [],
+    customPrompt: '',
+    manualTimeLimit: 15,
+    requireCode: false,
+    accessCode: '',
+    showOnHome: false,
+    tags: [],
+    generatedQuiz: null,
+    setAiDetectedCategory: vi.fn(),
+    setAiDetectedLesson: vi.fn(),
+    setAiSuggestedTags: vi.fn(),
+    setGeneratedQuiz: vi.fn(),
+  };
+  return form;
+};
 
 const renderGeneration = (form: ReturnType<typeof makeForm>) => renderHook(() => useQuizGeneration({
   form: form as never,
@@ -81,20 +104,29 @@ const renderGeneration = (form: ReturnType<typeof makeForm>) => renderHook(() =>
   teacherName: 'Cô A',
 }));
 
+const prepareAndGeneratePdf = async (
+  result: ReturnType<typeof renderGeneration>['result'],
+): Promise<void> => {
+  await act(async () => {
+    await result.current.handleGenerate('pdf');
+  });
+  await act(async () => {
+    await result.current.handleGenerate('pdf');
+  });
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
-  aiMocks.extractTextFromPdf.mockResolvedValue(`NỘI DUNG OCR ${'đủ dài '.repeat(30)}`);
+  aiMocks.extractTextFromPdf.mockResolvedValue(makeOcrDocument());
   aiMocks.generateQuiz.mockResolvedValue({ title: 'Đề đã tạo', questions: [] });
 });
 
 describe('quiz AI workflow', () => {
-  it('uses the same action id for OCR, generate and review context', async () => {
+  it('uses the same action id for OCR and generate after page review', async () => {
     const form = makeForm(new File(['pdf'], 'nguon.pdf', { type: 'application/pdf' }));
     const { result } = renderGeneration(form);
 
-    await act(async () => {
-      await result.current.handleGenerate('pdf');
-    });
+    await prepareAndGeneratePdf(result);
 
     const ocrContext = aiMocks.extractTextFromPdf.mock.calls[0][2];
     const generationContext = aiMocks.generateQuiz.mock.calls[0][8];
@@ -102,18 +134,35 @@ describe('quiz AI workflow', () => {
     expect(ocrContext.stage).toBe('OCR');
     expect(generationContext.stage).toBe('GENERATE');
     expect(generationContext.action.workflow).toBe('QUIZ_CREATE');
+    expect(form.applyOcrDocument).toHaveBeenCalledOnce();
   });
 
   it('does not attach the original file after OCR succeeds', async () => {
     const form = makeForm(new File(['pdf'], 'nguon.pdf', { type: 'application/pdf' }));
     const { result } = renderGeneration(form);
 
+    await prepareAndGeneratePdf(result);
+
+    expect(aiMocks.generateQuiz.mock.calls[0][3]).toBeUndefined();
+    expect(String(aiMocks.generateQuiz.mock.calls[0][2])).toContain('=== TRANG 1 ===');
+  });
+
+  it('generates from selected OCR pages only', async () => {
+    const form = makeForm(new File(['pdf'], 'nguon.pdf', { type: 'application/pdf' }));
+    const { result } = renderGeneration(form);
+
+    await act(async () => {
+      await result.current.handleGenerate('pdf');
+    });
+    form.selectedOcrPageNumbers = [1, 3];
     await act(async () => {
       await result.current.handleGenerate('pdf');
     });
 
-    expect(aiMocks.generateQuiz.mock.calls[0][3]).toBeUndefined();
-    expect(String(aiMocks.generateQuiz.mock.calls[0][2])).toContain('NỘI DUNG OCR');
+    const content = String(aiMocks.generateQuiz.mock.calls[0][2]);
+    expect(content).toContain('=== TRANG 1 ===');
+    expect(content).toContain('=== TRANG 3 ===');
+    expect(content).not.toContain('=== TRANG 2 ===');
   });
 
   it('uses a new QUESTION_REGENERATE action for a manual single-question retry', async () => {

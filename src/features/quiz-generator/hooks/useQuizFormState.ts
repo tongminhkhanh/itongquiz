@@ -31,6 +31,7 @@ import {
     type QuizBlueprint,
     type QuizIntent,
 } from '../domain/quizBlueprint';
+import type { OcrDocument } from '../../../services/ai/schemas/ocrDocumentSchema';
 import { useGeneratedQuizSync } from './useGeneratedQuizSync';
 
 interface UseQuizFormStateOptions {
@@ -89,7 +90,9 @@ export const useQuizFormState = ({
     const [requireCode, setRequireCode] = useState(false);
     const [accessCode, setAccessCode] = useState('');
     const [showOnHome, setShowOnHome] = useState(true);
-    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [uploadedFile, setUploadedFileState] = useState<File | null>(null);
+    const [ocrDocument, setOcrDocumentState] = useState<OcrDocument | null>(null);
+    const [selectedOcrPageNumbers, setSelectedOcrPageNumbers] = useState<number[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [expandedSections, setExpandedSections] = useState<ExpandedSections>(
         createDefaultExpandedSections,
@@ -116,6 +119,22 @@ export const useQuizFormState = ({
         () => validateQuizBlueprint(questionBlueprint),
         [questionBlueprint],
     );
+
+    const setUploadedFile = (nextFile: File | null) => {
+        setUploadedFileState(nextFile);
+        setOcrDocumentState(null);
+        setSelectedOcrPageNumbers([]);
+    };
+
+    const applyOcrDocument = (nextDocument: OcrDocument) => {
+        setOcrDocumentState(nextDocument);
+        setSelectedOcrPageNumbers(nextDocument.pages.map((page) => page.pageNumber));
+    };
+
+    const clearOcrDocument = () => {
+        setOcrDocumentState(null);
+        setSelectedOcrPageNumbers([]);
+    };
 
     const setSelectedTypes = (nextTypes: Record<string, boolean>) => {
         setSelectedTypesState(nextTypes);
@@ -341,6 +360,11 @@ export const useQuizFormState = ({
         setShowOnHome,
         uploadedFile,
         setUploadedFile,
+        ocrDocument,
+        applyOcrDocument,
+        clearOcrDocument,
+        selectedOcrPageNumbers,
+        setSelectedOcrPageNumbers,
         fileInputRef,
         expandedSections,
         toggleSection,

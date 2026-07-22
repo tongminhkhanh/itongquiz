@@ -6,17 +6,15 @@ import {
     generateQuiz,
     type AIProvider,
 } from '../../../services/geminiService';
+import { buildSelectedOcrText } from '../../../services/ai/schemas/ocrDocumentSchema';
 import { generateTrangNguyenQuiz } from '../../../services/trangNguyenGeminiService';
 import { showError } from '../../../utils/toast';
 import { normalizeAiCategory, normalizeTags } from '../utils/quizNormalizers';
-import {
-    buildQuizGenerationOptions,
-} from '../domain/buildQuizGenerationRequest';
-import { MAX_OCR_CONTENT_LENGTH } from '../domain/quizCreationDefaults';
+import { buildQuizGenerationOptions } from '../domain/buildQuizGenerationRequest';
 import { validateQuizGenerationInput } from '../domain/quizCreationValidation';
 import type { GenerationStep, QuizMode } from '../domain/quizCreation.types';
 import type { useQuizFormState } from './useQuizFormState';
-import { createAiAction } from '../../../services/ai/aiAction';
+import { createAiAction, type ClientAiAction } from '../../../services/ai/aiAction';
 import { useTeacherAiQuota } from './useTeacherAiQuota';
 
 interface UseQuizGenerationOptions {
@@ -27,6 +25,15 @@ interface UseQuizGenerationOptions {
     teacherName: string | null;
 }
 
+interface ActiveGeneration {
+    action: ClientAiAction;
+    controller: AbortController;
+    phase: 'ocr' | 'generate';
+    sourceFileKey?: string;
+}
+
+const fileKey = (file: File): string => `${file.name}:${file.size}:${file.lastModified}`;
+
 export const useQuizGeneration = ({
     form,
     editingQuiz,
@@ -36,7 +43,7 @@ export const useQuizGeneration = ({
 }: UseQuizGenerationOptions) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStep, setGenerationStep] = useState<GenerationStep>('idle');
-    const activeGenerationRef = useRef<{ actionId: string; controller: AbortController } | null>(null);
+    const activeGenerationRef = useRef<ActiveGeneration | null>(null);
     const quota = useTeacherAiQuota({ isTeacherAccount, username });
 
     const createQuizFromResult = (
@@ -70,6 +77,52 @@ export const useQuizGeneration = ({
         suggestedTags: suggestedTags.length > 0 ? suggestedTags : undefined,
     });
 
+    const prepareOcrPreview = async (file: File): Promise<void> => {
+        activeGenerationRef.current?.controller.abort();
+        const action = createAiAction('QUIZ_CREATE');
+        const controller = new AbortController();
+        const sourceFileKey = fileKey(file);
+        activeGenerationRef.current = { action, controller, phase: 'ocr', sourceFileKey };
+        form.clearOcrDocument();
+        setIsGenerating(true);
+        setGenerationStep('reading_document');
+
+        try {
+            const ocrProvider: AIProvider = [
+                'gemini',
+                'llm-mux',
+                'native-ocr',
+            ].includes(form.aiProvider)
+                ? form.aiProvider
+                : 'llm-mux';
+            const document = await extractTextFromPdf(file, ocrProvider, {
+                action,
+                stage: 'OCR',
+                signal: controller.signal,
+            });
+            form.applyOcrDocument(document);
+            activeGenerationRef.current = {
+                action,
+                controller,
+                phase: 'generate',
+                sourceFileKey,
+            };
+            setGenerationStep('idle');
+        } catch (error: unknown) {
+            activeGenerationRef.current = null;
+            if (controller.signal.aborted) {
+                setGenerationStep('cancelled');
+            } else {
+                const normalizedError = error instanceof Error ? error : new Error(String(error));
+                showError(normalizedError.message || 'Không thể đọc tài liệu.');
+                setGenerationStep('idle');
+            }
+        } finally {
+            setIsGenerating(false);
+            void quota.refresh();
+        }
+    };
+
     const handleGenerate = async (modeOverride?: QuizMode) => {
         const activeQuizMode = modeOverride ?? form.quizMode;
         const isPdfMode = activeQuizMode === 'pdf';
@@ -95,15 +148,39 @@ export const useQuizGeneration = ({
             showError(validation.error);
             return;
         }
+
+        if (isPdfMode && form.uploadedFile) {
+            const pending = activeGenerationRef.current;
+            const hasMatchingPreview = form.ocrDocument
+                && pending?.phase === 'generate'
+                && pending.sourceFileKey === fileKey(form.uploadedFile);
+            if (!hasMatchingPreview) {
+                await prepareOcrPreview(form.uploadedFile);
+                return;
+            }
+            if (form.selectedOcrPageNumbers.length === 0) {
+                showError('Cần chọn ít nhất một trang.');
+                return;
+            }
+        }
+
+        const pendingAction = activeGenerationRef.current?.phase === 'generate'
+            ? activeGenerationRef.current
+            : null;
+        const action = pendingAction?.action ?? createAiAction('QUIZ_CREATE');
+        const controller = pendingAction?.controller ?? new AbortController();
+        activeGenerationRef.current = {
+            action,
+            controller,
+            phase: 'generate',
+            sourceFileKey: pendingAction?.sourceFileKey,
+        };
+
         setIsGenerating(true);
-        setGenerationStep(isPdfMode ? 'reading_document' : 'generating');
+        setGenerationStep('generating');
         form.setAiDetectedCategory(null);
         form.setAiDetectedLesson('');
         form.setAiSuggestedTags([]);
-
-        const action = createAiAction('QUIZ_CREATE');
-        const controller = new AbortController();
-        activeGenerationRef.current = { actionId: action.actionId, controller };
 
         try {
             if (form.category === 'trang-nguyen') {
@@ -149,7 +226,7 @@ export const useQuizGeneration = ({
             }
 
             const titlePrefix = isPdfMode
-                ? 'Đề từ PDF'
+                ? 'Đề từ tài liệu'
                 : activeQuizMode === 'exam'
                     ? 'Kiểm tra'
                     : 'Ôn tập';
@@ -157,37 +234,21 @@ export const useQuizGeneration = ({
             let generationFile: File | undefined = form.uploadedFile || undefined;
             let generationTopic = form.topic;
 
-            if (isPdfMode && form.uploadedFile) {
-                const ocrProvider: AIProvider = [
-                    'gemini',
-                    'llm-mux',
-                    'native-ocr',
-                ].includes(form.aiProvider)
-                    ? form.aiProvider
-                    : 'llm-mux';
-                const extractedText = await extractTextFromPdf(form.uploadedFile, ocrProvider, {
-                    action,
-                    stage: 'OCR',
-                    signal: controller.signal,
-                });
-                const normalizedOcr = extractedText?.trim();
-                if (!normalizedOcr || normalizedOcr.length < 120) {
+            if (isPdfMode && form.uploadedFile && form.ocrDocument) {
+                const selectedOcrText = buildSelectedOcrText(
+                    form.ocrDocument,
+                    form.selectedOcrPageNumbers,
+                );
+                if (selectedOcrText.trim().length < 120) {
                     throw new Error(
-                        'OCR không đọc được đủ nội dung từ file. Vui lòng thử file rõ hơn hoặc chọn file khác.',
+                        'Các trang đã chọn chưa có đủ nội dung. Vui lòng chọn thêm trang hoặc dùng file rõ hơn.',
                     );
                 }
-
-                generationContent = [
-                    form.content.trim(),
-                    `=== NỘI DUNG OCR TỪ FILE (NGUỒN CHÍNH) ===\n${
-                        normalizedOcr.length > MAX_OCR_CONTENT_LENGTH
-                            ? normalizedOcr.slice(0, MAX_OCR_CONTENT_LENGTH)
-                            : normalizedOcr
-                    }\n=== HẾT NỘI DUNG OCR ===`,
-                ].filter(Boolean).join('\n\n');
+                generationContent = [form.content.trim(), selectedOcrText]
+                    .filter(Boolean)
+                    .join('\n\n');
                 generationTopic = form.topic || form.uploadedFile.name.replace(/\.[^/.]+$/, '');
                 generationFile = undefined;
-                setGenerationStep('generating');
             }
 
             const options = buildQuizGenerationOptions({
@@ -255,7 +316,7 @@ export const useQuizGeneration = ({
                 setGenerationStep('idle');
             }
         } finally {
-            if (activeGenerationRef.current?.actionId === action.actionId) {
+            if (activeGenerationRef.current?.action.actionId === action.actionId) {
                 activeGenerationRef.current = null;
             }
             setIsGenerating(false);
