@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '../../../../stores/authStore';
 import { useAssignmentStore } from '../../../stores/useAssignmentStore';
+import { isAiQuizV2Enabled } from '../../../config/featureFlags';
 import { useClassStore } from '../../../stores/useClassStore';
 import type { UseCreateQuizLogicProps } from '../domain/quizCreation.types';
 import { useQuizFormState } from './useQuizFormState';
@@ -17,6 +18,7 @@ export const useCreateQuizLogic = ({
     const authStore = useAuthStore();
     const classStore = useClassStore();
     const assignmentStore = useAssignmentStore();
+    const aiQuizV2Enabled = isAiQuizV2Enabled();
 
     const isTeacherAccount = !authStore.isAdmin;
     const isClassLocked = !authStore.isAdmin && !!authStore.teacherClass;
@@ -35,6 +37,7 @@ export const useCreateQuizLogic = ({
         isTeacherAccount,
         username: authStore.username,
         teacherName: authStore.teacherName,
+        aiQuizV2Enabled,
     });
     const persistence = useQuizPersistence({
         form,
@@ -132,6 +135,7 @@ export const useCreateQuizLogic = ({
         isClassLocked,
         lockedClass,
         isTeacherAccount,
+        aiQuizV2Enabled,
         aiUsageCount: generation.aiUsageCount,
         aiUsageRemaining: generation.aiUsageRemaining,
         hasAiQuota: generation.hasAiQuota,

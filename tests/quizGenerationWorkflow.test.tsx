@@ -96,12 +96,16 @@ const makeForm = (uploadedFile: File | null = null) => {
   return form;
 };
 
-const renderGeneration = (form: ReturnType<typeof makeForm>) => renderHook(() => useQuizGeneration({
+const renderGeneration = (
+  form: ReturnType<typeof makeForm>,
+  aiQuizV2Enabled = true,
+) => renderHook(() => useQuizGeneration({
   form: form as never,
   editingQuiz: null,
   isTeacherAccount: true,
   username: 'teacher-a',
   teacherName: 'Cô A',
+  aiQuizV2Enabled,
 }));
 
 const prepareAndGeneratePdf = async (
@@ -163,6 +167,19 @@ describe('quiz AI workflow', () => {
     expect(content).toContain('=== TRANG 1 ===');
     expect(content).toContain('=== TRANG 3 ===');
     expect(content).not.toContain('=== TRANG 2 ===');
+  });
+
+  it('keeps the legacy PDF flow callable in one action when V2 is disabled', async () => {
+    const form = makeForm(new File(['pdf'], 'nguon.pdf', { type: 'application/pdf' }));
+    const { result } = renderGeneration(form, false);
+
+    await act(async () => {
+      await result.current.handleGenerate('pdf');
+    });
+
+    expect(aiMocks.extractTextFromPdf).toHaveBeenCalledOnce();
+    expect(aiMocks.generateQuiz).toHaveBeenCalledOnce();
+    expect(aiMocks.generateQuiz.mock.calls[0][3]).toBeUndefined();
   });
 
   it('uses a new QUESTION_REGENERATE action for a manual single-question retry', async () => {

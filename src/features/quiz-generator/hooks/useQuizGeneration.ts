@@ -6,7 +6,10 @@ import {
     generateQuiz,
     type AIProvider,
 } from '../../../services/geminiService';
-import { buildSelectedOcrText } from '../../../services/ai/schemas/ocrDocumentSchema';
+import {
+    buildSelectedOcrText,
+    type OcrDocument,
+} from '../../../services/ai/schemas/ocrDocumentSchema';
 import { generateTrangNguyenQuiz } from '../../../services/trangNguyenGeminiService';
 import { showError } from '../../../utils/toast';
 import { normalizeAiCategory, normalizeTags } from '../utils/quizNormalizers';
@@ -23,6 +26,7 @@ interface UseQuizGenerationOptions {
     isTeacherAccount: boolean;
     username: string | null;
     teacherName: string | null;
+    aiQuizV2Enabled: boolean;
 }
 
 interface ActiveGeneration {
@@ -40,6 +44,7 @@ export const useQuizGeneration = ({
     isTeacherAccount,
     username,
     teacherName,
+    aiQuizV2Enabled,
 }: UseQuizGenerationOptions) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStep, setGenerationStep] = useState<GenerationStep>('idle');
@@ -77,7 +82,7 @@ export const useQuizGeneration = ({
         suggestedTags: suggestedTags.length > 0 ? suggestedTags : undefined,
     });
 
-    const prepareOcrPreview = async (file: File): Promise<void> => {
+    const prepareOcrPreview = async (file: File): Promise<OcrDocument | null> => {
         activeGenerationRef.current?.controller.abort();
         const action = createAiAction('QUIZ_CREATE');
         const controller = new AbortController();
@@ -108,6 +113,7 @@ export const useQuizGeneration = ({
                 sourceFileKey,
             };
             setGenerationStep('idle');
+            return document;
         } catch (error: unknown) {
             activeGenerationRef.current = null;
             if (controller.signal.aborted) {
@@ -117,6 +123,7 @@ export const useQuizGeneration = ({
                 showError(normalizedError.message || 'Không thể đọc tài liệu.');
                 setGenerationStep('idle');
             }
+            return null;
         } finally {
             setIsGenerating(false);
             void quota.refresh();
@@ -149,18 +156,24 @@ export const useQuizGeneration = ({
             return;
         }
 
+        let legacyOcrDocument: OcrDocument | null = null;
         if (isPdfMode && form.uploadedFile) {
-            const pending = activeGenerationRef.current;
-            const hasMatchingPreview = form.ocrDocument
-                && pending?.phase === 'generate'
-                && pending.sourceFileKey === fileKey(form.uploadedFile);
-            if (!hasMatchingPreview) {
-                await prepareOcrPreview(form.uploadedFile);
-                return;
-            }
-            if (form.selectedOcrPageNumbers.length === 0) {
-                showError('Cần chọn ít nhất một trang.');
-                return;
+            if (aiQuizV2Enabled) {
+                const pending = activeGenerationRef.current;
+                const hasMatchingPreview = form.ocrDocument
+                    && pending?.phase === 'generate'
+                    && pending.sourceFileKey === fileKey(form.uploadedFile);
+                if (!hasMatchingPreview) {
+                    await prepareOcrPreview(form.uploadedFile);
+                    return;
+                }
+                if (form.selectedOcrPageNumbers.length === 0) {
+                    showError('Cần chọn ít nhất một trang.');
+                    return;
+                }
+            } else {
+                legacyOcrDocument = await prepareOcrPreview(form.uploadedFile);
+                if (!legacyOcrDocument) return;
             }
         }
 
@@ -234,10 +247,14 @@ export const useQuizGeneration = ({
             let generationFile: File | undefined = form.uploadedFile || undefined;
             let generationTopic = form.topic;
 
-            if (isPdfMode && form.uploadedFile && form.ocrDocument) {
+            const sourceOcrDocument = legacyOcrDocument ?? form.ocrDocument;
+            if (isPdfMode && form.uploadedFile && sourceOcrDocument) {
+                const selectedPageNumbers = legacyOcrDocument
+                    ? legacyOcrDocument.pages.map((page) => page.pageNumber)
+                    : form.selectedOcrPageNumbers;
                 const selectedOcrText = buildSelectedOcrText(
-                    form.ocrDocument,
-                    form.selectedOcrPageNumbers,
+                    sourceOcrDocument,
+                    selectedPageNumbers,
                 );
                 if (selectedOcrText.trim().length < 120) {
                     throw new Error(

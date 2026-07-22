@@ -13,6 +13,7 @@ interface QuestionSettingsSectionProps {
     setDifficultyLevels: (value: DifficultyLevels) => void;
     questionBlueprint: QuizBlueprint;
     setQuestionBlueprint: (value: QuizBlueprint) => void;
+    showBlueprint?: boolean;
     isOpenTypes: boolean;
     isOpenDifficulty: boolean;
     onToggle: (id: string) => void;
@@ -25,6 +26,7 @@ const QuestionSettingsSection: React.FC<QuestionSettingsSectionProps> = ({
     setDifficultyLevels,
     questionBlueprint,
     setQuestionBlueprint,
+    showBlueprint = true,
     isOpenTypes,
     isOpenDifficulty,
     onToggle,
@@ -37,7 +39,7 @@ const QuestionSettingsSection: React.FC<QuestionSettingsSectionProps> = ({
             <CollapsibleSection
                 id="questionTypes"
                 icon={<BookOpen className="h-4 w-4" />}
-                title="Dạng câu hỏi & ma trận"
+                title={showBlueprint ? 'Dạng câu hỏi & ma trận' : 'Dạng câu hỏi'}
                 badge={`${selectedTypesCount} dạng · ${questionCount} câu`}
                 isOpen={isOpenTypes}
                 onToggle={onToggle}
@@ -47,10 +49,12 @@ const QuestionSettingsSection: React.FC<QuestionSettingsSectionProps> = ({
                         selectedTypes={selectedTypes}
                         onChange={setSelectedTypes}
                     />
-                    <QuestionBlueprintSection
-                        blueprint={questionBlueprint}
-                        onChange={setQuestionBlueprint}
-                    />
+                    {showBlueprint && (
+                        <QuestionBlueprintSection
+                            blueprint={questionBlueprint}
+                            onChange={setQuestionBlueprint}
+                        />
+                    )}
                 </div>
             </CollapsibleSection>
 

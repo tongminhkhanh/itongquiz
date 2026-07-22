@@ -21,3 +21,12 @@ export const isManualQuizWorkspaceEnabled = (): boolean => resolveFeatureFlag(
     import.meta.env.VITE_FEATURE_MANUAL_QUIZ_WORKSPACE_V1,
     true,
 );
+
+/**
+ * AI Quiz Generation V2 starts disabled so production can roll out gradually.
+ * Set VITE_FEATURE_AI_QUIZ_V2=true for a controlled cohort or full release.
+ */
+export const isAiQuizV2Enabled = (): boolean => resolveFeatureFlag(
+    import.meta.env.VITE_FEATURE_AI_QUIZ_V2,
+    false,
+);
