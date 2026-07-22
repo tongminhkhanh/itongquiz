@@ -46,10 +46,13 @@ vi.mock('../src/utils/toast', () => ({
 const makeForm = (uploadedFile: File | null = null) => ({
   quizMode: uploadedFile ? 'pdf' : 'exam',
   setQuizMode: vi.fn(),
+  quizIntent: 'EXAM',
+  setQuizIntent: vi.fn(),
   uploadedFile,
   topic: 'Phân số',
   classLevel: '4',
   selectedTypes: { [QuestionType.MCQ]: true },
+  questionTypeAllocations: [{ type: QuestionType.MCQ, count: 1 }],
   difficultyLevels: { level1: 1, level2: 0, level3: 0 },
   category: 'toan',
   content: 'Yêu cầu của giáo viên',

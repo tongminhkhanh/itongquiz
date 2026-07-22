@@ -74,6 +74,8 @@ export const useQuizGeneration = ({
         const activeQuizMode = modeOverride ?? form.quizMode;
         const isPdfMode = activeQuizMode === 'pdf';
         form.setQuizMode(activeQuizMode);
+        if (activeQuizMode === 'exam') form.setQuizIntent('EXAM');
+        if (activeQuizMode === 'practice') form.setQuizIntent('PRACTICE');
 
         const validation = validateQuizGenerationInput({
             mode: activeQuizMode,
@@ -81,6 +83,12 @@ export const useQuizGeneration = ({
             topic: form.topic,
             classLevel: form.classLevel,
             selectedTypes: form.selectedTypes,
+            typeAllocations: form.questionTypeAllocations,
+            intent: activeQuizMode === 'exam'
+                ? 'EXAM'
+                : activeQuizMode === 'practice'
+                    ? 'PRACTICE'
+                    : form.quizIntent,
             difficultyLevels: form.difficultyLevels,
         });
         if (validation.error) {
@@ -188,12 +196,17 @@ export const useQuizGeneration = ({
                 }`,
                 questionCount: validation.questionCount,
                 questionTypes: validation.enabledTypes,
+                typeAllocations: form.questionTypeAllocations,
                 difficultyLevels: form.difficultyLevels,
                 promptProfile: form.promptProfile,
                 imageLibrary: form.imageLibrary,
                 customPrompt: form.customPrompt,
                 quizMode: activeQuizMode,
-                intent: activeQuizMode === 'exam' ? 'EXAM' : 'PRACTICE',
+                intent: activeQuizMode === 'exam'
+                    ? 'EXAM'
+                    : activeQuizMode === 'practice'
+                        ? 'PRACTICE'
+                        : form.quizIntent,
                 sourceMode: isPdfMode ? 'DOCUMENT' : 'TOPIC',
                 isPdfMode,
             });
@@ -260,6 +273,7 @@ export const useQuizGeneration = ({
                     title: form.quizTitle || `Sinh lại câu hỏi: ${form.topic || 'Bài kiểm tra'}`,
                     questionCount: 1,
                     questionTypes: [question.type],
+                    typeAllocations: [{ type: question.type, count: 1 }],
                     difficultyLevels: {
                         level1: question.difficulty === 1 ? 1 : 0,
                         level2: question.difficulty === 2 || !question.difficulty ? 1 : 0,
@@ -269,7 +283,7 @@ export const useQuizGeneration = ({
                     imageLibrary: form.imageLibrary,
                     customPrompt: prompt,
                     quizMode: form.quizMode,
-                    intent: form.quizMode === 'exam' ? 'EXAM' : 'PRACTICE',
+                    intent: form.quizIntent,
                     sourceMode: form.quizMode === 'pdf' ? 'DOCUMENT' : 'TOPIC',
                     isPdfMode: false,
                 }),

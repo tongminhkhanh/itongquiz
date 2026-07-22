@@ -1,5 +1,6 @@
 import { QuestionType } from '../../../types';
 import type { DifficultyLevels, QuizMode } from './quizCreation.types';
+import { validateQuizBlueprint, type QuestionTypeAllocation, type QuizIntent } from './quizBlueprint';
 
 export interface QuizGenerationValidationInput {
     mode: QuizMode;
@@ -7,6 +8,8 @@ export interface QuizGenerationValidationInput {
     topic: string;
     classLevel: string;
     selectedTypes: Record<string, boolean>;
+    typeAllocations?: QuestionTypeAllocation[];
+    intent?: QuizIntent;
     difficultyLevels: DifficultyLevels;
 }
 
@@ -44,6 +47,18 @@ export const validateQuizGenerationInput = (
     }
     if (questionCount === 0) {
         return { error: 'Tổng số câu hỏi phải lớn hơn 0', enabledTypes, questionCount };
+    }
+    if (input.typeAllocations) {
+        const blueprintErrors = validateQuizBlueprint({
+            intent: input.intent ?? (input.mode === 'exam' ? 'EXAM' : 'PRACTICE'),
+            sourceMode: input.mode === 'pdf' ? 'DOCUMENT' : 'TOPIC',
+            totalQuestions: questionCount,
+            typeAllocations: input.typeAllocations,
+            difficultyLevels: input.difficultyLevels,
+        });
+        if (blueprintErrors.length > 0) {
+            return { error: blueprintErrors[0], enabledTypes, questionCount };
+        }
     }
 
     return { error: null, enabledTypes, questionCount };

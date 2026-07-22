@@ -4,6 +4,7 @@ import type { DifficultyLevels, QuizMode } from './quizCreation.types';
 import {
     buildBalancedTypeAllocations,
     validateQuizBlueprint,
+    type QuestionTypeAllocation,
     type QuizBlueprint,
     type QuizIntent,
     type QuizSourceMode,
@@ -13,6 +14,7 @@ interface BuildQuizGenerationOptionsInput {
     title: string;
     questionCount: number;
     questionTypes: QuestionType[];
+    typeAllocations?: QuestionTypeAllocation[];
     difficultyLevels: DifficultyLevels;
     promptProfile: PromptProfileOptions;
     imageLibrary: ImageLibraryItem[];
@@ -37,7 +39,9 @@ const buildBlueprint = (input: BuildQuizGenerationOptionsInput): QuizBlueprint =
         intent: input.intent ?? (legacyMode === 'exam' ? 'EXAM' : 'PRACTICE'),
         sourceMode: input.sourceMode ?? (legacyMode === 'pdf' ? 'DOCUMENT' : 'TOPIC'),
         totalQuestions: input.questionCount,
-        typeAllocations: buildBalancedTypeAllocations(input.questionTypes, input.questionCount),
+        typeAllocations: input.typeAllocations
+            ? input.typeAllocations.map((allocation) => ({ ...allocation }))
+            : buildBalancedTypeAllocations(input.questionTypes, input.questionCount),
         difficultyLevels: { ...input.difficultyLevels },
     };
     const errors = validateQuizBlueprint(blueprint);

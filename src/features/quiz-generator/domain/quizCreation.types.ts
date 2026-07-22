@@ -1,6 +1,6 @@
 import type { Quiz } from '../../../types';
 import type { AIProvider, PromptProfileOptions } from '../../../services/geminiService';
-import type { QuizIntent, QuizSourceMode } from './quizBlueprint';
+import type { QuestionTypeAllocation, QuizIntent, QuizSourceMode } from './quizBlueprint';
 
 export type QuizMode = 'exam' | 'practice' | 'pdf';
 export type GenerationStep = 'idle' | 'generating' | 'reviewing' | 'repairing' | 'completed';
@@ -44,6 +44,7 @@ export interface QuizGenerationFormSnapshot {
     sourceMode?: QuizSourceMode;
     aiProvider: AIProvider;
     selectedTypes: Record<string, boolean>;
+    questionTypeAllocations?: QuestionTypeAllocation[];
     difficultyLevels: DifficultyLevels;
     promptProfile: PromptProfileOptions;
     requireCode: boolean;

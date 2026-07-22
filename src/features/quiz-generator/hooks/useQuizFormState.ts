@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import type { ImageLibraryItem, Quiz } from '../../../types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { QuestionType, type ImageLibraryItem, type Quiz } from '../../../types';
 import type {
     AIProvider,
     LearnerPromptMode,
@@ -24,6 +24,13 @@ import type {
     QuizMode,
     TrangNguyenSearchMode,
 } from '../domain/quizCreation.types';
+import {
+    buildBalancedTypeAllocations,
+    validateQuizBlueprint,
+    type QuestionTypeAllocation,
+    type QuizBlueprint,
+    type QuizIntent,
+} from '../domain/quizBlueprint';
 import { useGeneratedQuizSync } from './useGeneratedQuizSync';
 
 interface UseQuizFormStateOptions {
@@ -32,6 +39,16 @@ interface UseQuizFormStateOptions {
     lockedClass: string;
     teacherName: string | null;
 }
+
+const enabledTypesFromSelection = (selectedTypes: Record<string, boolean>): QuestionType[] => (
+    Object.entries(selectedTypes)
+        .filter(([, enabled]) => enabled)
+        .map(([type]) => type as QuestionType)
+);
+
+const createDefaultTypeAllocations = (): QuestionTypeAllocation[] => (
+    buildBalancedTypeAllocations(enabledTypesFromSelection(createDefaultSelectedTypes()), 10)
+);
 
 export const useQuizFormState = ({
     editingQuiz,
@@ -54,11 +71,15 @@ export const useQuizFormState = ({
     const [error, setError] = useState<string | null>(null);
     const [customPrompt, setCustomPrompt] = useState('');
     const [quizMode, setQuizMode] = useState<QuizMode>('practice');
+    const [quizIntent, setQuizIntent] = useState<QuizIntent>('PRACTICE');
     const [aiProvider, setAiProvider] = useState<AIProvider>(() =>
         (localStorage.getItem('ai_provider') as AIProvider) || 'llm-mux'
     );
-    const [selectedTypes, setSelectedTypes] = useState<Record<string, boolean>>(
+    const [selectedTypes, setSelectedTypesState] = useState<Record<string, boolean>>(
         createDefaultSelectedTypes,
+    );
+    const [questionTypeAllocations, setQuestionTypeAllocations] = useState<QuestionTypeAllocation[]>(
+        createDefaultTypeAllocations,
     );
     const [difficultyLevels, setDifficultyLevels] = useState<DifficultyLevels>(
         createDefaultDifficultyLevels,
@@ -82,6 +103,33 @@ export const useQuizFormState = ({
     const [deadline, setDeadline] = useState(createDefaultDeadline);
     const [maxAttempts, setMaxAttempts] = useState(3);
     const [tnSearchMode, setTnSearchMode] = useState<TrangNguyenSearchMode>('search');
+
+    const questionCount = difficultyLevels.level1 + difficultyLevels.level2 + difficultyLevels.level3;
+    const questionBlueprint = useMemo<QuizBlueprint>(() => ({
+        intent: quizIntent,
+        sourceMode: quizMode === 'pdf' ? 'DOCUMENT' : 'TOPIC',
+        totalQuestions: questionCount,
+        typeAllocations: questionTypeAllocations.map((allocation) => ({ ...allocation })),
+        difficultyLevels: { ...difficultyLevels },
+    }), [difficultyLevels, questionCount, questionTypeAllocations, quizIntent, quizMode]);
+    const blueprintErrors = useMemo(
+        () => validateQuizBlueprint(questionBlueprint),
+        [questionBlueprint],
+    );
+
+    const setSelectedTypes = (nextTypes: Record<string, boolean>) => {
+        setSelectedTypesState(nextTypes);
+        setQuestionTypeAllocations(buildBalancedTypeAllocations(
+            enabledTypesFromSelection(nextTypes),
+            questionCount,
+        ));
+    };
+
+    const setQuestionBlueprint = (nextBlueprint: QuizBlueprint) => {
+        setQuizIntent(nextBlueprint.intent);
+        setQuestionTypeAllocations(nextBlueprint.typeAllocations.map((allocation) => ({ ...allocation })));
+        setDifficultyLevels({ ...nextBlueprint.difficultyLevels });
+    };
 
     const toggleSection = (section: string) => {
         setExpandedSections((previous) => ({
@@ -163,6 +211,8 @@ export const useQuizFormState = ({
         setAiSuggestedTags([]);
         setPromptProfile(DEFAULT_PROMPT_PROFILE);
         setProfilePresetNotice(null);
+        setQuizMode('practice');
+        setQuizIntent('PRACTICE');
     };
 
     useEffect(() => {
@@ -186,6 +236,8 @@ export const useQuizFormState = ({
             setAiSuggestedTags(normalizeTags(editingQuiz.suggestedTags));
             setPromptProfile(DEFAULT_PROMPT_PROFILE);
             setProfilePresetNotice(null);
+            setQuizIntent(editingQuiz.isPractice ? 'PRACTICE' : 'EXAM');
+            setQuizMode(editingQuiz.isPractice ? 'practice' : 'exam');
             return;
         }
 
@@ -208,6 +260,8 @@ export const useQuizFormState = ({
         setAiSuggestedTags([]);
         setPromptProfile(DEFAULT_PROMPT_PROFILE);
         setProfilePresetNotice(null);
+        setQuizMode('practice');
+        setQuizIntent('PRACTICE');
     }, [editingQuiz, isClassLocked, lockedClass]);
 
     useEffect(() => {
@@ -263,10 +317,18 @@ export const useQuizFormState = ({
         setCustomPrompt,
         quizMode,
         setQuizMode,
+        quizIntent,
+        setQuizIntent,
+        questionBlueprint,
+        blueprintErrors,
+        isBlueprintValid: blueprintErrors.length === 0,
+        setQuestionBlueprint,
         aiProvider,
         setAiProvider,
         selectedTypes,
         setSelectedTypes,
+        questionTypeAllocations,
+        setQuestionTypeAllocations,
         difficultyLevels,
         setDifficultyLevels,
         promptProfile,
