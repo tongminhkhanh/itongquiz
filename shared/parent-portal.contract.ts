@@ -48,7 +48,9 @@ export interface ParentResultHistoryItem {
   score: number;
   correctCount: number;
   totalQuestions: number;
+  correctRate: number;
   classification: string | null;
+  hasTeacherReport: boolean;
   comment: string | null;
   needsImprovement: string | null;
   encouragement: string | null;
@@ -61,7 +63,7 @@ export interface ParentHomeworkHistoryItem {
   title: string;
   subject: string;
   deadline: string;
-  status: 'not_submitted' | 'submitted' | 'graded' | 'closed';
+  status: 'pending' | 'submitted' | 'graded' | 'overdue';
   score: number | null;
   teacherFeedback: string | null;
   submittedAt: string | null;
@@ -72,6 +74,7 @@ export interface ParentCertificateHistoryItem {
   id: string;
   batchId: string;
   title: string;
+  teacherName: string;
   message: string | null;
   quizTitle: string | null;
   studentScore: number | null;
