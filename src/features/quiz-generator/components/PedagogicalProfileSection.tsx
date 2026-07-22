@@ -12,8 +12,7 @@ interface PedagogicalProfileSectionProps {
     onSelectLearnerMode: (mode: LearnerPromptMode) => void;
 }
 
-const baseCardClass =
-    'w-full rounded-2xl border p-4 text-left transition-all shadow-sm hover:-translate-y-0.5';
+const baseCardClass = 'w-full rounded-2xl border p-4 text-left transition-colors shadow-sm';
 
 const PedagogicalProfileSection: React.FC<PedagogicalProfileSectionProps> = ({
     promptProfile,
@@ -28,9 +27,9 @@ const PedagogicalProfileSection: React.FC<PedagogicalProfileSectionProps> = ({
     return (
         <CollapsibleSection
             id="pedagogy"
-            icon={<BookMarked className="w-4 h-4" />}
-            title="Dinh huong ra de"
-            subtitle="Thong tu 27, boi duong gioi, phu dao hoc sinh"
+            icon={<BookMarked className="h-4 w-4" />}
+            title="Định hướng ra đề"
+            subtitle="Thông tư 27, bồi dưỡng học sinh giỏi, phụ đạo học sinh"
             isOpen={isOpen}
             onToggle={onToggle}
         >
@@ -38,6 +37,7 @@ const PedagogicalProfileSection: React.FC<PedagogicalProfileSectionProps> = ({
                 <button
                     type="button"
                     onClick={onToggleThongTu27}
+                    aria-pressed={isThongTu27Enabled}
                     className={`${baseCardClass} ${
                         isThongTu27Enabled
                             ? 'border-blue-500 bg-blue-50 text-blue-900 shadow-blue-100'
@@ -49,22 +49,24 @@ const PedagogicalProfileSection: React.FC<PedagogicalProfileSectionProps> = ({
                             isThongTu27Enabled
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-slate-100 text-slate-500'
-                        }`}>
-                            <ShieldCheck className="w-5 h-5" />
+                        }`}
+                        >
+                            <ShieldCheck className="h-5 w-5" />
                         </div>
                         <div className="flex-1">
                             <div className="flex items-center justify-between gap-3">
-                                <h4 className="text-sm font-bold">Bam Thong tu 27</h4>
+                                <h4 className="text-sm font-bold">Bám Thông tư 27</h4>
                                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${
                                     isThongTu27Enabled
                                         ? 'bg-blue-600 text-white'
                                         : 'bg-slate-100 text-slate-500'
-                                }`}>
-                                    {isThongTu27Enabled ? 'Dang bat' : 'Dang tat'}
+                                }`}
+                                >
+                                    {isThongTu27Enabled ? 'Đang bật' : 'Đang tắt'}
                                 </span>
                             </div>
                             <p className="mt-1 text-xs leading-5 text-slate-600">
-                                Bam chuan danh gia tieu hoc, ngon ngu phu hop lua tuoi, uu tien cau hoi co y nghia hoc tap va phan hoa hop ly.
+                                Bám chuẩn đánh giá tiểu học, dùng ngôn ngữ phù hợp lứa tuổi, ưu tiên câu hỏi có ý nghĩa học tập và phân hóa hợp lý.
                             </p>
                         </div>
                     </div>
@@ -74,29 +76,33 @@ const PedagogicalProfileSection: React.FC<PedagogicalProfileSectionProps> = ({
                     <button
                         type="button"
                         disabled={!isThongTu27Enabled}
-                        onClick={() => onSelectLearnerMode(promptProfile.learnerMode === 'gifted' ? 'default' : 'gifted')}
+                        aria-pressed={promptProfile.learnerMode === 'gifted'}
+                        onClick={() => onSelectLearnerMode(
+                            promptProfile.learnerMode === 'gifted' ? 'default' : 'gifted',
+                        )}
                         className={`${baseCardClass} ${
                             promptProfile.learnerMode === 'gifted'
                                 ? 'border-amber-500 bg-amber-50 text-amber-900 shadow-amber-100'
                                 : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                        } ${!isThongTu27Enabled ? 'cursor-not-allowed opacity-50 hover:translate-y-0' : ''}`}
+                        } ${!isThongTu27Enabled ? 'cursor-not-allowed opacity-50' : ''}`}
                     >
                         <div className="flex items-start gap-3">
                             <div className={`rounded-xl p-2 ${
                                 promptProfile.learnerMode === 'gifted'
                                     ? 'bg-amber-500 text-white'
                                     : 'bg-slate-100 text-slate-500'
-                            }`}>
-                                <GraduationCap className="w-5 h-5" />
+                            }`}
+                            >
+                                <GraduationCap className="h-5 w-5" />
                             </div>
                             <div className="flex-1">
-                                <h4 className="text-sm font-bold">Boi duong hoc sinh gioi</h4>
+                                <h4 className="text-sm font-bold">Bồi dưỡng học sinh giỏi</h4>
                                 <p className="mt-1 text-xs leading-5 text-slate-600">
-                                    Tang cau suy luan va van dung, nghieng ro sang boi duong nhom kha gioi trong pham vi tieu hoc.
+                                    Tăng câu suy luận và vận dụng, hướng rõ vào nhóm khá giỏi nhưng vẫn trong phạm vi chương trình tiểu học.
                                 </p>
                                 {!isThongTu27Enabled && (
                                     <p className="mt-2 text-[11px] font-medium text-slate-400">
-                                        Bat Thong tu 27 de su dung profile nay.
+                                        Bật Thông tư 27 để sử dụng định hướng này.
                                     </p>
                                 )}
                             </div>
@@ -106,29 +112,33 @@ const PedagogicalProfileSection: React.FC<PedagogicalProfileSectionProps> = ({
                     <button
                         type="button"
                         disabled={!isThongTu27Enabled}
-                        onClick={() => onSelectLearnerMode(promptProfile.learnerMode === 'remedial' ? 'default' : 'remedial')}
+                        aria-pressed={promptProfile.learnerMode === 'remedial'}
+                        onClick={() => onSelectLearnerMode(
+                            promptProfile.learnerMode === 'remedial' ? 'default' : 'remedial',
+                        )}
                         className={`${baseCardClass} ${
                             promptProfile.learnerMode === 'remedial'
                                 ? 'border-emerald-500 bg-emerald-50 text-emerald-900 shadow-emerald-100'
                                 : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                        } ${!isThongTu27Enabled ? 'cursor-not-allowed opacity-50 hover:translate-y-0' : ''}`}
+                        } ${!isThongTu27Enabled ? 'cursor-not-allowed opacity-50' : ''}`}
                     >
                         <div className="flex items-start gap-3">
                             <div className={`rounded-xl p-2 ${
                                 promptProfile.learnerMode === 'remedial'
                                     ? 'bg-emerald-500 text-white'
                                     : 'bg-slate-100 text-slate-500'
-                            }`}>
-                                <HeartHandshake className="w-5 h-5" />
+                            }`}
+                            >
+                                <HeartHandshake className="h-5 w-5" />
                             </div>
                             <div className="flex-1">
-                                <h4 className="text-sm font-bold">Phu dao hoc sinh yeu kem</h4>
+                                <h4 className="text-sm font-bold">Phụ đạo học sinh cần hỗ trợ</h4>
                                 <p className="mt-1 text-xs leading-5 text-slate-600">
-                                    Uu tien kien thuc cot loi, tang cau nhan biet va thong hieu gan, giam nhieu gay roi.
+                                    Ưu tiên kiến thức cốt lõi, tăng câu nhận biết và thông hiểu gần gũi, giảm phương án nhiễu gây rối.
                                 </p>
                                 {!isThongTu27Enabled && (
                                     <p className="mt-2 text-[11px] font-medium text-slate-400">
-                                        Bat Thong tu 27 de su dung profile nay.
+                                        Bật Thông tư 27 để sử dụng định hướng này.
                                     </p>
                                 )}
                             </div>
@@ -137,15 +147,15 @@ const PedagogicalProfileSection: React.FC<PedagogicalProfileSectionProps> = ({
                 </div>
 
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Trang thai hien tai</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Trạng thái hiện tại</p>
                     <p className="mt-1 text-sm font-medium text-slate-700">
                         {!isThongTu27Enabled
-                            ? 'Dang dung che do tao de thong thuong.'
+                            ? 'Đang dùng chế độ tạo đề thông thường.'
                             : promptProfile.learnerMode === 'gifted'
-                                ? 'Dang dung chuan Thong tu 27 va profile boi duong hoc sinh gioi.'
+                                ? 'Đang dùng chuẩn Thông tư 27 và định hướng bồi dưỡng học sinh giỏi.'
                                 : promptProfile.learnerMode === 'remedial'
-                                    ? 'Dang dung chuan Thong tu 27 va profile phu dao hoc sinh yeu kem.'
-                                    : 'Dang dung chuan Thong tu 27.'}
+                                    ? 'Đang dùng chuẩn Thông tư 27 và định hướng phụ đạo học sinh cần hỗ trợ.'
+                                    : 'Đang dùng chuẩn Thông tư 27.'}
                     </p>
                     {profilePresetNotice && (
                         <p className="mt-2 text-xs text-slate-500">{profilePresetNotice}</p>
