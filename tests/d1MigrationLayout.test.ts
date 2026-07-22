@@ -34,6 +34,17 @@ describe('D1 migration layout', () => {
     expect(registered).toHaveLength(25);
     const numericPrefixes = migrations.map((name) => name.slice(0, 4));
     expect(new Set(numericPrefixes).size).toBe(numericPrefixes.length);
-    expect(migrations.at(-1)).toBe('0036_seed_itong_certificate_templates.sql');
+    expect(migrations.at(-1)).toBe('0037_create_ai_generation_actions.sql');
+  });
+
+  it('stores teacher AI quota and action reservations in migrations', () => {
+    const sql = fs.readFileSync(
+      path.join(migrationsDir, '0037_create_ai_generation_actions.sql'),
+      'utf8',
+    );
+
+    expect(sql).toContain('CREATE TABLE IF NOT EXISTS teacher_ai_daily_usage');
+    expect(sql).toContain('CREATE TABLE IF NOT EXISTS ai_generation_actions');
+    expect(sql).toContain("CHECK(status IN ('RESERVED', 'SUCCEEDED', 'FAILED', 'EXPIRED'))");
   });
 });
