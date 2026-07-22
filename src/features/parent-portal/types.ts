@@ -32,6 +32,30 @@ export interface ParentNotificationPage {
   unreadCount: number;
 }
 
+export interface ParentAnnouncementView {
+  id: string;
+  classId: string;
+  title: string;
+  body: string;
+  isImportant: boolean;
+  status: 'PUBLISHED' | 'REVOKED';
+  createdBy: string;
+  publishedAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  targetCount: number;
+  readCount: number;
+  unreadCount: number;
+}
+
+export interface ParentDeliveryView {
+  studentId: string;
+  studentName: string;
+  parentAccessStatus: 'not_issued' | 'pending' | 'active' | 'revoked';
+  unreadCount: number;
+  lastViewedAt: string | null;
+}
+
 export interface ParentLinkSafeView {
   id: string;
   studentId: string;

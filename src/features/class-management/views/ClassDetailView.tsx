@@ -4,6 +4,8 @@ import { Classroom, CreateStudentPayload } from '../types';
 import { Button } from '../../../components/common';
 import { StudentTable } from '../components/StudentTable';
 import { AddStudentModal, ResetPasswordModal } from '../components/Modals';
+import ParentAccessModal from '../components/ParentAccessModal';
+import ParentCommunicationPanel from '../components/ParentCommunicationPanel';
 import { useRosterStore } from '../../../stores/useRosterStore';
 import { showSuccess, showError } from '../../../utils/toast';
 import type { Student } from '../types';
@@ -26,6 +28,7 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({ classroom, onB
     const [resettingStudent, setResettingStudent] = useState<Student | null>(null);
     const [resetError, setResetError] = useState<string | null>(null);
     const [isResetting, setIsResetting] = useState(false);
+    const [parentAccessStudent, setParentAccessStudent] = useState<Student | null>(null);
 
     const visibleStudents = useMemo(() => {
         const keyword = searchTerm.trim().toLocaleLowerCase('vi');
@@ -145,6 +148,8 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({ classroom, onB
 
             {store.error && <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700">{store.error}</div>}
 
+            <ParentCommunicationPanel classId={classroom.id} />
+
             {isLoadingStudents ? (
                  <div className="flex items-center justify-center py-12">
                      <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
@@ -155,6 +160,7 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({ classroom, onB
                     classId={classroom.id}
                     onResetPassword={handleResetPassword}
                     onRemoveStudent={handleRemoveStudent}
+                    onParentAccess={setParentAccessStudent}
                 />
             ) : students.length > 0 ? (
                 <div className="bg-white rounded-2xl border p-10 text-center text-gray-500">Không tìm thấy học sinh phù hợp.</div>
@@ -181,6 +187,14 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({ classroom, onB
             )}
             {resettingStudent && (
                 <ResetPasswordModal student={resettingStudent} isSaving={isResetting} error={resetError} onClose={() => !isResetting && setResettingStudent(null)} onSubmit={submitResetPassword} />
+            )}
+            {parentAccessStudent && (
+                <ParentAccessModal
+                    studentId={parentAccessStudent.id}
+                    studentName={parentAccessStudent.fullName}
+                    className={classroom.name}
+                    onClose={() => setParentAccessStudent(null)}
+                />
             )}
         </div>
     );

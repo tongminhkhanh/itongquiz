@@ -10,6 +10,8 @@ import type {
 import { executeApiAction } from '../../services/api/apiClient';
 import type {
   ParentActivationPreview,
+  ParentAnnouncementView,
+  ParentDeliveryView,
   ParentLinkSafeView,
   ParentNotificationPage,
   ParentSessionResponse,
@@ -86,13 +88,17 @@ export const createParentAnnouncement = (input: {
   body: string;
   isImportant: boolean;
   expiresAt?: string;
-}) => unwrap('create_parent_announcement', input);
-export const listParentAnnouncements = (classId: string) => unwrap(
-  'list_parent_announcements', { classId },
-);
-export const revokeParentAnnouncement = (announcementId: string) => unwrap(
-  'revoke_parent_announcement', { announcementId },
-);
-export const getParentDelivery = (classId: string, kind?: ParentNotificationKind) => unwrap(
-  'get_parent_delivery', { classId, kind },
-);
+}) => unwrap<{
+  announcement: ParentAnnouncementView;
+  delivery: { targetCount: number; createdCount: number };
+}>('create_parent_announcement', input);
+export const listParentAnnouncements = (classId: string) => unwrap<{
+  items: ParentAnnouncementView[];
+}>('list_parent_announcements', { classId });
+export const revokeParentAnnouncement = (announcementId: string) => unwrap<{
+  id: string;
+  status: 'REVOKED';
+}>('revoke_parent_announcement', { announcementId });
+export const getParentDelivery = (classId: string, kind?: ParentNotificationKind) => unwrap<{
+  items: ParentDeliveryView[];
+}>('get_parent_delivery', { classId, kind });
