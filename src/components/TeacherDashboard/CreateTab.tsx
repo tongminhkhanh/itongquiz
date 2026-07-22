@@ -15,6 +15,7 @@ import PedagogicalProfileSection from '../../features/quiz-generator/components/
 import ContentSourceSection from '../../features/quiz-generator/components/ContentSourceSection';
 import AdvancedSettingsSection from '../../features/quiz-generator/components/AdvancedSettingsSection';
 import AssignmentSection from '../../features/quiz-generator/components/AssignmentSection';
+import GenerationProgressPanel from '../../features/quiz-generator/components/GenerationProgressPanel';
 import SuccessModal from '../../features/quiz-generator/components/SuccessModal';
 
 interface CreateTabProps {
@@ -183,7 +184,13 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                             Lượt tạo đề AI hôm nay: <span className="font-bold">{logic.aiUsageRemaining}/{logic.dailyAiLimit}</span>
                         </div>
                     )}
-                    {logic.category === 'trang-nguyen' ? (
+                    {logic.generationStep !== 'idle' && (
+                        <GenerationProgressPanel
+                            step={logic.generationStep}
+                            onCancel={logic.cancelGeneration}
+                        />
+                    )}
+                    {!logic.isGenerating && (logic.category === 'trang-nguyen' ? (
                         <div className="space-y-2">
                             <button
                                 onClick={() => { logic.setTnSearchMode('search'); logic.handleGenerate('practice'); }}
@@ -254,7 +261,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                                 </button>
                             </div>
                         </>
-                    )}
+                    ))}
                 </div>
             </div>
 

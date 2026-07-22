@@ -96,6 +96,7 @@ export const useQuizGeneration = ({
             return;
         }
         setIsGenerating(true);
+        setGenerationStep(isPdfMode ? 'reading_document' : 'generating');
         form.setAiDetectedCategory(null);
         form.setAiDetectedLesson('');
         form.setAiSuggestedTags([]);
@@ -143,6 +144,7 @@ export const useQuizGeneration = ({
                     showOnHome: form.showOnHome,
                     tags: form.tags,
                 } as Quiz);
+                setGenerationStep('completed');
                 return;
             }
 
@@ -156,7 +158,6 @@ export const useQuizGeneration = ({
             let generationTopic = form.topic;
 
             if (isPdfMode && form.uploadedFile) {
-                setGenerationStep('generating');
                 const ocrProvider: AIProvider = [
                     'gemini',
                     'llm-mux',
@@ -186,6 +187,7 @@ export const useQuizGeneration = ({
                 ].filter(Boolean).join('\n\n');
                 generationTopic = form.topic || form.uploadedFile.name.replace(/\.[^/.]+$/, '');
                 generationFile = undefined;
+                setGenerationStep('generating');
             }
 
             const options = buildQuizGenerationOptions({
@@ -245,11 +247,13 @@ export const useQuizGeneration = ({
             ));
             setGenerationStep('completed');
         } catch (error: unknown) {
-            if (!controller.signal.aborted) {
+            if (controller.signal.aborted) {
+                setGenerationStep('cancelled');
+            } else {
                 const normalizedError = error instanceof Error ? error : new Error(String(error));
                 showError(normalizedError.message || 'Đã xảy ra lỗi khi tạo đề');
+                setGenerationStep('idle');
             }
-            setGenerationStep('idle');
         } finally {
             if (activeGenerationRef.current?.actionId === action.actionId) {
                 activeGenerationRef.current = null;
@@ -315,6 +319,11 @@ export const useQuizGeneration = ({
         dailyAiLimit: quota.dailyAiLimit,
         handleGenerate,
         handleRegenerateSingle,
-        cancelGeneration: () => activeGenerationRef.current?.controller.abort(),
+        cancelGeneration: () => {
+            const activeGeneration = activeGenerationRef.current;
+            if (!activeGeneration) return;
+            setGenerationStep('cancelled');
+            activeGeneration.controller.abort();
+        },
     };
 };
