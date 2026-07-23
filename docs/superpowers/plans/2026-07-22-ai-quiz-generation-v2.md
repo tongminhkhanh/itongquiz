@@ -2,26 +2,26 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** NÃ¢ng cáº¥p luá»“ng ra Ä‘á» báº±ng AI Ä‘á»ƒ háº¡n má»©c khÃ´ng thá»ƒ bá»‹ nÃ©, tÃ i liá»‡u chá»‰ Ä‘Æ°á»£c gá»­i má»™t láº§n, Ä‘áº§u ra Ä‘Æ°á»£c kiá»ƒm Ä‘á»‹nh báº±ng mÃ£ trÆ°á»›c khi hiá»ƒn thá»‹, cháº¿ Ä‘á»™ Ä‘á» thi/Ã´n táº­p cÃ³ hÃ nh vi khÃ¡c nhau, vÃ  giÃ¡o viÃªn cÃ³ tiáº¿n trÃ¬nh rÃµ rÃ ng Ä‘á»ƒ kiá»ƒm tra trÆ°á»›c khi lÆ°u.
+**Goal:** Nâng cấp luồng ra đề bằng AI để hạn mức không thể bị né, tài liệu chỉ được gửi một lần, đầu ra được kiểm định bằng mã trước khi hiển thị, chế độ đề thi/ôn tập có hành vi khác nhau, và giáo viên có tiến trình rõ ràng để kiểm tra trước khi lưu.
 
-**Architecture:** Giá»¯ Cloudflare Worker lÃ m ranh giá»›i tin cáº­y cho má»i yÃªu cáº§u AI. Má»—i thao tÃ¡c AI cÃ³ `actionId`, `workflow` vÃ  `stage`; Worker dÃ¹ng D1 Ä‘á»ƒ giá»¯ chá»— háº¡n má»©c, chá»‘ng trá»« láº·p, hoÃ n lÆ°á»£t khi upstream tháº¥t báº¡i vÃ  giá»›i háº¡n sá»‘ láº§n gá»i trong má»™t workflow. Frontend tiáº¿p tá»¥c phá»¥ trÃ¡ch tráº£i nghiá»‡m soáº¡n Ä‘á», nhÆ°ng má»i Ä‘áº§u ra AI Ä‘Æ°á»£c coi lÃ  dá»¯ liá»‡u khÃ´ng tin cáº­y vÃ  pháº£i Ä‘i qua Zod schema, kiá»ƒm tra blueprint, sá»­a cÃ³ má»¥c tiÃªu rá»“i má»›i Ä‘Æ°a vÃ o `QuizPreview`.
+**Architecture:** Giữ Cloudflare Worker làm ranh giới tin cậy cho mọi yêu cầu AI. Mỗi thao tác AI có `actionId`, `workflow` và `stage`; Worker dùng D1 để giữ chỗ hạn mức, chống trừ lặp, hoàn lượt khi upstream thất bại và giới hạn số lần gọi trong một workflow. Frontend tiếp tục phụ trách trải nghiệm soạn đề, nhưng mọi đầu ra AI được coi là dữ liệu không tin cậy và phải đi qua Zod schema, kiểm tra blueprint, sửa có mục tiêu rồi mới đưa vào `QuizPreview`.
 
 **Tech Stack:** React 19, TypeScript 5.8, Vite 6, Vitest 4, Cypress 15, Cloudflare Workers, Cloudflare D1, Zod 4, existing AI proxy at `/api/ai/chat`.
 
 ## Global Constraints
 
-- KhÃ´ng thÃªm dependency runtime má»›i; dÃ¹ng `zod`, Vitest, Cypress vÃ  cÃ¡c tiá»‡n Ã­ch Ä‘ang cÃ³.
-- KhÃ´ng thay Ä‘á»•i schema lÆ°u `quizzes` vÃ  `questions` trong giai Ä‘oáº¡n nÃ y.
-- Háº¡n má»©c giÃ¡o viÃªn giá»¯ nguyÃªn `5` thao tÃ¡c AI thÃ nh cÃ´ng má»—i ngÃ y; admin khÃ´ng giá»›i háº¡n.
-- Má»™t thao tÃ¡c táº¡o cáº£ Ä‘á» hoáº·c sinh láº¡i má»™t cÃ¢u chá»‰ tÃ­nh má»™t lÆ°á»£t khi bÆ°á»›c táº¡o chÃ­nh nháº­n upstream HTTP 2xx.
-- OCR, reviewer vÃ  má»™t láº§n sá»­a cÃ³ má»¥c tiÃªu trong cÃ¹ng `actionId` khÃ´ng tÃ­nh thÃªm lÆ°á»£t.
-- Auth lá»—i, rate-limit lá»—i, upstream non-2xx hoáº·c timeout trÆ°á»›c bÆ°á»›c táº¡o chÃ­nh pháº£i hoÃ n láº¡i lÆ°á»£t Ä‘Ã£ giá»¯.
-- Má»™t `actionId` chá»‰ thuá»™c má»™t tÃ i khoáº£n vÃ  má»™t workflow; tÃ¡i sá»­ dá»¥ng sai tráº£ vá» HTTP `409`.
-- File nguá»“n tá»‘i Ä‘a `10 MiB`; chá»‰ cháº¥p nháº­n PDF vÃ  áº£nh JPEG/PNG/WebP.
-- KhÃ´ng ghi prompt, ná»™i dung OCR, Ä‘Ã¡p Ã¡n, file base64, token hoáº·c thÃ´ng tin há»c sinh vÃ o log.
-- Má»i chuá»—i giao diá»‡n vÃ  prompt tiáº¿ng Viá»‡t pháº£i lÃ  UTF-8 cÃ³ dáº¥u, khÃ´ng cÃ²n chuá»—i mojibake nhÆ° `Kh?ng`, `T?I LI?U`.
-- TÃ­nh nÄƒng V2 Ä‘Æ°á»£c báº£o vá»‡ bá»Ÿi `VITE_FEATURE_AI_QUIZ_V2`; máº·c Ä‘á»‹nh `false` cho Ä‘áº¿n checkpoint rollout.
-- Má»—i task pháº£i cháº¡y test liÃªn quan trÆ°á»›c, sau Ä‘Ã³ cháº¡y `npm run build` táº¡i checkpoint.
+- Không thêm dependency runtime mới; dùng `zod`, Vitest, Cypress và các tiện ích đang có.
+- Không thay đổi schema lưu `quizzes` và `questions` trong giai đoạn này.
+- Hạn mức giáo viên giữ nguyên `5` thao tác AI thành công mỗi ngày; admin không giới hạn.
+- Một thao tác tạo cả đề hoặc sinh lại một câu chỉ tính một lượt khi bước tạo chính nhận upstream HTTP 2xx.
+- OCR, reviewer và một lần sửa có mục tiêu trong cùng `actionId` không tính thêm lượt.
+- Auth lỗi, rate-limit lỗi, upstream non-2xx hoặc timeout trước bước tạo chính phải hoàn lại lượt đã giữ.
+- Một `actionId` chỉ thuộc một tài khoản và một workflow; tái sử dụng sai trả về HTTP `409`.
+- File nguồn tối đa `10 MiB`; chỉ chấp nhận PDF và ảnh JPEG/PNG/WebP.
+- Không ghi prompt, nội dung OCR, đáp án, file base64, token hoặc thông tin học sinh vào log.
+- Mọi chuỗi giao diện và prompt tiếng Việt phải là UTF-8 có dấu, không còn chuỗi mojibake như `Kh?ng`, `T?I LI?U`.
+- Tính năng V2 được bảo vệ bởi `VITE_FEATURE_AI_QUIZ_V2`; mặc định `false` cho đến checkpoint rollout.
+- Mỗi task phải chạy test liên quan trước, sau đó chạy `npm run build` tại checkpoint.
 
 ---
 
@@ -29,34 +29,34 @@
 
 ### Worker security and quota
 
-- Create `workers/migrations/0039_create_ai_generation_actions.sql` â€” táº¡o báº£ng ledger thao tÃ¡c AI vÃ  báº£o Ä‘áº£m báº£ng háº¡n má»©c tá»“n táº¡i báº±ng migration.
-- Create `workers/src/services/teacherAiQuotaLedger.ts` â€” giá»¯ lÆ°á»£t, hoÃ n lÆ°á»£t, chá»‘t thÃ nh cÃ´ng vÃ  háº¿t háº¡n reservation.
-- Create `workers/src/services/aiRequestPolicy.ts` â€” kiá»ƒm tra workflow/stage, giá»›i háº¡n sá»‘ láº§n gá»i vÃ  thá»© tá»± gá»i.
-- Modify `workers/src/routes/aiProxy.ts` â€” Ã¡p auth, policy vÃ  quota ngay táº¡i ranh giá»›i AI.
-- Modify `workers/src/routes/teacherAiQuota.ts` â€” chá»‰ Ä‘á»c ledger/service, khÃ´ng tá»± táº¡o báº£ng khi request cháº¡y.
+- Create `workers/migrations/0039_create_ai_generation_actions.sql` — tạo bảng ledger thao tác AI và bảo đảm bảng hạn mức tồn tại bằng migration.
+- Create `workers/src/services/teacherAiQuotaLedger.ts` — giữ lượt, hoàn lượt, chốt thành công và hết hạn reservation.
+- Create `workers/src/services/aiRequestPolicy.ts` — kiểm tra workflow/stage, giới hạn số lần gọi và thứ tự gọi.
+- Modify `workers/src/routes/aiProxy.ts` — áp auth, policy và quota ngay tại ranh giới AI.
+- Modify `workers/src/routes/teacherAiQuota.ts` — chỉ đọc ledger/service, không tự tạo bảng khi request chạy.
 
 ### Frontend request workflow
 
-- Create `src/services/ai/aiAction.ts` â€” táº¡o `actionId` vÃ  kiá»ƒu metadata dÃ¹ng chung á»Ÿ client.
-- Modify `src/services/ai/workerAiClient.ts` â€” gá»­i metadata, há»— trá»£ `AbortSignal`, giá»¯ timeout hiá»‡n táº¡i.
-- Modify `src/services/ai/extractTextFromPdf.ts` â€” OCR dÃ¹ng stage riÃªng vÃ  tráº£ tÃ i liá»‡u cÃ³ cáº¥u trÃºc.
-- Modify `src/features/quiz-generator/hooks/useQuizGeneration.ts` â€” má»™t `actionId` xuyÃªn suá»‘t OCR â†’ generate â†’ review/repair.
+- Create `src/services/ai/aiAction.ts` — tạo `actionId` và kiểu metadata dùng chung ở client.
+- Modify `src/services/ai/workerAiClient.ts` — gửi metadata, hỗ trợ `AbortSignal`, giữ timeout hiện tại.
+- Modify `src/services/ai/extractTextFromPdf.ts` — OCR dùng stage riêng và trả tài liệu có cấu trúc.
+- Modify `src/features/quiz-generator/hooks/useQuizGeneration.ts` — một `actionId` xuyên suốt OCR → generate → review/repair.
 
 ### Blueprint and validation
 
-- Create `src/features/quiz-generator/domain/quizBlueprint.ts` â€” Ã½ Ä‘á»‹nh Ä‘á», phÃ¢n bá»• dáº¡ng cÃ¢u vÃ  Ä‘á»™ khÃ³.
-- Create `src/services/ai/schemas/quizGenerationSchema.ts` â€” Zod discriminated union cho Ä‘áº§u ra AI.
-- Create `src/services/ai/quizAudit.ts` â€” kiá»ƒm tra sá»‘ lÆ°á»£ng, Ä‘Ã¡p Ã¡n, Ä‘á»™ khÃ³, trÃ¹ng láº·p vÃ  cáº¥u trÃºc.
-- Create `src/services/ai/quizRepair.ts` â€” táº¡o prompt sá»­a Ä‘Ãºng pháº§n lá»—i vÃ  há»£p nháº¥t káº¿t quáº£.
-- Modify `src/services/ai/prompts/quizPromptBuilder.ts` â€” yÃªu cáº§u chÃ­nh xÃ¡c blueprint vÃ  khÃ¡c biá»‡t exam/practice.
+- Create `src/features/quiz-generator/domain/quizBlueprint.ts` — ý định đề, phân bổ dạng câu và độ khó.
+- Create `src/services/ai/schemas/quizGenerationSchema.ts` — Zod discriminated union cho đầu ra AI.
+- Create `src/services/ai/quizAudit.ts` — kiểm tra số lượng, đáp án, độ khó, trùng lặp và cấu trúc.
+- Create `src/services/ai/quizRepair.ts` — tạo prompt sửa đúng phần lỗi và hợp nhất kết quả.
+- Modify `src/services/ai/prompts/quizPromptBuilder.ts` — yêu cầu chính xác blueprint và khác biệt exam/practice.
 
 ### Teacher UX
 
-- Create `src/features/quiz-generator/components/QuestionBlueprintSection.tsx` â€” chá»‰nh sá»‘ cÃ¢u theo dáº¡ng.
-- Create `src/features/quiz-generator/components/GenerationProgressPanel.tsx` â€” hiá»ƒn thá»‹ bÆ°á»›c, lá»—i vÃ  nÃºt há»§y.
-- Create `src/features/quiz-generator/components/OcrPreviewSection.tsx` â€” chá»n trang OCR trÆ°á»›c khi táº¡o Ä‘á».
-- Modify `src/components/TeacherDashboard/CreateTab.tsx` â€” káº¿t ná»‘i cÃ¡c pháº§n V2 sau feature flag.
-- Modify `src/features/quiz-generator/components/GeneralInfoSection.tsx` â€” gá»£i Ã½ AI tiáº¿ng Viá»‡t vÃ  â€œÃp dá»¥ng táº¥t cáº£â€.
+- Create `src/features/quiz-generator/components/QuestionBlueprintSection.tsx` — chỉnh số câu theo dạng.
+- Create `src/features/quiz-generator/components/GenerationProgressPanel.tsx` — hiển thị bước, lỗi và nút hủy.
+- Create `src/features/quiz-generator/components/OcrPreviewSection.tsx` — chọn trang OCR trước khi tạo đề.
+- Modify `src/components/TeacherDashboard/CreateTab.tsx` — kết nối các phần V2 sau feature flag.
+- Modify `src/features/quiz-generator/components/GeneralInfoSection.tsx` — gợi ý AI tiếng Việt và “Áp dụng tất cả”.
 
 ### Verification and rollout
 
@@ -71,7 +71,7 @@
 
 ---
 
-## Phase 1 â€” Security, quota and request reliability
+## Phase 1 — Security, quota and request reliability
 
 ### Task 1: Persist the AI action ledger in D1
 
@@ -236,8 +236,8 @@ Use this error class:
 export class AiQuotaError extends Error {
   constructor(public readonly code: 'AI_DAILY_LIMIT_REACHED' | 'AI_ACTION_CONFLICT') {
     super(code === 'AI_DAILY_LIMIT_REACHED'
-      ? 'Báº¡n Ä‘Ã£ dÃ¹ng háº¿t 5 lÆ°á»£t táº¡o Ä‘á» AI hÃ´m nay.'
-      : 'MÃ£ thao tÃ¡c AI Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng cho má»™t yÃªu cáº§u khÃ¡c.');
+      ? 'Bạn đã dùng hết 5 lượt tạo đề AI hôm nay.'
+      : 'Mã thao tác AI đã được sử dụng cho một yêu cầu khác.');
   }
 }
 ```
@@ -252,7 +252,7 @@ Remove `ensureTeacherAiQuotaTable` from `workers/src/routes/teacherAiQuota.ts`. 
 return jsonResponse({
   status: 'error',
   code: 'AI_QUOTA_CONSUME_MOVED',
-  message: 'Háº¡n má»©c AI Ä‘Æ°á»£c tÃ­nh tá»± Ä‘á»™ng khi yÃªu cáº§u AI thÃ nh cÃ´ng.',
+  message: 'Hạn mức AI được tính tự động khi yêu cầu AI thành công.',
 }, 410);
 ```
 
@@ -408,7 +408,7 @@ try {
   return proxyResponse(aiResponse);
 } catch (error) {
   await failAiAction(env.DB, meta.actionId, authResult.user.username, 'UPSTREAM_NETWORK_ERROR');
-  return errorResponse('Dá»‹ch vá»¥ AI táº¡m thá»i khÃ´ng kháº£ dá»¥ng.', 503);
+  return errorResponse('Dịch vụ AI tạm thời không khả dụng.', 503);
 }
 ```
 
@@ -481,7 +481,7 @@ it('aborts when the caller cancels', async () => {
   }));
   const promise = requestWorkerAiText(payload, { action, signal: controller.signal });
   controller.abort();
-  await expect(promise).rejects.toThrow('ÄÃ£ há»§y yÃªu cáº§u AI.');
+  await expect(promise).rejects.toThrow('Đã hủy yêu cầu AI.');
 });
 ```
 
@@ -509,7 +509,7 @@ Do not store action IDs in localStorage.
 Use one internal `AbortController`. Forward caller abort to it and distinguish messages:
 
 ```ts
-if (options.signal?.aborted) throw new Error('ÄÃ£ há»§y yÃªu cáº§u AI.');
+if (options.signal?.aborted) throw new Error('Đã hủy yêu cầu AI.');
 const onAbort = () => controller.abort('caller');
 options.signal?.addEventListener('abort', onAbort, { once: true });
 const timeoutId = setTimeout(() => controller.abort('timeout'), options.timeoutMs ?? 300_000);
@@ -517,8 +517,8 @@ const timeoutId = setTimeout(() => controller.abort('timeout'), options.timeoutM
 
 In `catch`, return:
 
-- caller cancelled â†’ `ÄÃ£ há»§y yÃªu cáº§u AI.`
-- timeout â†’ `YÃªu cáº§u AI quÃ¡ thá»i gian. Vui lÃ²ng thá»­ láº¡i.`
+- caller cancelled → `Đã hủy yêu cầu AI.`
+- timeout → `Yêu cầu AI quá thời gian. Vui lòng thử lại.`
 
 Always remove the listener in `finally`.
 
@@ -577,7 +577,7 @@ it('uses the same action id for OCR, generate and review', async () => {
 it('does not attach the original file after OCR succeeds', async () => {
   await runPdfGeneration();
   expect(generateMock.mock.calls[0][3]).toBeUndefined();
-  expect(String(generateMock.mock.calls[0][2])).toContain('Ná»˜I DUNG OCR');
+  expect(String(generateMock.mock.calls[0][2])).toContain('NỘI DUNG OCR');
 });
 
 it('uses a new QUESTION_REGENERATE action for a manual single-question retry', async () => {
@@ -675,11 +675,11 @@ npm run build
 
 Expected: exit code `0`.
 
-- [ ] Human review before Phase 2: verify the exact quota semantics and whether one manual single-question regeneration should consume one lÆ°á»£t.
+- [ ] Human review before Phase 2: verify the exact quota semantics and whether one manual single-question regeneration should consume one lượt.
 
 ---
 
-## Phase 2 â€” Blueprint, deterministic validation and targeted repair
+## Phase 2 — Blueprint, deterministic validation and targeted repair
 
 ### Task 5: Separate quiz intent from content source and define a blueprint
 
@@ -734,7 +734,7 @@ it('rejects mismatched type and difficulty totals', () => {
     totalQuestions: 10,
     typeAllocations: [{ type: QuestionType.MCQ, count: 9 }],
     difficultyLevels: { level1: 3, level2: 5, level3: 2 },
-  })).toContain('Tá»•ng sá»‘ cÃ¢u theo dáº¡ng pháº£i báº±ng 10.');
+  })).toContain('Tổng số câu theo dạng phải bằng 10.');
 });
 ```
 
@@ -787,23 +787,23 @@ git commit -m "feat(ai): define an explicit quiz blueprint"
 
 ```ts
 it('writes exact question counts for every selected type', () => {
-  const prompt = buildPrompt('PhÃ¢n sá»‘', '4', '', optionsWithBlueprint);
-  expect(prompt).toContain('MCQ: 4 cÃ¢u');
-  expect(prompt).toContain('TRUE_FALSE: 2 cÃ¢u');
-  expect(prompt).toContain('SHORT_ANSWER: 2 cÃ¢u');
-  expect(prompt).toContain('MATCHING: 2 cÃ¢u');
+  const prompt = buildPrompt('Phân số', '4', '', optionsWithBlueprint);
+  expect(prompt).toContain('MCQ: 4 câu');
+  expect(prompt).toContain('TRUE_FALSE: 2 câu');
+  expect(prompt).toContain('SHORT_ANSWER: 2 câu');
+  expect(prompt).toContain('MATCHING: 2 câu');
 });
 
 it('uses exam rules without hints', () => {
-  const prompt = buildPrompt('PhÃ¢n sá»‘', '4', '', examOptions);
+  const prompt = buildPrompt('Phân số', '4', '', examOptions);
   expect(prompt).toContain('[INTENT: EXAM]');
-  expect(prompt).toContain('KhÃ´ng Ä‘Æ°a gá»£i Ã½ trong ná»™i dung cÃ¢u há»i');
+  expect(prompt).toContain('Không đưa gợi ý trong nội dung câu hỏi');
 });
 
 it('uses practice rules with learning feedback', () => {
-  const prompt = buildPrompt('PhÃ¢n sá»‘', '4', '', practiceOptions);
+  const prompt = buildPrompt('Phân số', '4', '', practiceOptions);
   expect(prompt).toContain('[INTENT: PRACTICE]');
-  expect(prompt).toContain('Lá»i giáº£i pháº£i hÆ°á»›ng dáº«n tá»«ng bÆ°á»›c');
+  expect(prompt).toContain('Lời giải phải hướng dẫn từng bước');
 });
 ```
 
@@ -821,15 +821,15 @@ Use these rules:
 const INTENT_PROMPTS = {
   EXAM: `
 [INTENT: EXAM]
-- CÃ¢u há»i ngáº¯n gá»n, trung láº­p, khÃ´ng Ä‘Æ°a gá»£i Ã½ trong ná»™i dung cÃ¢u há»i.
-- KhÃ´ng láº·p cÃ¹ng má»™t ká»¹ nÄƒng báº±ng cÃ¡ch Ä‘á»•i sá»‘ Ä‘Æ¡n giáº£n.
-- PhÆ°Æ¡ng Ã¡n nhiá»…u pháº£i há»£p lÃ½ nhÆ°ng chá»‰ cÃ³ Ä‘Ãºng sá»‘ Ä‘Ã¡p Ã¡n theo schema.
-- explanation váº«n pháº£i Ä‘áº§y Ä‘á»§ Ä‘á»ƒ giÃ¡o viÃªn duyá»‡t, nhÆ°ng khÃ´ng xuáº¥t hiá»‡n khi há»c sinh Ä‘ang lÃ m bÃ i.`,
+- Câu hỏi ngắn gọn, trung lập, không đưa gợi ý trong nội dung câu hỏi.
+- Không lặp cùng một kỹ năng bằng cách đổi số đơn giản.
+- Phương án nhiễu phải hợp lý nhưng chỉ có đúng số đáp án theo schema.
+- explanation vẫn phải đầy đủ để giáo viên duyệt, nhưng không xuất hiện khi học sinh đang làm bài.`,
   PRACTICE: `
 [INTENT: PRACTICE]
-- Sáº¯p xáº¿p tá»« kiáº¿n thá»©c cá»‘t lÃµi Ä‘áº¿n váº­n dá»¥ng.
-- Lá»i giáº£i pháº£i hÆ°á»›ng dáº«n tá»«ng bÆ°á»›c, nÃªu lá»—i sai thÆ°á»ng gáº·p vÃ  má»™t máº¹o nhá»› ngáº¯n.
-- NgÃ´n ngá»¯ khuyáº¿n khÃ­ch, khÃ´ng gÃ¢y Ã¡p lá»±c.`,
+- Sắp xếp từ kiến thức cốt lõi đến vận dụng.
+- Lời giải phải hướng dẫn từng bước, nêu lỗi sai thường gặp và một mẹo nhớ ngắn.
+- Ngôn ngữ khuyến khích, không gây áp lực.`,
 } as const;
 ```
 
@@ -883,16 +883,16 @@ Cover at minimum:
 ```ts
 it('rejects MCQ when correctAnswer is outside the option range', () => {
   expect(() => parseGeneratedQuiz({
-    title: 'Äá»',
+    title: 'Đề',
     questions: [{ type: 'MCQ', question: '1 + 1 = ?', options: ['1', '2'], correctAnswer: 'D', explanation: '...' }],
   })).toThrow();
 });
 
 it('rejects empty categorization content instead of inventing placeholders', () => {
   expect(() => parseGeneratedQuiz({
-    title: 'Äá»',
+    title: 'Đề',
     questions: [{
-      type: 'CATEGORIZATION', question: 'PhÃ¢n loáº¡i',
+      type: 'CATEGORIZATION', question: 'Phân loại',
       categories: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
       items: [{ id: 'i1', content: '', categoryId: 'a' }], explanation: '...',
     }],
@@ -926,16 +926,16 @@ const CommonQuestionSchema = z.object({
 Use `.superRefine` for cross-field rules:
 
 - MCQ answer letter must reference an existing option.
-- MULTIPLE_SELECT must have 2â€“3 unique answers.
-- TRUE_FALSE must have 2â€“4 items.
-- MATCHING must have 3â€“6 non-empty pairs.
+- MULTIPLE_SELECT must have 2–3 unique answers.
+- TRUE_FALSE must have 2–4 items.
+- MATCHING must have 3–6 non-empty pairs.
 - DRAG_DROP placeholder count must equal `blanks.length`.
 - CATEGORIZATION category IDs must exist and every item content must be non-empty.
 - ORDERING `correctOrder` must be a permutation of item indexes/IDs.
 
 - [ ] **Step 4: Stop silent placeholder repair**
 
-In `jsonRepair.ts`, retain math normalization and metadata normalization, but remove code that inserts `(Má»¥c 1)` or assigns the first category when data is missing. Invalid structures must surface to the audit/repair layer.
+In `jsonRepair.ts`, retain math normalization and metadata normalization, but remove code that inserts `(Mục 1)` or assigns the first category when data is missing. Invalid structures must surface to the audit/repair layer.
 
 - [ ] **Step 5: Verify and commit**
 
@@ -1061,7 +1061,7 @@ export function mergeRepairedQuestions(
 ```ts
 it('requests exactly the two missing questions', () => {
   const prompt = buildQuizRepairPrompt({ blueprint, quiz: eightQuestionQuiz, issues: missingTwoIssues });
-  expect(prompt).toContain('Táº¡o Ä‘Ãºng 2 cÃ¢u thay tháº¿');
+  expect(prompt).toContain('Tạo đúng 2 câu thay thế');
   expect(prompt).not.toContain(JSON.stringify(eightQuestionQuiz.questions));
 });
 
@@ -1150,11 +1150,11 @@ npm run build
 
 Expected: exit code `0`.
 
-- [ ] Human review: generate fixtures for ToÃ¡n, Tiáº¿ng Viá»‡t and Tiáº¿ng Anh, then verify exact type/difficulty counts and no duplicate questions.
+- [ ] Human review: generate fixtures for Toán, Tiếng Việt and Tiếng Anh, then verify exact type/difficulty counts and no duplicate questions.
 
 ---
 
-## Phase 3 â€” Teacher UX, OCR review and rollout
+## Phase 3 — Teacher UX, OCR review and rollout
 
 ### Task 10: Add a visible question blueprint editor
 
@@ -1174,16 +1174,16 @@ Expected: exit code `0`.
 ```tsx
 it('keeps total question count unchanged when auto balancing types', async () => {
   render(<Harness />);
-  await user.click(screen.getByRole('button', { name: 'AI tá»± cÃ¢n Ä‘á»‘i' }));
-  expect(screen.getByText('Tá»•ng: 10 cÃ¢u')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'AI tự cân đối' }));
+  expect(screen.getByText('Tổng: 10 câu')).toBeInTheDocument();
   expect(screen.getAllByRole('spinbutton').map(input => Number((input as HTMLInputElement).value)).reduce((a, b) => a + b, 0)).toBe(10);
 });
 
 it('shows a blocking message when type totals do not match', async () => {
   render(<Harness />);
-  await user.clear(screen.getByLabelText('Sá»‘ cÃ¢u Tráº¯c nghiá»‡m'));
-  await user.type(screen.getByLabelText('Sá»‘ cÃ¢u Tráº¯c nghiá»‡m'), '9');
-  expect(screen.getByText('Tá»•ng sá»‘ cÃ¢u theo dáº¡ng pháº£i báº±ng 10.')).toBeInTheDocument();
+  await user.clear(screen.getByLabelText('Số câu Trắc nghiệm'));
+  await user.type(screen.getByLabelText('Số câu Trắc nghiệm'), '9');
+  expect(screen.getByText('Tổng số câu theo dạng phải bằng 10.')).toBeInTheDocument();
 });
 ```
 
@@ -1197,11 +1197,11 @@ npx vitest run tests/QuestionBlueprintSection.test.tsx
 
 UI requirements:
 
-- Intent cards: `Äá» thi` and `Ã”n táº­p`.
+- Intent cards: `Đề thi` and `Ôn tập`.
 - One row per selected question type with `-`, numeric input and `+`.
-- `AI tá»± cÃ¢n Ä‘á»‘i` calls `buildBalancedTypeAllocations`.
+- `AI tự cân đối` calls `buildBalancedTypeAllocations`.
 - Total mismatch appears in red and disables generation.
-- Difficulty inputs remain 0â€“40 and show the same total.
+- Difficulty inputs remain 0–40 and show the same total.
 - On mobile, rows stack without horizontal scrolling.
 
 - [ ] **Step 4: Remove `any` from `QuestionSettingsSection`**
@@ -1261,8 +1261,8 @@ export type GenerationStep =
 it('shows the active step and cancels the request', async () => {
   const onCancel = vi.fn();
   render(<GenerationProgressPanel step="reading_document" onCancel={onCancel} />);
-  expect(screen.getByText('Äang Ä‘á»c tÃ i liá»‡u')).toBeInTheDocument();
-  await user.click(screen.getByRole('button', { name: 'Há»§y táº¡o Ä‘á»' }));
+  expect(screen.getByText('Đang đọc tài liệu')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Hủy tạo đề' }));
   expect(onCancel).toHaveBeenCalledOnce();
 });
 ```
@@ -1278,12 +1278,12 @@ npx vitest run tests/GenerationProgressPanel.test.tsx
 ```ts
 const STEP_COPY = {
   idle: '',
-  reading_document: 'Äang Ä‘á»c tÃ i liá»‡u',
-  generating: 'Äang táº¡o cÃ¢u há»i',
-  reviewing: 'Äang kiá»ƒm tra Ä‘Ã¡p Ã¡n',
-  repairing: 'Äang sá»­a cÃ¡c cÃ¢u chÆ°a Ä‘áº¡t',
-  completed: 'ÄÃ£ hoÃ n thÃ nh',
-  cancelled: 'ÄÃ£ há»§y yÃªu cáº§u',
+  reading_document: 'Đang đọc tài liệu',
+  generating: 'Đang tạo câu hỏi',
+  reviewing: 'Đang kiểm tra đáp án',
+  repairing: 'Đang sửa các câu chưa đạt',
+  completed: 'Đã hoàn thành',
+  cancelled: 'Đã hủy yêu cầu',
 } as const;
 ```
 
@@ -1291,7 +1291,7 @@ Display no fake percentages. Use a stepper with completed/current/upcoming state
 
 - [ ] **Step 4: Connect cancel and sticky actions**
 
-When generating, replace the generate buttons with the panel and one `Há»§y táº¡o Ä‘á»` button. After cancellation, preserve form input and do not decrement quota if the main generation request never received upstream 2xx.
+When generating, replace the generate buttons with the panel and one `Hủy tạo đề` button. After cancellation, preserve form input and do not decrement quota if the main generation request never received upstream 2xx.
 
 - [ ] **Step 5: Verify and commit**
 
@@ -1373,7 +1373,7 @@ Use `response_format: { "type": "json_object" }`. Limit each page text to `20,00
 
 - All non-empty pages selected by default.
 - Show page number and first 220 characters.
-- Show `TÃ i liá»‡u Ä‘Ã£ bá»‹ cáº¯t bá»›t` when `wasTruncated` is true.
+- Show `Tài liệu đã bị cắt bớt` when `wasTruncated` is true.
 - Require at least one selected page.
 - Generation concatenates only selected pages with markers `=== TRANG N ===`.
 
@@ -1433,13 +1433,13 @@ Expected: FAIL on the current corrupted strings.
 
 Required labels in `GeneralInfoSection.tsx`:
 
-- `Gá»£i Ã½ tá»« AI`
-- `Ãp dá»¥ng mÃ´n há»c`
-- `DÃ¹ng tÃªn bÃ i nÃ y`
-- `ThÃªm nhÃ£n`
-- `Ãp dá»¥ng táº¥t cáº£`
+- `Gợi ý từ AI`
+- `Áp dụng môn học`
+- `Dùng tên bài này`
+- `Thêm nhãn`
+- `Áp dụng tất cả`
 
-`Ãp dá»¥ng táº¥t cáº£` must apply category, title and all unique tags without overwriting a non-empty teacher title unless the teacher confirms by clicking the dedicated title button.
+`Áp dụng tất cả` must apply category, title and all unique tags without overwriting a non-empty teacher title unless the teacher confirms by clicking the dedicated title button.
 
 - [ ] **Step 4: Verify and commit**
 
@@ -1495,11 +1495,11 @@ Extend the existing feature flag tests to assert false by default and true for `
 Assertions:
 
 ```ts
-cy.contains('Äang Ä‘á»c tÃ i liá»‡u').should('be.visible');
+cy.contains('Đang đọc tài liệu').should('be.visible');
 cy.findByLabelText('Trang 2').uncheck();
-cy.contains('Äang kiá»ƒm tra Ä‘Ã¡p Ã¡n').should('be.visible');
-cy.contains('10 cÃ¢u').should('be.visible');
-cy.contains('LÆ°u Ä‘á»').should('be.enabled');
+cy.contains('Đang kiểm tra đáp án').should('be.visible');
+cy.contains('10 câu').should('be.visible');
+cy.contains('Lưu đề').should('be.enabled');
 ```
 
 - [ ] **Step 4: Write the rollout runbook**
@@ -1564,29 +1564,29 @@ git commit -m "test(ai): add v2 rollout gate and end-to-end coverage"
 
 ```text
 Task 1 quota ledger
-  â””â”€ Task 2 Worker policy
-       â””â”€ Task 3 client action metadata
-            â””â”€ Task 4 unified workflow
+  └─ Task 2 Worker policy
+       └─ Task 3 client action metadata
+            └─ Task 4 unified workflow
 
 Task 5 blueprint
-  â””â”€ Task 6 prompt intent
-  â””â”€ Task 7 schema
-       â””â”€ Task 8 audit
-            â””â”€ Task 9 targeted repair
+  └─ Task 6 prompt intent
+  └─ Task 7 schema
+       └─ Task 8 audit
+            └─ Task 9 targeted repair
 
 Task 5 + Task 4
-  â””â”€ Task 10 blueprint UI
-  â””â”€ Task 11 progress/cancel
-  â””â”€ Task 12 OCR preview
+  └─ Task 10 blueprint UI
+  └─ Task 11 progress/cancel
+  └─ Task 12 OCR preview
 
-Tasks 1â€“12
-  â””â”€ Task 13 UTF-8 cleanup
-       â””â”€ Task 14 rollout and E2E
+Tasks 1–12
+  └─ Task 13 UTF-8 cleanup
+       └─ Task 14 rollout and E2E
 ```
 
 ## Parallelization
 
-- Tasks 5â€“8 may start after Task 3 and can run in parallel with Task 4 if shared signatures are frozen first.
+- Tasks 5–8 may start after Task 3 and can run in parallel with Task 4 if shared signatures are frozen first.
 - Task 10 and Task 13 can run in parallel after blueprint interfaces are stable.
 - Task 11 depends on Task 4 cancellation.
 - Task 12 depends on the OCR execution context from Task 4.
