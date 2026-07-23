@@ -46,6 +46,7 @@ export const renderCertificatePreview = async (input: CertificatePreviewInput): 
       student_id: input.studentId,
       achievement_prefix: input.achievementPrefix.trim(),
       date_line: input.dateLine.trim(),
+      student_name_font: input.studentNameFont,
     }),
   });
   if (!response.ok) {

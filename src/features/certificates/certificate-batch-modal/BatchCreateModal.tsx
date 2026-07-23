@@ -34,6 +34,7 @@ const BatchCreateModal: React.FC<BatchCreateModalProps> = ({ onClose, onCreated,
     selectedIds: selection.selectedIds,
     achievementPrefix: submit.achievementPrefix,
     dateLine: submit.dateLine,
+    studentNameFont: submit.studentNameFont,
   });
 
   return (

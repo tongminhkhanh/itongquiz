@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadCertificateFonts, loadFont } from '../workers/src/services/fontLoader';
 import { buildCertificateSvg } from '../workers/src/services/certificateSvg';
+import { previewFontAssets } from '../workers/src/routes/certificates/previewAssets';
 
 describe('certificate SVG renderer', () => {
   it('keeps Vietnamese, score zero, long text constraints, and escapes XML', () => {
@@ -16,9 +17,44 @@ describe('certificate SVG renderer', () => {
 
     expect(svg).toContain('Nguyễn Việt Anh &amp; &lt;Bạn&gt;');
     expect(svg).toContain('0/10');
-    expect(svg).toContain('textLength="420"');
+    expect(svg).not.toContain('textLength=');
     expect(svg).toContain('font-family="Roboto"');
     expect(svg).not.toContain('& <Bạn>');
+  });
+
+  it('uses an alphabetic baseline and only shrinks text that exceeds its guide line', () => {
+    const shortSvg = buildCertificateSvg('data:image/png;base64,AA==', [
+      {
+        key: 'student_name',
+        x: 635,
+        y: 310,
+        fontSize: 60,
+        fontFamily: 'Great Vibes',
+        baseline: 'alphabetic',
+        maxWidth: 680,
+      },
+    ], {
+      student_name: 'Lê Văn Tuấn', score: '', quiz_title: '', date: '', teacher_name: '', custom_note: '',
+    }, 1270, 698);
+    const longSvg = buildCertificateSvg('data:image/png;base64,AA==', [
+      {
+        key: 'student_name',
+        x: 635,
+        y: 310,
+        fontSize: 60,
+        fontFamily: 'Great Vibes',
+        baseline: 'alphabetic',
+        maxWidth: 360,
+      },
+    ], {
+      student_name: 'Nguyễn Hoàng Minh Anh Phương Thảo', score: '', quiz_title: '', date: '', teacher_name: '', custom_note: '',
+    }, 1270, 698);
+
+    expect(shortSvg).toContain('dominant-baseline="alphabetic"');
+    expect(shortSvg).toContain('font-size="60"');
+    expect(shortSvg).not.toContain('textLength=');
+    expect(longSvg).not.toContain('font-size="60"');
+    expect(longSvg).not.toContain('textLength=');
   });
 
   it('renders static text, custom fonts, prefixes, and Vietnamese long dates', () => {
@@ -75,6 +111,25 @@ describe('certificate SVG renderer', () => {
 
     await loadCertificateFonts(env);
 
-    expect(requestedKeys).toContain('fonts/GreatVibes-Regular.ttf');
+    expect(requestedKeys).toEqual(expect.arrayContaining([
+      'fonts/GreatVibes-Regular.ttf',
+      'fonts/DancingScript-Bold.ttf',
+      'fonts/PlaywriteVN-Regular.ttf',
+      'fonts/Allura-Regular.ttf',
+      'fonts/AlexBrush-Regular.ttf',
+    ]));
+  });
+
+  it('maps every selectable Vietnamese name font to a preview asset', () => {
+    const families = ['Great Vibes', 'Dancing Script', 'Playwrite VN', 'Allura', 'Alex Brush'] as const;
+    const assets = previewFontAssets(families.map((fontFamily, index) => ({
+      key: 'student_name',
+      x: 100,
+      y: 100 + index,
+      fontSize: 48,
+      fontFamily,
+    })));
+
+    expect(assets.map(asset => asset.family)).toEqual(expect.arrayContaining(families));
   });
 });

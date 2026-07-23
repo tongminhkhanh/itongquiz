@@ -1,4 +1,5 @@
 import type { FieldConfig } from '../../types/certificates';
+import type { CertificateNameFont } from '../../../../shared/certificates.contract';
 
 export interface CertificateRenderPreviewRequest {
   template_id?: string;
@@ -7,6 +8,7 @@ export interface CertificateRenderPreviewRequest {
   student_id?: string;
   achievement_prefix?: string;
   date_line?: string;
+  student_name_font?: string;
 }
 
 export interface PreviewInput {
@@ -16,6 +18,7 @@ export interface PreviewInput {
   quizId: string | null;
   achievementPrefix: string | null;
   dateLine: string | null;
+  studentNameFont: CertificateNameFont | null;
 }
 
 export interface PreviewTemplate {

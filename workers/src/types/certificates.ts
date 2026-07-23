@@ -1,5 +1,6 @@
 import type {
   CertificateBatchStatus,
+  CertificateNameFont,
   CertificateStatus,
 } from '../../../shared/certificates.contract';
 
@@ -21,8 +22,9 @@ export interface FieldConfig {
   y: number;
   fontSize: number;
   fontWeight?: 'normal' | 'bold';
-  fontFamily?: 'Roboto' | 'Spectral' | 'Dancing Script' | 'Great Vibes';
+  fontFamily?: 'Roboto' | 'Spectral' | CertificateNameFont;
   fontStyle?: 'normal' | 'italic';
+  baseline?: 'middle' | 'alphabetic';
   color?: string;
   align?: 'left' | 'center' | 'right';
   maxWidth?: number;

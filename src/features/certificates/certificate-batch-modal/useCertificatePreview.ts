@@ -45,6 +45,7 @@ export const useCertificatePreview = () => {
         studentId: previewStudent.id,
         achievementPrefix: options.achievementPrefix,
         dateLine: options.dateLine,
+        studentNameFont: options.studentNameFont,
       });
       const nextUrl = URL.createObjectURL(blob);
       setPreviewUrl(current => {

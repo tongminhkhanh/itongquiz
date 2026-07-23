@@ -1,3 +1,5 @@
+import type { CertificateNameFont } from '../../../../shared/certificates.contract';
+
 export interface BatchInput {
   title: string;
   requestId: string;
@@ -7,6 +9,7 @@ export interface BatchInput {
   message: string | null;
   achievementPrefix: string | null;
   dateLine: string | null;
+  studentNameFont: CertificateNameFont | null;
   studentIds: string[];
 }
 

@@ -53,6 +53,9 @@ export async function loadPreviewContext(
     return certificateError('CERTIFICATE_TEMPLATE_INVALID', 'Template field configuration is invalid', 500);
   }
   fieldsConfig = fieldsConfig.map((field) => {
+    if (field.key === 'student_name' && input.studentNameFont !== null) {
+      return { ...field, fontFamily: input.studentNameFont };
+    }
     if (field.key === 'quiz_title' && input.achievementPrefix !== null) {
       return { ...field, prefix: input.achievementPrefix ? `${input.achievementPrefix} ` : '' };
     }

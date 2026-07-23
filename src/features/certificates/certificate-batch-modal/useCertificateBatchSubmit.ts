@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { showError, showSuccess } from '../../../utils/toast';
 import { defaultCertificateDateLine } from './certificateBatchHelpers';
 import type { BatchCreateModalProps, BatchStudentRow } from './types';
+import type { CertificateNameFont } from '../../../../shared/certificates.contract';
 
 interface SubmitOptions {
   templateId: string;
@@ -20,6 +21,7 @@ export const useCertificateBatchSubmit = (
   const [customNote, setCustomNote] = useState('');
   const [achievementPrefix, setAchievementPrefix] = useState('Đã hoàn thành xuất sắc');
   const [dateLine, setDateLine] = useState(defaultCertificateDateLine);
+  const [studentNameFont, setStudentNameFont] = useState<CertificateNameFont>('Great Vibes');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submit = useCallback(async (options: SubmitOptions) => {
@@ -46,6 +48,7 @@ export const useCertificateBatchSubmit = (
         message: customNote.trim() || undefined,
         achievement_prefix: achievementPrefix.trim(),
         date_line: dateLine.trim(),
+        student_name_font: studentNameFont,
         class_id: options.classId,
         quiz_id: options.quizId || undefined,
         student_ids: selectedStudents.map(student => student.id),
@@ -57,7 +60,7 @@ export const useCertificateBatchSubmit = (
     } finally {
       setIsSubmitting(false);
     }
-  }, [achievementPrefix, createBatch, customNote, dateLine, onCreated, title]);
+  }, [achievementPrefix, createBatch, customNote, dateLine, onCreated, studentNameFont, title]);
 
   return {
     title,
@@ -68,6 +71,8 @@ export const useCertificateBatchSubmit = (
     setAchievementPrefix,
     dateLine,
     setDateLine,
+    studentNameFont,
+    setStudentNameFont,
     isSubmitting,
     submit,
   };

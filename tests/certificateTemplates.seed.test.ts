@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 const root = process.cwd();
 const assetDir = path.join(root, 'assets', 'certificate-backgrounds', 'itong-2026');
 const migrationPath = path.join(root, 'workers', 'migrations', '0036_seed_itong_certificate_templates.sql');
+const layoutMigrationPath = path.join(root, 'workers', 'migrations', '0041_certificate_layout_and_name_fonts.sql');
 
 const templates = [
   { id: 'itong-classic-red-navy-2026', file: 'classic-red-navy' },
@@ -54,5 +55,17 @@ describe('Ít Ong certificate template seed', () => {
       expect(bytes.subarray(0, 4).toString('ascii')).toBe('RIFF');
       expect(bytes.subarray(8, 12).toString('ascii')).toBe('WEBP');
     }
+  });
+
+  it('aligns names to guide lines and centers score text in each score frame', async () => {
+    const sql = await readFile(layoutMigrationPath, 'utf8');
+
+    expect(sql).toContain("'itong-classic-red-navy-2026', 478");
+    expect(sql).toContain("'itong-modern-color-2026', 499");
+    expect(sql).toContain("'itong-formal-blue-2026', 503");
+    expect(sql).toContain("'itong-kids-learning-2026', 509");
+    expect(sql).toContain("'itong-geometric-navy-orange-2026', 497");
+    expect(sql).toContain("'$.baseline', 'alphabetic'");
+    expect(sql).toContain("'$.maxWidth', 680");
   });
 });

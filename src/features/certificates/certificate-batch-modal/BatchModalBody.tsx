@@ -28,6 +28,8 @@ export const BatchModalBody = ({ data, selection, submit }: BatchModalBodyProps)
       setAchievementPrefix={submit.setAchievementPrefix}
       dateLine={submit.dateLine}
       setDateLine={submit.setDateLine}
+      studentNameFont={submit.studentNameFont}
+      setStudentNameFont={submit.setStudentNameFont}
     />
     <BatchScopeFields
       classes={data.classes}

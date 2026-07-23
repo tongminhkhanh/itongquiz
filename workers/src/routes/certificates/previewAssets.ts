@@ -27,7 +27,15 @@ export function previewFontAssets(fieldsConfig: FieldConfig[]): PreviewFontAsset
   const assets = new Map<string, PreviewFontAsset>();
   for (const field of fieldsConfig) {
     const configuredFamily = field.fontFamily ?? 'Roboto';
-    const family = ['Spectral', 'Great Vibes', 'Dancing Script', 'Roboto'].includes(configuredFamily)
+    const family = [
+      'Spectral',
+      'Great Vibes',
+      'Dancing Script',
+      'Playwrite VN',
+      'Allura',
+      'Alex Brush',
+      'Roboto',
+    ].includes(configuredFamily)
       ? configuredFamily
       : 'Roboto';
     const weight = field.fontWeight === 'bold' ? '700' : '400';
@@ -41,6 +49,12 @@ export function previewFontAssets(fieldsConfig: FieldConfig[]): PreviewFontAsset
       r2Name = 'GreatVibes-Regular';
     } else if (family === 'Dancing Script') {
       r2Name = 'DancingScript-Bold';
+    } else if (family === 'Playwrite VN') {
+      r2Name = 'PlaywriteVN-Regular';
+    } else if (family === 'Allura') {
+      r2Name = 'Allura-Regular';
+    } else if (family === 'Alex Brush') {
+      r2Name = 'AlexBrush-Regular';
     } else {
       r2Name = weight === '700' ? 'Roboto-Bold' : 'Roboto-Regular';
     }

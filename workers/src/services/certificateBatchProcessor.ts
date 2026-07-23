@@ -1,5 +1,6 @@
 import type { Env } from '../types';
 import type { FieldConfig } from '../types/certificates';
+import type { CertificateNameFont } from '../../../shared/certificates.contract';
 import { renderCertificate } from './certificateRenderer';
 import { createParentNotification } from '../parentPortal/notificationService';
 
@@ -41,6 +42,7 @@ export async function processBatch(
   message: string,
   achievementPrefix: string | null = null,
   dateLine: string | null = null,
+  studentNameFont: CertificateNameFont | null = null,
 ): Promise<void> {
   const successfulCertificateIds = new Set<string>();
 
@@ -61,6 +63,9 @@ export async function processBatch(
       throw new Error(`Invalid fields_config for template ${templateId}`);
     }
     const renderFieldsConfig = fieldsConfig.map((field) => {
+      if (field.key === 'student_name' && studentNameFont !== null) {
+        return { ...field, fontFamily: studentNameFont };
+      }
       if (field.key === 'quiz_title' && achievementPrefix !== null) {
         return {
           ...field,

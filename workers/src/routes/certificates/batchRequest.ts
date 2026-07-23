@@ -1,4 +1,7 @@
-import type { CreateCertificateBatchRequest } from '../../../../shared/certificates.contract';
+import {
+  isCertificateNameFont,
+  type CreateCertificateBatchRequest,
+} from '../../../../shared/certificates.contract';
 import { certificateError } from './responses';
 import type { BatchInput } from './batchTypes';
 
@@ -24,6 +27,12 @@ export async function parseBatchRequest(request: Request): Promise<Response | Ba
     ? body.achievement_prefix.trim()
     : null;
   const dateLine = typeof body.date_line === 'string' ? body.date_line.trim() : null;
+  const studentNameFontValue = typeof body.student_name_font === 'string'
+    ? body.student_name_font.trim()
+    : '';
+  const studentNameFont = studentNameFontValue && isCertificateNameFont(studentNameFontValue)
+    ? studentNameFontValue
+    : null;
   const validStudentIds = Array.isArray(body.student_ids)
     && body.student_ids.every((studentId) => typeof studentId === 'string');
   const studentIds = validStudentIds
@@ -38,6 +47,9 @@ export async function parseBatchRequest(request: Request): Promise<Response | Ba
   if (studentIds.length > 100) {
     return certificateError('CERTIFICATE_BATCH_TOO_LARGE', 'A batch can contain at most 100 students');
   }
+  if (studentNameFontValue && !studentNameFont) {
+    return certificateError('CERTIFICATE_VALIDATION_ERROR', 'Unsupported student-name font');
+  }
   if (
     requestId.length > 128
     || title.length > 200
@@ -49,6 +61,6 @@ export async function parseBatchRequest(request: Request): Promise<Response | Ba
   }
   return {
     title, requestId, classId, templateId, quizId, message,
-    achievementPrefix, dateLine, studentIds,
+    achievementPrefix, dateLine, studentNameFont, studentIds,
   };
 }

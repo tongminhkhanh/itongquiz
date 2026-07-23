@@ -17,6 +17,7 @@ class ProcessorStatement {
       return Promise.resolve({
         bg_image_r2_key: 'templates/bg.png',
         fields_config: JSON.stringify([
+          { key: 'student_name', x: 100, y: 50, fontFamily: 'Great Vibes' },
           { key: 'quiz_title', x: 100, y: 100, prefix: 'Đã hoàn thành xuất sắc ' },
           { key: 'date', x: 100, y: 200, prefix: 'Mường La, ngày ', format: 'vi-long-date' },
         ]),
@@ -60,7 +61,7 @@ describe('certificate batch processor', () => {
       { certificate_id: 'cert-ok', student_id: 'student-1', student_name: 'Nguyễn Việt Anh', student_score: 0, quiz_title: 'Tiếng Việt' },
       { certificate_id: 'cert-fail', student_id: 'student-2', student_name: 'Học sinh lỗi', student_score: 9, quiz_title: 'Bài rất dài '.repeat(30) },
     ], 'Cô Nguyễn', 'Hoàn thành xuất sắc', 'Tiếp tục cố gắng',
-    'Đã tiến bộ vượt bậc', 'Ít Ong, ngày 20 tháng 7 năm 2026');
+    'Đã tiến bộ vượt bậc', 'Ít Ong, ngày 20 tháng 7 năm 2026', 'Playwrite VN');
 
     expect(renderInputs[0].data).toMatchObject({
       student_name: 'Nguyễn Việt Anh', score: '0/10', teacher_name: 'Cô Nguyễn',
@@ -69,6 +70,7 @@ describe('certificate batch processor', () => {
     expect(renderInputs[0].fieldsConfig).toEqual(expect.arrayContaining([
       expect.objectContaining({ key: 'quiz_title', prefix: 'Đã tiến bộ vượt bậc ' }),
       expect.objectContaining({ key: 'date', prefix: '', format: undefined }),
+      expect.objectContaining({ key: 'student_name', fontFamily: 'Playwrite VN' }),
     ]));
     expect(put).toHaveBeenCalledWith('certs/cert-ok.png', expect.any(Uint8Array), expect.any(Object));
     expect(renderInputs[0].env).toBe(env);

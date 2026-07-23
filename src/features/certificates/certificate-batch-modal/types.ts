@@ -1,4 +1,5 @@
 import type {
+  CertificateNameFont,
   CreateCertificateBatchRequest,
   CreateCertificateBatchResult,
 } from '../../../../shared/certificates.contract';
@@ -31,4 +32,5 @@ export interface CertificatePreviewInput {
   studentId: string;
   achievementPrefix: string;
   dateLine: string;
+  studentNameFont: CertificateNameFont;
 }

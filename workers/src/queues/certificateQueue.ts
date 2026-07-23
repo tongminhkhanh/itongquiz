@@ -1,6 +1,7 @@
 import type { Env } from '../types';
 import type { BatchStudent } from '../services/certificateBatchProcessor';
 import { processBatch } from '../services/certificateBatchProcessor';
+import type { CertificateNameFont } from '../../../shared/certificates.contract';
 
 const MAX_QUEUE_ATTEMPTS = 3;
 const PROCESSING_STALE_AFTER_MS = 10 * 60 * 1000;
@@ -17,6 +18,7 @@ interface QueueBatchRow {
   message: string | null;
   achievement_prefix: string | null;
   date_line: string | null;
+  student_name_font: CertificateNameFont | null;
   status: 'pending' | 'processing' | 'sent' | 'partial' | 'failed';
   processing_started_at: string | null;
 }
@@ -35,6 +37,7 @@ export default {
       try {
         const batchRow = await env.DB.prepare(`
           SELECT id, teacher_id, template_id, title, message, achievement_prefix, date_line,
+                 student_name_font,
                  status, processing_started_at
           FROM certificate_batches WHERE id = ?
         `).bind(batchId).first<QueueBatchRow>();
@@ -113,6 +116,7 @@ export default {
           batchRow.message || '',
           batchRow.achievement_prefix,
           batchRow.date_line,
+          batchRow.student_name_font,
         );
 
         queueMessage.ack();

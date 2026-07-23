@@ -149,6 +149,7 @@ describe('Certificate BatchCreateModal contracts', () => {
     renderModal();
     await waitForInitialLoad();
 
+    fireEvent.click(screen.getByRole('radio', { name: /Playwrite Việt Nam/i }));
     fireEvent.change(screen.getByPlaceholderText('Đã hoàn thành xuất sắc'), {
       target: { value: 'Đã tiến bộ vượt bậc' },
     });
@@ -163,6 +164,7 @@ describe('Certificate BatchCreateModal contracts', () => {
       template_id: 'template-default',
       class_id: 'class-1',
       student_id: 'student-1',
+      student_name_font: 'Playwrite VN',
       achievement_prefix: 'Đã tiến bộ vượt bậc',
       date_line: 'Mường La, ngày 19 tháng 7 năm 2026',
     });
@@ -192,6 +194,7 @@ describe('Certificate BatchCreateModal contracts', () => {
     fireEvent.change(screen.getByPlaceholderText('Vd: Chúc mừng em đã hoàn thành xuất sắc!'), {
       target: { value: '  Tiếp tục phát huy  ' },
     });
+    fireEvent.click(screen.getByRole('radio', { name: /Alex Brush/i }));
     const selects = screen.getAllByRole('combobox');
     fireEvent.change(selects[2], { target: { value: 'quiz-1' } });
     await waitFor(() => expect(mocks.fetch).toHaveBeenCalledWith(
@@ -208,6 +211,7 @@ describe('Certificate BatchCreateModal contracts', () => {
       template_id: 'template-default',
       title: 'Đợt cấp tháng 7',
       message: 'Tiếp tục phát huy',
+      student_name_font: 'Alex Brush',
       class_id: 'class-1',
       quiz_id: 'quiz-1',
       student_ids: ['student-1', 'student-2'],

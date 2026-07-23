@@ -14,8 +14,17 @@ export const CERTIFICATE_STATUSES = [
   'revoked',
 ] as const;
 
+export const CERTIFICATE_NAME_FONTS = [
+  'Great Vibes',
+  'Dancing Script',
+  'Playwrite VN',
+  'Allura',
+  'Alex Brush',
+] as const;
+
 export type CertificateBatchStatus = typeof CERTIFICATE_BATCH_STATUSES[number];
 export type CertificateStatus = typeof CERTIFICATE_STATUSES[number];
+export type CertificateNameFont = typeof CERTIFICATE_NAME_FONTS[number];
 
 export interface CertificateApiError {
   error: {
@@ -35,6 +44,7 @@ export interface CreateCertificateBatchRequest {
   message?: string;
   achievement_prefix?: string;
   date_line?: string;
+  student_name_font?: CertificateNameFont;
   class_id: string;
   quiz_id?: string;
   student_ids: string[];
@@ -104,4 +114,8 @@ export function isCertificateBatchStatus(value: unknown): value is CertificateBa
 
 export function isCertificateStatus(value: unknown): value is CertificateStatus {
   return typeof value === 'string' && CERTIFICATE_STATUSES.includes(value as CertificateStatus);
+}
+
+export function isCertificateNameFont(value: unknown): value is CertificateNameFont {
+  return typeof value === 'string' && CERTIFICATE_NAME_FONTS.includes(value as CertificateNameFont);
 }

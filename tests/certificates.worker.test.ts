@@ -181,6 +181,7 @@ describe('certificate worker authorization and integrity', () => {
     const response = await handleCreateBatch(requestBody({
       achievement_prefix: 'Đã tiến bộ vượt bậc',
       date_line: 'Ít Ong, ngày 20 tháng 7 năm 2026',
+      student_name_font: 'Dancing Script',
     }), env);
     const payload = await response.json() as { data: { batch_id: string; status: string } };
 
@@ -190,6 +191,7 @@ describe('certificate worker authorization and integrity', () => {
     expect(db.batches[0]).toHaveLength(2);
     expect(db.batches[0][0].bindings).toContain('Đã tiến bộ vượt bậc');
     expect(db.batches[0][0].bindings).toContain('Ít Ong, ngày 20 tháng 7 năm 2026');
+    expect(db.batches[0][0].bindings).toContain('Dancing Script');
     expect(db.batches[0][1].bindings).toContain('Nguyễn Văn A');
     expect(env.CERTIFICATE_QUEUE.send).toHaveBeenCalledWith({ batchId: payload.data.batch_id });
   });
@@ -261,6 +263,7 @@ describe('certificate worker authorization and integrity', () => {
           template_id: 'template-1', class_id: 'class-1', student_id: 'student-1', quiz_id: 'quiz-1',
           achievement_prefix: 'Đã tiến bộ vượt bậc',
           date_line: 'Ít Ong, ngày 20 tháng 7 năm 2026',
+          student_name_font: 'Playwrite VN',
         }),
       },
     ), env);
@@ -271,9 +274,24 @@ describe('certificate worker authorization and integrity', () => {
     expect(svg).toContain('Lê Văn Tuấn');
     expect(svg).toContain('Đã tiến bộ vượt bậc Ôn tập Toán');
     expect(svg).toContain('Ít Ong, ngày 20 tháng 7 năm 2026');
+    expect(svg).toContain('font-family="Playwrite VN"');
     expect(svg).toContain('@font-face');
     expect(db.batches).toHaveLength(0);
     expect(env.CERTIFICATE_QUEUE.send).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unsupported student-name font before querying D1', async () => {
+    const db = new FakeDB();
+
+    const response = await handleCreateBatch(requestBody({
+      student_name_font: 'Comic Sans MS',
+    }), createEnv(db));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: { code: 'CERTIFICATE_VALIDATION_ERROR' },
+    });
+    expect(db.statements).toHaveLength(0);
   });
 
   it('blocks a student from previewing another student certificate', async () => {

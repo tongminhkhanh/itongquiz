@@ -1,5 +1,6 @@
 import { certificateError } from './responses';
 import type { CertificateRenderPreviewRequest, PreviewInput } from './previewTypes';
+import { isCertificateNameFont } from '../../../../shared/certificates.contract';
 
 export async function parsePreviewRequest(request: Request): Promise<Response | PreviewInput> {
   let body: CertificateRenderPreviewRequest;
@@ -16,6 +17,12 @@ export async function parsePreviewRequest(request: Request): Promise<Response | 
     ? body.achievement_prefix.trim()
     : null;
   const dateLine = typeof body.date_line === 'string' ? body.date_line.trim() : null;
+  const studentNameFontValue = typeof body.student_name_font === 'string'
+    ? body.student_name_font.trim()
+    : '';
+  const studentNameFont = studentNameFontValue && isCertificateNameFont(studentNameFontValue)
+    ? studentNameFontValue
+    : null;
   if (!templateId || !classId || !studentId) {
     return certificateError(
       'CERTIFICATE_VALIDATION_ERROR',
@@ -25,5 +32,8 @@ export async function parsePreviewRequest(request: Request): Promise<Response | 
   if ((achievementPrefix?.length ?? 0) > 160 || (dateLine?.length ?? 0) > 200) {
     return certificateError('CERTIFICATE_VALIDATION_ERROR', 'Preview text exceeds the allowed length');
   }
-  return { templateId, classId, studentId, quizId, achievementPrefix, dateLine };
+  if (studentNameFontValue && !studentNameFont) {
+    return certificateError('CERTIFICATE_VALIDATION_ERROR', 'Unsupported student-name font');
+  }
+  return { templateId, classId, studentId, quizId, achievementPrefix, dateLine, studentNameFont };
 }

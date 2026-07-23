@@ -15,11 +15,11 @@ export async function persistCertificateBatch(
   const statements: D1PreparedStatement[] = [env.DB.prepare(`
     INSERT INTO certificate_batches (
       id, teacher_id, request_id, class_id, quiz_id, template_id, title, message,
-      achievement_prefix, date_line, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+      achievement_prefix, date_line, student_name_font, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
   `).bind(
     batchId, teacherId, input.requestId, input.classId, input.quizId, input.templateId,
-    input.title, input.message, input.achievementPrefix, input.dateLine, now, now,
+    input.title, input.message, input.achievementPrefix, input.dateLine, input.studentNameFont, now, now,
   )];
 
   for (const student of scope.roster) {
