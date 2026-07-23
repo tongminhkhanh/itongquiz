@@ -227,3 +227,29 @@
 .celebrate-pulse {
     animation: celebratePulse 0.6s ease-in-out 3;
 }
+
+@keyframes notificationTickerScroll {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(-100%);
+    }
+}
+
+.notification-ticker__track--animated {
+    animation: notificationTickerScroll 18s linear infinite;
+    padding-inline-start: 1rem;
+}
+
+.notification-ticker__track--paused {
+    animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .notification-ticker__track {
+        animation: none !important;
+        transform: none !important;
+    }
+}
