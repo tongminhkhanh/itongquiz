@@ -3,9 +3,8 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import { showError, showConfirm } from '../../utils/toast';
-import { getAnnouncement, Announcement as AnnouncementData } from '../../services/announcementService';
-import AnnouncementBanner from '../common/AnnouncementBanner';
 import PasswordChangeDialog from '../common/PasswordChangeDialog';
+import { NotificationSurfaceStack } from '../../features/notifications/components';
 
 // Sub-components
 import LandingHeader from './components/LandingHeader';
@@ -25,20 +24,11 @@ const LoginLandingPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'student' | 'teacher'>('student');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [announcement, setAnnouncement] = useState<AnnouncementData | null>(null);
     const [pendingTeacher, setPendingTeacher] = useState<any | null>(null);
 
     const authStore = useAuthStore();
     const classroomStore = useClassroomStore();
     const quizStore = useQuizStore();
-
-    useEffect(() => {
-        const fetchAnnouncement = async () => {
-            const data = await getAnnouncement();
-            if (data) setAnnouncement(data);
-        };
-        fetchAnnouncement();
-    }, []);
 
     // Session Persistence
     useEffect(() => {
@@ -132,19 +122,8 @@ const LoginLandingPage: React.FC = () => {
                     quizStore.setView('teacher_dash');
                 }} />
             )}
-            {/* Announcement Banner */}
-            {announcement && announcement.isBannerActive && (
-                <AnnouncementBanner
-                    id={`banner-${announcement.bannerTitle || announcement.id || 'current'}`}
-                    title={announcement.bannerTitle || ''}
-                    subtitle={announcement.bannerSubtitle || ''}
-                    link={announcement.bannerLink || ''}
-                    image={announcement.bannerImage || ''}
-                    daysToLive={announcement.daysToLive || 7}
-                />
-            )}
-
             <LandingHeader />
+            <NotificationSurfaceStack surface="LOGIN" />
 
             <main className="flex-1 flex flex-col md:flex-row items-center justify-between gap-10 px-4 md:px-20 pb-16 max-w-[1280px] mx-auto w-full z-10">
                 <Suspense fallback={<div className="flex-1 h-64 animate-pulse bg-white/10 rounded-3xl" />}>
