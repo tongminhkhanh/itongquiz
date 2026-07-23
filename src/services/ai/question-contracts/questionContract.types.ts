@@ -55,7 +55,7 @@ export interface GeneratedQuizV3 {
   questions: GeneratedQuestionV3[];
 }
 
-export interface AiQuestionTypeContract<TQuestion extends GeneratedQuestionV3> {
+export interface AiQuestionTypeContract<TQuestion> {
   type: AiSelectableQuestionType;
   label: string;
   shortLabel: string;
