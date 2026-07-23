@@ -64,6 +64,7 @@ const renderHeader = () =>
       giftShopEnabled
       studentId="student-1"
       onSelectSection={vi.fn()}
+      onOpenAssignment={vi.fn()}
       onOpenResultReport={vi.fn()}
       onOpenGiftShop={vi.fn()}
       onOpenLiveExam={vi.fn()}

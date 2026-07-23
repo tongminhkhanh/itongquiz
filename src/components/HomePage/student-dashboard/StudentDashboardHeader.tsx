@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import NotificationBell from '../../common/NotificationBell';
+import type { NotificationTarget } from '../../../../shared/notifications.contract';
+import { NotificationCenter } from '../../../features/notifications/components';
 import type { StudentDashboardHeaderProps } from './dashboard.types';
 
 const baseActionClass =
@@ -15,6 +16,7 @@ export function StudentDashboardHeader({
   giftShopEnabled,
   studentId,
   onSelectSection,
+  onOpenAssignment,
   onOpenResultReport,
   onOpenGiftShop,
   onOpenLiveExam,
@@ -48,6 +50,17 @@ export function StudentDashboardHeader({
     window.requestAnimationFrame(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
+  };
+
+  const openNotificationTarget = (target: NotificationTarget) => {
+    if (target.kind === 'assignment') onOpenAssignment(target.assignmentId);
+    if (target.kind === 'result-report') onOpenResultReport(target.reportId);
+    if (target.kind === 'certificate') onSelectSection('achievements');
+    if (target.kind === 'live-exam') onOpenLiveExam();
+    if (target.kind === 'url') {
+      if (target.url.startsWith('/')) window.location.assign(target.url);
+      else window.open(target.url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   return (
@@ -137,10 +150,9 @@ export function StudentDashboardHeader({
           </button>
 
           <div className="flex min-h-11 min-w-11 items-center justify-center">
-            <NotificationBell
-              userId={studentId}
-              onOpenCertificate={() => onSelectSection('achievements')}
-              onOpenResultReport={onOpenResultReport}
+            <NotificationCenter
+              enabled={Boolean(studentId)}
+              onNavigate={openNotificationTarget}
             />
           </div>
 

@@ -77,6 +77,19 @@ export const useStudentAssignments = (studentId?: string) => {
     setView('student');
   }, [selectQuiz, setView]);
 
+  const openAssignment = useCallback((assignmentId: string) => {
+    const index = allQuizzes.findIndex((quiz) => (
+      String(quiz._assignmentData?.id || '') === String(assignmentId)
+    ));
+    if (index < 0) {
+      document.getElementById('assigned-work')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    setPage(Math.floor(index / ASSIGNMENTS_PER_PAGE) + 1);
+    startQuiz(allQuizzes[index]);
+  }, [allQuizzes, startQuiz]);
+
   const reviewQuiz = useCallback(async (quiz: AssignedQuiz) => {
     const assignmentId = String(quiz._assignmentData?.id || quiz.id);
     setReviewingAssignmentId(assignmentId);
@@ -145,6 +158,7 @@ export const useStudentAssignments = (studentId?: string) => {
     setPage,
     retry: fetchAssignments,
     startQuiz,
+    openAssignment,
     reviewQuiz,
     closeReview: () => setReviewState(null),
     scrollToPrimaryTarget,

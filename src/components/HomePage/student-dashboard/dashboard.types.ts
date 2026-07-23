@@ -15,6 +15,7 @@ export interface StudentDashboardHeaderProps {
   giftShopEnabled: boolean;
   studentId: string;
   onSelectSection: (section: 'dashboard' | 'achievements' | 'resultReports') => void;
+  onOpenAssignment: (assignmentId: string) => void;
   onOpenResultReport: (phieuId: string) => void;
   onOpenGiftShop: () => void;
   onOpenLiveExam: () => void;
