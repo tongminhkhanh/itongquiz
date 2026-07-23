@@ -6,6 +6,7 @@ import {
     createParentNotification,
     fanOutParentNotificationToClass,
 } from '../parentPortal/notificationService';
+import { createNotification } from '../services/notificationWriter';
 
 type AssignmentRow = Record<string, any>;
 
@@ -273,6 +274,27 @@ async function submitHomework(db: D1Database, user: JWTPayload, assignmentId: st
       ) VALUES (?, ?, ?, ?, 'SUBMITTED', ?, ?, '', '', 0, ?, '[]', ?, ?, '', '[]')
     `).bind(id, assignmentId, user.id, student.full_name || user.fullName || user.username, JSON.stringify(urls),
         String(body.studentNote || body.student_note || ''), now, attemptNo, idempotencyKey).run();
+    try {
+        await createNotification(db, {
+            userId: String(assignment.teacher_username),
+            userRole: 'teacher',
+            type: 'assignment_submitted',
+            priority: 'IMPORTANT',
+            title: 'Có học sinh vừa nộp bài',
+            body: `${student.full_name || user.fullName || user.username} đã nộp “${assignment.title || 'Bài tập'}”.`,
+            actionUrl: `/teacher/homework?assignment=${encodeURIComponent(assignmentId)}`,
+            data: { assignment_id: assignmentId, submission_id: id, student_id: user.id },
+            sourceType: 'homework_submission',
+            sourceId: id,
+            createdAt: now,
+        });
+    } catch (error) {
+        console.error('[NotificationWriter] assignment_submitted failed', {
+            assignmentId,
+            submissionId: id,
+            error,
+        });
+    }
     const created = await db.prepare('SELECT * FROM hw_submissions WHERE id=?').bind(id).first<any>();
     return jsonResponse({ status: 'success', data: mapSubmission(created || { id }) }, 201);
 }
@@ -391,6 +413,31 @@ async function publishGrade(db: D1Database, user: JWTPayload, submissionId: stri
         .bind(score, feedback, JSON.stringify(breakdown),
             JSON.stringify(breakdown.map((x: any) => ({ questionId: x.questionId, label: x.label, score: x.score / x.maxScore }))),
             user.username, now, now, submissionId).run();
+    try {
+        await createNotification(db, {
+            userId: String(row.student_id),
+            userRole: 'student',
+            type: 'homework_graded',
+            priority: 'IMPORTANT',
+            title: 'Bài tập của em đã được chấm',
+            body: `${row.assignment_title || 'Bài tập'}: ${score.toFixed(1)}/10${feedback ? ` · ${feedback.slice(0, 240)}` : ''}`,
+            actionUrl: `/student?assignment=${encodeURIComponent(String(row.assignment_id))}`,
+            data: {
+                assignment_id: String(row.assignment_id),
+                submission_id: submissionId,
+                score,
+            },
+            sourceType: 'homework_grade',
+            sourceId: submissionId,
+            createdAt: now,
+        });
+    } catch (error) {
+        console.error('[NotificationWriter] homework_graded failed', {
+            assignmentId: row.assignment_id,
+            submissionId,
+            error,
+        });
+    }
     try {
         await createParentNotification(db, {
             studentId: String(row.student_id),

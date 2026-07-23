@@ -25,6 +25,9 @@ class ProcessorStatement {
         canvas_height: 698,
       } as T);
     }
+    if (this.sql.includes('FROM certificate_batches')) {
+      return Promise.resolve({ teacher_id: 'teacher-1' } as T);
+    }
     return Promise.resolve(null);
   }
   run() { this.db.runs.push(this); return Promise.resolve({ success: true }); }
@@ -33,6 +36,9 @@ class ProcessorStatement {
 class ProcessorDB {
   runs: ProcessorStatement[] = [];
   prepare(sql: string) { return new ProcessorStatement(sql, this); }
+  batch(statements: ProcessorStatement[]) {
+    return Promise.all(statements.map((statement) => statement.run()));
+  }
 }
 
 describe('certificate batch processor', () => {
@@ -77,8 +83,11 @@ describe('certificate batch processor', () => {
     expect(renderInputs[0]).toMatchObject({ width: 1270, height: 698 });
     const finalBatchUpdate = db.runs.find((statement) => statement.sql.includes('SET status = ?, sent_at'));
     expect(finalBatchUpdate?.bindings[0]).toBe('partial');
-    const notifications = db.runs.filter((statement) => statement.sql.includes('INSERT INTO notifications'));
-    expect(notifications).toHaveLength(1);
-    expect(notifications[0].bindings[0]).toBe('student-1');
+    const notifications = db.runs.filter((statement) => statement.sql.includes('INSERT OR IGNORE INTO notifications'));
+    expect(notifications).toHaveLength(2);
+    expect(notifications.find((statement) => statement.bindings[3] === 'certificate_issued')?.bindings[1])
+      .toBe('student-1');
+    expect(notifications.find((statement) => statement.bindings[3] === 'certificate_batch_completed')?.bindings[1])
+      .toBe('teacher-1');
   });
 });

@@ -1,5 +1,6 @@
 import { requireTeacherForClass, requireTeacherForStudent } from '../../classroom/authorization';
 import type { ClassroomRouteContext } from '../../classroom/types';
+import { createNotifications } from '../../services/notificationWriter';
 import { parseBody } from '../../utils/helpers';
 import { errorResponse, generateId, jsonResponse } from '../../utils/response';
 
@@ -28,7 +29,9 @@ export async function handleAssignmentCreateRoute(context: ClassroomRouteContext
     const classError = await requireTeacherForClass(db, user, classId);
     if (classError) return classError;
 
-    const quiz = await db.prepare('SELECT id FROM quizzes WHERE id = ?').bind(quizId).first<{ id: string }>();
+    const quiz = await db.prepare('SELECT id, title FROM quizzes WHERE id = ?')
+        .bind(quizId)
+        .first<{ id: string; title?: string }>();
     if (!quiz) return errorResponse('Quiz not found', 404);
 
     if (studentId) {
@@ -58,6 +61,34 @@ export async function handleAssignmentCreateRoute(context: ClassroomRouteContext
     await db.prepare(
         'INSERT INTO assignments (id, quiz_id, class_id, student_id, deadline, max_attempts, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(id, quizId, classId, studentId, deadline, maxAttempts, 'OPEN', nowIso).run();
+
+    try {
+        const recipientIds = studentId
+            ? [studentId]
+            : (await db.prepare(`
+                SELECT id FROM students
+                WHERE class_id = ? AND COALESCE(archived_at, '') = ''
+            `).bind(classId).all<{ id: string }>()).results.map((student) => String(student.id));
+        await createNotifications(db, recipientIds.map((recipientId) => ({
+            userId: recipientId,
+            userRole: 'student',
+            type: 'assignment_created',
+            priority: 'IMPORTANT',
+            title: 'Em có bài được giao mới',
+            body: `${quiz.title || 'Bài kiểm tra'} · Hạn làm ${new Date(deadline).toLocaleString('vi-VN')}`,
+            actionUrl: `/student?assignment=${encodeURIComponent(id)}`,
+            data: { assignment_id: id, quiz_id: quizId, deadline },
+            sourceType: 'assignment',
+            sourceId: id,
+            createdAt: nowIso,
+        })));
+    } catch (error) {
+        console.error('[NotificationWriter] assignment_created failed', {
+            assignmentId: id,
+            classId,
+            error,
+        });
+    }
 
     return jsonResponse({
         status: 'success',

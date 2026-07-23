@@ -4,6 +4,7 @@ import type {
 } from '../../../../shared/result-reports.contract';
 import type { Env } from '../../types';
 import { createParentNotification } from '../../parentPortal/notificationService';
+import { createNotification } from '../../services/notificationWriter';
 import type { JWTPayload } from '../../utils/jwt';
 import { handleUpsertPhieu } from '../phieu/phieuUpsertService';
 import { resultSubmissionKey } from '../phieu/phieuRepository';
@@ -320,21 +321,25 @@ export function createResultReportDeliveryRuntime(
       return { id: String(link.id || ''), url: String(link.url || '') };
     },
     insertNotification: async (input) => {
-      await env.DB.prepare(`
-        INSERT OR IGNORE INTO notifications (id, user_id, user_role, type, title, body, data)
-        VALUES (?, ?, 'student', 'result_report_published', ?, ?, ?)
-      `).bind(
-        input.notificationId,
-        input.studentId,
-        'Bạn có phiếu kết quả mới',
-        `${user.fullName || input.teacherName} đã gửi kết quả bài “${input.quizTitle}”. Điểm của em: ${input.score}/10.`,
-        JSON.stringify({
+      await createNotification(env.DB, {
+        id: input.notificationId,
+        userId: input.studentId,
+        userRole: 'student',
+        type: 'result_report_ready',
+        priority: 'IMPORTANT',
+        title: 'Em có phiếu kết quả mới',
+        body: `${user.fullName || input.teacherName} đã gửi kết quả bài “${input.quizTitle}”. Điểm của em: ${input.score}/10.`,
+        actionUrl: `/student/results?report=${encodeURIComponent(input.phieuId)}`,
+        data: {
           phieu_id: input.phieuId,
+          report_id: input.phieuId,
           result_id: input.resultId,
           quiz_id: input.quizId,
           batch_id: input.batchId,
-        }),
-      ).run();
+        },
+        sourceType: 'result_report',
+        sourceId: input.phieuId,
+      });
       return input.notificationId;
     },
     insertParentNotification: async (input) => {

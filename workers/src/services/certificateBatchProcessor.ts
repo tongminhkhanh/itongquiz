@@ -3,6 +3,7 @@ import type { FieldConfig } from '../types/certificates';
 import type { CertificateNameFont } from '../../../shared/certificates.contract';
 import { renderCertificate } from './certificateRenderer';
 import { createParentNotification } from '../parentPortal/notificationService';
+import { createNotification, createNotifications } from './notificationWriter';
 
 const CERTIFICATE_RENDER_CONCURRENCY = 4;
 
@@ -147,24 +148,65 @@ export async function processBatch(
       WHERE id = ?
     `).bind(finalStatus, successCount > 0 ? now : null, now, batchId).run();
 
-    for (const student of students) {
-      if (!successfulCertificateIds.has(student.certificate_id)) continue;
-      try {
-        await env.DB.prepare(`
-          INSERT INTO notifications (id, user_id, user_role, type, title, body, data)
-          VALUES (lower(hex(randomblob(8))), ?, 'student', 'certificate_issued', ?, ?, ?)
-        `).bind(
-          student.student_id,
-          'Bạn có chứng nhận mới! 🎓',
-          `Bạn vừa nhận được chứng nhận: ${batchTitle}`,
-          JSON.stringify({
+    try {
+      const batch = await env.DB.prepare(
+        'SELECT teacher_id FROM certificate_batches WHERE id = ?',
+      ).bind(batchId).first<{ teacher_id: string }>();
+      if (batch?.teacher_id) {
+        await createNotification(env.DB, {
+          userId: batch.teacher_id,
+          userRole: 'teacher',
+          type: 'certificate_batch_completed',
+          priority: finalStatus === 'sent' ? 'INFO' : 'IMPORTANT',
+          title: 'Đợt cấp chứng nhận đã hoàn tất',
+          body: `${batchTitle}: ${successCount}/${students.length} chứng nhận được tạo thành công.`,
+          actionUrl: `/teacher/certificates?batch=${encodeURIComponent(batchId)}`,
+          data: {
+            batch_id: batchId,
+            status: finalStatus,
+            success_count: successCount,
+            total_count: students.length,
+          },
+          sourceType: 'certificate_batch',
+          sourceId: batchId,
+          createdAt: now,
+        });
+      }
+    } catch (error) {
+      console.error('[NotificationWriter] certificate_batch_completed failed', {
+        batchId,
+        error,
+      });
+    }
+
+    try {
+      await createNotifications(env.DB, students
+        .filter((student) => successfulCertificateIds.has(student.certificate_id))
+        .map((student) => ({
+          userId: student.student_id,
+          userRole: 'student' as const,
+          type: 'certificate_issued' as const,
+          priority: 'IMPORTANT' as const,
+          title: 'Em có chứng nhận mới! 🎓',
+          body: `Em vừa nhận được chứng nhận: ${batchTitle}`,
+          actionUrl: `/student/certificates?certificate=${encodeURIComponent(student.certificate_id)}`,
+          data: {
             batch_id: batchId,
             certificate_id: student.certificate_id,
-          }),
-        ).run();
-      } catch (error) {
-        console.error(`[CertificateProcessor] notification failed certificate=${student.certificate_id}`, error);
-      }
+          },
+          sourceType: 'certificate',
+          sourceId: student.certificate_id,
+          createdAt: now,
+        })));
+    } catch (error) {
+      console.error('[NotificationWriter] certificate_issued failed', {
+        batchId,
+        error,
+      });
+    }
+
+    for (const student of students) {
+      if (!successfulCertificateIds.has(student.certificate_id)) continue;
       try {
         await createParentNotification(env.DB, {
           studentId: student.student_id,

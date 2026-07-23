@@ -15,6 +15,10 @@ class Statement {
   bind(...values: unknown[]) { this.bindings = values; return this; }
   async first<T>() { this.db.executed.push(this); return this.db.first(this.sql, this.bindings) as T; }
   async run() { this.db.executed.push(this); return { success: true, meta: { changes: 1 } }; }
+  async all<T>() {
+    this.db.executed.push(this);
+    return { success: true, results: this.db.all(this.sql) as T[] };
+  }
 }
 
 class FakeDatabase {
@@ -23,13 +27,22 @@ class FakeDatabase {
   studentMatchesClass = true;
   duplicateAssignmentId = '';
   prepare(sql: string) { return new Statement(sql, this); }
+  batch(statements: Statement[]) {
+    return Promise.all(statements.map((statement) => statement.run()));
+  }
   first(sql: string, _bindings: unknown[]) {
-    if (sql.includes('FROM quizzes')) return this.quizExists ? { id: 'quiz-1' } : null;
+    if (sql.includes('FROM quizzes')) return this.quizExists ? { id: 'quiz-1', title: 'Ôn tập Toán 4' } : null;
     if (sql.includes('FROM students') && sql.includes('class_id')) return this.studentMatchesClass ? { id: 'student-1' } : null;
     if (sql.includes('FROM assignments') && sql.includes("status = 'OPEN'")) {
       return this.duplicateAssignmentId ? { id: this.duplicateAssignmentId } : null;
     }
     return null;
+  }
+  all(sql: string) {
+    if (sql.includes('SELECT id FROM students')) {
+      return [{ id: 'student-1' }, { id: 'student-2' }];
+    }
+    return [];
   }
 }
 
@@ -90,6 +103,22 @@ describe('assignment route validation', () => {
 
     expect(response?.status).toBe(409);
     expect(body.existingAssignmentId).toBe('assignment-existing');
+  });
+
+  it('fans out one deduplicated notification per active student after creating an assignment', async () => {
+    const db = new FakeDatabase();
+    const response = await handleAssignmentCreateRoute(makeContext(db, validPayload));
+    const notifications = db.executed.filter((statement) => (
+      statement.sql.includes('INSERT OR IGNORE INTO notifications')
+    ));
+
+    expect(response?.status).toBe(200);
+    expect(notifications).toHaveLength(2);
+    expect(notifications.map((statement) => statement.bindings[1])).toEqual([
+      'student-1',
+      'student-2',
+    ]);
+    expect(notifications.every((statement) => statement.bindings[3] === 'assignment_created')).toBe(true);
   });
 
   it.each(['not-a-date', '2020-01-01T00:00:00.000Z'])('rejects invalid or past deadline updates: %s', async newDeadline => {

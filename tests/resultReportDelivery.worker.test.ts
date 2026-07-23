@@ -284,7 +284,8 @@ describe('delivery runtime notifications', () => {
       teacherName: 'teacher-a',
     });
 
-    expect(boundValues[3]).toBe(
+    expect(boundValues[3]).toBe('result_report_ready');
+    expect(boundValues[5]).toBe(
       'Cô Khánh đã gửi kết quả bài “Bài 1 – Ôn tập phép nhân”. Điểm của em: 8/10.',
     );
   });
