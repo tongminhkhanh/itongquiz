@@ -6,7 +6,13 @@ export interface ClientAiAction {
   workflow: AiWorkflow;
 }
 
-export interface AiActionMeta extends ClientAiAction {
+export interface AiRequestDiagnostics {
+  promptVersion?: 'ai-blueprint-v3';
+  blueprintVersion?: 3;
+  slotCount?: number;
+}
+
+export interface AiActionMeta extends ClientAiAction, AiRequestDiagnostics {
   stage: AiStage;
 }
 
@@ -14,6 +20,7 @@ export interface QuizAiExecutionContext {
   action: ClientAiAction;
   stage: AiStage;
   signal?: AbortSignal;
+  diagnostics?: AiRequestDiagnostics;
 }
 
 export interface AiActionOptions {
@@ -42,12 +49,19 @@ const defaultStageForWorkflow = (workflow: AiWorkflow): AiStage => {
   return 'GENERATE';
 };
 
+const diagnosticsFrom = (source?: AiRequestDiagnostics): AiRequestDiagnostics => ({
+  ...(source?.promptVersion ? { promptVersion: source.promptVersion } : {}),
+  ...(source?.blueprintVersion ? { blueprintVersion: source.blueprintVersion } : {}),
+  ...(source?.slotCount !== undefined ? { slotCount: source.slotCount } : {}),
+});
+
 export const resolveAiActionMeta = (options: AiActionOptions = {}): AiActionMeta => {
   if (options.action) {
     return {
       actionId: options.action.actionId.trim(),
       workflow: options.action.workflow,
       stage: options.action.stage,
+      ...diagnosticsFrom(options.action),
     };
   }
 

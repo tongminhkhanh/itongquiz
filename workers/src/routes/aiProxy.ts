@@ -176,6 +176,15 @@ export async function handleAiProxy(
         if (QUOTA_COMPLETION_STAGES.has(meta.stage)) {
             await succeedAiAction(env.DB, meta.actionId, authResult.user.username);
         }
+        if (meta.promptVersion) {
+            console.info('[AI Proxy] Stage completed', {
+                workflow: meta.workflow,
+                stage: meta.stage,
+                promptVersion: meta.promptVersion,
+                blueprintVersion: meta.blueprintVersion,
+                slotCount: meta.slotCount,
+            });
+        }
     } catch (error) {
         if (error instanceof AiRequestPolicyError) return policyErrorResponse(error);
         console.error('[AI Proxy] Failed to persist successful AI stage');

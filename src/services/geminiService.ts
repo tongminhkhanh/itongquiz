@@ -79,6 +79,7 @@ const toWorkerOptions = (execution?: QuizAiExecutionContext) => execution ? {
   action: {
     ...execution.action,
     stage: execution.stage,
+    ...(execution.diagnostics ?? {}),
   },
   signal: execution.signal,
 } : undefined;
@@ -317,6 +318,16 @@ export const generateQuiz = async (
   const systemInstruction = useV3
     ? buildGeneratorSystemPrompt(getProviderCapabilities(provider), 'ai-blueprint-v3')
     : undefined;
+  const requestExecution = useV3 && options?.blueprintV3 && execution
+    ? {
+      ...execution,
+      diagnostics: {
+        promptVersion: 'ai-blueprint-v3' as const,
+        blueprintVersion: 3 as const,
+        slotCount: options.blueprintV3.totalQuestions,
+      },
+    }
+    : execution;
   const requestedCount = options?.blueprintV3?.totalQuestions
     ?? options?.blueprint?.totalQuestions
     ?? options?.questionCount
@@ -324,7 +335,7 @@ export const generateQuiz = async (
   let result: unknown;
 
   if (provider === 'perplexity') {
-    result = await generateWithPerplexity(promptText, '', execution, systemInstruction);
+    result = await generateWithPerplexity(promptText, '', requestExecution, systemInstruction);
   } else if (provider === 'openai') {
     result = await generateWithOpenAIResilient(
       promptText,
@@ -333,7 +344,7 @@ export const generateQuiz = async (
       options?.imageLibrary,
       '',
       onStepChange,
-      execution,
+      requestExecution,
       systemInstruction,
     );
   } else if (provider === 'llm-mux' || provider === 'localhost') {
@@ -344,7 +355,7 @@ export const generateQuiz = async (
       options?.imageLibrary,
       'https://api.thitong.site/v1',
       onStepChange,
-      execution,
+      requestExecution,
       systemInstruction,
     );
   } else {
@@ -354,7 +365,7 @@ export const generateQuiz = async (
       file,
       options?.imageLibrary,
       onStepChange,
-      execution,
+      requestExecution,
       systemInstruction,
     );
   }
@@ -363,7 +374,7 @@ export const generateQuiz = async (
     const finalQuizV3 = await runV3QualityPipeline(
       result,
       options.blueprintV3,
-      execution,
+      requestExecution,
       onStepChange,
     );
     result = mapGeneratedQuizV3ToDomain(finalQuizV3);

@@ -6,6 +6,9 @@ export interface AiRequestMeta {
   actionId: string;
   workflow: AiWorkflow;
   stage: AiStage;
+  promptVersion?: 'ai-blueprint-v3';
+  blueprintVersion?: 3;
+  slotCount?: number;
 }
 
 type AiRequestPolicyCode = 'AI_META_REQUIRED' | 'AI_META_INVALID' | 'AI_STAGE_CONFLICT';
@@ -68,11 +71,24 @@ export function parseAiRequestMeta(raw: unknown): AiRequestMeta {
   const actionId = typeof raw.actionId === 'string' ? raw.actionId.trim() : '';
   const workflow = typeof raw.workflow === 'string' ? raw.workflow.trim() : '';
   const stage = typeof raw.stage === 'string' ? raw.stage.trim() : '';
+  const hasAnyDiagnostics = raw.promptVersion !== undefined
+    || raw.blueprintVersion !== undefined
+    || raw.slotCount !== undefined;
+  const promptVersion = raw.promptVersion;
+  const blueprintVersion = raw.blueprintVersion;
+  const slotCount = raw.slotCount;
 
   if (
     !ACTION_ID.test(actionId)
     || !WORKFLOWS.has(workflow as AiWorkflow)
     || !STAGES.has(stage as AiStage)
+    || (hasAnyDiagnostics && (
+      promptVersion !== 'ai-blueprint-v3'
+      || blueprintVersion !== 3
+      || !Number.isInteger(slotCount)
+      || Number(slotCount) < 1
+      || Number(slotCount) > 40
+    ))
   ) {
     throw new AiRequestPolicyError('AI_META_INVALID');
   }
@@ -81,6 +97,11 @@ export function parseAiRequestMeta(raw: unknown): AiRequestMeta {
     actionId,
     workflow: workflow as AiWorkflow,
     stage: stage as AiStage,
+    ...(hasAnyDiagnostics ? {
+      promptVersion: 'ai-blueprint-v3' as const,
+      blueprintVersion: 3 as const,
+      slotCount: Number(slotCount),
+    } : {}),
   };
 
   if (!WORKFLOW_STAGES[meta.workflow].has(meta.stage)) {

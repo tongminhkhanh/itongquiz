@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   AiRequestPolicyError,
   authorizeAiStage,
@@ -228,6 +228,10 @@ let fakeDb: FakeAiDb;
 let env: any;
 let fetchSpy: ReturnType<typeof vi.spyOn>;
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 beforeEach(() => {
   fakeDb = new FakeAiDb();
   env = {
@@ -347,6 +351,58 @@ describe('/api/ai/chat', () => {
     expect(key).toContain('teacher');
     expect(key).toContain('/api/ai/chat');
     expect(key).not.toContain('teacher-a');
+  });
+
+  it('accepts allow-listed V3 diagnostics without logging prompt content', async () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    const response = await handleAiProxy(
+      request({
+        model: 'gemini-2.5-flash',
+        messages: [{ role: 'user', content: 'SECRET QUESTION CONTENT' }],
+        _meta: {
+          actionId,
+          workflow: 'QUIZ_CREATE',
+          stage: 'GENERATE',
+          promptVersion: 'ai-blueprint-v3',
+          blueprintVersion: 3,
+          slotCount: 13,
+          prompt: 'SECRET META CONTENT',
+        },
+      }),
+      env,
+      '/api/ai/chat',
+      'POST',
+    );
+
+    expect(response?.status).toBe(200);
+    expect(JSON.stringify(infoSpy.mock.calls)).toContain('ai-blueprint-v3');
+    expect(JSON.stringify(infoSpy.mock.calls)).not.toContain('SECRET');
+    const upstreamBody = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body));
+    expect(upstreamBody._meta).toBeUndefined();
+  });
+
+  it('rejects invalid V3 diagnostic values', async () => {
+    const response = await handleAiProxy(
+      request({
+        model: 'gemini-2.5-flash',
+        messages: [{}],
+        _meta: {
+          actionId,
+          workflow: 'QUIZ_CREATE',
+          stage: 'GENERATE',
+          promptVersion: 'ai-blueprint-v3',
+          blueprintVersion: 3,
+          slotCount: 41,
+        },
+      }),
+      env,
+      '/api/ai/chat',
+      'POST',
+    );
+
+    expect(response?.status).toBe(400);
+    await expect(response?.json()).resolves.toMatchObject({ code: 'AI_META_INVALID' });
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('does not forward internal action metadata to the upstream provider', async () => {

@@ -59,6 +59,36 @@ describe('requestWorkerAiText', () => {
     });
   });
 
+  it('forwards safe V3 diagnostics inside internal metadata only', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: 'Đề V3' } }],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await requestWorkerAiText(
+      { model: 'gemini-2.5-flash', messages: [{}] },
+      {
+        action: {
+          actionId: 'ai-1234567890abcdefghij',
+          workflow: 'QUIZ_CREATE',
+          stage: 'GENERATE',
+          promptVersion: 'ai-blueprint-v3',
+          blueprintVersion: 3,
+          slotCount: 13,
+        },
+      },
+    );
+
+    const body = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body));
+    expect(body._meta).toEqual({
+      actionId: 'ai-1234567890abcdefghij',
+      workflow: 'QUIZ_CREATE',
+      stage: 'GENERATE',
+      promptVersion: 'ai-blueprint-v3',
+      blueprintVersion: 3,
+      slotCount: 13,
+    });
+  });
+
   it('combines OpenAI-compatible SSE deltas', async () => {
     const stream = [
       'data: {"choices":[{"delta":{"content":"Xin "}}]}',
