@@ -6,6 +6,7 @@ import {
   validateQuizBlueprint,
   type QuestionTypeAllocation,
   type QuizBlueprint,
+  type QuizBlueprintV3,
   type QuizIntent,
 } from '../domain/quizBlueprint';
 
@@ -29,15 +30,28 @@ const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
 
 interface QuestionBlueprintSectionProps {
   blueprint: QuizBlueprint;
+  blueprintV3?: QuizBlueprintV3 | null;
   onChange: (blueprint: QuizBlueprint) => void;
 }
 
 const clampCount = (value: number): number => Math.max(0, Math.min(40, Math.trunc(value || 0)));
 
-const QuestionBlueprintSection: React.FC<QuestionBlueprintSectionProps> = ({ blueprint, onChange }) => {
+const QuestionBlueprintSection: React.FC<QuestionBlueprintSectionProps> = ({
+  blueprint,
+  blueprintV3,
+  onChange,
+}) => {
   const typeTotal = blueprint.typeAllocations.reduce((sum, allocation) => sum + allocation.count, 0);
   const errors = validateQuizBlueprint(blueprint);
   const typeError = errors.find((error) => error.startsWith('Tổng số câu theo dạng'));
+  const slotTypeCount = blueprintV3
+    ? new Set(blueprintV3.slots.map((slot) => slot.type)).size
+    : 0;
+  const slotDifficultyCounts = blueprintV3 ? {
+    level1: blueprintV3.slots.filter((slot) => slot.difficulty === 1).length,
+    level2: blueprintV3.slots.filter((slot) => slot.difficulty === 2).length,
+    level3: blueprintV3.slots.filter((slot) => slot.difficulty === 3).length,
+  } : null;
 
   const setIntent = (intent: QuizIntent) => {
     onChange({ ...blueprint, intent });
@@ -146,6 +160,18 @@ const QuestionBlueprintSection: React.FC<QuestionBlueprintSectionProps> = ({ blu
           );
         })}
       </div>
+
+      {blueprintV3 && slotDifficultyCounts && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3" aria-label="Tóm tắt Blueprint V3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <span className="font-bold text-emerald-800">{blueprintV3.slots.length} slot đã sẵn sàng</span>
+            <span className="font-medium text-emerald-700">{slotTypeCount} dạng câu</span>
+          </div>
+          <p className="mt-1 text-xs text-emerald-700">
+            Mức 1: {slotDifficultyCounts.level1} · Mức 2: {slotDifficultyCounts.level2} · Mức 3: {slotDifficultyCounts.level3}
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <span className={`text-sm font-bold ${typeTotal === blueprint.totalQuestions ? 'text-emerald-700' : 'text-red-700'}`}>

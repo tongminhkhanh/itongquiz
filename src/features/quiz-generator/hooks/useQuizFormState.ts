@@ -26,9 +26,11 @@ import type {
 } from '../domain/quizCreation.types';
 import {
     buildBalancedTypeAllocations,
+    buildQuestionBlueprintSlots,
     validateQuizBlueprint,
     type QuestionTypeAllocation,
     type QuizBlueprint,
+    type QuizBlueprintV3,
     type QuizIntent,
 } from '../domain/quizBlueprint';
 import type { OcrDocument } from '../../../services/ai/schemas/ocrDocumentSchema';
@@ -119,6 +121,38 @@ export const useQuizFormState = ({
         () => validateQuizBlueprint(questionBlueprint),
         [questionBlueprint],
     );
+    const questionBlueprintV3 = useMemo<QuizBlueprintV3 | null>(() => {
+        if (blueprintErrors.length > 0 || !classLevel.trim()) return null;
+        const objective = topic.trim() || quizTitle.trim() || 'B?i ki?m tra';
+        try {
+            return {
+                version: 3,
+                intent: questionBlueprint.intent,
+                sourceMode: questionBlueprint.sourceMode,
+                topic: objective,
+                classLevel: classLevel.trim(),
+                totalQuestions: questionBlueprint.totalQuestions,
+                slots: buildQuestionBlueprintSlots({
+                    totalQuestions: questionBlueprint.totalQuestions,
+                    typeAllocations: questionBlueprint.typeAllocations,
+                    difficultyLevels: questionBlueprint.difficultyLevels,
+                    objective,
+                    sourceRefs: questionBlueprint.sourceMode === 'DOCUMENT'
+                        ? selectedOcrPageNumbers.map((pageNumber) => `page-${pageNumber}`)
+                        : undefined,
+                }),
+            };
+        } catch {
+            return null;
+        }
+    }, [
+        blueprintErrors,
+        classLevel,
+        questionBlueprint,
+        quizTitle,
+        selectedOcrPageNumbers,
+        topic,
+    ]);
 
     const setUploadedFile = (nextFile: File | null) => {
         setUploadedFileState(nextFile);
@@ -339,6 +373,7 @@ export const useQuizFormState = ({
         quizIntent,
         setQuizIntent,
         questionBlueprint,
+        questionBlueprintV3,
         blueprintErrors,
         isBlueprintValid: blueprintErrors.length === 0,
         setQuestionBlueprint,

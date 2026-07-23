@@ -1,7 +1,10 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '../../../../stores/authStore';
 import { useAssignmentStore } from '../../../stores/useAssignmentStore';
-import { isAiQuizV2Enabled } from '../../../config/featureFlags';
+import {
+    isAiBlueprintV3Enabled,
+    isAiQuizV2Enabled,
+} from '../../../config/featureFlags';
 import { useClassStore } from '../../../stores/useClassStore';
 import type { UseCreateQuizLogicProps } from '../domain/quizCreation.types';
 import { useQuizFormState } from './useQuizFormState';
@@ -19,6 +22,7 @@ export const useCreateQuizLogic = ({
     const classStore = useClassStore();
     const assignmentStore = useAssignmentStore();
     const aiQuizV2Enabled = isAiQuizV2Enabled();
+    const aiBlueprintV3Enabled = aiQuizV2Enabled && isAiBlueprintV3Enabled();
 
     const isTeacherAccount = !authStore.isAdmin;
     const isClassLocked = !authStore.isAdmin && !!authStore.teacherClass;
@@ -91,6 +95,7 @@ export const useCreateQuizLogic = ({
         quizIntent: form.quizIntent,
         setQuizIntent: form.setQuizIntent,
         questionBlueprint: form.questionBlueprint,
+        questionBlueprintV3: form.questionBlueprintV3,
         blueprintErrors: form.blueprintErrors,
         isBlueprintValid: form.isBlueprintValid,
         setQuestionBlueprint: form.setQuestionBlueprint,
@@ -136,6 +141,7 @@ export const useCreateQuizLogic = ({
         lockedClass,
         isTeacherAccount,
         aiQuizV2Enabled,
+        aiBlueprintV3Enabled,
         aiUsageCount: generation.aiUsageCount,
         aiUsageRemaining: generation.aiUsageRemaining,
         hasAiQuota: generation.hasAiQuota,

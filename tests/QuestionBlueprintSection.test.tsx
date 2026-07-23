@@ -3,7 +3,11 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { QuestionType } from '../src/types';
 import QuestionBlueprintSection from '../src/features/quiz-generator/components/QuestionBlueprintSection';
-import type { QuizBlueprint } from '../src/features/quiz-generator/domain/quizBlueprint';
+import {
+  buildQuestionBlueprintSlots,
+  type QuizBlueprint,
+  type QuizBlueprintV3,
+} from '../src/features/quiz-generator/domain/quizBlueprint';
 
 const initialBlueprint: QuizBlueprint = {
   intent: 'PRACTICE',
@@ -18,9 +22,30 @@ const initialBlueprint: QuizBlueprint = {
   difficultyLevels: { level1: 3, level2: 5, level3: 2 },
 };
 
-const Harness = () => {
+const blueprintV3: QuizBlueprintV3 = {
+  version: 3,
+  intent: 'PRACTICE',
+  sourceMode: 'TOPIC',
+  topic: 'Phân số',
+  classLevel: '4',
+  totalQuestions: 10,
+  slots: buildQuestionBlueprintSlots({
+    totalQuestions: 10,
+    typeAllocations: initialBlueprint.typeAllocations,
+    difficultyLevels: initialBlueprint.difficultyLevels,
+    objective: 'Phân số lớp 4',
+  }),
+};
+
+const Harness = ({ showV3 = false }: { showV3?: boolean }) => {
   const [blueprint, setBlueprint] = useState(initialBlueprint);
-  return <QuestionBlueprintSection blueprint={blueprint} onChange={setBlueprint} />;
+  return (
+    <QuestionBlueprintSection
+      blueprint={blueprint}
+      blueprintV3={showV3 ? blueprintV3 : null}
+      onChange={setBlueprint}
+    />
+  );
 };
 
 describe('QuestionBlueprintSection', () => {
@@ -44,6 +69,15 @@ describe('QuestionBlueprintSection', () => {
     fireEvent.change(input, { target: { value: '9' } });
 
     expect(screen.getByText('Tổng số câu theo dạng phải bằng 10.')).toBeInTheDocument();
+  });
+
+  it('shows a read-only V3 slot summary', () => {
+    render(<Harness showV3 />);
+
+    expect(screen.getByText('10 slot đã sẵn sàng')).toBeInTheDocument();
+    expect(screen.getByText('4 dạng câu')).toBeInTheDocument();
+    expect(screen.getByText('Mức 1: 3 · Mức 2: 5 · Mức 3: 2')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Sửa slot-1')).not.toBeInTheDocument();
   });
 
   it('switches between exam and practice intent', async () => {

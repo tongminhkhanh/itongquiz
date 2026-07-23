@@ -117,6 +117,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     difficultyLevels={logic.difficultyLevels}
                     setDifficultyLevels={logic.setDifficultyLevels}
                     questionBlueprint={logic.questionBlueprint}
+                    questionBlueprintV3={logic.aiBlueprintV3Enabled ? logic.questionBlueprintV3 : null}
                     setQuestionBlueprint={logic.setQuestionBlueprint}
                     showBlueprint={aiQuizV2Enabled}
                     isOpenTypes={logic.expandedSections.questionTypes}

@@ -4,7 +4,7 @@ import CollapsibleSection from './CollapsibleSection';
 import QuestionBlueprintSection from './QuestionBlueprintSection';
 import { QuestionTypeSelector, DifficultyLevelSelector } from '../../../components/teacher/QuizCreator';
 import type { DifficultyLevels } from '../domain/quizCreation.types';
-import type { QuizBlueprint } from '../domain/quizBlueprint';
+import type { QuizBlueprint, QuizBlueprintV3 } from '../domain/quizBlueprint';
 
 interface QuestionSettingsSectionProps {
     selectedTypes: Record<string, boolean>;
@@ -12,6 +12,7 @@ interface QuestionSettingsSectionProps {
     difficultyLevels: DifficultyLevels;
     setDifficultyLevels: (value: DifficultyLevels) => void;
     questionBlueprint: QuizBlueprint;
+    questionBlueprintV3?: QuizBlueprintV3 | null;
     setQuestionBlueprint: (value: QuizBlueprint) => void;
     showBlueprint?: boolean;
     isOpenTypes: boolean;
@@ -25,6 +26,7 @@ const QuestionSettingsSection: React.FC<QuestionSettingsSectionProps> = ({
     difficultyLevels,
     setDifficultyLevels,
     questionBlueprint,
+    questionBlueprintV3,
     setQuestionBlueprint,
     showBlueprint = true,
     isOpenTypes,
@@ -52,6 +54,7 @@ const QuestionSettingsSection: React.FC<QuestionSettingsSectionProps> = ({
                     {showBlueprint && (
                         <QuestionBlueprintSection
                             blueprint={questionBlueprint}
+                            blueprintV3={questionBlueprintV3}
                             onChange={setQuestionBlueprint}
                         />
                     )}
