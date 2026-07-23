@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom';
 import SubjectLibrary from '../student/PracticeLibrary/SubjectLibrary';
 import { StudentFloatingSidebar } from '../gamification/StudentFloatingSidebar';
+import ResultScreen from '../student/ResultScreen';
 import {
   StudentDashboardContent,
   StudentDashboardModals,
@@ -19,6 +20,19 @@ const StudentDashboardUI = () => {
 
   if (liveExam.shouldRenderScreen) return <StudentLiveExamScreen controller={liveExam} />;
   if (!studentSession) return null;
+  if (assignments.reviewState) {
+    return (
+      <ResultScreen
+        quiz={assignments.reviewState.quiz}
+        result={assignments.reviewState.result}
+        answers={assignments.reviewState.answers}
+        initialTab="review"
+        onExit={assignments.closeReview}
+        studentName={studentSession.fullName}
+        studentClass={studentSession.className}
+      />
+    );
+  }
   if (subjectId) {
     return (
       <SubjectLibrary

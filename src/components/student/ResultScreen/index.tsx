@@ -17,14 +17,15 @@ interface Props {
     onExit: () => void;
     studentName?: string;
     studentClass?: string;
+    initialTab?: TabType;
 }
 
 export type TabType = 'result' | 'review' | 'study-plan';
 type ReviewFilter = 'all' | 'incorrect' | 'skipped';
 
-const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit }) => {
+const ResultScreen: React.FC<Props> = ({ quiz, result, answers, onExit, initialTab = 'result' }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [activeTab, setActiveTab] = useState<TabType>('result');
+    const [activeTab, setActiveTab] = useState<TabType>(initialTab);
     const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
     const [recommendationFocus, setRecommendationFocus] = useState<StudentWeaknessFocus | null>(null);
 

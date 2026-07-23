@@ -39,9 +39,11 @@ export interface AssignedWorkSectionProps {
   errorMessage?: string | null;
   page: number;
   totalPages: number;
+  reviewingAssignmentId?: string | null;
   onRetry: () => void;
   onPageChange: (page: number) => void;
   onStartQuiz: (quiz: AssignedQuiz) => void;
+  onReviewQuiz: (quiz: AssignedQuiz) => void;
 }
 
 export interface LearningProgressPanelProps {

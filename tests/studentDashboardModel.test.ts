@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildAssignmentReviewQuiz,
   buildAssignedQuizzes,
+  buildSelectedAssignmentAnswers,
   buildAttendanceQuestionPool,
   buildPracticeCatalog,
   getAttendanceMultiplier,
@@ -19,6 +21,36 @@ describe('student dashboard assignment model', () => {
 
     expect(result.map((quiz) => quiz.id)).toEqual(['earlier', 'later', 'completed']);
     expect(result[0]._assignmentData?.id).toBe('earlier-assignment');
+  });
+
+  it('rebuilds the submitted question order from stored snapshots', () => {
+    const quiz = {
+      id: 'quiz-1',
+      title: 'Quiz',
+      questions: [
+        { id: 'q1', question: 'Current question 1' },
+        { id: 'q2', question: 'Current question 2' },
+      ],
+    } as any;
+    const answers = {
+      _questionOrder: ['q2', 'q1'],
+      q1: {
+        selectedAnswer: 'A',
+        isCorrect: true,
+        questionSnapshot: { id: 'q1', question: 'Submitted question 1' },
+      },
+      q2: {
+        selectedAnswer: 'B',
+        isCorrect: false,
+        questionSnapshot: { id: 'q2', question: 'Submitted question 2' },
+      },
+    };
+
+    const reviewQuiz = buildAssignmentReviewQuiz(quiz, answers);
+
+    expect(reviewQuiz.questions.map((question) => question.id)).toEqual(['q2', 'q1']);
+    expect((reviewQuiz.questions[0] as any).question).toBe('Submitted question 2');
+    expect(buildSelectedAssignmentAnswers(answers)).toEqual({ q1: 'A', q2: 'B' });
   });
 });
 

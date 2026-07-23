@@ -51,6 +51,24 @@ const renderScreen = (resultOverride: StudentResult = result) => render(
 );
 
 describe('student result screen', () => {
+  it('can open directly on the full answer review', () => {
+    render(
+      <ResultScreen
+        quiz={quiz}
+        result={result}
+        answers={{ q1: 'A', q2: 'A', q3: '' }}
+        initialTab="review"
+        onExit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('tab', { name: 'Xem lại bài' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tabpanel', { name: 'Xem lại bài' })).toBeVisible();
+    expect(screen.getByText('Câu một')).toBeInTheDocument();
+    expect(screen.getByText('Câu hai')).toBeInTheDocument();
+    expect(screen.getByText('Câu ba')).toBeInTheDocument();
+  });
+
   it('presents a compact factual result summary and three useful areas', () => {
     renderScreen();
 

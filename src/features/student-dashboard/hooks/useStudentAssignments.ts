@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useAssignmentStore } from '@/src/stores/useAssignmentStore';
 import { useQuizStore } from '@/stores/quizStore';
 import type { AssignedQuiz } from '@/src/components/HomePage/student-dashboard';
 import { getAssignmentVisualState } from '@/src/components/HomePage/student-dashboard';
+import { fetchResultAnswers } from '@/src/services/results/resultAnswersService';
+import type { StudentResult } from '@/src/types';
 import {
   ASSIGNMENTS_PER_PAGE,
+  buildAssignmentReviewQuiz,
   buildAssignedQuizzes,
+  buildSelectedAssignmentAnswers,
 } from '../model';
+
+interface AssignmentReviewState {
+  quiz: AssignedQuiz;
+  result: StudentResult;
+  answers: Record<string, unknown>;
+}
 
 export const useStudentAssignments = (studentId?: string) => {
   const assignments = useAssignmentStore((state) => state.assignments);
@@ -14,9 +25,13 @@ export const useStudentAssignments = (studentId?: string) => {
   const quizzes = useQuizStore((state) => state.quizzes);
   const selectQuiz = useQuizStore((state) => state.selectQuiz);
   const setView = useQuizStore((state) => state.setView);
+  const loadResults = useQuizStore((state) => state.loadResults);
+  const loadQuizQuestions = useQuizStore((state) => state.loadQuizQuestions);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [reviewingAssignmentId, setReviewingAssignmentId] = useState<string | null>(null);
+  const [reviewState, setReviewState] = useState<AssignmentReviewState | null>(null);
 
   const fetchAssignments = useCallback(async () => {
     setIsLoading(true);
@@ -62,6 +77,57 @@ export const useStudentAssignments = (studentId?: string) => {
     setView('student');
   }, [selectQuiz, setView]);
 
+  const reviewQuiz = useCallback(async (quiz: AssignedQuiz) => {
+    const assignmentId = String(quiz._assignmentData?.id || quiz.id);
+    setReviewingAssignmentId(assignmentId);
+
+    try {
+      await loadResults();
+      const result = useQuizStore.getState().results
+        .filter((item) => String(item.quizId) === String(quiz.id))
+        .sort((first, second) => (
+          Date.parse(second.submittedAt || '') - Date.parse(first.submittedAt || '')
+        ))[0];
+
+      if (!result) {
+        throw new Error('Không tìm thấy bài làm đã nộp.');
+      }
+
+      const storedAnswers = await fetchResultAnswers(result.id);
+      const answeredQuestionIds = Object.keys(storedAnswers)
+        .filter((questionId) => !questionId.startsWith('_'));
+      if (answeredQuestionIds.length === 0) {
+        throw new Error('Bài làm này chưa có dữ liệu câu trả lời để xem lại.');
+      }
+
+      let reviewQuizData = buildAssignmentReviewQuiz(quiz, storedAnswers);
+      if (reviewQuizData.questions.length < result.totalQuestions) {
+        const loadedQuiz = await loadQuizQuestions(quiz.id);
+        if (loadedQuiz) {
+          reviewQuizData = buildAssignmentReviewQuiz({
+            ...loadedQuiz,
+            _assignmentData: quiz._assignmentData,
+          }, storedAnswers);
+        }
+      }
+
+      if (reviewQuizData.questions.length === 0) {
+        throw new Error('Không tải được nội dung câu hỏi của bài làm.');
+      }
+
+      setReviewState({
+        quiz: reviewQuizData,
+        result: { ...result, answers: storedAnswers },
+        answers: buildSelectedAssignmentAnswers(storedAnswers),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Không thể mở lại bài làm.';
+      toast.error(message);
+    } finally {
+      setReviewingAssignmentId(null);
+    }
+  }, [loadQuizQuestions, loadResults]);
+
   const scrollToPrimaryTarget = useCallback(() => {
     const targetId = hasReadyAssignment ? 'assigned-work' : 'practice-library';
     document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -74,9 +140,13 @@ export const useStudentAssignments = (studentId?: string) => {
     isLoading,
     errorMessage,
     hasReadyAssignment,
+    reviewingAssignmentId,
+    reviewState,
     setPage,
     retry: fetchAssignments,
     startQuiz,
+    reviewQuiz,
+    closeReview: () => setReviewState(null),
     scrollToPrimaryTarget,
   };
 };

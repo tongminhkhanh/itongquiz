@@ -122,6 +122,7 @@ const assignedWorkProps = {
   onRetry: vi.fn(),
   onPageChange: vi.fn(),
   onStartQuiz: vi.fn(),
+  onReviewQuiz: vi.fn(),
 };
 
 describe('dashboard state primitives', () => {
@@ -220,8 +221,9 @@ describe('student dashboard hero and assigned work', () => {
     );
   });
 
-  it('maps assignment actions and only starts ready work', () => {
+  it('starts ready work and opens completed work for review', () => {
     const onStartQuiz = vi.fn();
+    const onReviewQuiz = vi.fn();
     const ready = assignmentQuiz({ id: 'ready' });
     const completed = assignmentQuiz({ id: 'completed', attemptCount: 1 });
     const closed = assignmentQuiz({ id: 'closed', status: 'CLOSED' });
@@ -231,14 +233,17 @@ describe('student dashboard hero and assigned work', () => {
         {...assignedWorkProps}
         quizzes={[ready, completed, closed]}
         onStartQuiz={onStartQuiz}
+        onReviewQuiz={onReviewQuiz}
       />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Làm bài ngay' }));
-    expect(screen.getByRole('button', { name: 'Xem kết quả' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Xem kết quả' }));
     expect(screen.getByRole('button', { name: 'Đã đóng' })).toBeDisabled();
     expect(onStartQuiz).toHaveBeenCalledTimes(1);
     expect(onStartQuiz).toHaveBeenCalledWith(ready);
+    expect(onReviewQuiz).toHaveBeenCalledTimes(1);
+    expect(onReviewQuiz).toHaveBeenCalledWith(completed);
   });
 });
 

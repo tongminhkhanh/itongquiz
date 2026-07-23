@@ -1,5 +1,6 @@
 import type { Assignment, Quiz } from '@/src/types';
 import type { AssignedQuiz } from '@/src/components/HomePage/student-dashboard';
+import type { ResultAnswers } from '@/src/services/results/resultAnswersService';
 
 const parseDate = (value?: string, fallback = 0) => {
   const timestamp = Date.parse(value || '');
@@ -40,3 +41,54 @@ export const buildAssignedQuizzes = (
   if (firstCreated !== secondCreated) return secondCreated - firstCreated;
   return String(first.title || '').localeCompare(String(second.title || ''), 'vi');
 });
+
+const getQuestionSnapshot = (answer: unknown): Quiz['questions'][number] | null => {
+  if (!answer || typeof answer !== 'object' || Array.isArray(answer)) return null;
+  const snapshot = (answer as { questionSnapshot?: unknown }).questionSnapshot;
+  return snapshot && typeof snapshot === 'object'
+    ? snapshot as Quiz['questions'][number]
+    : null;
+};
+
+export const buildAssignmentReviewQuiz = (
+  quiz: AssignedQuiz,
+  answers: ResultAnswers,
+): AssignedQuiz => {
+  const currentQuestions = new Map(
+    (quiz.questions || []).map((question) => [String(question.id), question]),
+  );
+  const answeredQuestionIds = Object.keys(answers).filter((key) => !key.startsWith('_'));
+  const storedOrder = Array.isArray(answers._questionOrder)
+    ? answers._questionOrder.map(String).filter(Boolean)
+    : [];
+  const orderedIds = Array.from(new Set([
+    ...storedOrder,
+    ...answeredQuestionIds,
+  ]));
+  const reviewedQuestions = orderedIds
+    .map((questionId) => getQuestionSnapshot(answers[questionId]) ?? currentQuestions.get(questionId))
+    .filter((question): question is Quiz['questions'][number] => Boolean(question));
+
+  return {
+    ...quiz,
+    questions: reviewedQuestions.length > 0 ? reviewedQuestions : quiz.questions,
+  };
+};
+
+export const buildSelectedAssignmentAnswers = (
+  answers: ResultAnswers,
+): Record<string, unknown> => Object.fromEntries(
+  Object.entries(answers)
+    .filter(([questionId]) => !questionId.startsWith('_'))
+    .map(([questionId, answer]) => {
+      if (
+        answer
+        && typeof answer === 'object'
+        && !Array.isArray(answer)
+        && Object.prototype.hasOwnProperty.call(answer, 'selectedAnswer')
+      ) {
+        return [questionId, (answer as { selectedAnswer?: unknown }).selectedAnswer];
+      }
+      return [questionId, answer];
+    }),
+);

@@ -27,9 +27,11 @@ export const StudentDashboardBody = ({
           errorMessage={assignments.errorMessage}
           page={assignments.page}
           totalPages={assignments.totalPages}
+          reviewingAssignmentId={assignments.reviewingAssignmentId}
           onRetry={() => void assignments.retry()}
           onPageChange={assignments.setPage}
           onStartQuiz={assignments.startQuiz}
+          onReviewQuiz={(quiz) => void assignments.reviewQuiz(quiz)}
         />
         <StudentHomeworkSection
           studentId={studentSession.studentId}

@@ -9,9 +9,11 @@ export function AssignedWorkSection({
   errorMessage,
   page,
   totalPages,
+  reviewingAssignmentId,
   onRetry,
   onPageChange,
   onStartQuiz,
+  onReviewQuiz,
 }: AssignedWorkSectionProps) {
   const safeTotalPages = Math.max(1, totalPages);
   const safePage = Math.min(Math.max(1, page), safeTotalPages);
@@ -47,6 +49,9 @@ export function AssignedWorkSection({
             const visualState = getAssignmentVisualState(quiz);
             const actionLabel = getAssignmentActionLabel(visualState);
             const isReady = visualState === 'ready';
+            const isCompleted = visualState === 'completed';
+            const isReviewing = isCompleted
+              && String(reviewingAssignmentId || '') === String(assignment?.id || '');
             const attemptCount = Math.max(0, Number(assignment?.attemptCount) || 0);
             const maxAttempts = Math.max(1, Number(assignment?.maxAttempts) || 1);
             const remainingAttempts = Math.max(0, maxAttempts - attemptCount);
@@ -105,17 +110,19 @@ export function AssignedWorkSection({
                     type="button"
                     onClick={() => {
                       if (isReady) onStartQuiz(quiz);
+                      else if (isCompleted) onReviewQuiz(quiz);
                     }}
-                    disabled={!isReady}
+                    disabled={visualState === 'closed' || isReviewing}
+                    aria-busy={isReviewing}
                     className={`inline-flex min-h-11 w-full items-center justify-center rounded-[10px] px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:w-auto sm:min-w-36 ${
                       isReady
                         ? 'bg-sky-500 text-white hover:bg-sky-600 focus-visible:ring-sky-500'
-                        : visualState === 'completed'
-                          ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : isCompleted
+                          ? 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 focus-visible:ring-emerald-500 disabled:cursor-wait'
                           : 'cursor-not-allowed border border-slate-300 bg-slate-100 text-slate-600'
                     }`}
                   >
-                    {actionLabel}
+                    {isReviewing ? 'Đang tải bài...' : actionLabel}
                   </button>
                 </div>
               </article>
