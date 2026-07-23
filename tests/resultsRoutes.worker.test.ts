@@ -103,7 +103,8 @@ describe('canonical student id on result writes', () => {
     const insert = insertedResult(db);
     expect(insert?.sql).toContain('student_id');
     expect(insert?.bindings[0]).toBe('student-canonical');
-    expect(insert?.bindings[1]).toBe(' Nguyễn Văn An ');
+    expect(insert?.bindings[1]).toBeNull();
+    expect(insert?.bindings[2]).toBe(' Nguyễn Văn An ');
   });
 
   it('stores null instead of guessing when multiple active students match', async () => {

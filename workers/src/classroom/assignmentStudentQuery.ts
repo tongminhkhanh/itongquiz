@@ -27,19 +27,24 @@ export const getStudentAssignmentsResponse = async (
         return jsonResponse({ status: 'success', data: [] });
     }
 
-    const quizIds = [...new Set(assignments.results.map((assignment: any) => assignment.quiz_id))];
-    const placeholders = quizIds.map(() => '?').join(',');
+    const assignmentIds = assignments.results.map((assignment: any) => String(assignment.id));
+    const placeholders = assignmentIds.map(() => '?').join(',');
     const counts = await db.prepare(
-        `SELECT quiz_id, COUNT(*) as cnt FROM results WHERE student_name = ? AND quiz_id IN (${placeholders}) AND answers != '{"status":"STARTED"}' GROUP BY quiz_id`
-    ).bind(student.full_name, ...quizIds).all();
+        `SELECT assignment_id, COUNT(*) as cnt
+         FROM results
+         WHERE assignment_id IN (${placeholders})
+           AND (student_id = ? OR (student_id IS NULL AND LOWER(TRIM(student_name)) = LOWER(TRIM(?))))
+           AND answers != '{"status":"STARTED"}'
+         GROUP BY assignment_id`
+    ).bind(...assignmentIds, student.id, student.full_name).all();
     const countMap = new Map(
-        (counts.results as any[]).map((row) => [row.quiz_id, row.cnt])
+        (counts.results as any[]).map((row) => [String(row.assignment_id), Number(row.cnt) || 0])
     );
     return jsonResponse({
         status: 'success',
         data: assignments.results.map((assignment: any) => ({
             ...mapAssignment(assignment),
-            attemptCount: countMap.get(assignment.quiz_id) || 0,
+            attemptCount: countMap.get(String(assignment.id)) || 0,
             maxAttempts: Number(assignment.max_attempts) || 1,
         })),
     });

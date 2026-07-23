@@ -10,21 +10,27 @@ import { AssignmentSubmitRow } from './AssignmentSubmitRow';
 
 export const CreateAssignmentSection = (props: CreateAssignmentSectionProps) => {
   const composer = useAssignmentComposer(props);
+  const isDrawer = props.variant === 'drawer';
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-      <AssignmentComposerHeader />
-      <AssignmentInsight
-        manualNotice={composer.manualNotice}
-        model={composer.insightModel}
-        onClearDraft={() => composer.clearDraftState({ keepFormValues: true })}
-      />
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-5">
-        <AssignmentQuizField
-          selectedQuizId={composer.selectedQuizId}
-          setSelectedQuizId={composer.setSelectedQuizId}
-          quizzes={composer.orderedQuizzes}
-          recommendedQuizIds={composer.recommendedQuizIds}
+    <div className={isDrawer ? 'space-y-5' : 'bg-white rounded-2xl border border-gray-100 p-6 shadow-sm'}>
+      {!isDrawer && <AssignmentComposerHeader />}
+      {!isDrawer && (
+        <AssignmentInsight
+          manualNotice={composer.manualNotice}
+          model={composer.insightModel}
+          onClearDraft={() => composer.clearDraftState({ keepFormValues: true })}
         />
+      )}
+      {isDrawer && <SelectedQuizPreview quiz={composer.selectedQuiz} />}
+      <div className={isDrawer ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-1 md:grid-cols-5 gap-4 mb-5'}>
+        {!props.initialQuizId && (
+          <AssignmentQuizField
+            selectedQuizId={composer.selectedQuizId}
+            setSelectedQuizId={composer.setSelectedQuizId}
+            quizzes={composer.orderedQuizzes}
+            recommendedQuizIds={composer.recommendedQuizIds}
+          />
+        )}
         <AssignmentAudienceFields
           classes={props.classes}
           selectedClassId={composer.selectedClassId}
@@ -40,7 +46,7 @@ export const CreateAssignmentSection = (props: CreateAssignmentSectionProps) => 
           setMaxAttempts={composer.setMaxAttempts}
         />
       </div>
-      <SelectedQuizPreview quiz={composer.selectedQuiz} />
+      {!isDrawer && <SelectedQuizPreview quiz={composer.selectedQuiz} />}
       <AssignmentSubmitRow
         disabled={!composer.selectedQuizId || !composer.selectedClassId || !composer.deadline}
         isLoading={props.isLoading}

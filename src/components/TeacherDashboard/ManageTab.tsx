@@ -1,24 +1,35 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Quiz } from '../../types';
-import { Card, Button } from '../common';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    BookOpen,
+    Copy,
+    Edit,
+    Eye,
+    Key,
+    Loader2,
+    Lock,
+    MoreVertical,
+    RefreshCw,
+    Search,
+    Send,
+    Tag,
+    Trash2,
+} from 'lucide-react';
+import type { Quiz } from '../../types';
+import { Button } from '../common';
 import { useQuizManager } from '../../hooks';
-import { Search, Key, Edit, Trash2, RefreshCw, Lock, Tag, Copy, Send, MoreVertical, Eye, X, Loader2, CheckCircle2, BookOpen } from 'lucide-react';
 import { useQuizStore } from '../../../stores/quizStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useAssignmentStore } from '../../stores/useAssignmentStore';
-import { useClassStore } from '../../stores/useClassStore';
+import { useTeacherDashboardUIStore } from '../../stores/useTeacherDashboardUIStore';
 import { SUBJECT_CONFIG } from '../../features/student-dashboard/model/dashboardConstants';
-import { showError, showConfirm, showSuccess } from '../../utils/toast';
+import { parseQuizTags } from '../../utils/quizTags';
+import { showConfirm, showError, showSuccess } from '../../utils/toast';
+import { AssignmentDrawer } from './AssignmentDrawer';
 import WorksheetExportModal from './WorksheetExportModal';
 
-// Category tabs config for teacher filter
-const CATEGORY_TABS = [
-    { key: 'all', label: 'Tất cả', icon: '📚' },
-    ...Object.entries(SUBJECT_CONFIG).map(([key, config]) => ({
-        key,
-        label: config.title,
-        icon: config.icon,
-    })),
+const CATEGORY_OPTIONS = [
+    { key: 'all', label: 'Tất cả môn' },
+    ...Object.entries(SUBJECT_CONFIG).map(([key, config]) => ({ key, label: config.title })),
 ];
 
 interface ManageTabProps {
@@ -28,74 +39,99 @@ interface ManageTabProps {
     onManageCode: (quizId: string, currentCode: string) => void;
 }
 
-// ============ Dropdown Menu Component ============
+type AssignmentStatusFilter = 'all' | 'unassigned' | 'open' | 'closed';
+
+const getClassGrade = (value: unknown): string => (
+    String(value || '').match(/\d+/)?.[0] || ''
+);
+
 const DropdownMenu: React.FC<{
     quiz: Quiz;
     onManageCode: (quizId: string, currentCode: string) => void;
     onEdit: (quiz: Quiz) => void;
+    onDuplicate: (quiz: Quiz) => void;
     onDelete: (quizId: string) => void;
     onExportWorksheet: (quiz: Quiz) => void;
     isDeleting: boolean;
-}> = ({ quiz, onManageCode, onEdit, onDelete, onExportWorksheet, isDeleting }) => {
+    isDuplicating: boolean;
+}> = ({
+    quiz,
+    onManageCode,
+    onEdit,
+    onDuplicate,
+    onDelete,
+    onExportWorksheet,
+    isDeleting,
+    isDuplicating,
+}) => {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    // Close dropdown when clicking outside
     useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-                setIsOpen(false);
-            }
+        const handlePointerDown = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) setIsOpen(false);
         };
-        if (isOpen) document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setIsOpen(false);
+        };
+        if (isOpen) {
+            document.addEventListener('mousedown', handlePointerDown);
+            document.addEventListener('keydown', handleKeyDown);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handlePointerDown);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
     }, [isOpen]);
+
+    const actionClass = 'flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none';
 
     return (
         <div className="relative" ref={menuRef}>
             <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                title="Tùy chọn khác"
+                type="button"
+                onClick={() => setIsOpen(value => !value)}
+                aria-label={`Tùy chọn khác cho ${quiz.title}`}
+                aria-haspopup="menu"
+                aria-expanded={isOpen}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             >
-                <MoreVertical className="w-4 h-4" />
+                <MoreVertical className="h-5 w-5" />
             </button>
             {isOpen && (
-                <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-xl z-50 py-1 animate-in fade-in slide-in-from-top-2">
-                    <button
-                        onClick={() => { onManageCode(quiz.id, quiz.accessCode || ''); setIsOpen(false); }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-blue-900 hover:bg-purple-50 hover:text-blue-800 transition-colors"
-                    >
-                        <Key className="w-4 h-4" /> Quản lý mã
+                <div
+                    role="menu"
+                    className="absolute right-0 top-full z-50 mt-1 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl"
+                >
+                    <button role="menuitem" className={actionClass} onClick={() => { onManageCode(quiz.id, quiz.accessCode || ''); setIsOpen(false); }}>
+                        <Key className="h-4 w-4" /> Quản lý mã
+                    </button>
+                    <button role="menuitem" className={actionClass} onClick={() => { window.open(`${window.location.origin}?quizId=${quiz.id}`, '_blank'); setIsOpen(false); }}>
+                        <Eye className="h-4 w-4" /> Xem trước
+                    </button>
+                    <button role="menuitem" className={actionClass} onClick={() => { onEdit(quiz); setIsOpen(false); }}>
+                        <Edit className="h-4 w-4" /> Sửa đề
                     </button>
                     <button
-                        onClick={() => {
-                            window.open(`${window.location.origin}?quizId=${quiz.id}`, '_blank');
-                            setIsOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-blue-900 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                        role="menuitem"
+                        className={actionClass}
+                        disabled={isDuplicating}
+                        onClick={() => { onDuplicate(quiz); setIsOpen(false); }}
                     >
-                        <Eye className="w-4 h-4" /> Xem trước
+                        {isDuplicating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
+                        {isDuplicating ? 'Đang nhân bản...' : 'Nhân bản'}
                     </button>
-                    <button
-                        onClick={() => { onEdit(quiz); setIsOpen(false); }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-orange-950 hover:bg-orange-50 hover:text-orange-700 transition-colors"
-                    >
-                        <Edit className="w-4 h-4" /> Sửa đề
+                    <button role="menuitem" className={actionClass} onClick={() => { onExportWorksheet(quiz); setIsOpen(false); }}>
+                        <BookOpen className="h-4 w-4" /> Xuất Vở Bài Tập
                     </button>
+                    <div className="my-1 border-t border-slate-100" />
                     <button
-                        onClick={() => { onExportWorksheet(quiz); setIsOpen(false); }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-emerald-900 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
-                    >
-                        <BookOpen className="w-4 h-4" /> Xuất Vở Bài Tập
-                    </button>
-                    <div className="my-1 border-t border-gray-100" />
-                    <button
-                        onClick={() => { onDelete(quiz.id); setIsOpen(false); }}
+                        role="menuitem"
+                        className={`${actionClass} text-red-600 hover:bg-red-50`}
                         disabled={isDeleting}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                        onClick={() => { onDelete(quiz.id); setIsOpen(false); }}
                     >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-4 w-4" />
                         {isDeleting ? 'Đang xóa...' : 'Xóa đề'}
                     </button>
                 </div>
@@ -104,192 +140,88 @@ const DropdownMenu: React.FC<{
     );
 };
 
-// ============ Quick Assign Modal Component ============
-const QuickAssignModal: React.FC<{
-    quiz: Quiz;
-    onClose: () => void;
-}> = ({ quiz, onClose }) => {
-    const authStore = useAuthStore();
-    const classes = useClassStore((state) => state.classes);
-    const fetchClasses = useClassStore((state) => state.fetchClasses);
-    const addAssignment = useAssignmentStore((state) => state.addAssignment);
-    const [selectedClassId, setSelectedClassId] = useState('');
-    const [deadline, setDeadline] = useState('');
-    const [maxAttempts, setMaxAttempts] = useState(1);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [success, setSuccess] = useState(false);
-
-    // Fetch classes on mount
-    useEffect(() => {
-        if (authStore.isAdmin) {
-            fetchClasses();
-        } else if (authStore.username) {
-            fetchClasses(authStore.username);
-        }
-        // Set default deadline to tomorrow
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(23, 59, 0, 0);
-        setDeadline(tomorrow.toISOString().slice(0, 16));
-    }, [authStore.isAdmin, authStore.username]);
-
-    const handleSubmit = async () => {
-        if (!selectedClassId || !deadline) return;
-        setIsSubmitting(true);
-        try {
-            const result = await addAssignment({
-                quizId: quiz.id,
-                classId: selectedClassId,
-                deadline: new Date(deadline).toISOString(),
-                maxAttempts,
-            });
-            if (result) {
-                setSuccess(true);
-                setTimeout(onClose, 1500);
-            }
-        } catch (err) {
-            // Handled
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4 flex items-center justify-between">
-                    <div>
-                        <h3 className="text-white font-bold text-lg">🚀 Giao bài nhanh</h3>
-                        <p className="text-orange-100 text-sm mt-0.5 truncate max-w-[280px]">{quiz.title}</p>
-                    </div>
-                    <button onClick={onClose} className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20 transition-colors">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {success ? (
-                    <div className="px-6 py-10 flex flex-col items-center gap-3">
-                        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-                            <CheckCircle2 className="w-8 h-8 text-green-600" />
-                        </div>
-                        <p className="text-green-700 font-semibold text-lg">Giao bài thành công!</p>
-                    </div>
-                ) : (
-                    <div className="px-6 py-5 space-y-4">
-                        {/* Select Class */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Chọn lớp</label>
-                            <select
-                                value={selectedClassId}
-                                onChange={(e) => setSelectedClassId(e.target.value)}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-50 transition-colors"
-                            >
-                                <option value="">-- Chọn lớp --</option>
-                                {classes.map((c) => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Deadline */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Hạn nộp</label>
-                            <input
-                                type="datetime-local"
-                                value={deadline}
-                                onChange={(e) => setDeadline(e.target.value)}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-50 transition-colors"
-                            />
-                        </div>
-
-                        {/* Max Attempts */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Số lần làm bài tối đa</label>
-                            <select
-                                value={maxAttempts}
-                                onChange={(e) => setMaxAttempts(Number(e.target.value))}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-50 transition-colors"
-                            >
-                                {[1, 2, 3, 5, 10].map(n => (
-                                    <option key={n} value={n}>{n} lần</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Submit Button */}
-                        <button
-                            onClick={handleSubmit}
-                            disabled={!selectedClassId || !deadline || isSubmitting}
-                            className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-200"
-                        >
-                            {isSubmitting ? (
-                                <><Loader2 className="w-5 h-5 animate-spin" /> Đang giao...</>
-                            ) : (
-                                <><Send className="w-5 h-5" /> Giao ngay</>
-                            )}
-                        </button>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
-
-// ============ Main ManageTab Component ============
 const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onManageCode }) => {
-    // Auth store - to check class permissions
     const authStore = useAuthStore();
     const quizStore = useQuizStore();
-
-    // Check if teacher is locked to a specific class
-    const isClassLocked = !authStore.isAdmin && !!authStore.teacherClass;
-    const teacherClass = authStore.teacherClass;
-
-    // Helper function to check if user can manage this quiz
-    const canManageQuiz = (quiz: Quiz): boolean => {
-        if (authStore.isAdmin) return true;
-        if (!teacherClass) return true;
-        return quiz.classLevel === teacherClass;
-    };
-
-    // Use custom hooks for quiz management
-    const quizManagerHook = useQuizManager({
-        quizzes,
-        onDelete: onDelete,
-    });
-
+    const assignments = useAssignmentStore(state => state.assignments);
+    const fetchAllAssignments = useAssignmentStore(state => state.fetchAllAssignments);
+    const fetchTeacherAssignments = useAssignmentStore(state => state.fetchTeacherAssignments);
+    const setActiveTab = useTeacherDashboardUIStore(state => state.setActiveTab);
+    const [statusFilter, setStatusFilter] = useState<AssignmentStatusFilter>('all');
+    const [creatorFilter, setCreatorFilter] = useState('all');
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
     const [assigningQuiz, setAssigningQuiz] = useState<Quiz | null>(null);
     const [worksheetQuiz, setWorksheetQuiz] = useState<Quiz | null>(null);
 
+    useEffect(() => {
+        if (!authStore.username) return;
+        if (authStore.isAdmin) void fetchAllAssignments();
+        else void fetchTeacherAssignments(authStore.username);
+    }, [
+        authStore.isAdmin,
+        authStore.username,
+        fetchAllAssignments,
+        fetchTeacherAssignments,
+    ]);
+
+    const assignmentStats = useMemo(() => {
+        const stats = new Map<string, { status: Exclude<AssignmentStatusFilter, 'all'>; openCount: number; total: number }>();
+        quizzes.forEach(quiz => {
+            const matching = assignments.filter(assignment => String(assignment.quizId) === String(quiz.id));
+            const openCount = matching.filter(assignment => assignment.status === 'OPEN').length;
+            stats.set(quiz.id, {
+                status: matching.length === 0 ? 'unassigned' : openCount > 0 ? 'open' : 'closed',
+                openCount,
+                total: matching.length,
+            });
+        });
+        return stats;
+    }, [assignments, quizzes]);
+
+    const creatorOptions = useMemo(() => (
+        Array.from(new Set(quizzes.map(quiz => String(quiz.createdBy || '')).filter(Boolean))).sort()
+    ), [quizzes]);
+
+    const metadataFilteredQuizzes = useMemo(() => quizzes.filter(quiz => {
+        const status = assignmentStats.get(quiz.id)?.status || 'unassigned';
+        if (statusFilter !== 'all' && status !== statusFilter) return false;
+        if (creatorFilter !== 'all' && String(quiz.createdBy || '') !== creatorFilter) return false;
+        return true;
+    }), [assignmentStats, creatorFilter, quizzes, statusFilter]);
+
+    const quizManager = useQuizManager({ quizzes: metadataFilteredQuizzes, onDelete });
+
+    const canManageQuiz = (quiz: Quiz): boolean => {
+        if (authStore.isAdmin || !authStore.teacherClass) return true;
+        const teacherGrade = getClassGrade(authStore.teacherClass);
+        return Boolean(teacherGrade) && getClassGrade(quiz.classLevel) === teacherGrade;
+    };
+
     const handleRefresh = async () => {
         setIsRefreshing(true);
         try {
-            await quizStore.loadQuizzes();
+            await Promise.all([
+                quizStore.loadQuizzes(),
+                authStore.isAdmin
+                    ? fetchAllAssignments()
+                    : fetchTeacherAssignments(authStore.username || ''),
+            ]);
         } finally {
             setIsRefreshing(false);
         }
     };
 
-
     const handleDuplicate = async (quiz: Quiz) => {
         showConfirm({
-            message: `Nhan ban de "${quiz.title}"?`,
-            confirmLabel: 'Nhan ban',
+            message: `Nhân bản đề "${quiz.title}"?`,
+            confirmLabel: 'Nhân bản',
             onConfirm: async () => {
                 setDuplicatingId(quiz.id);
                 try {
                     const ok = await quizStore.duplicateQuiz(quiz.id);
-                    if (ok) {
-                        showSuccess('Nhan ban de thanh cong!');
-                    } else {
-                        showError('Khong the nhan ban de. Vui long thu lai.');
-                    }
+                    if (ok) showSuccess('Nhân bản đề thành công!');
+                    else showError('Không thể nhân bản đề. Vui lòng thử lại.');
                 } finally {
                     setDuplicatingId(null);
                 }
@@ -297,200 +229,208 @@ const ManageTab: React.FC<ManageTabProps> = ({ quizzes, onDelete, onEdit, onMana
         });
     };
 
+    const setMetadataFilter = (setter: (value: any) => void, value: string) => {
+        setter(value);
+        quizManager.setPage(1);
+    };
 
     return (
-        <div className="space-y-4">
-            {/* Quick Assign Modal */}
+        <section className="space-y-4" aria-labelledby="quiz-management-title">
             {assigningQuiz && (
-                <QuickAssignModal quiz={assigningQuiz} onClose={() => setAssigningQuiz(null)} />
-            )}
-
-            {/* Worksheet Export Modal */}
-            {worksheetQuiz && (
-                <WorksheetExportModal
-                    quiz={worksheetQuiz}
-                    onClose={() => setWorksheetQuiz(null)}
+                <AssignmentDrawer
+                    quiz={assigningQuiz}
+                    onClose={() => setAssigningQuiz(null)}
+                    onViewAssignments={() => {
+                        setAssigningQuiz(null);
+                        setActiveTab('assignments');
+                    }}
                 />
             )}
+            {worksheetQuiz && (
+                <WorksheetExportModal quiz={worksheetQuiz} onClose={() => setWorksheetQuiz(null)} />
+            )}
 
-            {/* Category Filter Tabs */}
-            <div className="flex flex-wrap gap-2 pb-2 border-b border-gray-100">
-                {CATEGORY_TABS.map((tab) => (
-                    <button
-                        key={tab.key}
-                        onClick={() => { quizManagerHook.setFilterCategory(tab.key); quizManagerHook.setPage(1); }}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${quizManagerHook.filterCategory === tab.key
-                            ? 'bg-orange-500 text-white shadow-sm'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                    >
-                        {tab.key === 'all' ? (
-                            <span>{tab.icon}</span>
-                        ) : (
-                            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{tab.icon}</span>
-                        )}
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-4">
-                <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                        type="text"
-                        value={quizManagerHook.searchTerm}
-                        onChange={(e) => quizManagerHook.setSearchTerm(e.target.value)}
-                        placeholder="Tìm kiếm bài kiểm tra... (gõ #tag để tìm theo nhãn)"
-                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
-                    />
+            <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <h2 id="quiz-management-title" className="text-xl font-bold text-slate-900">Quản lý đề</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                        {quizManager.filteredQuizzes.length} đề phù hợp · Chọn một đề để giao bài
+                    </p>
                 </div>
-
-                <select
-                    value={quizManagerHook.filterLevel}
-                    onChange={(e) => quizManagerHook.setFilterLevel(e.target.value)}
-                    className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
-                >
-                    <option value="All">Tất cả lớp</option>
-                    {['1', '2', '3', '4', '5'].map(level => (
-                        <option key={level} value={level}>Lớp {level}</option>
-                    ))}
-                </select>
-
                 <Button
                     onClick={handleRefresh}
                     variant="ghost"
                     size="sm"
                     disabled={isRefreshing}
-                    className="text-blue-600 hover:bg-blue-50"
-                    icon={<RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />}
+                    className="text-sky-700 hover:bg-sky-50"
+                    icon={<RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />}
                 >
                     {isRefreshing ? 'Đang tải...' : 'Làm mới'}
                 </Button>
             </div>
 
-            {/* Quiz List */}
-            <div className="grid gap-4">
-                {quizManagerHook.paginatedQuizzes.map((quiz) => (
-                    <Card key={quiz.id} className="hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
-                                <a
-                                    href={`${window.location.origin}?quizId=${quiz.id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="font-semibold text-gray-800 hover:text-orange-600 hover:underline cursor-pointer transition-colors"
-                                    title="Bấm để mở trang làm bài của học sinh"
-                                >
-                                    {quiz.title}
-                                </a>
-                                <p className="text-sm text-gray-500">
-                                    Lớp {quiz.classLevel} • {quiz.questions.length} câu • {quiz.timeLimit} phút
-                                    {quiz.accessCode && ` • Mã: ${quiz.accessCode}`}
+            <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:grid-cols-2 xl:grid-cols-[minmax(280px,1fr)_repeat(4,minmax(140px,auto))]">
+                <label className="relative block">
+                    <span className="sr-only">Tìm kiếm đề</span>
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                        type="search"
+                        value={quizManager.searchTerm}
+                        onChange={event => quizManager.setSearchTerm(event.target.value)}
+                        placeholder="Tìm tên đề hoặc #nhãn"
+                        className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                    />
+                </label>
+                <select
+                    aria-label="Lọc môn học"
+                    value={quizManager.filterCategory}
+                    onChange={event => quizManager.setFilterCategory(event.target.value)}
+                    className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                >
+                    {CATEGORY_OPTIONS.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}
+                </select>
+                <select
+                    aria-label="Lọc khối"
+                    value={quizManager.filterLevel}
+                    onChange={event => quizManager.setFilterLevel(event.target.value)}
+                    className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                >
+                    <option value="All">Tất cả khối</option>
+                    {['1', '2', '3', '4', '5'].map(level => <option key={level} value={level}>Khối {level}</option>)}
+                </select>
+                <select
+                    aria-label="Lọc trạng thái giao bài"
+                    value={statusFilter}
+                    onChange={event => setMetadataFilter(setStatusFilter, event.target.value)}
+                    className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                >
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="unassigned">Chưa giao</option>
+                    <option value="open">Đang giao</option>
+                    <option value="closed">Đã đóng</option>
+                </select>
+                <select
+                    aria-label="Lọc người tạo"
+                    value={creatorFilter}
+                    onChange={event => setMetadataFilter(setCreatorFilter, event.target.value)}
+                    className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                >
+                    <option value="all">Tất cả người tạo</option>
+                    {creatorOptions.map(creator => <option key={creator} value={creator}>{creator}</option>)}
+                </select>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                {quizManager.paginatedQuizzes.map((quiz, index) => {
+                    const tags = parseQuizTags((quiz as any).tags);
+                    const stats = assignmentStats.get(quiz.id) || { status: 'unassigned', openCount: 0, total: 0 };
+                    const statusLabel = stats.status === 'open'
+                        ? `Đang giao ${stats.openCount} lớp`
+                        : stats.status === 'closed'
+                            ? `Đã đóng ${stats.total} lượt giao`
+                            : 'Chưa giao';
+                    const statusClass = stats.status === 'open'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : stats.status === 'closed'
+                            ? 'border-slate-200 bg-slate-100 text-slate-600'
+                            : 'border-amber-200 bg-amber-50 text-amber-700';
+
+                    return (
+                        <article
+                            key={quiz.id}
+                            className={`flex min-h-[104px] flex-col gap-4 px-4 py-4 transition-colors hover:bg-slate-50/70 sm:flex-row sm:items-center ${index > 0 ? 'border-t border-slate-100' : ''}`}
+                        >
+                            <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <a
+                                        href={`${window.location.origin}?quizId=${quiz.id}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="truncate font-semibold text-slate-900 hover:text-sky-700 hover:underline"
+                                    >
+                                        {quiz.title}
+                                    </a>
+                                    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusClass}`}>{statusLabel}</span>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Khối {quiz.classLevel} · {quiz.questions.length} câu · {quiz.timeLimit} phút
+                                    {quiz.accessCode ? ` · Mã ${quiz.accessCode}` : ''}
                                 </p>
-                                {/* Tags display */}
-                                {(() => {
-                                    const rawTags = (quiz as any).tags;
-                                    const tags: string[] = typeof rawTags === 'string' ? (rawTags ? JSON.parse(rawTags) : []) : (rawTags || []);
-                                    if (tags.length === 0) return null;
-                                    return (
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                            {tags.map((tag: string, idx: number) => (
-                                                <span key={idx} className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">
-                                                    <Tag className="w-3 h-3" />
-                                                    {tag}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    );
-                                })()}
-                                <p className="text-xs text-gray-400 mt-1">
-                                    Tạo: {new Date(quiz.createdAt).toLocaleString('vi-VN', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        year: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                    })}
-                                    {quiz.createdBy && <span className="ml-2">• Bởi: <span className="text-blue-600 font-medium">{quiz.createdBy}</span></span>}
-                                </p>
+                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                    {tags.slice(0, 3).map(tag => (
+                                        <span key={tag} className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                                            <Tag className="h-3 w-3" /> {tag}
+                                        </span>
+                                    ))}
+                                    <span className="text-xs text-slate-400">
+                                        {new Date(quiz.createdAt).toLocaleDateString('vi-VN')}
+                                        {quiz.createdBy ? ` · ${quiz.createdBy}` : ''}
+                                    </span>
+                                </div>
                             </div>
 
-                            <div className="flex items-center gap-1.5 ml-3 flex-shrink-0">
+                            <div className="flex shrink-0 items-center justify-end gap-2">
                                 {canManageQuiz(quiz) ? (
                                     <>
-                                        {/* Quick Assign Button - Primary Action */}
                                         <button
+                                            type="button"
                                             onClick={() => setAssigningQuiz(quiz)}
-                                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-sm hover:shadow-md transition-all"
-                                            title="Giao bài nhanh"
+                                            className="inline-flex h-10 items-center gap-2 rounded-lg bg-orange-500 px-4 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
                                         >
-                                            <Send className="w-3.5 h-3.5" />
-                                            <span className="hidden sm:inline">Giao bài</span>
+                                            <Send className="h-4 w-4" /> Giao bài
                                         </button>
-
-                                        {/* Duplicate Button */}
-                                        <button
-                                            onClick={() => handleDuplicate(quiz)}
-                                            disabled={duplicatingId === quiz.id}
-                                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-all disabled:opacity-50"
-                                            title="Nhân bản đề"
-                                        >
-                                            {duplicatingId === quiz.id ? (
-                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                            ) : (
-                                                <Copy className="w-3.5 h-3.5" />
-                                            )}
-                                            <span className="hidden sm:inline">{duplicatingId === quiz.id ? 'Đang sao...' : 'Nhân bản'}</span>
-                                        </button>
-
-                                        {/* More Options Dropdown */}
                                         <DropdownMenu
                                             quiz={quiz}
                                             onManageCode={onManageCode}
                                             onEdit={onEdit}
-                                            onExportWorksheet={(q) => setWorksheetQuiz(q)}
-                                            onDelete={quizManagerHook.handleDelete}
-                                            isDeleting={quizManagerHook.deletingId === quiz.id}
+                                            onDuplicate={handleDuplicate}
+                                            onExportWorksheet={setWorksheetQuiz}
+                                            onDelete={quizManager.handleDelete}
+                                            isDeleting={quizManager.deletingId === quiz.id}
+                                            isDuplicating={duplicatingId === quiz.id}
                                         />
                                     </>
                                 ) : (
-                                    <span className="flex items-center gap-1 text-xs text-gray-400 px-2 py-1 bg-gray-100 rounded-lg">
-                                        <Lock className="w-3 h-3" />
-                                        Lớp {quiz.classLevel}
+                                    <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-500">
+                                        <Lock className="h-3.5 w-3.5" /> Khối {quiz.classLevel}
                                     </span>
                                 )}
                             </div>
-                        </div>
-                    </Card>
-                ))}
+                        </article>
+                    );
+                })}
 
-                {quizManagerHook.paginatedQuizzes.length === 0 && (
-                    <div className="text-center py-12 text-gray-500">
-                        Không có bài kiểm tra nào.
+                {quizManager.paginatedQuizzes.length === 0 && (
+                    <div role="status" className="px-6 py-14 text-center">
+                        <Search className="mx-auto h-10 w-10 text-slate-300" />
+                        <p className="mt-3 font-medium text-slate-700">Không tìm thấy đề phù hợp</p>
+                        <p className="mt-1 text-sm text-slate-400">Thử thay đổi từ khóa hoặc bộ lọc.</p>
                     </div>
                 )}
             </div>
 
-            {/* Pagination */}
-            {quizManagerHook.totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2">
-                    {Array.from({ length: quizManagerHook.totalPages }, (_, i) => i + 1).map((page) => (
-                        <button
-                            key={page}
-                            onClick={() => quizManagerHook.setPage(page)}
-                            className={`px-3 py-1 rounded ${page === quizManagerHook.page
-                                ? 'bg-orange-600 text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                        >
-                            {page}
-                        </button>
-                    ))}
-                </div>
+            {quizManager.totalPages > 1 && (
+                <nav className="flex items-center justify-between gap-3" aria-label="Phân trang danh sách đề">
+                    <button
+                        type="button"
+                        disabled={quizManager.page === 1}
+                        onClick={() => quizManager.setPage(Math.max(1, quizManager.page - 1))}
+                        className="h-10 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700 disabled:opacity-40"
+                    >
+                        Trang trước
+                    </button>
+                    <span className="text-sm text-slate-500">Trang {quizManager.page}/{quizManager.totalPages}</span>
+                    <button
+                        type="button"
+                        disabled={quizManager.page === quizManager.totalPages}
+                        onClick={() => quizManager.setPage(Math.min(quizManager.totalPages, quizManager.page + 1))}
+                        className="h-10 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700 disabled:opacity-40"
+                    >
+                        Trang sau
+                    </button>
+                </nav>
             )}
-        </div>
+        </section>
     );
 };
 

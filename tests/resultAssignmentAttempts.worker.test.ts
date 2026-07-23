@@ -95,6 +95,16 @@ describe('assignment-scoped result attempt limits', () => {
       statement.sql.includes('WHERE a.id = ?')
       && statement.bindings[0] === 'assignment-current-3-attempts'
     ))).toBe(true);
+
+    const attemptCount = db.executed.find(statement => statement.sql.includes('COUNT(*) as cnt'));
+    expect(attemptCount?.sql).toContain('assignment_id = ?');
+    expect(attemptCount?.sql).toContain('student_id = ?');
+    expect(attemptCount?.bindings).toContain('assignment-current-3-attempts');
+    expect(attemptCount?.bindings).toContain('student-1');
+
+    const insert = db.executed.find(statement => statement.sql.includes('INSERT INTO results'));
+    expect(insert?.sql).toContain('assignment_id');
+    expect(insert?.bindings).toContain('assignment-current-3-attempts');
   });
 
   it('falls back to the newest applicable open assignment for older clients', async () => {

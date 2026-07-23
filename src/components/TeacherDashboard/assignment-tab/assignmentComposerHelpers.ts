@@ -1,12 +1,8 @@
 import type { Quiz } from '../../../types';
 import type { SmartAssignmentRecommendedQuiz } from '../../../types/classroom.types';
+import { getVietnamDefaultDeadline } from '../../../utils/dateTime';
 
-export const getDefaultDeadline = (): string => {
-  const nextDeadline = new Date();
-  nextDeadline.setDate(nextDeadline.getDate() + 7);
-  nextDeadline.setHours(23, 59, 0, 0);
-  return nextDeadline.toISOString().slice(0, 16);
-};
+export const getDefaultDeadline = (): string => getVietnamDefaultDeadline();
 
 export const orderAssignmentQuizzes = (
   quizzes: Quiz[],

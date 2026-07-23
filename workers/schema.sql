@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS questions (
 CREATE TABLE IF NOT EXISTS results (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   student_id TEXT,
+  assignment_id TEXT,
   student_name TEXT NOT NULL,
   class_name TEXT DEFAULT '',
   quiz_id TEXT DEFAULT '',
@@ -132,6 +133,9 @@ CREATE TABLE IF NOT EXISTS assignments (
   status TEXT DEFAULT 'OPEN',
   created_at TEXT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_results_assignment_student
+  ON results(assignment_id, student_id, submitted_at);
 
 -- User Pets (Gamification)
 CREATE TABLE IF NOT EXISTS user_pets (

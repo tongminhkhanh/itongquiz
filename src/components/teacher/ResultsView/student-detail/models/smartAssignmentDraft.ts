@@ -1,4 +1,5 @@
 import type { SmartAssignmentPreviewData } from '../../../../../types/classroom.types';
+import { vietnamDateTimeLocalToIso } from '../../../../../utils/dateTime';
 
 export const createSmartAssignmentComposerDraft = (
     resultId: string | number,
@@ -15,7 +16,7 @@ export const createSmartAssignmentComposerDraft = (
     classId: preview.assignmentDraft.classId,
     studentId: preview.assignmentDraft.studentId,
     quizId,
-    deadline: new Date(deadline).toISOString(),
+    deadline: vietnamDateTimeLocalToIso(deadline),
     maxAttempts,
     weaknessSummary: {
         skillCode: preview.weaknessSummary.topSkill.skillCode,

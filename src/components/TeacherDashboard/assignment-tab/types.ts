@@ -9,6 +9,9 @@ export interface CreateAssignmentSectionProps {
   onClearDraft: () => void;
   onCreateAssignment: (payload: CreateAssignmentPayload) => Promise<boolean>;
   isLoading: boolean;
+  initialQuizId?: string;
+  variant?: 'page' | 'drawer';
+  onCreated?: () => void;
 }
 
 export interface ComposerFormState {

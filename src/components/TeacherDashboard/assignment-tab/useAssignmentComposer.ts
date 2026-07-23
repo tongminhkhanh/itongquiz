@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useRosterStore } from '../../../stores/useRosterStore';
+import { vietnamDateTimeLocalToIso } from '../../../utils/dateTime';
 import type { CreateAssignmentSectionProps } from './types';
 import { useAssignmentDraftHydration } from './useAssignmentDraftHydration';
 import { useAssignmentFormState } from './useAssignmentFormState';
 import { useAssignmentInsightModel } from './useAssignmentInsightModel';
 
 export const useAssignmentComposer = (props: CreateAssignmentSectionProps) => {
-  const form = useAssignmentFormState();
+  const form = useAssignmentFormState(props.initialQuizId);
   const [showSuccess, setShowSuccess] = useState(false);
   const students = useRosterStore(state => state.students);
   const fetchStudents = useRosterStore(state => state.fetchStudents);
@@ -24,6 +25,10 @@ export const useAssignmentComposer = (props: CreateAssignmentSectionProps) => {
     resetForm: form.resetForm,
     onClearDraft: props.onClearDraft,
   });
+
+  useEffect(() => {
+    if (props.initialQuizId) form.setSelectedQuizId(props.initialQuizId);
+  }, [props.initialQuizId]);
 
   useEffect(() => {
     if (!form.selectedClassId) {
@@ -55,10 +60,11 @@ export const useAssignmentComposer = (props: CreateAssignmentSectionProps) => {
       quizId: form.selectedQuizId,
       classId: form.selectedClassId,
       studentId: form.selectedStudentId || undefined,
-      deadline: new Date(form.deadline).toISOString(),
+      deadline: vietnamDateTimeLocalToIso(form.deadline),
       maxAttempts: form.maxAttempts,
     });
     if (!success) return;
+    props.onCreated?.();
     form.resetForm();
     draft.setManualNotice(null);
     if (draft.activeDraft) draft.clearDraftState({ keepFormValues: true });

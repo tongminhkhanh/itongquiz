@@ -353,6 +353,9 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
             return errorResponse('Forbidden: Results submit access required', 403);
         }
 
+        const canonicalStudentId = studentContext?.id
+            || await resolveUniqueStudentId(db, studentName, className);
+
         // SECURITY CHECK: Enforce the exact assignment selected by the student UI.
         // Older clients without assignmentId fall back only to the newest applicable open assignment.
         const assignmentId = String(body.assignmentId || '').trim();
@@ -377,8 +380,23 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
 
             const maxAttempts = Number(assignment.max_attempts) || 1;
             const countResult = await db.prepare(
-                'SELECT COUNT(*) as cnt FROM results WHERE LOWER(TRIM(student_name)) = ? AND LOWER(TRIM(class_name)) = ? AND quiz_id = ?'
-            ).bind(normalizeName(studentName), normalizeName(className), quizId).first<{ cnt: number }>();
+                `SELECT COUNT(*) as cnt
+                 FROM results
+                 WHERE assignment_id = ?
+                   AND (
+                     student_id = ?
+                     OR (
+                       student_id IS NULL
+                       AND LOWER(TRIM(student_name)) = ?
+                       AND LOWER(TRIM(class_name)) = ?
+                     )
+                   )`
+            ).bind(
+                assignment.id,
+                canonicalStudentId,
+                normalizeName(studentName),
+                normalizeName(className),
+            ).first<{ cnt: number }>();
 
             const currentAttempts = countResult?.cnt || 0;
             if (currentAttempts >= maxAttempts) {
@@ -397,16 +415,14 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
         const totalQuestions = derivedMetrics?.totalQuestions
             ?? (Number.isFinite(submittedTotalQuestions) ? submittedTotalQuestions : 0);
 
-        const canonicalStudentId = studentContext?.id
-            || await resolveUniqueStudentId(db, studentName, className);
         const submittedAt = new Date().toISOString();
         const insertResult = await db.prepare(`
             INSERT INTO results (
-                student_id, student_name, class_name, quiz_id, quiz_title,
+                student_id, assignment_id, student_name, class_name, quiz_id, quiz_title,
                 score, correct_count, total_questions, time_taken, submitted_at, answers
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
-            canonicalStudentId, studentName, className, quizId,
+            canonicalStudentId, assignment?.id || null, studentName, className, quizId,
             body.quizTitle || '', score, correctCount,
             totalQuestions, body.timeTaken || 0,
             submittedAt,
@@ -430,7 +446,7 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
                 console.error('[ParentNotification] quiz result notification failed', error);
             }
         }
-        return jsonResponse({ status: 'success', resultId });
+        return jsonResponse({ status: 'success', resultId, assignmentId: assignment?.id || null });
     }
 
     // DELETE /api/results/:id - Delete result

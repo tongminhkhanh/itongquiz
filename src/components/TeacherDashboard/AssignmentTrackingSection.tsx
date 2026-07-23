@@ -1,7 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { Check, CheckCircle2, Clock, ClipboardList, Edit3, Loader2, Trash2, X } from 'lucide-react';
+import { Check, CheckCircle2, Clock, ClipboardList, Edit3, Loader2, Search, Trash2, X } from 'lucide-react';
 import { Assignment } from '../../types/classroom.types';
+import {
+    getVietnamDefaultDeadline,
+    toVietnamDateTimeLocal,
+    vietnamDateTimeLocalToIso,
+} from '../../utils/dateTime';
 import { ResponsiveDataView } from '../common';
+import { showConfirm } from '../../utils/toast';
 
 const AssignmentTrackingSection: React.FC<{
     assignments: Assignment[];
@@ -10,15 +16,31 @@ const AssignmentTrackingSection: React.FC<{
     onUpdateStatus: (assignmentId: string, newStatus: 'OPEN' | 'CLOSED') => Promise<boolean>;
     isLoading: boolean;
 }> = ({ assignments, onDelete, onUpdateDeadline, onUpdateStatus, isLoading }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'CLOSED'>('ALL');
 
     // Sort: OPEN first, then by deadline
     const sorted = useMemo(() => {
-        return [...assignments].sort((a, b) => {
+        const search = searchTerm.trim().toLocaleLowerCase('vi');
+        return assignments.filter(assignment => {
+            if (statusFilter !== 'ALL' && assignment.status !== statusFilter) return false;
+            if (!search) return true;
+            return [
+                assignment.quizTitle,
+                assignment.quizId,
+                assignment.className,
+                assignment.studentName,
+            ].some(value => String(value || '').toLocaleLowerCase('vi').includes(search));
+        }).sort((a, b) => {
             if (a.status === 'OPEN' && b.status !== 'OPEN') return -1;
             if (a.status !== 'OPEN' && b.status === 'OPEN') return 1;
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            const leftDeadline = Date.parse(a.deadline);
+            const rightDeadline = Date.parse(b.deadline);
+            if (!Number.isFinite(leftDeadline)) return 1;
+            if (!Number.isFinite(rightDeadline)) return -1;
+            return leftDeadline - rightDeadline;
         });
-    }, [assignments]);
+    }, [assignments, searchTerm, statusFilter]);
 
     return (
         <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
@@ -30,6 +52,31 @@ const AssignmentTrackingSection: React.FC<{
                     <h2 className="text-xl font-bold text-gray-800">Theo dõi bài giao</h2>
                     <p className="text-sm text-gray-400">{assignments.length} bài tập đã giao</p>
                 </div>
+            </div>
+
+            <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(240px,1fr)_180px]">
+                <label className="relative block">
+                    <span className="sr-only">Tìm bài đã giao</span>
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                        type="search"
+                        aria-label="Tìm bài đã giao"
+                        value={searchTerm}
+                        onChange={event => setSearchTerm(event.target.value)}
+                        placeholder="Tìm đề, lớp hoặc học sinh"
+                        className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                    />
+                </label>
+                <select
+                    aria-label="Lọc trạng thái bài giao"
+                    value={statusFilter}
+                    onChange={event => setStatusFilter(event.target.value as 'ALL' | 'OPEN' | 'CLOSED')}
+                    className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                >
+                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="OPEN">Đang mở</option>
+                    <option value="CLOSED">Đã đóng</option>
+                </select>
             </div>
 
             {/* Loading */}
@@ -45,6 +92,14 @@ const AssignmentTrackingSection: React.FC<{
                     <ClipboardList className="w-14 h-14 text-gray-200 mx-auto mb-3" />
                     <p className="text-gray-400">Chưa giao bài tập nào</p>
                     <p className="text-gray-300 text-sm">Sử dụng form ở trên để giao bài</p>
+                </div>
+            )}
+
+            {!isLoading && assignments.length > 0 && sorted.length === 0 && (
+                <div role="status" className="py-12 text-center">
+                    <Search className="mx-auto h-10 w-10 text-slate-300" />
+                    <p className="mt-3 font-medium text-slate-700">Không tìm thấy bài giao phù hợp</p>
+                    <p className="mt-1 text-sm text-slate-400">Thử thay đổi từ khóa hoặc trạng thái.</p>
                 </div>
             )}
 
@@ -123,22 +178,21 @@ const AssignmentRow: React.FC<{
 
     const handleEditClick = () => {
         // Pre-fill with current deadline in datetime-local format
-        setEditDeadline(deadlineDate.toISOString().slice(0, 16));
+        setEditDeadline(toVietnamDateTimeLocal(deadlineDate));
         setIsEditing(true);
     };
 
     // Handle re-opening: if deadline is expired, must extend deadline first
     const handleReopenClick = () => {
         // Default to 7 days from now
-        const defaultNew = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        setEditDeadline(defaultNew.toISOString().slice(0, 16));
+        setEditDeadline(getVietnamDefaultDeadline());
         setIsEditing(true);
     };
 
     const handleSave = async () => {
         if (!editDeadline) return;
         setIsSaving(true);
-        const newDeadlineISO = new Date(editDeadline).toISOString();
+        const newDeadlineISO = vietnamDateTimeLocalToIso(editDeadline);
         const ok = await onUpdateDeadline(assignment.id, newDeadlineISO);
         // If the assignment was closed and new deadline is in the future, also set status to OPEN
         if (ok && !isOpen && new Date(editDeadline) > new Date()) {
@@ -204,7 +258,11 @@ const AssignmentRow: React.FC<{
                     timeRemaining={timeRemaining}
                     onToggle={() => {
                         if (isOpen) {
-                            onUpdateStatus(assignment.id, 'CLOSED');
+                            showConfirm({
+                                message: `Đóng bài "${assignment.quizTitle || assignment.quizId}"?`,
+                                confirmLabel: 'Đóng bài',
+                                onConfirm: () => { void onUpdateStatus(assignment.id, 'CLOSED'); },
+                            });
                         } else {
                             handleReopenClick();
                         }
@@ -227,6 +285,7 @@ const AssignmentRow: React.FC<{
                     onClick={onDelete}
                     className="p-1.5 text-red-900 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     title="Xóa bài giao"
+                    aria-label={`Xóa bài giao ${assignment.quizTitle || assignment.quizId}`}
                 >
                     <Trash2 className="w-4 h-4" />
                 </button>
@@ -264,20 +323,19 @@ const AssignmentCardRow: React.FC<{
     const timeRemaining = getTimeRemaining();
 
     const handleEditClick = () => {
-        setEditDeadline(deadlineDate.toISOString().slice(0, 16));
+        setEditDeadline(toVietnamDateTimeLocal(deadlineDate));
         setIsEditing(true);
     };
 
     const handleReopenClick = () => {
-        const defaultNew = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        setEditDeadline(defaultNew.toISOString().slice(0, 16));
+        setEditDeadline(getVietnamDefaultDeadline());
         setIsEditing(true);
     };
 
     const handleSave = async () => {
         if (!editDeadline) return;
         setIsSaving(true);
-        const newDeadlineISO = new Date(editDeadline).toISOString();
+        const newDeadlineISO = vietnamDateTimeLocalToIso(editDeadline);
         const ok = await onUpdateDeadline(assignment.id, newDeadlineISO);
         if (ok && !isOpen && new Date(editDeadline) > new Date()) {
             await onUpdateStatus(assignment.id, 'OPEN');
@@ -294,6 +352,7 @@ const AssignmentCardRow: React.FC<{
                     onClick={onDelete}
                     className="h-9 w-9 shrink-0 rounded-lg border border-red-100 bg-red-50 text-red-500 inline-flex items-center justify-center"
                     title="Xóa bài giao"
+                    aria-label={`Xóa bài giao ${assignment.quizTitle || assignment.quizId}`}
                 >
                     <Trash2 className="w-4 h-4" />
                 </button>
@@ -335,7 +394,11 @@ const AssignmentCardRow: React.FC<{
                     timeRemaining={timeRemaining}
                     onToggle={() => {
                         if (isOpen) {
-                            onUpdateStatus(assignment.id, 'CLOSED');
+                            showConfirm({
+                                message: `Đóng bài "${assignment.quizTitle || assignment.quizId}"?`,
+                                confirmLabel: 'Đóng bài',
+                                onConfirm: () => { void onUpdateStatus(assignment.id, 'CLOSED'); },
+                            });
                         } else {
                             handleReopenClick();
                         }
@@ -370,6 +433,7 @@ const DeadlineEditor: React.FC<{
             disabled={isSaving}
             className="p-1 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
             title="Lưu"
+            aria-label="Lưu hạn nộp"
         >
             {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
         </button>
@@ -377,6 +441,7 @@ const DeadlineEditor: React.FC<{
             onClick={onCancel}
             className="p-1 text-gray-400 hover:bg-gray-100 rounded-md transition-colors"
             title="Hủy"
+            aria-label="Hủy sửa hạn nộp"
         >
             <X className="w-3.5 h-3.5" />
         </button>
@@ -405,7 +470,8 @@ const DeadlineDisplay: React.FC<{
         </div>
         <button
             onClick={onEdit}
-            className="p-1 text-orange-950 hover:text-orange-500 hover:bg-orange-50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+            aria-label="Sửa hạn nộp"
+            className="p-1 text-orange-700 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
             title="Sửa hạn nộp"
         >
             <Edit3 className="w-3.5 h-3.5" />
@@ -421,6 +487,7 @@ const AssignmentStatusBadge: React.FC<{
     <div className="flex items-center gap-2">
         <button
             onClick={onToggle}
+            aria-label={isOpen ? 'Đóng bài giao' : 'Mở lại bài giao'}
             className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition-all hover:shadow-sm ${isOpen
                 ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
                 : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'

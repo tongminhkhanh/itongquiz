@@ -11,6 +11,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useQuizStore } from '../stores/quizStore';
 import { fetchWeaknessProfile } from '../src/services/weaknessProfileService';
 import { getSmartAssignmentPreview } from '../src/services/classroomService';
+import { toVietnamDateTimeLocal } from '../src/utils/dateTime';
 import { makeWeaknessProfileWeak } from './fixtures/weaknessProfile.fixtures';
 import type { Question, Quiz, StudentResult } from '../src/types';
 import type {
@@ -429,16 +430,15 @@ describe('assignment prefill integration flow', () => {
             expect(useTeacherDashboardUIStore.getState().assignmentComposerDraft).not.toBeNull();
         });
 
-        const selects = Array.from(container.querySelectorAll('select'));
-        const assignmentSelects = selects.slice(-3) as HTMLSelectElement[];
-        const [quizSelect, classSelect, studentSelect] = assignmentSelects;
+        const selects = Array.from(container.querySelectorAll('select')) as HTMLSelectElement[];
+        const quizSelect = selects.find(select => Array.from(select.options).some(option => option.value === 'quiz-phan-so-01'))!;
+        const classSelect = selects.find(select => Array.from(select.options).some(option => option.value === 'c-001'))!;
+        const studentSelect = selects.find(select => Array.from(select.options).some(option => option.value === 's-001'))!;
         const deadlineInputs = Array.from(container.querySelectorAll('input[type="datetime-local"]')) as HTMLInputElement[];
         const assignmentDeadlineInput = deadlineInputs[deadlineInputs.length - 1];
         const numberInputs = Array.from(container.querySelectorAll('input[type="number"]')) as HTMLInputElement[];
         const attemptsInput = numberInputs[numberInputs.length - 1];
-        const expectedAssignmentDeadline = new Date(
-            new Date(new Date(SMART_PREVIEW_DEADLINE_ISO).toISOString().slice(0, 16)).toISOString(),
-        ).toISOString().slice(0, 16);
+        const expectedAssignmentDeadline = toVietnamDateTimeLocal(SMART_PREVIEW_DEADLINE_ISO);
 
         expect(quizSelect.value).toBe('quiz-phan-so-01');
         expect(classSelect.value).toBe('c-001');
@@ -481,9 +481,8 @@ describe('assignment prefill integration flow', () => {
             fireEvent.click(await screen.findByRole('button', { name: /Dung trong AssignmentTab/i }));
         });
 
-        const selects = Array.from(container.querySelectorAll('select'));
-        const assignmentSelects = selects.slice(-3) as HTMLSelectElement[];
-        const [quizSelect] = assignmentSelects;
+        const selects = Array.from(container.querySelectorAll('select')) as HTMLSelectElement[];
+        const quizSelect = selects.find(select => Array.from(select.options).some(option => option.value === 'quiz-on-tap-tu-do'))!;
 
         await act(async () => {
             fireEvent.change(quizSelect, { target: { value: 'quiz-on-tap-tu-do' } });
@@ -525,9 +524,8 @@ describe('assignment prefill integration flow', () => {
         });
 
         await waitFor(() => {
-            const selects = Array.from(container.querySelectorAll('select'));
-            const assignmentSelects = selects.slice(-3) as HTMLSelectElement[];
-            const [quizSelect] = assignmentSelects;
+            const selects = Array.from(container.querySelectorAll('select')) as HTMLSelectElement[];
+            const quizSelect = selects.find(select => Array.from(select.options).some(option => option.value === 'quiz-on-tap-tu-do'))!;
 
             expect(quizSelect.value).toBe('');
         });

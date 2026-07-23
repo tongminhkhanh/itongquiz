@@ -1,34 +1,27 @@
-import { requireTeacherForAssignment, requireTeacherForClass, requireTeacherForStudent } from '../../classroom/authorization';
+import { requireTeacherForAssignment } from '../../classroom/authorization';
 import type { ClassroomRouteContext } from '../../classroom/types';
-import { isStudent, requireTeacher } from '../../middleware/jwtAuth';
-import { getSmartAssignmentPreview } from '../../services/smartAssignment';
-import { extractIdFromPath, parseBody } from '../../utils/helpers';
-import { errorResponse, generateId, jsonResponse } from '../../utils/response';
+import { parseBody } from '../../utils/helpers';
+import { errorResponse, jsonResponse } from '../../utils/response';
 
 export async function handleAssignmentDeadlineRoute(context: ClassroomRouteContext): Promise<Response | null> {
     const { request, path, method, db, nowIso, user } = context;
-    // PUT /api/assignments/:id/deadline
-        if (path.match(/\/api\/assignments\/[^/]+\/deadline/) && method === 'PUT') {
-            const parts = path.split('/');
-            const assignmentId = parts[3];
-            if (!assignmentId) return errorResponse('Missing assignment ID');
+    if (!path.match(/\/api\/assignments\/[^/]+\/deadline/) || method !== 'PUT') return null;
 
-            const assignmentError = await requireTeacherForAssignment(db, user, assignmentId);
-            if (assignmentError) return assignmentError;
+    const assignmentId = path.split('/')[3];
+    if (!assignmentId) return errorResponse('Missing assignment ID');
 
-            const body = await parseBody(request);
-            if (!body) return errorResponse('Invalid JSON body');
+    const assignmentError = await requireTeacherForAssignment(db, user, assignmentId);
+    if (assignmentError) return assignmentError;
 
-            const newDeadline = new Date(body.newDeadline);
-            const newStatus = newDeadline > new Date() ? 'OPEN' : undefined;
-            if (newStatus) {
-                await db.prepare('UPDATE assignments SET deadline = ?, status = ? WHERE id = ?')
-                    .bind(body.newDeadline, newStatus, assignmentId).run();
-            } else {
-                await db.prepare('UPDATE assignments SET deadline = ? WHERE id = ?')
-                    .bind(body.newDeadline, assignmentId).run();
-            }
-            return jsonResponse({ status: 'success', data: { assignmentId, newDeadline: body.newDeadline, status: newStatus || 'CLOSED' } });
-        }
-    return null;
+    const body = await parseBody(request);
+    if (!body) return errorResponse('Invalid JSON body');
+
+    const deadlineMs = Date.parse(String(body.newDeadline || ''));
+    if (!Number.isFinite(deadlineMs)) return errorResponse('newDeadline must be a valid date');
+    if (deadlineMs <= Date.parse(nowIso)) return errorResponse('newDeadline must be in the future');
+
+    const newDeadline = new Date(deadlineMs).toISOString();
+    await db.prepare('UPDATE assignments SET deadline = ?, status = ? WHERE id = ?')
+        .bind(newDeadline, 'OPEN', assignmentId).run();
+    return jsonResponse({ status: 'success', data: { assignmentId, newDeadline, status: 'OPEN' } });
 }

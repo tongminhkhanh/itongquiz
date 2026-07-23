@@ -4,9 +4,10 @@
  * Custom hook for quiz list management.
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Quiz } from '../types';
+import { parseQuizTags } from '../utils/quizTags';
 
 export interface UseQuizManagerProps {
     quizzes: Quiz[];
@@ -75,7 +76,7 @@ export const useQuizManager = ({ quizzes, onDelete }: UseQuizManagerProps): UseQ
                 // Tag search - filter by tag
                 const tagSearch = search.substring(1);
                 filtered = filtered.filter(q => {
-                    const tags: string[] = typeof (q as any).tags === 'string' ? JSON.parse((q as any).tags || '[]') : ((q as any).tags || []);
+                    const tags = parseQuizTags((q as any).tags);
                     return tags.some(t => t.toLowerCase().includes(tagSearch));
                 });
             } else {
@@ -96,6 +97,15 @@ export const useQuizManager = ({ quizzes, onDelete }: UseQuizManagerProps): UseQ
 
     // Calculate pagination
     const totalPages = Math.ceil(filteredQuizzes.length / QUIZZES_PER_PAGE);
+
+    useEffect(() => {
+        setPage(1);
+    }, [filterLevel, filterCategory, searchTerm]);
+
+    useEffect(() => {
+        if (totalPages === 0 && page !== 1) setPage(1);
+        else if (totalPages > 0 && page > totalPages) setPage(totalPages);
+    }, [page, totalPages]);
 
     // Paginate
     const paginatedQuizzes = useMemo(() => {

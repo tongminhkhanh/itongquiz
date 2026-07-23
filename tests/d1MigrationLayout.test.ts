@@ -34,7 +34,18 @@ describe('D1 migration layout', () => {
     expect(registered).toHaveLength(25);
     const numericPrefixes = migrations.map((name) => name.slice(0, 4));
     expect(new Set(numericPrefixes).size).toBe(numericPrefixes.length);
-    expect(migrations.at(-1)).toBe('0039_create_ai_generation_actions.sql');
+    expect(migrations.at(-1)).toBe('0040_scope_results_to_assignments.sql');
+  });
+
+  it('stores assignment-scoped result identity in migration 0040', () => {
+    const sql = fs.readFileSync(
+      path.join(migrationsDir, '0040_scope_results_to_assignments.sql'),
+      'utf8',
+    );
+
+    expect(sql).toContain('ALTER TABLE results ADD COLUMN assignment_id TEXT');
+    expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_results_assignment_student');
+    expect(sql).toContain('UPDATE results');
   });
 
   it('stores teacher AI quota and action reservations in migrations', () => {
