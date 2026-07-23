@@ -1,5 +1,7 @@
-import { Bell, Menu } from 'lucide-react';
+import { Megaphone, Menu } from 'lucide-react';
 import type React from 'react';
+import type { NotificationTarget } from '../../../../shared/notifications.contract';
+import { NotificationCenter } from '../../../features/notifications/components';
 import type { TeacherDashboardTab } from '../../../stores/useTeacherDashboardUIStore';
 import { DashboardSearchForm } from './DashboardSearchForm';
 import { TeacherAccountMenu } from './TeacherAccountMenu';
@@ -15,6 +17,7 @@ interface TeacherDashboardHeaderProps {
   teacherInitial: string;
   isAdmin: boolean;
   onLogout: () => void;
+  onNotificationNavigate: (target: NotificationTarget) => void;
 }
 
 const TAB_LABELS: Partial<Record<TeacherDashboardTab, string>> = {
@@ -60,18 +63,21 @@ export const TeacherDashboardHeader = (props: TeacherDashboardHeaderProps) => (
         setSearchQuery={props.setSearchQuery}
         onSubmit={props.onSearchSubmit}
       />
-      <button
-        type="button"
-        aria-label="Mở cài đặt thông báo"
-        title="Thông báo"
-        onClick={() => props.setActiveTab('announcements')}
-        className={`hidden size-10 items-center justify-center rounded-[10px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9] sm:inline-flex ${props.activeTab === 'announcements'
-          ? 'border-[#BAE6FD] bg-[#F0F9FF] text-[#0284C7]'
-          : 'border-[#E5E7EB] bg-white text-[#526174] hover:bg-[#F8FAFC] hover:text-[#0284C7]'
-        }`}
-      >
-        <Bell aria-hidden="true" className="size-5" />
-      </button>
+      <NotificationCenter onNavigate={props.onNotificationNavigate} />
+      {props.isAdmin && (
+        <button
+          type="button"
+          aria-label="Quản lý thông báo"
+          title="Quản lý thông báo"
+          onClick={() => props.setActiveTab('announcements')}
+          className={`hidden size-10 items-center justify-center rounded-[10px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9] sm:inline-flex ${props.activeTab === 'announcements'
+            ? 'border-[#BAE6FD] bg-[#F0F9FF] text-[#0284C7]'
+            : 'border-[#E5E7EB] bg-white text-[#526174] hover:bg-[#F8FAFC] hover:text-[#0284C7]'
+          }`}
+        >
+          <Megaphone aria-hidden="true" className="size-5" />
+        </button>
+      )}
       <TeacherAccountMenu
         displayName={props.teacherDisplayName}
         initial={props.teacherInitial}

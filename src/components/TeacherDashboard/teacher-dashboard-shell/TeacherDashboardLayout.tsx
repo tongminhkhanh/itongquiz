@@ -1,6 +1,6 @@
 import { Footer } from '../../common';
-import CurrentAnnouncementBanner from '../../common/CurrentAnnouncementBanner';
 import PasswordChangeDialog from '../../common/PasswordChangeDialog';
+import { NotificationSurfaceStack } from '../../../features/notifications/components';
 import Sidebar from '../Sidebar';
 import { AccessCodeDialog } from './AccessCodeDialog';
 import { TeacherDashboardHeader } from './TeacherDashboardHeader';
@@ -16,7 +16,6 @@ export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => (
         onComplete={props.completePasswordChange}
       />
     )}
-    <CurrentAnnouncementBanner role="teacher" />
     <Sidebar
       activeTab={props.activeTab}
       setActiveTab={props.selectTab}
@@ -37,6 +36,17 @@ export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => (
         teacherInitial={props.teacherInitial}
         isAdmin={props.isAdmin}
         onLogout={props.onLogout}
+        onNotificationNavigate={(target) => {
+          if (target.kind === 'assignment') props.setActiveTab('assignments');
+          if (target.kind === 'result-report') props.setActiveTab('results');
+          if (target.kind === 'certificate') props.setActiveTab('certificates');
+          if (target.kind === 'live-exam') props.setActiveTab('live-exam');
+          if (target.kind === 'url') props.onNavigate(target.url);
+        }}
+      />
+      <NotificationSurfaceStack
+        surface="TEACHER_DASHBOARD"
+        role={props.isAdmin ? 'admin' : 'teacher'}
       />
       <main className="flex-1 overflow-x-hidden px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         <TeacherDashboardTabContent
