@@ -12,11 +12,12 @@ export const generateWithPerplexity = async (
   promptText: string,
   _apiKey: string,
   execution?: QuizAiExecutionContext,
+  systemInstruction?: string,
 ): Promise<unknown> => {
   const text = await requestWorkerAiText({
     model: 'sonar',
     messages: [
-      { role: 'system', content: SYSTEM_INSTRUCTION },
+      { role: 'system', content: systemInstruction ?? SYSTEM_INSTRUCTION },
       { role: 'user', content: promptText },
     ],
     temperature: 0.4,

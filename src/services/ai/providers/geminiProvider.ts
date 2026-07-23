@@ -49,6 +49,7 @@ export const generateWithGemini = async (
   imageLibrary?: ImageLibraryItem[],
   _onStepChange?: (step: 'generating' | 'reviewing' | 'repairing' | 'completed') => void,
   execution?: QuizAiExecutionContext,
+  systemInstruction?: string,
 ): Promise<unknown> => {
   const userContent: Record<string, unknown>[] = [{ type: 'text', text: promptText }];
 
@@ -80,7 +81,7 @@ export const generateWithGemini = async (
   }
 
   const messages = [
-    { role: 'system', content: SYSTEM_INSTRUCTION },
+    { role: 'system', content: systemInstruction ?? SYSTEM_INSTRUCTION },
     { role: 'user', content: userContent },
   ];
 

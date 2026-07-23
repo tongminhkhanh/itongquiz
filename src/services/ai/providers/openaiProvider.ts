@@ -80,6 +80,7 @@ export const generateWithOpenAIResilient = async (
   baseUrl: string = 'https://api.thitong.site/v1',
   _onStepChange?: StepCallback,
   execution?: QuizAiExecutionContext,
+  systemInstruction?: string,
 ): Promise<unknown> => {
   const isMux = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('thitong.site');
   const allModelCandidates = isMux
@@ -89,7 +90,7 @@ export const generateWithOpenAIResilient = async (
   const imageLibraryItems = imageLibrary || [];
   const userContent = await buildUserContent(promptText, file, imageLibraryItems);
   const messages = [
-    { role: 'system', content: SYSTEM_INSTRUCTION },
+    { role: 'system', content: systemInstruction ?? SYSTEM_INSTRUCTION },
     { role: 'user', content: userContent },
   ];
 
