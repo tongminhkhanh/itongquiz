@@ -8,6 +8,9 @@ compatibility_flags = ["nodejs_compat"]
 minify = true
 account_id = "9306cc101c6560aee603252ca21f0456"
 
+[secrets]
+required = ["JWT_SECRET", "CLIPROXY_TOKEN"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "itongquiz-db"

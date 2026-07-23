@@ -1,23 +1,23 @@
 import React from 'react';
-import { FileText, Clock, Tag, X, Lock } from 'lucide-react';
+import { Clock, FileText, Lightbulb, Lock, Tag, X } from 'lucide-react';
 import CollapsibleSection from './CollapsibleSection';
 import { QUIZ_CATEGORIES } from '../../../config/constants';
 
 interface GeneralInfoSectionProps {
     topic: string;
-    setTopic: (v: string) => void;
+    setTopic: (value: string) => void;
     quizTitle: string;
-    setQuizTitle: (v: string) => void;
+    setQuizTitle: (value: string) => void;
     classLevel: string;
-    setClassLevel: (v: string) => void;
+    setClassLevel: (value: string) => void;
     manualTimeLimit: number | '';
-    setManualTimeLimit: (v: number | '') => void;
+    setManualTimeLimit: (value: number | '') => void;
     category: string;
-    setCategory: (v: string) => void;
+    setCategory: (value: string) => void;
     tags: string[];
-    setTags: (v: string[]) => void;
+    setTags: (value: string[]) => void;
     tagInput: string;
-    setTagInput: (v: string) => void;
+    setTagInput: (value: string) => void;
     isOpen: boolean;
     onToggle: (id: string) => void;
     isClassLocked: boolean;
@@ -33,16 +33,51 @@ interface GeneralInfoSectionProps {
 }
 
 const GeneralInfoSection: React.FC<GeneralInfoSectionProps> = ({
-    topic, setTopic, quizTitle, setQuizTitle, classLevel, setClassLevel,
-    manualTimeLimit, setManualTimeLimit, category, setCategory,
-    tags, setTags, tagInput, setTagInput, isOpen, onToggle,
-    isClassLocked, isPdfMode, aiSuggestions,
-    onApplyAiCategory, onApplyAiTitle, onAddTag
+    topic,
+    setTopic,
+    quizTitle,
+    setQuizTitle,
+    classLevel,
+    setClassLevel,
+    manualTimeLimit,
+    setManualTimeLimit,
+    category,
+    setCategory,
+    tags,
+    setTags,
+    tagInput,
+    setTagInput,
+    isOpen,
+    onToggle,
+    isClassLocked,
+    isPdfMode,
+    aiSuggestions,
+    onApplyAiCategory,
+    onApplyAiTitle,
+    onAddTag,
 }) => {
+    const hasAiSuggestions = Boolean(
+        aiSuggestions.category
+        || aiSuggestions.lesson
+        || aiSuggestions.tags.length > 0,
+    );
+
+    const categoryLabel = aiSuggestions.category
+        ? QUIZ_CATEGORIES.find((item) => item.id === aiSuggestions.category)?.name
+            ?? aiSuggestions.category
+        : '';
+    const uniqueSuggestedTags = [...new Set(aiSuggestions.tags)];
+
+    const applyAllSuggestions = () => {
+        if (aiSuggestions.category) onApplyAiCategory();
+        if (!quizTitle.trim() && aiSuggestions.lesson) onApplyAiTitle();
+        uniqueSuggestedTags.forEach(onAddTag);
+    };
+
     return (
         <CollapsibleSection
             id="basic"
-            icon={<FileText className="w-4 h-4" />}
+            icon={<FileText className="h-4 w-4" />}
             title="Thông tin cơ bản"
             subtitle="Chủ đề, khối lớp, thời gian"
             isOpen={isOpen}
@@ -50,82 +85,97 @@ const GeneralInfoSection: React.FC<GeneralInfoSectionProps> = ({
         >
             <div className="space-y-3">
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    <label className="mb-1 block text-sm font-semibold text-gray-700">
                         Chủ đề bài học {!isPdfMode && <span className="text-red-500">*</span>}
                     </label>
                     <input
                         type="text"
                         value={topic}
-                        onChange={e => setTopic(e.target.value)}
-                        placeholder="VD: Động vật rừng xanh, Phép cộng có nhớ..."
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all text-sm"
+                        onChange={(event) => setTopic(event.target.value)}
+                        placeholder="Ví dụ: Động vật rừng xanh, phép cộng có nhớ..."
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm transition-all focus:border-orange-500 focus:ring-2 focus:ring-orange-500/40"
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Tên bài kiểm tra</label>
+                    <label className="mb-1 block text-sm font-semibold text-gray-700">Tên bài kiểm tra</label>
                     <input
                         type="text"
                         value={quizTitle}
-                        onChange={e => setQuizTitle(e.target.value)}
-                        placeholder="VD: Kiểm tra 15 phút - Chương 3..."
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all text-sm"
+                        onChange={(event) => setQuizTitle(event.target.value)}
+                        placeholder="Ví dụ: Kiểm tra 15 phút - Chương 3..."
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm transition-all focus:border-orange-500 focus:ring-2 focus:ring-orange-500/40"
                     />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">
-                            Khối lớp {isClassLocked && <Lock className="w-3 h-3 inline text-orange-500" />}
+                        <label className="mb-1 block text-xs font-semibold text-gray-600">
+                            Khối lớp {isClassLocked && <Lock className="inline h-3 w-3 text-orange-500" />}
                         </label>
                         <select
                             value={classLevel}
-                            onChange={e => setClassLevel(e.target.value)}
+                            onChange={(event) => setClassLevel(event.target.value)}
                             disabled={isClassLocked}
-                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40 ${isClassLocked ? 'bg-gray-50 cursor-not-allowed text-gray-500' : 'border-gray-200'}`}
+                            className={`w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500/40 ${
+                                isClassLocked
+                                    ? 'cursor-not-allowed bg-gray-50 text-gray-500'
+                                    : 'border-gray-200'
+                            }`}
                         >
-                            {[1, 2, 3, 4, 5].map(l => <option key={l} value={String(l)}>Lớp {l}</option>)}
+                            {[1, 2, 3, 4, 5].map((level) => (
+                                <option key={level} value={String(level)}>Lớp {level}</option>
+                            ))}
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">
-                            <Clock className="w-3 h-3 inline mr-1" />Thời gian
+                        <label className="mb-1 block text-xs font-semibold text-gray-600">
+                            <Clock className="mr-1 inline h-3 w-3" />Thời gian
                         </label>
                         <input
                             type="number"
+                            min={1}
                             value={manualTimeLimit}
-                            onChange={e => {
-                                const val = e.target.value;
-                                setManualTimeLimit(val === '' ? '' : parseInt(val, 10));
+                            onChange={(event) => {
+                                const value = event.target.value;
+                                setManualTimeLimit(value === '' ? '' : Number.parseInt(value, 10));
                             }}
                             placeholder="Tự động"
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40"
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500/40"
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Danh mục</label>
+                        <label className="mb-1 block text-xs font-semibold text-gray-600">Danh mục</label>
                         <select
                             value={category}
-                            onChange={e => setCategory(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40"
+                            onChange={(event) => setCategory(event.target.value)}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500/40"
                         >
-                            {QUIZ_CATEGORIES.map(cat => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            {QUIZ_CATEGORIES.map((item) => (
+                                <option key={item.id} value={item.id}>{item.name}</option>
                             ))}
                         </select>
                     </div>
                 </div>
 
                 <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">
-                        <Tag className="w-3 h-3 inline mr-1" />Nhãn (Tags)
+                    <label className="mb-1 block text-xs font-semibold text-gray-600">
+                        <Tag className="mr-1 inline h-3 w-3" />Nhãn
                     </label>
-                    <div className="flex flex-wrap gap-1 mb-1.5">
-                        {tags.map((tag, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">
+                    <div className="mb-1.5 flex flex-wrap gap-1">
+                        {tags.map((tag) => (
+                            <span
+                                key={tag}
+                                className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600"
+                            >
                                 {tag}
-                                <button onClick={() => setTags(tags.filter((_, i) => i !== idx))} className="ml-0.5 hover:text-red-500">
-                                    <X className="w-3 h-3" />
+                                <button
+                                    type="button"
+                                    aria-label={`Xóa nhãn ${tag}`}
+                                    onClick={() => setTags(tags.filter((item) => item !== tag))}
+                                    className="ml-0.5 hover:text-red-500"
+                                >
+                                    <X className="h-3 w-3" />
                                 </button>
                             </span>
                         ))}
@@ -133,30 +183,91 @@ const GeneralInfoSection: React.FC<GeneralInfoSectionProps> = ({
                     <input
                         type="text"
                         value={tagInput}
-                        onChange={e => setTagInput(e.target.value)}
-                        onKeyDown={e => {
-                            if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
-                                e.preventDefault();
+                        onChange={(event) => setTagInput(event.target.value)}
+                        onKeyDown={(event) => {
+                            if ((event.key === 'Enter' || event.key === ',') && tagInput.trim()) {
+                                event.preventDefault();
                                 onAddTag(tagInput);
                                 setTagInput('');
                             }
                         }}
-                        placeholder="Gõ tag rồi nhấn Enter"
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/40"
+                        placeholder="Gõ nhãn rồi nhấn Enter"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500/40"
                     />
                 </div>
-                
-                {/* AI Suggestions UI... (omitted for brevity in prompt but I'll include it in file) */}
-                {(aiSuggestions.category || aiSuggestions.lesson || aiSuggestions.tags.length > 0) && (
-                    <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50/70 p-2.5 space-y-2">
-                         <p className="text-xs font-semibold text-emerald-700">AI Suggestions:</p>
-                         {aiSuggestions.category && (
-                             <button onClick={onApplyAiCategory} className="text-xs font-semibold bg-emerald-600 text-white px-2 py-1 rounded">Apply {aiSuggestions.category}</button>
-                         )}
-                         {aiSuggestions.lesson && (
-                             <button onClick={onApplyAiTitle} className="text-xs font-semibold border border-emerald-300 text-emerald-700 px-2 py-1 rounded ml-2">Apply {aiSuggestions.lesson}</button>
-                         )}
-                    </div>
+
+                {hasAiSuggestions && (
+                    <section className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/80 p-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="flex items-center gap-2 text-sm font-bold text-emerald-800">
+                                <Lightbulb className="h-4 w-4" />
+                                Gợi ý từ AI
+                            </p>
+                            <button
+                                type="button"
+                                onClick={applyAllSuggestions}
+                                className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800"
+                            >
+                                Áp dụng tất cả
+                            </button>
+                        </div>
+
+                        <div className="space-y-2">
+                            {aiSuggestions.category && (
+                                <div className="flex flex-col gap-2 rounded-lg border border-emerald-100 bg-white p-2.5 sm:flex-row sm:items-center sm:justify-between">
+                                    <span className="text-sm text-gray-700">
+                                        Môn học: <strong>{categoryLabel}</strong>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={onApplyAiCategory}
+                                        className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
+                                    >
+                                        Áp dụng môn học
+                                    </button>
+                                </div>
+                            )}
+
+                            {aiSuggestions.lesson && (
+                                <div className="flex flex-col gap-2 rounded-lg border border-emerald-100 bg-white p-2.5 sm:flex-row sm:items-center sm:justify-between">
+                                    <span className="text-sm text-gray-700">
+                                        Tên bài: <strong>{aiSuggestions.lesson}</strong>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={onApplyAiTitle}
+                                        className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
+                                    >
+                                        Dùng tên bài này
+                                    </button>
+                                </div>
+                            )}
+
+                            {uniqueSuggestedTags.length > 0 && (
+                                <div className="rounded-lg border border-emerald-100 bg-white p-2.5">
+                                    <p className="mb-2 text-xs font-semibold text-gray-600">Nhãn được đề xuất</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {uniqueSuggestedTags.map((tag) => (
+                                            <button
+                                                key={tag}
+                                                type="button"
+                                                onClick={() => onAddTag(tag)}
+                                                className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                                            >
+                                                Thêm nhãn {tag}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {quizTitle.trim() && aiSuggestions.lesson && (
+                            <p className="text-xs text-emerald-800">
+                                “Áp dụng tất cả” giữ nguyên tên bài bạn đã nhập. Dùng nút “Dùng tên bài này” để thay thế tên bài.
+                            </p>
+                        )}
+                    </section>
                 )}
             </div>
         </CollapsibleSection>

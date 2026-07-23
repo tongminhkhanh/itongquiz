@@ -1,8 +1,16 @@
 import type { Quiz } from '../../../types';
 import type { AIProvider, PromptProfileOptions } from '../../../services/geminiService';
+import type { QuestionTypeAllocation, QuizIntent, QuizSourceMode } from './quizBlueprint';
 
 export type QuizMode = 'exam' | 'practice' | 'pdf';
-export type GenerationStep = 'idle' | 'generating' | 'reviewing' | 'completed';
+export type GenerationStep =
+    | 'idle'
+    | 'reading_document'
+    | 'generating'
+    | 'reviewing'
+    | 'repairing'
+    | 'completed'
+    | 'cancelled';
 export type TrangNguyenSearchMode = 'search' | 'quick';
 
 export interface DifficultyLevels {
@@ -39,8 +47,11 @@ export interface QuizGenerationFormSnapshot {
     manualTimeLimit: number | '';
     customPrompt: string;
     quizMode: QuizMode;
+    quizIntent?: QuizIntent;
+    sourceMode?: QuizSourceMode;
     aiProvider: AIProvider;
     selectedTypes: Record<string, boolean>;
+    questionTypeAllocations?: QuestionTypeAllocation[];
     difficultyLevels: DifficultyLevels;
     promptProfile: PromptProfileOptions;
     requireCode: boolean;

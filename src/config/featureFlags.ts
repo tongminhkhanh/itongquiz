@@ -22,6 +22,23 @@ export const isManualQuizWorkspaceEnabled = (): boolean => resolveFeatureFlag(
     true,
 );
 
+/**
+ * AI Quiz Generation V2 starts disabled so production can roll out gradually.
+ * Set VITE_FEATURE_AI_QUIZ_V2=true for a controlled cohort or full release.
+ */
+export const isAiQuizV2Enabled = (): boolean => resolveFeatureFlag(
+    import.meta.env.VITE_FEATURE_AI_QUIZ_V2,
+    false,
+);
+
+/**
+ * Per-question blueprint V3 rolls out independently and requires V2 to remain enabled.
+ */
+export const isAiBlueprintV3Enabled = (): boolean => resolveFeatureFlag(
+    import.meta.env.VITE_FEATURE_AI_BLUEPRINT_V3,
+    false,
+);
+
 export const isParentPortalEnabled = (): boolean => resolveFeatureFlag(
     import.meta.env.VITE_FEATURE_PARENT_PORTAL_V1,
     false,

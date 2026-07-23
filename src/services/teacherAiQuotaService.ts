@@ -20,7 +20,7 @@ interface QuotaApiResponse {
 
 const ensureQuotaData = (payload: QuotaApiResponse): TeacherAiQuotaData => {
   if (payload.status !== 'success' || !payload.data) {
-    throw new Error(payload.message || 'Kh?ng th? t?i h?n m?c AI.');
+    throw new Error(payload.message || 'Không thể tải hạn mức AI.');
   }
   return payload.data;
 };

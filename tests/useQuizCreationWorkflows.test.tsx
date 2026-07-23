@@ -5,10 +5,7 @@ import { QuestionType } from '../src/types';
 import { useAssignmentStore } from '../src/stores/useAssignmentStore';
 import { useClassStore } from '../src/stores/useClassStore';
 import { useAuthStore } from '../stores/authStore';
-import {
-    consumeTeacherAiQuota,
-    getTeacherAiQuota,
-} from '../src/services/teacherAiQuotaService';
+import { getTeacherAiQuota } from '../src/services/teacherAiQuotaService';
 import { generateQuiz } from '../src/services/geminiService';
 import { showError } from '../src/utils/toast';
 
@@ -27,7 +24,6 @@ vi.mock('../src/services/trangNguyenGeminiService', () => ({
 
 vi.mock('../src/services/teacherAiQuotaService', () => ({
     getTeacherAiQuota: vi.fn(),
-    consumeTeacherAiQuota: vi.fn(),
 }));
 
 vi.mock('../src/utils/toast', () => ({
@@ -38,7 +34,6 @@ vi.mock('../src/utils/toast', () => ({
 import { useCreateQuizLogic } from '../src/features/quiz-generator/hooks/useCreateQuizLogic';
 
 const mockedGetQuota = vi.mocked(getTeacherAiQuota);
-const mockedConsumeQuota = vi.mocked(consumeTeacherAiQuota);
 const mockedGenerateQuiz = vi.mocked(generateQuiz);
 const mockedShowError = vi.mocked(showError);
 
@@ -49,7 +44,7 @@ function resetStores(addAssignment = vi.fn(async () => null)) {
         teacherName: 'Teacher Test',
         isAdmin: false,
         teacherClass: '4A',
-        token: 'test-token',
+        token: '',
         isLoggingIn: false,
         loginError: false,
     });
@@ -131,16 +126,6 @@ describe('quiz creation workflows', () => {
             canGenerate: true,
             unlimited: false,
         });
-        mockedConsumeQuota.mockResolvedValue({
-            username: 'teacher_test',
-            role: 'teacher',
-            usageDate: '2026-07-18',
-            dailyLimit: 5,
-            usedCount: 2,
-            remaining: 3,
-            canGenerate: true,
-            unlimited: false,
-        });
         mockedGenerateQuiz.mockResolvedValue({
             title: 'Generated fractions quiz',
             timeLimit: 20,
@@ -155,17 +140,37 @@ describe('quiz creation workflows', () => {
         resetStores();
     });
 
-    it('validates before consuming quota or calling the AI service', async () => {
+    it('validates before calling the AI service', async () => {
         const { result } = renderCreationHook();
 
         await act(async () => result.current.handleGenerate('practice'));
 
         expect(mockedShowError).toHaveBeenCalledWith('Vui lòng nhập chủ đề bài học');
-        expect(mockedConsumeQuota).not.toHaveBeenCalled();
         expect(mockedGenerateQuiz).not.toHaveBeenCalled();
     });
 
-    it('consumes quota and stores the generated quiz', async () => {
+    it('stores the generated quiz and refreshes the server-owned quota', async () => {
+        mockedGetQuota
+            .mockResolvedValueOnce({
+                username: 'teacher_test',
+                role: 'teacher',
+                usageDate: '2026-07-18',
+                dailyLimit: 5,
+                usedCount: 1,
+                remaining: 4,
+                canGenerate: true,
+                unlimited: false,
+            })
+            .mockResolvedValueOnce({
+                username: 'teacher_test',
+                role: 'teacher',
+                usageDate: '2026-07-18',
+                dailyLimit: 5,
+                usedCount: 2,
+                remaining: 3,
+                canGenerate: true,
+                unlimited: false,
+            });
         const { result } = renderCreationHook();
         act(() => {
             result.current.setTopic('Fractions');
@@ -174,7 +179,6 @@ describe('quiz creation workflows', () => {
 
         await act(async () => result.current.handleGenerate('practice'));
 
-        expect(mockedConsumeQuota).toHaveBeenCalledWith('teacher_test');
         expect(mockedGenerateQuiz).toHaveBeenCalledTimes(1);
         expect(result.current.generatedQuiz).toEqual(expect.objectContaining({
             title: 'Generated fractions quiz',
@@ -182,20 +186,22 @@ describe('quiz creation workflows', () => {
             timeLimit: 20,
             questions: [expect.objectContaining({ id: 'q-1' })],
         }));
-        expect(result.current.aiUsageCount).toBe(2);
+        await waitFor(() => expect(result.current.aiUsageCount).toBe(2));
+        expect(mockedGetQuota).toHaveBeenCalledTimes(2);
         expect(result.current.isGenerating).toBe(false);
         expect(result.current.generationStep).toBe('completed');
     });
 
-    it('does not call the AI service when quota consumption fails', async () => {
-        mockedConsumeQuota.mockRejectedValueOnce(new Error('Daily quota reached'));
+    it('shows the Worker quota error and does not store a quiz', async () => {
+        mockedGenerateQuiz.mockRejectedValueOnce(new Error('Bạn đã dùng hết 5 lượt tạo đề AI hôm nay.'));
         const { result } = renderCreationHook();
         act(() => result.current.setTopic('Fractions'));
 
         await act(async () => result.current.handleGenerate('practice'));
 
-        expect(mockedGenerateQuiz).not.toHaveBeenCalled();
-        expect(mockedShowError).toHaveBeenCalledWith('Daily quota reached');
+        expect(mockedGenerateQuiz).toHaveBeenCalledTimes(1);
+        expect(mockedShowError).toHaveBeenCalledWith('Bạn đã dùng hết 5 lượt tạo đề AI hôm nay.');
+        expect(result.current.generatedQuiz).toBeNull();
     });
 
     it('saves a manual quiz, opens the link modal and resets the form', async () => {

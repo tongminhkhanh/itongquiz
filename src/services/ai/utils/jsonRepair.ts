@@ -54,16 +54,7 @@ export const parseAndRepairJSON = (text: string): unknown => {
   try {
     return JSON.parse(repaired);
   } catch (e2) {
-    const syntaxError = e2 as SyntaxError;
-    const match = /position\s+(\d+)/i.exec(syntaxError.message || '');
-    if (match?.[1]) {
-      const pos = Number(match[1]);
-      const start = Math.max(0, pos - 80);
-      const end = Math.min(repaired.length, pos + 80);
-      console.error('JSON error context:', repaired.slice(start, end));
-    }
     console.error('JSON repair failed:', e2);
-    console.error('Original text:', text.substring(0, 500));
     throw new Error('AI trả về JSON không hợp lệ. Vui lòng thử tạo đề lại.');
   }
 };
@@ -174,37 +165,7 @@ export const validateAndFixQuiz = (quiz: unknown, maxQuestions?: number): unknow
     q.questions = (q.questions as unknown[]).slice(0, maxQuestions);
   }
 
-  q.questions = (q.questions as Record<string, unknown>[]).map((item, index) => {
-    let fixedItem = fixQuestionLatex(item);
-
-    if (fixedItem.type === 'CATEGORIZATION') {
-      const categories = (fixedItem.categories as Record<string, unknown>[] | undefined) || [];
-      const items = (fixedItem.items as Record<string, unknown>[] | undefined) || [];
-
-      if (items.length === 0) {
-        console.error(`[CATEGORIZATION] ❌ Câu ${index + 1}: items array is EMPTY!`);
-        console.error(`[CATEGORIZATION] Question text: "${fixedItem.question}"`);
-      } else {
-        items.forEach((item, i) => {
-          if (!item.content || (item.content as string).trim() === '') {
-            console.error(`[CATEGORIZATION] ❌ Item ${i} has EMPTY content!`);
-            item.content = item.content || `(Mục ${i + 1})`;
-          }
-          if (!item.id) item.id = `item_${i + 1}`;
-          if (!item.categoryId && categories.length > 0) item.categoryId = categories[0].id;
-        });
-      }
-
-      categories.forEach((cat, i) => {
-        if (!cat.id) cat.id = `cat_${i + 1}`;
-        if (!cat.name) cat.name = `Nhóm ${i + 1}`;
-      });
-
-      return { ...fixedItem, categories, items };
-    }
-
-    return fixedItem;
-  });
+  q.questions = (q.questions as Record<string, unknown>[]).map((item) => fixQuestionLatex(item));
 
   if ((q.questions as Record<string, unknown>[]).some((item) => item.difficultyLevel)) {
     (q.questions as Record<string, unknown>[]).sort((a, b) => {

@@ -8,6 +8,8 @@ import {
     reportManualQuizTelemetry,
 } from '../src/services/telemetryService';
 import {
+    isAiBlueprintV3Enabled,
+    isAiQuizV2Enabled,
     isManualQuizWorkspaceEnabled,
     resolveFeatureFlag,
 } from '../src/config/featureFlags';
@@ -63,6 +65,34 @@ describe('manual quiz telemetry privacy', () => {
             questionCount: 5,
             outcome: 'success',
         });
+    });
+});
+
+describe('AI quiz V2 feature flag', () => {
+    it('defaults off and accepts all supported truthy values', () => {
+        vi.unstubAllEnvs();
+        expect(isAiQuizV2Enabled()).toBe(false);
+        for (const value of ['1', 'true', 'yes', 'on', 'enabled']) {
+            vi.stubEnv('VITE_FEATURE_AI_QUIZ_V2', value);
+            expect(isAiQuizV2Enabled(), value).toBe(true);
+        }
+        vi.stubEnv('VITE_FEATURE_AI_QUIZ_V2', 'false');
+        expect(isAiQuizV2Enabled()).toBe(false);
+        vi.unstubAllEnvs();
+    });
+});
+
+describe('AI blueprint V3 feature flag', () => {
+    it('defaults off and accepts all supported truthy values', () => {
+        vi.unstubAllEnvs();
+        expect(isAiBlueprintV3Enabled()).toBe(false);
+        for (const value of ['1', 'true', 'yes', 'on', 'enabled']) {
+            vi.stubEnv('VITE_FEATURE_AI_BLUEPRINT_V3', value);
+            expect(isAiBlueprintV3Enabled(), value).toBe(true);
+        }
+        vi.stubEnv('VITE_FEATURE_AI_BLUEPRINT_V3', 'false');
+        expect(isAiBlueprintV3Enabled()).toBe(false);
+        vi.unstubAllEnvs();
     });
 });
 

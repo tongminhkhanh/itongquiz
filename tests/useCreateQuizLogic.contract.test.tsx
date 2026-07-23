@@ -112,6 +112,23 @@ const expectedPublicKeys = [
     'toggleSection',
     'topic',
     'uploadedFile',
+    'aiBlueprintV3Enabled',
+    'aiQuizV2Enabled',
+    'applyOcrDocument',
+    'blueprintErrors',
+    'cancelGeneration',
+    'clearOcrDocument',
+    'isBlueprintValid',
+    'ocrDocument',
+    'questionBlueprint',
+    'questionBlueprintV3',
+    'questionTypeAllocations',
+    'quizIntent',
+    'selectedOcrPageNumbers',
+    'setQuestionBlueprint',
+    'setQuestionTypeAllocations',
+    'setQuizIntent',
+    'setSelectedOcrPageNumbers',
 ].sort();
 
 function resetStores() {

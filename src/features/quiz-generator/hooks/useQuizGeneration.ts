@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Quiz, Question } from '../../../types';
 import { QuestionType } from '../../../types';
 import {
@@ -6,16 +6,21 @@ import {
     generateQuiz,
     type AIProvider,
 } from '../../../services/geminiService';
+import {
+    buildSelectedOcrText,
+    type OcrDocument,
+} from '../../../services/ai/schemas/ocrDocumentSchema';
 import { generateTrangNguyenQuiz } from '../../../services/trangNguyenGeminiService';
 import { showError } from '../../../utils/toast';
 import { normalizeAiCategory, normalizeTags } from '../utils/quizNormalizers';
-import {
-    buildQuizGenerationOptions,
-} from '../domain/buildQuizGenerationRequest';
-import { MAX_OCR_CONTENT_LENGTH } from '../domain/quizCreationDefaults';
+import { buildQuizGenerationOptions } from '../domain/buildQuizGenerationRequest';
+import { buildQuestionRegenerationPrompt } from '../../../services/ai/prompts/questionRegenerationPrompt';
+import { isAiSelectableQuestionType } from '../../../services/ai/question-contracts/questionTypeAvailability';
+import type { GeneratedQuestionV3 } from '../../../services/ai/question-contracts/questionContract.types';
 import { validateQuizGenerationInput } from '../domain/quizCreationValidation';
 import type { GenerationStep, QuizMode } from '../domain/quizCreation.types';
 import type { useQuizFormState } from './useQuizFormState';
+import { createAiAction, type ClientAiAction } from '../../../services/ai/aiAction';
 import { useTeacherAiQuota } from './useTeacherAiQuota';
 
 interface UseQuizGenerationOptions {
@@ -24,7 +29,18 @@ interface UseQuizGenerationOptions {
     isTeacherAccount: boolean;
     username: string | null;
     teacherName: string | null;
+    aiQuizV2Enabled: boolean;
+    aiBlueprintV3Enabled: boolean;
 }
+
+interface ActiveGeneration {
+    action: ClientAiAction;
+    controller: AbortController;
+    phase: 'ocr' | 'generate';
+    sourceFileKey?: string;
+}
+
+const fileKey = (file: File): string => `${file.name}:${file.size}:${file.lastModified}`;
 
 export const useQuizGeneration = ({
     form,
@@ -32,9 +48,12 @@ export const useQuizGeneration = ({
     isTeacherAccount,
     username,
     teacherName,
+    aiQuizV2Enabled,
+    aiBlueprintV3Enabled,
 }: UseQuizGenerationOptions) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStep, setGenerationStep] = useState<GenerationStep>('idle');
+    const activeGenerationRef = useRef<ActiveGeneration | null>(null);
     const quota = useTeacherAiQuota({ isTeacherAccount, username });
 
     const createQuizFromResult = (
@@ -68,10 +87,60 @@ export const useQuizGeneration = ({
         suggestedTags: suggestedTags.length > 0 ? suggestedTags : undefined,
     });
 
+    const prepareOcrPreview = async (file: File): Promise<OcrDocument | null> => {
+        activeGenerationRef.current?.controller.abort();
+        const action = createAiAction('QUIZ_CREATE');
+        const controller = new AbortController();
+        const sourceFileKey = fileKey(file);
+        activeGenerationRef.current = { action, controller, phase: 'ocr', sourceFileKey };
+        form.clearOcrDocument();
+        setIsGenerating(true);
+        setGenerationStep('reading_document');
+
+        try {
+            const ocrProvider: AIProvider = [
+                'gemini',
+                'llm-mux',
+                'native-ocr',
+            ].includes(form.aiProvider)
+                ? form.aiProvider
+                : 'llm-mux';
+            const document = await extractTextFromPdf(file, ocrProvider, {
+                action,
+                stage: 'OCR',
+                signal: controller.signal,
+            });
+            form.applyOcrDocument(document);
+            activeGenerationRef.current = {
+                action,
+                controller,
+                phase: 'generate',
+                sourceFileKey,
+            };
+            setGenerationStep('idle');
+            return document;
+        } catch (error: unknown) {
+            activeGenerationRef.current = null;
+            if (controller.signal.aborted) {
+                setGenerationStep('cancelled');
+            } else {
+                const normalizedError = error instanceof Error ? error : new Error(String(error));
+                showError(normalizedError.message || 'Không thể đọc tài liệu.');
+                setGenerationStep('idle');
+            }
+            return null;
+        } finally {
+            setIsGenerating(false);
+            void quota.refresh();
+        }
+    };
+
     const handleGenerate = async (modeOverride?: QuizMode) => {
         const activeQuizMode = modeOverride ?? form.quizMode;
         const isPdfMode = activeQuizMode === 'pdf';
         form.setQuizMode(activeQuizMode);
+        if (activeQuizMode === 'exam') form.setQuizIntent('EXAM');
+        if (activeQuizMode === 'practice') form.setQuizIntent('PRACTICE');
 
         const validation = validateQuizGenerationInput({
             mode: activeQuizMode,
@@ -79,15 +148,54 @@ export const useQuizGeneration = ({
             topic: form.topic,
             classLevel: form.classLevel,
             selectedTypes: form.selectedTypes,
+            typeAllocations: form.questionTypeAllocations,
+            intent: activeQuizMode === 'exam'
+                ? 'EXAM'
+                : activeQuizMode === 'practice'
+                    ? 'PRACTICE'
+                    : form.quizIntent,
             difficultyLevels: form.difficultyLevels,
         });
         if (validation.error) {
             showError(validation.error);
             return;
         }
-        if (!(await quota.consume())) return;
+
+        let legacyOcrDocument: OcrDocument | null = null;
+        if (isPdfMode && form.uploadedFile) {
+            if (aiQuizV2Enabled) {
+                const pending = activeGenerationRef.current;
+                const hasMatchingPreview = form.ocrDocument
+                    && pending?.phase === 'generate'
+                    && pending.sourceFileKey === fileKey(form.uploadedFile);
+                if (!hasMatchingPreview) {
+                    await prepareOcrPreview(form.uploadedFile);
+                    return;
+                }
+                if (form.selectedOcrPageNumbers.length === 0) {
+                    showError('Cần chọn ít nhất một trang.');
+                    return;
+                }
+            } else {
+                legacyOcrDocument = await prepareOcrPreview(form.uploadedFile);
+                if (!legacyOcrDocument) return;
+            }
+        }
+
+        const pendingAction = activeGenerationRef.current?.phase === 'generate'
+            ? activeGenerationRef.current
+            : null;
+        const action = pendingAction?.action ?? createAiAction('QUIZ_CREATE');
+        const controller = pendingAction?.controller ?? new AbortController();
+        activeGenerationRef.current = {
+            action,
+            controller,
+            phase: 'generate',
+            sourceFileKey: pendingAction?.sourceFileKey,
+        };
 
         setIsGenerating(true);
+        setGenerationStep('generating');
         form.setAiDetectedCategory(null);
         form.setAiDetectedLesson('');
         form.setAiSuggestedTags([]);
@@ -131,11 +239,12 @@ export const useQuizGeneration = ({
                     showOnHome: form.showOnHome,
                     tags: form.tags,
                 } as Quiz);
+                setGenerationStep('completed');
                 return;
             }
 
             const titlePrefix = isPdfMode
-                ? 'Đề từ PDF'
+                ? 'Đề từ tài liệu'
                 : activeQuizMode === 'exam'
                     ? 'Kiểm tra'
                     : 'Ôn tập';
@@ -143,32 +252,25 @@ export const useQuizGeneration = ({
             let generationFile: File | undefined = form.uploadedFile || undefined;
             let generationTopic = form.topic;
 
-            if (isPdfMode && form.uploadedFile) {
-                setGenerationStep('generating');
-                const ocrProvider: AIProvider = [
-                    'gemini',
-                    'llm-mux',
-                    'native-ocr',
-                ].includes(form.aiProvider)
-                    ? form.aiProvider
-                    : 'llm-mux';
-                const extractedText = await extractTextFromPdf(form.uploadedFile, ocrProvider);
-                const normalizedOcr = extractedText?.trim();
-                if (!normalizedOcr || normalizedOcr.length < 120) {
+            const sourceOcrDocument = legacyOcrDocument ?? form.ocrDocument;
+            if (isPdfMode && form.uploadedFile && sourceOcrDocument) {
+                const selectedPageNumbers = legacyOcrDocument
+                    ? legacyOcrDocument.pages.map((page) => page.pageNumber)
+                    : form.selectedOcrPageNumbers;
+                const selectedOcrText = buildSelectedOcrText(
+                    sourceOcrDocument,
+                    selectedPageNumbers,
+                );
+                if (selectedOcrText.trim().length < 120) {
                     throw new Error(
-                        'OCR không đọc được đủ nội dung từ file. Vui lòng thử file rõ hơn hoặc chọn file khác.',
+                        'Các trang đã chọn chưa có đủ nội dung. Vui lòng chọn thêm trang hoặc dùng file rõ hơn.',
                     );
                 }
-
-                generationContent = [
-                    form.content.trim(),
-                    `=== NỘI DUNG OCR TỪ FILE (NGUỒN CHÍNH) ===\n${
-                        normalizedOcr.length > MAX_OCR_CONTENT_LENGTH
-                            ? normalizedOcr.slice(0, MAX_OCR_CONTENT_LENGTH)
-                            : normalizedOcr
-                    }\n=== HẾT NỘI DUNG OCR ===`,
-                ].filter(Boolean).join('\n\n');
+                generationContent = [form.content.trim(), selectedOcrText]
+                    .filter(Boolean)
+                    .join('\n\n');
                 generationTopic = form.topic || form.uploadedFile.name.replace(/\.[^/.]+$/, '');
+                generationFile = undefined;
             }
 
             const options = buildQuizGenerationOptions({
@@ -177,14 +279,27 @@ export const useQuizGeneration = ({
                     || form.uploadedFile?.name?.replace(/\.[^/.]+$/, '')
                     || 'Bài kiểm tra'
                 }`,
+                topic: generationTopic,
+                classLevel: form.classLevel,
                 questionCount: validation.questionCount,
                 questionTypes: validation.enabledTypes,
+                typeAllocations: form.questionTypeAllocations,
                 difficultyLevels: form.difficultyLevels,
                 promptProfile: form.promptProfile,
                 imageLibrary: form.imageLibrary,
                 customPrompt: form.customPrompt,
+                quizMode: activeQuizMode,
+                intent: activeQuizMode === 'exam'
+                    ? 'EXAM'
+                    : activeQuizMode === 'practice'
+                        ? 'PRACTICE'
+                        : form.quizIntent,
+                sourceMode: isPdfMode ? 'DOCUMENT' : 'TOPIC',
+                sourceRefs: isPdfMode
+                    ? form.selectedOcrPageNumbers.map((pageNumber) => `page-${pageNumber}`)
+                    : undefined,
                 isPdfMode,
-            });
+            }, { enableBlueprintV3: aiBlueprintV3Enabled });
 
             const result = await generateQuiz(
                 generationTopic,
@@ -195,6 +310,11 @@ export const useQuizGeneration = ({
                 undefined,
                 form.aiProvider,
                 setGenerationStep,
+                {
+                    action,
+                    stage: 'GENERATE',
+                    signal: controller.signal,
+                },
             ) as Record<string, unknown>;
 
             const detectedCategory = normalizeAiCategory(result.detectedCategory);
@@ -215,38 +335,100 @@ export const useQuizGeneration = ({
             ));
             setGenerationStep('completed');
         } catch (error: unknown) {
-            const normalizedError = error instanceof Error ? error : new Error(String(error));
-            showError(normalizedError.message || 'Đã xảy ra lỗi khi tạo đề');
-            setGenerationStep('idle');
+            if (controller.signal.aborted) {
+                setGenerationStep('cancelled');
+            } else {
+                const normalizedError = error instanceof Error ? error : new Error(String(error));
+                showError(normalizedError.message || 'Đã xảy ra lỗi khi tạo đề');
+                setGenerationStep('idle');
+            }
         } finally {
+            if (activeGenerationRef.current?.action.actionId === action.actionId) {
+                activeGenerationRef.current = null;
+            }
             setIsGenerating(false);
+            void quota.refresh();
         }
     };
 
     const handleRegenerateSingle = async (question: Question): Promise<Question | null> => {
+        const action = createAiAction('QUESTION_REGENERATE');
+        const controller = new AbortController();
         try {
-            const prompt = `Yêu cầu: Sinh lại câu hỏi dựa trên: ${JSON.stringify(question)}`;
+            const topic = form.topic || form.generatedQuiz?.title || 'T?ng h?p';
+            const useV3Regeneration = aiBlueprintV3Enabled && isAiSelectableQuestionType(question.type);
+            const supportedSubject = question.subject === 'math' || question.subject === 'vietnamese'
+                ? question.subject
+                : undefined;
+            const regenerationOptions = buildQuizGenerationOptions({
+                title: form.quizTitle || `Sinh l?i c?u h?i: ${form.topic || 'B?i ki?m tra'}`,
+                topic,
+                classLevel: form.classLevel,
+                questionCount: 1,
+                questionTypes: [question.type],
+                typeAllocations: [{ type: question.type, count: 1 }],
+                difficultyLevels: {
+                    level1: question.difficulty === 1 ? 1 : 0,
+                    level2: question.difficulty === 2 || !question.difficulty ? 1 : 0,
+                    level3: question.difficulty === 3 ? 1 : 0,
+                },
+                promptProfile: form.promptProfile,
+                imageLibrary: form.imageLibrary,
+                customPrompt: `T?o n?i dung m?i d?a tr?n c?u hi?n t?i: ${JSON.stringify(question)}`,
+                quizMode: form.quizMode,
+                intent: form.quizIntent,
+                sourceMode: form.quizMode === 'pdf' ? 'DOCUMENT' : 'TOPIC',
+                subject: supportedSubject,
+                skillCode: question.skillCode,
+                subskillCode: question.subskillCode,
+                isPdfMode: false,
+            }, { enableBlueprintV3: useV3Regeneration });
+
+            if (useV3Regeneration && regenerationOptions.blueprintV3) {
+                const slot = regenerationOptions.blueprintV3.slots[0];
+                const summarize = (candidate: Question): string => {
+                    const record = candidate as unknown as Record<string, unknown>;
+                    return String(
+                        record.question
+                        ?? record.mainQuestion
+                        ?? record.sentence
+                        ?? record.text
+                        ?? candidate.type,
+                    ).slice(0, 220);
+                };
+                regenerationOptions.customPrompt = buildQuestionRegenerationPrompt({
+                    slot,
+                    currentQuestion: {
+                        ...(question as unknown as Record<string, unknown>),
+                        slotId: slot.slotId,
+                        type: slot.type,
+                        difficulty: slot.difficulty,
+                        explanation: question.explanation || 'C?u hi?n t?i ch?a c? l?i gi?i.',
+                    } as GeneratedQuestionV3,
+                    otherQuestionSummaries: (form.generatedQuiz?.questions ?? [])
+                        .filter((candidate) => candidate.id !== question.id)
+                        .map((candidate) => ({
+                            slotId: candidate.id,
+                            normalizedPrompt: summarize(candidate),
+                        })),
+                    teacherInstruction: 'T?o m?t c?u m?i kh?c n?i dung, gi? nguy?n k? n?ng v? c?u tr?c t??ng t?c.',
+                });
+            }
+
             const result = await generateQuiz(
-                form.topic || form.generatedQuiz?.title || 'Tổng hợp',
+                topic,
                 form.classLevel,
                 form.content,
                 undefined,
-                buildQuizGenerationOptions({
-                    title: form.quizTitle || `Sinh lại câu hỏi: ${form.topic || 'Bài kiểm tra'}`,
-                    questionCount: 1,
-                    questionTypes: [question.type],
-                    difficultyLevels: {
-                        level1: question.difficulty === 1 ? 1 : 0,
-                        level2: question.difficulty === 2 || !question.difficulty ? 1 : 0,
-                        level3: question.difficulty === 3 ? 1 : 0,
-                    },
-                    promptProfile: form.promptProfile,
-                    imageLibrary: form.imageLibrary,
-                    customPrompt: prompt,
-                    isPdfMode: false,
-                }),
+                regenerationOptions,
                 undefined,
                 form.aiProvider,
+                undefined,
+                {
+                    action,
+                    stage: 'REGENERATE',
+                    signal: controller.signal,
+                },
             ) as Record<string, unknown>;
             const questions = Array.isArray(result.questions) ? result.questions : [];
             return questions.length > 0
@@ -267,5 +449,11 @@ export const useQuizGeneration = ({
         dailyAiLimit: quota.dailyAiLimit,
         handleGenerate,
         handleRegenerateSingle,
+        cancelGeneration: () => {
+            const activeGeneration = activeGenerationRef.current;
+            if (!activeGeneration) return;
+            setGenerationStep('cancelled');
+            activeGeneration.controller.abort();
+        },
     };
 };

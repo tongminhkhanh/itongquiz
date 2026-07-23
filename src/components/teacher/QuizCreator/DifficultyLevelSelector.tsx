@@ -26,7 +26,7 @@ export const DifficultyLevelSelector: React.FC<DifficultyLevelSelectorProps> = (
     const handleChange = (field: keyof DifficultyLevels, value: number) => {
         onChange({
             ...levels,
-            [field]: Math.max(0, Math.min(50, value)),
+            [field]: Math.max(0, Math.min(40, value)),
         });
     };
 
@@ -35,7 +35,7 @@ export const DifficultyLevelSelector: React.FC<DifficultyLevelSelectorProps> = (
             <label className="block text-sm font-bold text-green-800 mb-3">
                 Phân bổ câu hỏi theo mức độ:
             </label>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                         Mức 1: Nhận biết
@@ -43,7 +43,7 @@ export const DifficultyLevelSelector: React.FC<DifficultyLevelSelectorProps> = (
                     <input
                         type="number"
                         min={0}
-                        max={50}
+                        max={40}
                         value={levels.level1}
                         onChange={(e) => handleChange('level1', Number(e.target.value) || 0)}
                         className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-center"
@@ -57,7 +57,7 @@ export const DifficultyLevelSelector: React.FC<DifficultyLevelSelectorProps> = (
                     <input
                         type="number"
                         min={0}
-                        max={50}
+                        max={40}
                         value={levels.level2}
                         onChange={(e) => handleChange('level2', Number(e.target.value) || 0)}
                         className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-center"
@@ -71,7 +71,7 @@ export const DifficultyLevelSelector: React.FC<DifficultyLevelSelectorProps> = (
                     <input
                         type="number"
                         min={0}
-                        max={50}
+                        max={40}
                         value={levels.level3}
                         onChange={(e) => handleChange('level3', Number(e.target.value) || 0)}
                         className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-center"
@@ -80,7 +80,7 @@ export const DifficultyLevelSelector: React.FC<DifficultyLevelSelectorProps> = (
                 </div>
             </div>
             <p className="text-sm text-green-700 font-bold mt-3 text-center">
-                Tổng số câu: {total}
+                Tổng: {total} câu
             </p>
         </div>
     );

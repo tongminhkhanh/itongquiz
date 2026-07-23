@@ -13,8 +13,10 @@ import GeneralInfoSection from '../../features/quiz-generator/components/General
 import QuestionSettingsSection from '../../features/quiz-generator/components/QuestionSettingsSection';
 import PedagogicalProfileSection from '../../features/quiz-generator/components/PedagogicalProfileSection';
 import ContentSourceSection from '../../features/quiz-generator/components/ContentSourceSection';
+import OcrPreviewSection from '../../features/quiz-generator/components/OcrPreviewSection';
 import AdvancedSettingsSection from '../../features/quiz-generator/components/AdvancedSettingsSection';
 import AssignmentSection from '../../features/quiz-generator/components/AssignmentSection';
+import GenerationProgressPanel from '../../features/quiz-generator/components/GenerationProgressPanel';
 import SuccessModal from '../../features/quiz-generator/components/SuccessModal';
 
 interface CreateTabProps {
@@ -65,6 +67,8 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
     };
 
     const questionCount = logic.difficultyLevels.level1 + logic.difficultyLevels.level2 + logic.difficultyLevels.level3;
+    const aiQuizV2Enabled = logic.aiQuizV2Enabled;
+    const generationConfigurationInvalid = aiQuizV2Enabled && !logic.isBlueprintValid;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -112,6 +116,10 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     setSelectedTypes={logic.setSelectedTypes}
                     difficultyLevels={logic.difficultyLevels}
                     setDifficultyLevels={logic.setDifficultyLevels}
+                    questionBlueprint={logic.questionBlueprint}
+                    questionBlueprintV3={logic.aiBlueprintV3Enabled ? logic.questionBlueprintV3 : null}
+                    setQuestionBlueprint={logic.setQuestionBlueprint}
+                    showBlueprint={aiQuizV2Enabled}
                     isOpenTypes={logic.expandedSections.questionTypes}
                     isOpenDifficulty={logic.expandedSections.difficulty}
                     onToggle={logic.toggleSection}
@@ -137,6 +145,14 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     isOpen={logic.expandedSections.content}
                     onToggle={logic.toggleSection}
                 />
+
+                {aiQuizV2Enabled && logic.ocrDocument && (
+                    <OcrPreviewSection
+                        document={logic.ocrDocument}
+                        selectedPageNumbers={logic.selectedOcrPageNumbers}
+                        onChange={logic.setSelectedOcrPageNumbers}
+                    />
+                )}
 
                 <AdvancedSettingsSection
                     requireCode={logic.requireCode}
@@ -181,11 +197,17 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                             Lượt tạo đề AI hôm nay: <span className="font-bold">{logic.aiUsageRemaining}/{logic.dailyAiLimit}</span>
                         </div>
                     )}
-                    {logic.category === 'trang-nguyen' ? (
+                    {aiQuizV2Enabled && logic.generationStep !== 'idle' && (
+                        <GenerationProgressPanel
+                            step={logic.generationStep}
+                            onCancel={logic.cancelGeneration}
+                        />
+                    )}
+                    {(!aiQuizV2Enabled || !logic.isGenerating) && (logic.category === 'trang-nguyen' ? (
                         <div className="space-y-2">
                             <button
                                 onClick={() => { logic.setTnSearchMode('search'); logic.handleGenerate('practice'); }}
-                                disabled={!logic.topic.trim() || questionCount === 0 || logic.isGenerating || (logic.isTeacherAccount && !logic.hasAiQuota)}
+                                disabled={!logic.topic.trim() || questionCount === 0 || generationConfigurationInvalid || logic.isGenerating || (logic.isTeacherAccount && !logic.hasAiQuota)}
                                 className={`w-full py-3.5 px-6 rounded-xl font-bold text-white text-base flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${logic.isGenerating && logic.tnSearchMode === 'search'
                                     ? 'bg-gradient-to-r from-sky-400 to-pink-400 animate-pulse'
                                     : 'bg-gradient-to-r from-blue-600 to-pink-600 hover:from-blue-700 hover:to-pink-700'
@@ -199,7 +221,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                             </button>
                             <button
                                 onClick={() => { logic.setTnSearchMode('quick'); logic.handleGenerate('practice'); }}
-                                disabled={!logic.topic.trim() || questionCount === 0 || logic.isGenerating || (logic.isTeacherAccount && !logic.hasAiQuota)}
+                                disabled={!logic.topic.trim() || questionCount === 0 || generationConfigurationInvalid || logic.isGenerating || (logic.isTeacherAccount && !logic.hasAiQuota)}
                                 className={`w-full py-3.5 px-6 rounded-xl font-bold text-white text-base flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${logic.isGenerating && logic.tnSearchMode === 'quick'
                                     ? 'bg-gradient-to-r from-blue-400 to-cyan-400 animate-pulse'
                                     : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
@@ -218,19 +240,29 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                                 <Button
                                     onClick={() => logic.handleGenerate('pdf')}
                                     loading={logic.isGenerating && logic.quizMode === 'pdf'}
-                                    disabled={!logic.uploadedFile || questionCount === 0 || (logic.isTeacherAccount && !logic.hasAiQuota)}
+                                    disabled={
+                                        !logic.uploadedFile
+                                        || questionCount === 0
+                                        || generationConfigurationInvalid
+                                        || (aiQuizV2Enabled && logic.ocrDocument && logic.selectedOcrPageNumbers.length === 0)
+                                        || (logic.isTeacherAccount && !logic.hasAiQuota)
+                                    }
                                     className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                                     size="lg"
                                     variant="primary"
                                     icon={<FileText className="w-5 h-5" />}
                                 >
-                                    {logic.isGenerating && logic.quizMode === 'pdf' ? (logic.generationStep === 'reviewing' ? '🤖 Đang duyệt...' : 'Đang đọc PDF...') : `📄 TẠO ĐỀ TỪ FILE: ${logic.uploadedFile.name.substring(0, 20)}...`}
+                                    {aiQuizV2Enabled
+                                        ? (logic.ocrDocument
+                                            ? `📄 TẠO ĐỀ TỪ ${logic.selectedOcrPageNumbers.length} TRANG ĐÃ CHỌN`
+                                            : `📖 ĐỌC VÀ XEM TRƯỚC: ${logic.uploadedFile.name.substring(0, 20)}...`)
+                                        : `📄 TẠO ĐỀ TỪ FILE: ${logic.uploadedFile.name.substring(0, 20)}...`}
                                 </Button>
                             )}
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     onClick={() => logic.handleGenerate('exam')}
-                                    disabled={!logic.topic.trim() || questionCount === 0 || logic.isGenerating || (logic.isTeacherAccount && !logic.hasAiQuota)}
+                                    disabled={!logic.topic.trim() || questionCount === 0 || generationConfigurationInvalid || logic.isGenerating || (logic.isTeacherAccount && !logic.hasAiQuota)}
                                     className={`py-3.5 px-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm ${logic.isGenerating && logic.quizMode === 'exam'
                                         ? 'bg-gradient-to-r from-orange-400 to-red-400 animate-pulse'
                                         : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600'
@@ -241,7 +273,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                                 </button>
                                 <button
                                     onClick={() => logic.handleGenerate('practice')}
-                                    disabled={!logic.topic.trim() || questionCount === 0 || logic.isGenerating || (logic.isTeacherAccount && !logic.hasAiQuota)}
+                                    disabled={!logic.topic.trim() || questionCount === 0 || generationConfigurationInvalid || logic.isGenerating || (logic.isTeacherAccount && !logic.hasAiQuota)}
                                     className={`py-3.5 px-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm ${logic.isGenerating && logic.quizMode === 'practice'
                                         ? 'bg-gradient-to-r from-emerald-400 to-teal-400 animate-pulse'
                                         : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600'
@@ -252,7 +284,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                                 </button>
                             </div>
                         </>
-                    )}
+                    ))}
                 </div>
             </div>
 

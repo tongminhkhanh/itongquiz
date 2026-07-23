@@ -110,13 +110,13 @@ export const getPromptProfileNotice = (
     presetLabel: 'thongtu27' | 'gifted' | 'remedial' | null,
 ): string | null => {
     if (presetLabel === 'gifted') {
-        return 'Da goi y lai do kho theo profile boi duong hoc sinh gioi. Ban van co the chinh tay.';
+        return 'Đã gợi ý lại độ khó theo định hướng bồi dưỡng học sinh giỏi. Bạn vẫn có thể chỉnh tay.';
     }
     if (presetLabel === 'remedial') {
-        return 'Da goi y lai do kho theo profile phu dao hoc sinh yeu kem. Ban van co the chinh tay.';
+        return 'Đã gợi ý lại độ khó theo định hướng phụ đạo học sinh cần hỗ trợ. Bạn vẫn có thể chỉnh tay.';
     }
     if (presetLabel === 'thongtu27') {
-        return 'Da goi y lai do kho theo dinh huong Thong tu 27. Ban van co the chinh tay.';
+        return 'Đã gợi ý lại độ khó theo định hướng Thông tư 27. Bạn vẫn có thể chỉnh tay.';
     }
     return null;
 };

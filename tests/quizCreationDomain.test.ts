@@ -77,10 +77,20 @@ describe('quiz creation domain helpers', () => {
             promptProfile: { useThongTu27: true, learnerMode: 'default' },
             imageLibrary: images,
             customPrompt: '  explain clearly  ',
+            quizMode: 'exam',
             isPdfMode: false,
         });
 
         expect(result.customPrompt).toBe('explain clearly');
+        expect(result.blueprint).toEqual({
+            intent: 'EXAM',
+            sourceMode: 'TOPIC',
+            totalQuestions: 10,
+            typeAllocations: [{ type: QuestionType.MCQ, count: 10 }],
+            difficultyLevels,
+        });
+        expect(result.questionCount).toBe(result.blueprint?.totalQuestions);
+        expect(result.questionTypes).toEqual(result.blueprint?.typeAllocations.map(({ type }) => type));
         expect(result.imageLibrary).toEqual([{ id: 'img-1', name: 'Diagram', data: 'data:image/png;base64,abc' }]);
         expect(result.difficultyLevels).not.toBe(difficultyLevels);
         expect(result.imageLibrary).not.toBe(images);

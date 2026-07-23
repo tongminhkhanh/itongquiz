@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '../../../../stores/authStore';
 import { useAssignmentStore } from '../../../stores/useAssignmentStore';
+import {
+    isAiBlueprintV3Enabled,
+    isAiQuizV2Enabled,
+} from '../../../config/featureFlags';
 import { useClassStore } from '../../../stores/useClassStore';
 import type { UseCreateQuizLogicProps } from '../domain/quizCreation.types';
 import { useQuizFormState } from './useQuizFormState';
@@ -17,6 +21,8 @@ export const useCreateQuizLogic = ({
     const authStore = useAuthStore();
     const classStore = useClassStore();
     const assignmentStore = useAssignmentStore();
+    const aiQuizV2Enabled = isAiQuizV2Enabled();
+    const aiBlueprintV3Enabled = aiQuizV2Enabled && isAiBlueprintV3Enabled();
 
     const isTeacherAccount = !authStore.isAdmin;
     const isClassLocked = !authStore.isAdmin && !!authStore.teacherClass;
@@ -35,6 +41,8 @@ export const useCreateQuizLogic = ({
         isTeacherAccount,
         username: authStore.username,
         teacherName: authStore.teacherName,
+        aiQuizV2Enabled,
+        aiBlueprintV3Enabled,
     });
     const persistence = useQuizPersistence({
         form,
@@ -85,10 +93,19 @@ export const useCreateQuizLogic = ({
         profilePresetNotice: form.profilePresetNotice,
         quizMode: form.quizMode,
         setQuizMode: form.setQuizMode,
+        quizIntent: form.quizIntent,
+        setQuizIntent: form.setQuizIntent,
+        questionBlueprint: form.questionBlueprint,
+        questionBlueprintV3: form.questionBlueprintV3,
+        blueprintErrors: form.blueprintErrors,
+        isBlueprintValid: form.isBlueprintValid,
+        setQuestionBlueprint: form.setQuestionBlueprint,
         aiProvider: form.aiProvider,
         setAiProvider: form.setAiProvider,
         selectedTypes: form.selectedTypes,
         setSelectedTypes: form.setSelectedTypes,
+        questionTypeAllocations: form.questionTypeAllocations,
+        setQuestionTypeAllocations: form.setQuestionTypeAllocations,
         difficultyLevels: form.difficultyLevels,
         setDifficultyLevels: form.setDifficultyLevels,
         requireCode: form.requireCode,
@@ -99,6 +116,11 @@ export const useCreateQuizLogic = ({
         setShowOnHome: form.setShowOnHome,
         uploadedFile: form.uploadedFile,
         setUploadedFile: form.setUploadedFile,
+        ocrDocument: form.ocrDocument,
+        applyOcrDocument: form.applyOcrDocument,
+        clearOcrDocument: form.clearOcrDocument,
+        selectedOcrPageNumbers: form.selectedOcrPageNumbers,
+        setSelectedOcrPageNumbers: form.setSelectedOcrPageNumbers,
         fileInputRef: form.fileInputRef,
         showLinkModal: share.showLinkModal,
         setShowLinkModal: share.setShowLinkModal,
@@ -119,6 +141,8 @@ export const useCreateQuizLogic = ({
         isClassLocked,
         lockedClass,
         isTeacherAccount,
+        aiQuizV2Enabled,
+        aiBlueprintV3Enabled,
         aiUsageCount: generation.aiUsageCount,
         aiUsageRemaining: generation.aiUsageRemaining,
         hasAiQuota: generation.hasAiQuota,
@@ -131,6 +155,7 @@ export const useCreateQuizLogic = ({
         handleApplyAiTitleSuggestion: form.handleApplyAiTitleSuggestion,
         handleGenerate: generation.handleGenerate,
         handleRegenerateSingle: generation.handleRegenerateSingle,
+        cancelGeneration: generation.cancelGeneration,
         handleSaveQuiz: persistence.handleSaveQuiz,
         handleCopyLink: share.handleCopyLink,
         classStore,
