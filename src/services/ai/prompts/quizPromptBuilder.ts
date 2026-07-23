@@ -4,6 +4,8 @@
  */
 
 import type { QuizGenerationOptions } from '../../geminiService';
+import { buildPromptV3 as buildPromptV3Internal } from './slotPromptBuilder';
+export { buildPromptV3 } from './slotPromptBuilder';
 
 const SCIENTIFIC_GROUNDING_PROMPT = `
     [SCIENTIFIC RESEARCH PHASE]:
@@ -106,6 +108,14 @@ export const buildPrompt = (
   content: string,
   options?: QuizGenerationOptions
 ): string => {
+  if (options?.promptVersion === 'ai-blueprint-v3' && options.blueprintV3) {
+    return buildPromptV3Internal({
+      topic,
+      classLevel,
+      content,
+      options: { ...options, blueprintV3: options.blueprintV3 },
+    });
+  }
   const blueprint = options?.blueprint;
   const title = options?.title || `Kiem tra: ${topic}`;
   const count = blueprint?.totalQuestions ?? options?.questionCount ?? 10;
