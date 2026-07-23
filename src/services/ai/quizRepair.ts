@@ -1,5 +1,10 @@
-import type { QuizBlueprint } from '../../features/quiz-generator/domain/quizBlueprint';
-import type { QuizAuditIssue } from './quizAudit';
+import type {
+  QuizBlueprint,
+  QuizBlueprintV3,
+} from '../../features/quiz-generator/domain/quizBlueprint';
+import type { GeneratedQuizV3 } from './question-contracts/questionContract.types';
+import { getSelectedContractPromptFragments } from './question-contracts/questionContractRegistry';
+import type { QuizAuditIssue, QuizSlotAuditIssue } from './quizAudit';
 import type { GeneratedQuestion, GeneratedQuizPayload } from './schemas/quizGenerationSchema';
 
 export interface QuizRepairRequest {
@@ -132,5 +137,126 @@ export function mergeRepairedQuestions(
   });
 
   questions.push(...repaired.questions.slice(repairCursor));
+  return { ...original, questions };
+}
+
+export interface QuizSlotRepairPlan {
+  slotIds: string[];
+  requestedCount: number;
+}
+
+export function createQuizSlotRepairPlan(
+  issues: QuizSlotAuditIssue[],
+  blueprint: QuizBlueprintV3,
+): QuizSlotRepairPlan {
+  const requested = new Set(issues.flatMap((issue) => issue.slotIds));
+  const slotIds = blueprint.slots
+    .map((slot) => slot.slotId)
+    .filter((slotId) => requested.has(slotId));
+  return { slotIds, requestedCount: slotIds.length };
+}
+
+const summarizeQuestionForRepair = (question: GeneratedQuizV3['questions'][number]): string => {
+  const record = question as Record<string, unknown>;
+  const text = [record.question, record.mainQuestion, record.sentence, record.text]
+    .find((value) => typeof value === 'string');
+  return `${question.slotId}: ${String(text ?? question.type).slice(0, 220)}`;
+};
+
+export function buildQuizSlotRepairPrompt(input: {
+  blueprint: QuizBlueprintV3;
+  quiz: GeneratedQuizV3;
+  issues: QuizSlotAuditIssue[];
+}): string {
+  const plan = createQuizSlotRepairPlan(input.issues, input.blueprint);
+  const requestedSet = new Set(plan.slotIds);
+  const slots = input.blueprint.slots.filter((slot) => requestedSet.has(slot.slotId));
+  const contracts = getSelectedContractPromptFragments(
+    slots.map((slot) => slot.type),
+    {
+      classLevel: input.blueprint.classLevel,
+      intent: input.blueprint.intent,
+      sourceMode: input.blueprint.sourceMode,
+      hasImageLibrary: slots.some((slot) => slot.imagePolicy === 'required'),
+    },
+  ).map((fragment) => fragment.replaceAll('"slotId":"slot-1"', '"slotId":"<slotId>"'));
+  const issueSummary = input.issues
+    .filter((issue) => issue.slotIds.some((slotId) => requestedSet.has(slotId)))
+    .map((issue) => `- ${issue.code}: ${issue.message}`)
+    .join('\n');
+  const validQuestionSummaries = input.quiz.questions
+    .filter((question) => !requestedSet.has(question.slotId))
+    .map(summarizeQuestionForRepair)
+    .join('\n');
+
+  return [
+    'Bạn đang sửa đúng các slot lỗi của một đề đã được kiểm tra bằng mã.',
+    `Tạo đúng ${plan.requestedCount} câu và chỉ trả về JSON hợp lệ.`,
+    '[SLOTS CẦN SỬA]',
+    JSON.stringify(slots.map((slot) => ({
+      slotId: slot.slotId,
+      type: slot.type,
+      difficulty: slot.difficulty,
+      objective: slot.objective,
+      subject: slot.subject,
+      skillCode: slot.skillCode,
+      subskillCode: slot.subskillCode,
+      imagePolicy: slot.imagePolicy,
+    }))),
+    '[CONTRACTS]',
+    contracts.join('\n\n'),
+    '[LỖI CẦN SỬA]',
+    issueSummary || 'Không có mô tả bổ sung.',
+    '[CÂU HỢP LỆ ĐỂ TRÁNH TRÙNG]',
+    validQuestionSummaries || 'Không có.',
+    '[OUTPUT]',
+    'Trả {"promptVersion":"ai-blueprint-v3","blueprintVersion":3,"title":"Phần sửa","questions":[...]}.',
+    'Chỉ trả các slot được yêu cầu. Không được đổi slotId, type hoặc difficulty.',
+  ].join('\n');
+}
+
+export function mergeRepairedSlots(
+  original: GeneratedQuizV3,
+  repaired: GeneratedQuizV3,
+  plan: QuizSlotRepairPlan,
+  blueprint: QuizBlueprintV3,
+): GeneratedQuizV3 {
+  const requestedSet = new Set(plan.slotIds);
+  const repairedBySlotId = new Map<string, GeneratedQuizV3['questions'][number]>();
+
+  for (const question of repaired.questions) {
+    if (!requestedSet.has(question.slotId)) {
+      throw new Error(`AI trả slot không được yêu cầu: ${question.slotId}.`);
+    }
+    if (repairedBySlotId.has(question.slotId)) {
+      throw new Error(`AI trả trùng slot sửa: ${question.slotId}.`);
+    }
+    repairedBySlotId.set(question.slotId, question);
+  }
+  const missing = plan.slotIds.filter((slotId) => !repairedBySlotId.has(slotId));
+  if (missing.length > 0) {
+    throw new Error(`Thiếu slot sửa: ${missing.join(', ')}.`);
+  }
+
+  const expectedBySlotId = new Map<string, QuizBlueprintV3['slots'][number]>(
+    blueprint.slots.map((slot) => [slot.slotId, slot]),
+  );
+  for (const [slotId, question] of repairedBySlotId) {
+    const slot = expectedBySlotId.get(slotId);
+    if (!slot || question.type !== slot.type || question.difficulty !== slot.difficulty) {
+      throw new Error(`${slotId} không khớp type hoặc difficulty trong blueprint.`);
+    }
+  }
+
+  const originalBySlotId = new Map(original.questions.map((question) => [question.slotId, question]));
+  const questions = blueprint.slots.map((slot) => {
+    if (requestedSet.has(slot.slotId)) return repairedBySlotId.get(slot.slotId)!;
+    const originalQuestion = originalBySlotId.get(slot.slotId);
+    if (!originalQuestion) {
+      throw new Error(`Đề gốc thiếu slot hợp lệ: ${slot.slotId}.`);
+    }
+    return originalQuestion;
+  });
+
   return { ...original, questions };
 }
