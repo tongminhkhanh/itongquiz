@@ -393,7 +393,7 @@ describe('certificate worker authorization and integrity', () => {
 
     expect(response.status).toBe(200);
     expect(payload.data[0]).toMatchObject({ is_read: false, data: { certificate_id: 'cert-1' } });
-    expect(db.statements[0].bindings).toEqual(['student-1', 'student']);
+    expect(db.statements[0].bindings.slice(0, 2)).toEqual(['student-1', 'student']);
   });
 
   it('cannot mark another user notification as read', async () => {

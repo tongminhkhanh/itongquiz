@@ -1,37 +1,36 @@
 import { verifyJWTMiddleware } from '../../middleware/jwtAuth';
 import type { Env } from '../../types';
 import { certificateError, certificateSuccess } from './responses';
+import {
+  listNotifications,
+  markNotificationRead,
+} from '../notifications/repository';
 
 export async function handleGetNotifications(request: Request, env: Env): Promise<Response> {
   const authResult = await verifyJWTMiddleware(request, env);
   if (authResult instanceof Response) return authResult;
 
   const userId = authResult.user.id ?? authResult.user.username;
-  const { results } = await env.DB.prepare(`
-    SELECT id, type, title, body, data, is_read, created_at
-    FROM notifications
-    WHERE user_id = ? AND user_role = ?
-    ORDER BY created_at DESC
-    LIMIT 50
-  `).bind(userId, authResult.user.role).all<{
-    id: string;
-    type: string;
-    title: string;
-    body: string | null;
-    data: string;
-    is_read: number;
-    created_at: string;
-  }>();
+  const page = await listNotifications(env.DB, {
+    userId,
+    role: authResult.user.role,
+  }, {
+    filter: 'all',
+    limit: 50,
+  });
 
-  return certificateSuccess(results.map((notification) => {
-    let data: Record<string, unknown> = {};
-    try {
-      data = JSON.parse(notification.data || '{}') as Record<string, unknown>;
-    } catch {
-      data = {};
-    }
-    return { ...notification, data, is_read: notification.is_read === 1 };
-  }));
+  return certificateSuccess(page.items.map((notification) => ({
+    id: notification.id,
+    type: notification.type,
+    priority: notification.priority,
+    title: notification.title,
+    body: notification.body,
+    action_url: notification.actionUrl,
+    data: notification.data,
+    is_read: notification.isRead,
+    created_at: notification.createdAt,
+    expires_at: notification.expiresAt,
+  })));
 }
 
 // PATCH /api/certificates/notifications/:id/read
@@ -44,14 +43,12 @@ export async function handleMarkNotificationRead(
   if (authResult instanceof Response) return authResult;
 
   const userId = authResult.user.id ?? authResult.user.username;
-  const notification = await env.DB.prepare(`
-    SELECT id FROM notifications WHERE id = ? AND user_id = ? AND user_role = ?
-  `).bind(notificationId, userId, authResult.user.role).first();
-  if (!notification) {
+  const updated = await markNotificationRead(env.DB, {
+    userId,
+    role: authResult.user.role,
+  }, notificationId);
+  if (!updated) {
     return certificateError('NOTIFICATION_NOT_FOUND', 'Notification not found', 404);
   }
-
-  await env.DB.prepare(`UPDATE notifications SET is_read = 1 WHERE id = ?`)
-    .bind(notificationId).run();
   return certificateSuccess({ id: notificationId, is_read: true });
 }

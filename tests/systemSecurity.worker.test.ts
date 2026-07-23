@@ -63,6 +63,7 @@ describe('system security password storage', () => {
         expect(verifyToken(request('/api/account/me'), {} as any)).toBeNull();
         expect(verifyToken(request('/api/admin/teachers'), {} as any)).toBeNull();
         expect(verifyToken(request('/api/admin/announcements'), {} as any)).toBeNull();
+        expect(verifyToken(request('/api/notifications'), {} as any)).toBeNull();
     });
 
     it('allows student session restore to reach JWT authorization', () => {

@@ -41,6 +41,7 @@ import { handleCertificateRoutes } from './routes/certificates';
 import { handlePhieuSubdomain, handlePublicPhieuApi, handlePhieuRoutes } from './routes/phieu';
 import { handleResultReportRoutes } from './routes/resultReports';
 import { handleParentPortalRoutes } from './routes/parentPortal';
+import { handleNotificationRoutes } from './routes/notifications/route';
 import { Env } from './types';
 import { rateLimit } from './middleware/rateLimit';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
@@ -197,6 +198,8 @@ export default {
                 response = await handleTeacherAiQuotaRoutes(request, env, path, method);
             } else if (path.startsWith('/api/live-exam')) {
                 response = await handleLiveExamRoutes(request, env, path, method);
+            } else if (path.startsWith('/api/notifications')) {
+                response = await handleNotificationRoutes(request, env, path, method);
             } else if (path.startsWith('/api/certificate-batches') || path.startsWith('/api/certificates')) {
                 response = await handleCertificateRoutes(request, env, path, method);
             } else if (path.startsWith('/api/admin/certificate-templates')) {

@@ -47,6 +47,7 @@ export function verifyToken(request: Request, _env: Env): Response | null {
         '/api/admin/certificate-templates',
         '/api/certificate-batches',
         '/api/certificates',
+        '/api/notifications',
         '/api/homework',
         '/api/analytics',
         '/api/phieu',
