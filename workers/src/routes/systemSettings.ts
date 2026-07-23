@@ -12,6 +12,7 @@ type SystemSettingRow = {
 };
 
 const AI_ASSISTANT_KEY = 'ai_assistant_enabled';
+const UNIFIED_NOTIFICATIONS_KEY = 'unified_notifications_v1';
 
 const parseBool = (value: unknown, fallback = false): boolean => {
     if (typeof value === 'boolean') return value;
@@ -30,17 +31,17 @@ export async function handleSystemSettingsRoutes(request: Request, env: Env, pat
     const db = env.DB;
 
     if (method === 'GET') {
-        let row: SystemSettingRow | null = null;
+        let rows: SystemSettingRow[] = [];
         try {
-            row = await withD1Retry(
+            const result = await withD1Retry(
                 () => db.prepare(`
                     SELECT setting_key, setting_value, updated_at
                     FROM system_settings
-                    WHERE setting_key = ?
-                    LIMIT 1
-                `).bind(AI_ASSISTANT_KEY).first<SystemSettingRow>(),
+                    WHERE setting_key IN (?, ?)
+                `).bind(AI_ASSISTANT_KEY, UNIFIED_NOTIFICATIONS_KEY).all<SystemSettingRow>(),
                 'GET /api/system-settings'
             );
+            rows = result.results || [];
         } catch (error) {
             if (!isTransientD1Error(error) && !String(error).includes('no such table')) {
                 throw error;
@@ -48,13 +49,24 @@ export async function handleSystemSettingsRoutes(request: Request, env: Env, pat
             console.warn('[system-settings] Returning defaults after D1 read failure:', error);
         }
 
-        const aiAssistantEnabled = parseBool(row?.setting_value ?? 'false', false);
+        const settings = new Map(rows.map((row) => [row.setting_key, row]));
+        const aiRow = settings.get(AI_ASSISTANT_KEY);
+        const unifiedRow = settings.get(UNIFIED_NOTIFICATIONS_KEY);
+        const aiAssistantEnabled = parseBool(aiRow?.setting_value ?? 'false', false);
+        const unifiedNotificationsEnabled = parseBool(unifiedRow?.setting_value ?? 'false', false);
+        const updatedAt = rows
+            .map((row) => row.updated_at)
+            .filter(Boolean)
+            .sort()
+            .at(-1) || '';
         return jsonResponse({
             status: 'success',
             data: {
                 aiAssistantEnabled,
-                updatedAt: row?.updated_at || '',
-                degraded: !row,
+                unified_notifications_v1: unifiedNotificationsEnabled,
+                unifiedNotificationsEnabled,
+                updatedAt,
+                degraded: rows.length === 0,
             },
         });
     }
@@ -69,8 +81,12 @@ export async function handleSystemSettingsRoutes(request: Request, env: Env, pat
         if (typeof body.aiAssistantEnabled !== 'boolean') {
             return errorResponse('aiAssistantEnabled must be a boolean', 400);
         }
+        if (typeof body.unifiedNotificationsEnabled !== 'boolean') {
+            return errorResponse('unifiedNotificationsEnabled must be a boolean', 400);
+        }
 
         const aiAssistantEnabled = parseBool(body.aiAssistantEnabled, false);
+        const unifiedNotificationsEnabled = parseBool(body.unifiedNotificationsEnabled, false);
         const now = new Date().toISOString();
 
         await db.batch([
@@ -81,14 +97,21 @@ export async function handleSystemSettingsRoutes(request: Request, env: Env, pat
                     setting_value = excluded.setting_value,
                     updated_at = excluded.updated_at
             `).bind(AI_ASSISTANT_KEY, aiAssistantEnabled ? 'true' : 'false', now),
+            db.prepare(`
+                INSERT INTO system_settings (setting_key, setting_value, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(setting_key) DO UPDATE SET
+                    setting_value = excluded.setting_value,
+                    updated_at = excluded.updated_at
+            `).bind(UNIFIED_NOTIFICATIONS_KEY, unifiedNotificationsEnabled ? 'true' : 'false', now),
             auditStatement(db, {
                 actorUsername: authResult.user.username,
                 action: 'SYSTEM_SETTINGS_UPDATED',
                 targetType: 'system_setting',
-                targetId: AI_ASSISTANT_KEY,
+                targetId: 'notification_and_ai_settings',
                 requestId: request.headers.get('cf-ray') || request.headers.get('x-request-id') || crypto.randomUUID(),
                 before: null,
-                after: { aiAssistantEnabled },
+                after: { aiAssistantEnabled, unifiedNotificationsEnabled },
             }),
         ]);
 
@@ -96,6 +119,8 @@ export async function handleSystemSettingsRoutes(request: Request, env: Env, pat
             status: 'success',
             data: {
                 aiAssistantEnabled,
+                unified_notifications_v1: unifiedNotificationsEnabled,
+                unifiedNotificationsEnabled,
                 updatedAt: now,
             },
         });

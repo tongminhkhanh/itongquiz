@@ -9,10 +9,16 @@ Tất cả thay đổi đáng chú ý của sản phẩm được ghi lại tạ
 
 ### ✨ Tính năng mới
 
+- **Hệ thống thông báo hợp nhất**: Login, dashboard giáo viên và học sinh có chung mô hình cảnh báo quan trọng, dòng chữ chạy, banner trong luồng và hộp thư có trạng thái đã đọc. Admin có trình soạn/xem trước responsive và cờ rollout `unified_notifications_v1`.
+- **Thông báo theo sự kiện học tập**: Tự động báo khi giao/nộp/chấm bài, phiếu kết quả sẵn sàng và hoàn tất cấp chứng nhận; writer có chống trùng theo nguồn.
 - **Phiếu kết quả gửi phụ huynh**: Giáo viên có thể tạo phiếu nhận xét kết quả bài làm và chia sẻ link trực tiếp cho phụ huynh xem. Link có thể thu hồi bất kỳ lúc nào.
 - **Giao diện phiếu mới cho phụ huynh**: Trang xem phiếu của phụ huynh được thiết kế lại với header gradient, 5 ô kết quả có icon emoji, các mục Nhận xét / Cần cố gắng / Lời động viên có màu nền riêng biệt và phần chữ ký giáo viên chủ nhiệm.
 - **Cache thông tin phiếu**: Khi giáo viên mở lại modal phiếu của học sinh, hệ thống tự động khôi phục nội dung đã nhập và link đã tạo trước đó — không cần nhập lại.
 - **Thông tin học sinh có thể chỉnh sửa**: Các trường thông tin học sinh trong phiếu kết quả nay có thể chỉnh sửa trực tiếp trên giao diện.
+
+### 🔧 Cải tiến
+
+- Dòng thông báo hỗ trợ tạm dừng, reduced motion và fallback an toàn khi API lỗi; hộp thư mobile giới hạn `85dvh`, đóng bằng Escape và trả focus về chuông.
 
 ---
 

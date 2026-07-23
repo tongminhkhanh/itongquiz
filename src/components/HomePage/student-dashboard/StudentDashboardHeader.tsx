@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { NotificationTarget } from '../../../../shared/notifications.contract';
 import { NotificationCenter } from '../../../features/notifications/components';
+import NotificationBell from '../../common/NotificationBell';
 import type { StudentDashboardHeaderProps } from './dashboard.types';
 
 const baseActionClass =
@@ -15,6 +16,8 @@ export function StudentDashboardHeader({
   activeSection,
   giftShopEnabled,
   studentId,
+  unifiedNotificationsReady,
+  unifiedNotificationsEnabled,
   onSelectSection,
   onOpenAssignment,
   onOpenResultReport,
@@ -150,10 +153,22 @@ export function StudentDashboardHeader({
           </button>
 
           <div className="flex min-h-11 min-w-11 items-center justify-center">
-            <NotificationCenter
-              enabled={Boolean(studentId)}
-              onNavigate={openNotificationTarget}
-            />
+            {unifiedNotificationsReady && (
+              unifiedNotificationsEnabled
+                ? (
+                  <NotificationCenter
+                    enabled={Boolean(studentId)}
+                    onNavigate={openNotificationTarget}
+                  />
+                )
+                : (
+                  <NotificationBell
+                    userId={studentId}
+                    onOpenCertificate={() => onSelectSection('achievements')}
+                    onOpenResultReport={onOpenResultReport}
+                  />
+                )
+            )}
           </div>
 
           <div className="relative">

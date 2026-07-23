@@ -47,6 +47,8 @@ const renderHeader = (handlers: ReturnType<typeof callbacks>) => render(
     activeSection="dashboard"
     giftShopEnabled
     studentId="student-1"
+    unifiedNotificationsReady
+    unifiedNotificationsEnabled
     {...handlers}
   />,
 );

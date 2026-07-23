@@ -8,6 +8,12 @@ vi.mock('../src/services/announcementService', async () => {
   const actual = await vi.importActual('../src/services/announcementService');
   return { ...actual, getAnnouncements };
 });
+vi.mock('../src/services/systemSettingsService', () => ({
+  getSystemSettings: vi.fn(async () => ({
+    aiAssistantEnabled: true,
+    unifiedNotificationsEnabled: true,
+  })),
+}));
 vi.mock('../stores/authStore', () => ({
   useAuthStore: () => ({
     isLoggingIn: false,

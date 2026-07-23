@@ -2,6 +2,7 @@ import { Megaphone, Menu } from 'lucide-react';
 import type React from 'react';
 import type { NotificationTarget } from '../../../../shared/notifications.contract';
 import { NotificationCenter } from '../../../features/notifications/components';
+import NotificationBell from '../../common/NotificationBell';
 import type { TeacherDashboardTab } from '../../../stores/useTeacherDashboardUIStore';
 import { DashboardSearchForm } from './DashboardSearchForm';
 import { TeacherAccountMenu } from './TeacherAccountMenu';
@@ -16,6 +17,9 @@ interface TeacherDashboardHeaderProps {
   teacherDisplayName: string;
   teacherInitial: string;
   isAdmin: boolean;
+  notificationUserId: string;
+  unifiedNotificationsReady: boolean;
+  unifiedNotificationsEnabled: boolean;
   onLogout: () => void;
   onNotificationNavigate: (target: NotificationTarget) => void;
 }
@@ -63,7 +67,17 @@ export const TeacherDashboardHeader = (props: TeacherDashboardHeaderProps) => (
         setSearchQuery={props.setSearchQuery}
         onSubmit={props.onSearchSubmit}
       />
-      <NotificationCenter onNavigate={props.onNotificationNavigate} />
+      {props.unifiedNotificationsReady && (
+        props.unifiedNotificationsEnabled
+          ? <NotificationCenter onNavigate={props.onNotificationNavigate} />
+          : (
+            <NotificationBell
+              userId={props.notificationUserId}
+              onOpenCertificate={() => props.setActiveTab('certificates')}
+              onOpenResultReport={() => props.setActiveTab('results')}
+            />
+          )
+      )}
       {props.isAdmin && (
         <button
           type="button"

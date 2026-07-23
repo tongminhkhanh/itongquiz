@@ -14,6 +14,8 @@ export interface StudentDashboardHeaderProps {
   activeSection: 'dashboard' | 'achievements' | 'resultReports';
   giftShopEnabled: boolean;
   studentId: string;
+  unifiedNotificationsReady: boolean;
+  unifiedNotificationsEnabled: boolean;
   onSelectSection: (section: 'dashboard' | 'achievements' | 'resultReports') => void;
   onOpenAssignment: (assignmentId: string) => void;
   onOpenResultReport: (phieuId: string) => void;

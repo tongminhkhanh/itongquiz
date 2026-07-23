@@ -1,13 +1,17 @@
 import { Footer } from '../../common';
 import PasswordChangeDialog from '../../common/PasswordChangeDialog';
+import CurrentAnnouncementBanner from '../../common/CurrentAnnouncementBanner';
 import { NotificationSurfaceStack } from '../../../features/notifications/components';
+import { useUnifiedNotificationsFeatureFlag } from '../../../features/notifications/useUnifiedNotificationsFeatureFlag';
 import Sidebar from '../Sidebar';
 import { AccessCodeDialog } from './AccessCodeDialog';
 import { TeacherDashboardHeader } from './TeacherDashboardHeader';
 import { TeacherDashboardTabContent } from './TeacherDashboardTabContent';
 import type { TeacherDashboardLayoutProps } from './types';
 
-export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => (
+export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => {
+  const notificationFlag = useUnifiedNotificationsFeatureFlag();
+  return (
   <div className="teacher-dashboard-shell flex min-h-screen flex-col bg-[#FFFDF7] text-[#172033] lg:flex-row">
     {props.passwordGate && (
       <PasswordChangeDialog
@@ -35,6 +39,9 @@ export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => (
         teacherDisplayName={props.displayName}
         teacherInitial={props.teacherInitial}
         isAdmin={props.isAdmin}
+        notificationUserId={props.username}
+        unifiedNotificationsReady={notificationFlag.ready}
+        unifiedNotificationsEnabled={notificationFlag.enabled}
         onLogout={props.onLogout}
         onNotificationNavigate={(target) => {
           if (target.kind === 'assignment') props.setActiveTab('assignments');
@@ -44,10 +51,16 @@ export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => (
           if (target.kind === 'url') props.onNavigate(target.url);
         }}
       />
-      <NotificationSurfaceStack
-        surface="TEACHER_DASHBOARD"
-        role={props.isAdmin ? 'admin' : 'teacher'}
-      />
+      {notificationFlag.ready && (
+        notificationFlag.enabled
+          ? (
+            <NotificationSurfaceStack
+              surface="TEACHER_DASHBOARD"
+              role={props.isAdmin ? 'admin' : 'teacher'}
+            />
+          )
+          : <CurrentAnnouncementBanner role="teacher" />
+      )}
       <main className="flex-1 overflow-x-hidden px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         <TeacherDashboardTabContent
           activeTab={props.activeTab}
@@ -80,4 +93,5 @@ export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => (
       onSave={props.updateAccessCode}
     />
   </div>
-);
+  );
+};

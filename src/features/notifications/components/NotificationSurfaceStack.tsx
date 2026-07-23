@@ -29,9 +29,14 @@ export function NotificationSurfaceStack({
       : role === 'teacher' || role === 'admin'
         ? 'teacher'
         : undefined;
-    void getAnnouncements(audienceRole).then((nextItems) => {
-      if (active) setItems(nextItems);
-    });
+    void getAnnouncements(audienceRole)
+      .then((nextItems) => {
+        if (active) setItems(nextItems);
+      })
+      .catch((error) => {
+        console.warn('[Notifications] announcement collection unavailable', error);
+        if (active) setItems([]);
+      });
     return () => {
       active = false;
     };

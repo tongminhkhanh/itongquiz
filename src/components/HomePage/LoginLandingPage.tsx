@@ -4,7 +4,9 @@ import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useQuizStore } from '../../../stores/quizStore';
 import { showError, showConfirm } from '../../utils/toast';
 import PasswordChangeDialog from '../common/PasswordChangeDialog';
+import CurrentAnnouncementBanner from '../common/CurrentAnnouncementBanner';
 import { NotificationSurfaceStack } from '../../features/notifications/components';
+import { useUnifiedNotificationsFeatureFlag } from '../../features/notifications/useUnifiedNotificationsFeatureFlag';
 
 // Sub-components
 import LandingHeader from './components/LandingHeader';
@@ -29,6 +31,7 @@ const LoginLandingPage: React.FC = () => {
     const authStore = useAuthStore();
     const classroomStore = useClassroomStore();
     const quizStore = useQuizStore();
+    const notificationFlag = useUnifiedNotificationsFeatureFlag();
 
     // Session Persistence
     useEffect(() => {
@@ -123,7 +126,11 @@ const LoginLandingPage: React.FC = () => {
                 }} />
             )}
             <LandingHeader />
-            <NotificationSurfaceStack surface="LOGIN" />
+            {notificationFlag.ready && (
+                notificationFlag.enabled
+                    ? <NotificationSurfaceStack surface="LOGIN" />
+                    : <CurrentAnnouncementBanner role={activeTab} />
+            )}
 
             <main className="flex-1 flex flex-col md:flex-row items-center justify-between gap-10 px-4 md:px-20 pb-16 max-w-[1280px] mx-auto w-full z-10">
                 <Suspense fallback={<div className="flex-1 h-64 animate-pulse bg-white/10 rounded-3xl" />}>

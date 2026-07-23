@@ -46,6 +46,7 @@ const AnnouncementSettings: React.FC = () => {
     const [settingsDegraded, setSettingsDegraded] = useState(false);
     const [settingsError, setSettingsError] = useState('');
     const [aiEnabled, setAiEnabled] = useState(false);
+    const [unifiedNotificationsEnabled, setUnifiedNotificationsEnabled] = useState(false);
     const [saving, setSaving] = useState(false);
     const [savingSettings, setSavingSettings] = useState(false);
 
@@ -83,6 +84,7 @@ const AnnouncementSettings: React.FC = () => {
         try {
             const data = await getSystemSettings();
             setAiEnabled(data.aiAssistantEnabled);
+            setUnifiedNotificationsEnabled(data.unifiedNotificationsEnabled);
             setSettingsDegraded(Boolean(data.degraded));
             setSettingsLoaded(!data.degraded);
             if (data.degraded) setSettingsError('Cấu hình tạm không khả dụng; Trợ lý AI đang được tắt an toàn.');
@@ -156,7 +158,11 @@ const AnnouncementSettings: React.FC = () => {
         if (!settingsLoaded || settingsDegraded || !auth.username) return;
         setSavingSettings(true);
         try {
-            await saveSystemSettings({ actorUsername: auth.username, aiAssistantEnabled: aiEnabled });
+            await saveSystemSettings({
+                actorUsername: auth.username,
+                aiAssistantEnabled: aiEnabled,
+                unifiedNotificationsEnabled,
+            });
             showSuccess('Đã lưu cài đặt hệ thống.');
         } catch (err) { showError(err instanceof Error ? err.message : 'Không thể lưu cài đặt.'); }
         finally { setSavingSettings(false); }
@@ -214,7 +220,22 @@ const AnnouncementSettings: React.FC = () => {
             </section>
         </div>
 
-        <section className="rounded-2xl border bg-white p-5 shadow-sm"><h3 className="font-bold">Cài đặt Trợ lý AI</h3>{settingsError && <div className="my-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{settingsError} <button onClick={() => void loadSettings()} className="font-bold underline">Thử lại</button></div>}<label className="my-4 flex items-center gap-3"><input type="checkbox" checked={aiEnabled} disabled={!settingsLoaded || settingsDegraded} onChange={(event) => setAiEnabled(event.target.checked)} className="h-5 w-5" /><span className="font-semibold">{aiEnabled ? 'Đang bật' : 'Đang tắt'}</span></label><button onClick={() => void saveSettings()} disabled={!settingsLoaded || settingsDegraded || savingSettings} className="rounded-xl bg-slate-800 px-4 py-2 font-semibold text-white disabled:opacity-40">{savingSettings ? 'Đang lưu…' : 'Lưu cài đặt hệ thống'}</button></section>
+        <section className="rounded-2xl border bg-white p-5 shadow-sm">
+            <h3 className="font-bold">Cài đặt phát hành</h3>
+            <p className="mt-1 text-sm text-slate-600">Bật hệ thống mới sau khi migration và worker đã được triển khai.</p>
+            {settingsError && <div className="my-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{settingsError} <button onClick={() => void loadSettings()} className="font-bold underline">Thử lại</button></div>}
+            <div className="my-4 grid gap-3 md:grid-cols-2">
+                <label className="flex items-center gap-3 rounded-xl border p-4">
+                    <input type="checkbox" checked={unifiedNotificationsEnabled} disabled={!settingsLoaded || settingsDegraded} onChange={(event) => setUnifiedNotificationsEnabled(event.target.checked)} className="h-5 w-5" />
+                    <span><strong className="block">Thông báo hợp nhất v1</strong><span className="text-sm text-slate-500">{unifiedNotificationsEnabled ? 'Đang dùng UI mới' : 'Đang dùng UI cũ'}</span></span>
+                </label>
+                <label className="flex items-center gap-3 rounded-xl border p-4">
+                    <input type="checkbox" checked={aiEnabled} disabled={!settingsLoaded || settingsDegraded} onChange={(event) => setAiEnabled(event.target.checked)} className="h-5 w-5" />
+                    <span><strong className="block">Trợ lý AI</strong><span className="text-sm text-slate-500">{aiEnabled ? 'Đang bật' : 'Đang tắt'}</span></span>
+                </label>
+            </div>
+            <button onClick={() => void saveSettings()} disabled={!settingsLoaded || settingsDegraded || savingSettings} className="rounded-xl bg-slate-800 px-4 py-2 font-semibold text-white disabled:opacity-40">{savingSettings ? 'Đang lưu…' : 'Lưu cài đặt hệ thống'}</button>
+        </section>
     </div>;
 };
 

@@ -23,6 +23,12 @@ vi.mock('react-router-dom', async () => {
 });
 
 vi.mock('../src/services/apiAdapter', () => ({ callApi: mocks.callApi }));
+vi.mock('../src/services/systemSettingsService', () => ({
+  getSystemSettings: vi.fn(async () => ({
+    aiAssistantEnabled: true,
+    unifiedNotificationsEnabled: true,
+  })),
+}));
 vi.mock('../src/services/CacheService', () => ({
   cacheService: { invalidatePrefix: mocks.invalidatePrefix },
 }));
@@ -194,7 +200,7 @@ describe('TeacherDashboard shell contracts', () => {
 
   it('gives every teacher an inbox while reserving notification management for admins', async () => {
     const view = render(<TeacherDashboard />);
-    const inboxButton = screen.getByRole('button', { name: /^Thông báo/ });
+    const inboxButton = await screen.findByRole('button', { name: /^Thông báo/ });
     expect(inboxButton).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Quản lý thông báo' })).toBeNull();
 
@@ -204,8 +210,8 @@ describe('TeacherDashboard shell contracts', () => {
 
     useAuthStore.setState({ isAdmin: true } as any);
     render(<TeacherDashboard />);
-    expect(screen.getByRole('button', { name: /^Thông báo/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Quản lý thông báo' }));
+    expect(await screen.findByRole('button', { name: /^Thông báo/ })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Quản lý thông báo' }));
     await waitFor(() => expect(useTeacherDashboardUIStore.getState().activeTab).toBe('announcements'));
     expect(await screen.findByTestId('announcements-tab')).toBeInTheDocument();
   });
