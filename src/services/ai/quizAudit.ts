@@ -1,5 +1,17 @@
 import { QuestionType } from '../../types';
-import type { QuizBlueprint } from '../../features/quiz-generator/domain/quizBlueprint';
+import type {
+  QuizBlueprint,
+  QuizBlueprintV3,
+} from '../../features/quiz-generator/domain/quizBlueprint';
+import { validateQuestionMath } from '../../utils/questionMath';
+import type {
+  GeneratedQuestionV3,
+  GeneratedQuizV3,
+} from './question-contracts/questionContract.types';
+import {
+  getAiQuestionContract,
+  validateGeneratedQuestionSemantics,
+} from './question-contracts/questionContractRegistry';
 import type { GeneratedQuestion, GeneratedQuizPayload } from './schemas/quizGenerationSchema';
 
 export type QuizAuditCode =
@@ -161,6 +173,180 @@ export function auditGeneratedQuiz(
       });
     }
   });
+
+  return issues;
+}
+
+export type QuizSlotAuditCode =
+  | 'ROOT_VERSION_MISMATCH'
+  | 'MISSING_SLOT'
+  | 'DUPLICATE_SLOT'
+  | 'UNEXPECTED_SLOT'
+  | 'SLOT_TYPE_MISMATCH'
+  | 'SLOT_DIFFICULTY_MISMATCH'
+  | 'SLOT_SKILL_MISMATCH'
+  | 'QUESTION_SCHEMA_INVALID'
+  | 'QUESTION_SEMANTIC_INVALID'
+  | 'DUPLICATE_QUESTION_CONTENT'
+  | 'MATH_FORMAT_INVALID'
+  | 'MISSING_EXPLANATION';
+
+export interface QuizSlotAuditIssue {
+  code: QuizSlotAuditCode;
+  slotIds: string[];
+  path?: Array<string | number>;
+  message: string;
+  repairable: boolean;
+}
+
+const questionTextV3 = (question: GeneratedQuestionV3): string => {
+  const record = question as Record<string, unknown>;
+  if (typeof record.question === 'string') return record.question;
+  if (typeof record.mainQuestion === 'string') return record.mainQuestion;
+  if (typeof record.sentence === 'string') return record.sentence;
+  if (typeof record.text === 'string') return record.text;
+  if (Array.isArray(record.riddleLines)) return record.riddleLines.join(' ');
+  return question.slotId;
+};
+
+const slotIssue = (
+  code: QuizSlotAuditCode,
+  slotIds: string[],
+  message: string,
+  path?: Array<string | number>,
+): QuizSlotAuditIssue => ({
+  code,
+  slotIds,
+  path,
+  message,
+  repairable: true,
+});
+
+export function auditGeneratedQuizV3(
+  quiz: GeneratedQuizV3,
+  blueprint: QuizBlueprintV3,
+): QuizSlotAuditIssue[] {
+  const issues: QuizSlotAuditIssue[] = [];
+  if (quiz.promptVersion !== 'ai-blueprint-v3' || quiz.blueprintVersion !== 3) {
+    issues.push(slotIssue(
+      'ROOT_VERSION_MISMATCH',
+      [],
+      'Phiên bản prompt hoặc blueprint không khớp V3.',
+    ));
+  }
+
+  const expectedBySlotId = new Map<string, QuizBlueprintV3['slots'][number]>(
+    blueprint.slots.map((slot) => [slot.slotId, slot]),
+  );
+  const actualBySlotId = new Map<string, GeneratedQuestionV3[]>();
+  quiz.questions.forEach((question) => {
+    const existing = actualBySlotId.get(question.slotId) ?? [];
+    existing.push(question);
+    actualBySlotId.set(question.slotId, existing);
+  });
+
+  for (const slot of blueprint.slots) {
+    const actual = actualBySlotId.get(slot.slotId) ?? [];
+    if (actual.length === 0) {
+      issues.push(slotIssue('MISSING_SLOT', [slot.slotId], `Thiếu câu cho ${slot.slotId}.`));
+      continue;
+    }
+    if (actual.length > 1) {
+      issues.push(slotIssue('DUPLICATE_SLOT', [slot.slotId], `${slot.slotId} xuất hiện nhiều hơn một lần.`));
+      continue;
+    }
+
+    const question = actual[0];
+    if (question.type !== slot.type) {
+      issues.push(slotIssue(
+        'SLOT_TYPE_MISMATCH',
+        [slot.slotId],
+        `${slot.slotId} phải là ${slot.type} nhưng AI trả ${question.type}.`,
+        ['type'],
+      ));
+      continue;
+    }
+    if (question.difficulty !== slot.difficulty) {
+      issues.push(slotIssue(
+        'SLOT_DIFFICULTY_MISMATCH',
+        [slot.slotId],
+        `${slot.slotId} phải có mức độ ${slot.difficulty}.`,
+        ['difficulty'],
+      ));
+    }
+    if ((slot.subject && question.subject !== slot.subject)
+      || (slot.skillCode && question.skillCode !== slot.skillCode)
+      || (slot.subskillCode && question.subskillCode !== slot.subskillCode)) {
+      issues.push(slotIssue(
+        'SLOT_SKILL_MISMATCH',
+        [slot.slotId],
+        `${slot.slotId} không khớp metadata kỹ năng trong blueprint.`,
+        ['skillCode'],
+      ));
+    }
+
+    const contract = getAiQuestionContract(question.type);
+    const schemaResult = contract.schema.safeParse(question);
+    if (!schemaResult.success) {
+      issues.push(slotIssue(
+        'QUESTION_SCHEMA_INVALID',
+        [slot.slotId],
+        `${slot.slotId} không đúng schema ${slot.type}.`,
+      ));
+      continue;
+    }
+    const semanticIssues = validateGeneratedQuestionSemantics(question, slot);
+    semanticIssues.forEach((semanticIssue) => {
+      issues.push(slotIssue(
+        'QUESTION_SEMANTIC_INVALID',
+        [slot.slotId],
+        semanticIssue.message,
+        semanticIssue.path,
+      ));
+    });
+    if (!question.explanation?.trim()) {
+      issues.push(slotIssue(
+        'MISSING_EXPLANATION',
+        [slot.slotId],
+        `${slot.slotId} thiếu lời giải.`,
+        ['explanation'],
+      ));
+    }
+    const mathIssues = validateQuestionMath(question);
+    if (mathIssues.length > 0) {
+      issues.push(slotIssue(
+        'MATH_FORMAT_INVALID',
+        [slot.slotId],
+        mathIssues[0].message,
+        mathIssues[0].field ? [mathIssues[0].field] : undefined,
+      ));
+    }
+  }
+
+  for (const [slotId] of actualBySlotId) {
+    if (!expectedBySlotId.has(slotId)) {
+      issues.push(slotIssue('UNEXPECTED_SLOT', [slotId], `Đề chứa slot ngoài blueprint: ${slotId}.`));
+    }
+  }
+
+  const uniqueQuestions = quiz.questions.filter((question) => (
+    expectedBySlotId.has(question.slotId)
+    && actualBySlotId.get(question.slotId)?.length === 1
+  ));
+  for (let leftIndex = 0; leftIndex < uniqueQuestions.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < uniqueQuestions.length; rightIndex += 1) {
+      if (similarity(
+        questionTextV3(uniqueQuestions[leftIndex]),
+        questionTextV3(uniqueQuestions[rightIndex]),
+      ) >= 0.88) {
+        issues.push(slotIssue(
+          'DUPLICATE_QUESTION_CONTENT',
+          [uniqueQuestions[rightIndex].slotId],
+          `${uniqueQuestions[leftIndex].slotId} và ${uniqueQuestions[rightIndex].slotId} có nội dung gần trùng nhau.`,
+        ));
+      }
+    }
+  }
 
   return issues;
 }
