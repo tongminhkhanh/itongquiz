@@ -1,9 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Archive, Eye, Loader2, Megaphone, Plus, RefreshCw, Save, Send, XCircle } from 'lucide-react';
+import { Archive, Loader2, Plus, RefreshCw, XCircle } from 'lucide-react';
 import { callApi } from '../../services/apiAdapter';
 import { getSystemSettings, saveSystemSettings } from '../../services/systemSettingsService';
 import { useAuthStore } from '../../../stores/authStore';
 import { showError, showSuccess } from '../../utils/toast';
+import {
+    AnnouncementComposer,
+    type AnnouncementDraft,
+} from '../../features/notifications/admin/AnnouncementComposer';
+import type {
+    AnnouncementChannel,
+    NotificationPriority,
+} from '../../../shared/notifications.contract';
 
 type Status = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'EXPIRED' | 'ARCHIVED';
 type Audience = 'ALL' | 'TEACHERS' | 'STUDENTS';
@@ -11,12 +19,14 @@ interface AnnouncementItem {
     id: string; content: string; bannerTitle: string; bannerSubtitle: string; bannerLink: string;
     bannerImage: string; isActive: boolean; isBannerActive: boolean; status: Status;
     effectiveStatus: Status; audience: Audience; startsAt: string | null; endsAt: string | null; updatedAt: string;
+    priority?: NotificationPriority; channels?: AnnouncementChannel[]; dismissible?: boolean;
+    ctaLabel?: string; surfaceOverrides?: Record<string, unknown>;
 }
 
-const emptyForm = {
+const emptyForm: AnnouncementDraft = {
     id: '', content: '', bannerTitle: '', bannerSubtitle: '', bannerLink: '', bannerImage: '',
-    isActive: false, isBannerActive: false, status: 'DRAFT' as Status, audience: 'ALL' as Audience,
-    startsAt: '', endsAt: '', updatedAt: '',
+    ctaLabel: '', status: 'DRAFT', audience: 'ALL', priority: 'INFO', channels: [],
+    dismissible: true, startsAt: '', endsAt: '', updatedAt: '', surfaceOverrides: {},
 };
 
 const toLocalInput = (iso: string | null | undefined) => {
@@ -38,13 +48,19 @@ const AnnouncementSettings: React.FC = () => {
     const [aiEnabled, setAiEnabled] = useState(false);
     const [saving, setSaving] = useState(false);
     const [savingSettings, setSavingSettings] = useState(false);
-    const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
 
     const selectItem = (item: AnnouncementItem) => setForm({
         id: item.id, content: item.content || '', bannerTitle: item.bannerTitle || '', bannerSubtitle: item.bannerSubtitle || '',
-        bannerLink: item.bannerLink || '', bannerImage: item.bannerImage || '', isActive: Boolean(item.isActive),
-        isBannerActive: Boolean(item.isBannerActive), status: item.status, audience: item.audience || 'ALL',
+        bannerLink: item.bannerLink || '', bannerImage: item.bannerImage || '', ctaLabel: item.ctaLabel || '',
+        status: item.status === 'ARCHIVED' || item.status === 'EXPIRED' ? 'DRAFT' : item.status,
+        audience: item.audience || 'ALL', priority: item.priority || 'INFO',
+        channels: item.channels || [
+            ...(item.isActive ? ['TICKER' as const] : []),
+            ...(item.isBannerActive ? ['BANNER' as const] : []),
+        ],
+        dismissible: item.dismissible !== false,
         startsAt: toLocalInput(item.startsAt), endsAt: toLocalInput(item.endsAt), updatedAt: item.updatedAt || '',
+        surfaceOverrides: item.surfaceOverrides || {},
     });
 
     const loadAnnouncements = async () => {
@@ -80,32 +96,56 @@ const AnnouncementSettings: React.FC = () => {
         void Promise.allSettled([loadAnnouncements(), loadSettings()]);
     }, []);
 
-    const payload = () => ({
-        content: form.content, bannerTitle: form.bannerTitle, bannerSubtitle: form.bannerSubtitle,
-        bannerLink: form.bannerLink, bannerImage: form.bannerImage, isActive: form.isActive,
-        isBannerActive: form.isBannerActive, status: form.status, audience: form.audience,
-        startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
-        endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
-        expectedUpdatedAt: form.updatedAt || undefined,
+    const payload = (draft: AnnouncementDraft) => ({
+        content: draft.content, bannerTitle: draft.bannerTitle, bannerSubtitle: draft.bannerSubtitle,
+        bannerLink: draft.bannerLink, bannerImage: draft.bannerImage, ctaLabel: draft.ctaLabel,
+        isActive: draft.channels.includes('TICKER'), isBannerActive: draft.channels.includes('BANNER'),
+        status: draft.status, audience: draft.audience, priority: draft.priority,
+        channels: draft.channels, dismissible: draft.dismissible, surfaceOverrides: draft.surfaceOverrides,
+        startsAt: draft.startsAt ? new Date(draft.startsAt).toISOString() : null,
+        endsAt: draft.endsAt ? new Date(draft.endsAt).toISOString() : null,
+        expectedUpdatedAt: draft.updatedAt || undefined,
     });
 
-    const save = async () => {
+    const save = async (draft: AnnouncementDraft = form, notify = true) => {
         setSaving(true);
         try {
-            const action = form.id ? 'update_announcement' : 'create_announcement';
-            const response = await callApi<{ data?: { id?: string; updatedAt?: string } }>(action, { id: form.id, ...payload() });
-            setForm((value) => ({ ...value, id: response.data?.id || value.id, updatedAt: response.data?.updatedAt || value.updatedAt }));
-            showSuccess('Đã lưu thông báo.');
+            const action = draft.id ? 'update_announcement' : 'create_announcement';
+            const response = await callApi<{ data?: { id?: string; updatedAt?: string } }>(action, {
+                id: draft.id,
+                ...payload(draft),
+            });
+            const saved = {
+                ...draft,
+                id: response.data?.id || draft.id,
+                updatedAt: response.data?.updatedAt || draft.updatedAt,
+            };
+            setForm(saved);
+            if (notify) showSuccess('Đã lưu thông báo.');
             await loadAnnouncements();
-        } catch (err) { showError(err instanceof Error ? err.message : 'Không thể lưu thông báo.'); }
+            return saved;
+        } catch (err) {
+            showError(err instanceof Error ? err.message : 'Không thể lưu thông báo.');
+            return null;
+        }
         finally { setSaving(false); }
     };
 
-    const runAction = async (action: 'publish_announcement' | 'cancel_announcement' | 'archive_announcement') => {
-        if (!form.id) return showError('Hãy lưu bản nháp trước.');
+    const publish = async (draft: AnnouncementDraft) => {
+        const saved = await save({ ...draft, status: 'DRAFT' }, false);
+        if (!saved?.id) return;
+        setForm(saved);
+        await runAction('publish_announcement', saved);
+    };
+
+    const runAction = async (
+        action: 'publish_announcement' | 'cancel_announcement' | 'archive_announcement',
+        target: AnnouncementDraft = form,
+    ) => {
+        if (!target.id) return showError('Hãy lưu bản nháp trước.');
         setSaving(true);
         try {
-            await callApi(action, { id: form.id, expectedUpdatedAt: form.updatedAt });
+            await callApi(action, { id: target.id, expectedUpdatedAt: target.updatedAt });
             showSuccess(action === 'publish_announcement' ? 'Đã công bố thông báo.' : action === 'archive_announcement' ? 'Đã lưu trữ thông báo.' : 'Đã hủy lịch phát.');
             await loadAnnouncements();
         } catch (err) { showError(err instanceof Error ? err.message : 'Không thể cập nhật trạng thái.'); }
@@ -156,31 +196,23 @@ const AnnouncementSettings: React.FC = () => {
                 )}
             </aside>
 
-            <section className="space-y-5 rounded-2xl border bg-white p-5 shadow-sm">
-                <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="text-sm font-semibold">Trạng thái<select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as Status })} className="mt-1 h-10 w-full rounded-xl border px-3"><option value="DRAFT">Bản nháp</option><option value="SCHEDULED">Lên lịch</option><option value="PUBLISHED">Công bố</option></select></label>
-                    <label className="text-sm font-semibold">Đối tượng<select value={form.audience} onChange={(event) => setForm({ ...form, audience: event.target.value as Audience })} className="mt-1 h-10 w-full rounded-xl border px-3"><option value="ALL">Toàn hệ thống</option><option value="TEACHERS">Giáo viên</option><option value="STUDENTS">Học sinh</option></select></label>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-semibold">Bắt đầu<input type="datetime-local" value={form.startsAt} onChange={(event) => setForm({ ...form, startsAt: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label><label className="text-sm font-semibold">Kết thúc<input type="datetime-local" value={form.endsAt} onChange={(event) => setForm({ ...form, endsAt: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label></div>
-                <label className="block text-sm font-semibold">Tiêu đề<input maxLength={160} value={form.bannerTitle} onChange={(event) => setForm({ ...form, bannerTitle: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label>
-                <label className="block text-sm font-semibold">Mô tả<input maxLength={300} value={form.bannerSubtitle} onChange={(event) => setForm({ ...form, bannerSubtitle: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label>
-                <label className="block text-sm font-semibold">Chữ chạy<textarea maxLength={1000} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} className="mt-1 min-h-20 w-full rounded-xl border p-3" /></label>
-                <div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-semibold">Liên kết HTTPS hoặc nội bộ<input value={form.bannerLink} onChange={(event) => setForm({ ...form, bannerLink: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label><label className="text-sm font-semibold">Ảnh từ media/R2<input value={form.bannerImage} onChange={(event) => setForm({ ...form, bannerImage: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3" /></label></div>
-                <div className="flex flex-wrap gap-5"><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={form.isBannerActive} onChange={(event) => setForm({ ...form, isBannerActive: event.target.checked })} />Hiện banner</label><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} />Hiện chữ chạy</label></div>
-                <div className="flex flex-wrap gap-2">
-                    <button disabled={saving} onClick={() => void save()} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 font-semibold text-white disabled:opacity-50"><Save className="h-4 w-4" />Lưu</button>
-                    {form.id && (
-                        <>
-                            <button disabled={saving} onClick={() => void runAction('publish_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 font-semibold text-white"><Send className="h-4 w-4" />Công bố</button>
-                            <button disabled={saving} onClick={() => void runAction('cancel_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl border px-4 font-semibold"><XCircle className="h-4 w-4" />Hủy lịch</button>
-                            <button disabled={saving} onClick={() => void runAction('archive_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl border px-4 font-semibold text-slate-700 hover:bg-slate-50"><Archive className="h-4 w-4" />Lưu trữ</button>
-                        </>
-                    )}
-                </div>
+            <section className="min-w-0">
+                <AnnouncementComposer
+                    initialDraft={form}
+                    saving={saving}
+                    onChange={setForm}
+                    onSaveDraft={(draft) => save(draft)}
+                    onPublish={publish}
+                    onSendTest={async () => showSuccess('Bản xem thử đã sẵn sàng; chưa công bố thông báo.')}
+                />
+                {form.id && (
+                    <div className="mt-3 flex flex-wrap justify-end gap-2">
+                        <button disabled={saving} onClick={() => void runAction('cancel_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl border px-4 font-semibold"><XCircle className="h-4 w-4" />Hủy lịch</button>
+                        <button disabled={saving} onClick={() => void runAction('archive_announcement')} className="inline-flex h-10 items-center gap-2 rounded-xl border px-4 font-semibold text-slate-700 hover:bg-slate-50"><Archive className="h-4 w-4" />Lưu trữ</button>
+                    </div>
+                )}
             </section>
         </div>
-
-        <section className="rounded-2xl border bg-white p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2"><Eye className="h-5 w-5 text-blue-600" /><h3 className="font-bold">Xem trước</h3></div><div className="rounded-lg bg-slate-100 p-1"><button onClick={() => setPreviewMode('desktop')} className={`rounded-md px-3 py-1 text-sm ${previewMode === 'desktop' ? 'bg-white shadow' : ''}`}>Desktop</button><button onClick={() => setPreviewMode('mobile')} className={`rounded-md px-3 py-1 text-sm ${previewMode === 'mobile' ? 'bg-white shadow' : ''}`}>Mobile</button></div></div><div className={`mx-auto rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-200 ${previewMode === 'mobile' ? 'max-w-sm' : 'max-w-4xl'}`}><div className="flex items-center gap-3"><Megaphone className="h-8 w-8 shrink-0 text-emerald-700" /><div className="min-w-0"><div className="truncate font-bold text-emerald-900">{form.bannerTitle || 'Tiêu đề thông báo'}</div><div className="truncate text-sm text-emerald-700">{form.bannerSubtitle || 'Mô tả ngắn sẽ hiển thị tại đây'}</div></div></div></div></section>
 
         <section className="rounded-2xl border bg-white p-5 shadow-sm"><h3 className="font-bold">Cài đặt Trợ lý AI</h3>{settingsError && <div className="my-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{settingsError} <button onClick={() => void loadSettings()} className="font-bold underline">Thử lại</button></div>}<label className="my-4 flex items-center gap-3"><input type="checkbox" checked={aiEnabled} disabled={!settingsLoaded || settingsDegraded} onChange={(event) => setAiEnabled(event.target.checked)} className="h-5 w-5" /><span className="font-semibold">{aiEnabled ? 'Đang bật' : 'Đang tắt'}</span></label><button onClick={() => void saveSettings()} disabled={!settingsLoaded || settingsDegraded || savingSettings} className="rounded-xl bg-slate-800 px-4 py-2 font-semibold text-white disabled:opacity-40">{savingSettings ? 'Đang lưu…' : 'Lưu cài đặt hệ thống'}</button></section>
     </div>;

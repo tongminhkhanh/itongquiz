@@ -38,13 +38,15 @@ export function AnnouncementTicker({ announcement }: AnnouncementTickerProps) {
         viewport && track && track.scrollWidth > viewport.clientWidth,
       ));
     };
-    const observer = new ResizeObserver(measure);
-    if (viewportRef.current) observer.observe(viewportRef.current);
-    if (trackRef.current) observer.observe(trackRef.current);
+    const observer = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(measure);
+    if (viewportRef.current) observer?.observe(viewportRef.current);
+    if (trackRef.current) observer?.observe(trackRef.current);
     window.addEventListener('resize', measure);
     measure();
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
       window.removeEventListener('resize', measure);
     };
   }, [announcement.content]);
