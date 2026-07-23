@@ -43,7 +43,7 @@ export const buildDisplayQuestions = (
 
         let isCorrect = normalized.isCorrect;
         if (isAnswerSkipped(normalized.selectedAnswer)) {
-            isCorrect = false;
+            isCorrect = undefined;
         } else if (typeof normalized.isCorrect !== 'boolean' && question.type) {
             isCorrect = checkAnswer(question as any, normalized.selectedAnswer).status === 'correct';
         }

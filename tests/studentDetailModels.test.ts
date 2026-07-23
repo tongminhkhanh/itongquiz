@@ -29,14 +29,38 @@ const weaknessProfile = {
 } as any;
 
 describe('student detail question model', () => {
-    it('uses snapshots and forces empty answers to wrong even when persisted as correct', () => {
+    it('uses snapshots and keeps empty answers as skipped even when persisted as correct', () => {
         const questions = buildDisplayQuestions(studentDetailResult, studentDetailQuestions);
         expect(questions.map(({ id, question, isCorrect }) => ({ id, question, isCorrect }))).toEqual([
             { id: 'q1', question: 'Hai cộng hai bằng bao nhiêu?', isCorrect: true },
-            { id: 'q2', question: 'Viết số liền sau số 9', isCorrect: false },
+            { id: 'q2', question: 'Viết số liền sau số 9', isCorrect: undefined },
         ]);
-        expect(getQuestionResultCounts(questions)).toEqual({ correctCount: 1, wrongCount: 1 });
-        expect(filterDisplayQuestions(questions, 'wrong')).toHaveLength(1);
+        expect(getQuestionResultCounts(questions)).toEqual({ correctCount: 1, wrongCount: 0 });
+        expect(filterDisplayQuestions(questions, 'wrong')).toHaveLength(0);
+    });
+
+    it('treats matching shuffle metadata without any pair as skipped', () => {
+        const questions = buildDisplayQuestions({
+            ...studentDetailResult,
+            answers: {
+                matching: {
+                    selectedAnswer: { __shuffledIds: ['r-1', 'r-0'] },
+                    isCorrect: false,
+                    questionSnapshot: {
+                        id: 'matching',
+                        type: 'MATCHING',
+                        question: 'Nối cặp',
+                        pairs: [
+                            { left: 'Một', right: '1' },
+                            { left: 'Hai', right: '2' },
+                        ],
+                    },
+                },
+            },
+        }, []);
+
+        expect(questions).toHaveLength(1);
+        expect(questions[0].isCorrect).toBeUndefined();
     });
 
     it('keeps an empty review when legacy answers contain metadata only', () => {

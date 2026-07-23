@@ -45,20 +45,23 @@ describe('StudentDetailModal public behavior', () => {
         fetchWeaknessProfileMock.mockResolvedValue(weaknessProfileFixture as any);
     });
 
-    it('renders result details, treats an empty answer as wrong, and closes', () => {
+    it('renders result details, excludes skipped answers from wrong, and closes', () => {
         const onClose = renderModal();
         expect(screen.getByText('Lan')).toBeInTheDocument();
         expect(screen.getByText('Review: Hai cộng hai bằng bao nhiêu?')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Đúng\s*1/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Sai\s*1/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Sai\s*0/i })).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Đóng modal' }));
         expect(onClose).toHaveBeenCalledOnce();
     });
 
-    it('filters to wrong questions and renders the skipped question snapshot', () => {
+    it('renders the skipped question snapshot with a grey palette state', () => {
         renderModal();
-        fireEvent.click(screen.getByRole('button', { name: /Sai\s*1/i }));
+        const skippedQuestion = screen.getByRole('button', { name: '2ĐB' });
+        expect(skippedQuestion).toHaveClass('bg-slate-100');
+        fireEvent.click(skippedQuestion);
         expect(screen.getByText('Review: Viết số liền sau số 9')).toBeInTheDocument();
+        expect(screen.getAllByText('Bỏ qua').length).toBeGreaterThan(0);
     });
 
     it('loads analytics data only after the analytics tab is selected', async () => {

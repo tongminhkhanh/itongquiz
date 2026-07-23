@@ -62,6 +62,25 @@ const makeQuiz = (isPractice = false): Quiz => ({
   isPractice,
 });
 
+const makeMatchingQuiz = (): Quiz => ({
+  ...makeQuiz(),
+  id: 'quiz-matching-state',
+  questions: [{
+    id: 'matching-1',
+    type: QuestionType.MATCHING,
+    question: 'Nối các cặp tương ứng',
+    pairs: [],
+    leftItems: [
+      { id: 'l-0', content: 'Một' },
+      { id: 'l-1', content: 'Hai' },
+    ],
+    rightItems: [
+      { id: 'r-0', content: '1' },
+      { id: 'r-1', content: '2' },
+    ],
+  } as any],
+});
+
 const savedResult = (result: StudentResult): StudentResult => ({ ...result, id: '42' });
 
 describe('useQuizPlayer result rewards', () => {
@@ -89,6 +108,36 @@ describe('useQuizPlayer result rewards', () => {
       leveledUp: false,
       mood: 'excited',
     });
+  });
+
+  it('does not mark a matching question answered from shuffle metadata or a partial pair', async () => {
+    const quiz = makeMatchingQuiz();
+    const question = quiz.questions[0];
+    const { result } = renderHook(() => useQuizPlayer({
+      quiz,
+      onExit: vi.fn(),
+      onSaveResult: mocks.onSaveResult,
+    }));
+
+    await waitFor(() => expect(result.current.step).toBe('quiz'));
+
+    act(() => result.current.handleAnswerChange(question.id, {
+      __shuffledIds: ['r-1', 'r-0'],
+    }));
+    expect(result.current.isQuestionAnswered(question)).toBe(false);
+
+    act(() => result.current.handleAnswerChange(question.id, {
+      __shuffledIds: ['r-1', 'r-0'],
+      'l-0': 'r-0',
+    }));
+    expect(result.current.isQuestionAnswered(question)).toBe(false);
+
+    act(() => result.current.handleAnswerChange(question.id, {
+      __shuffledIds: ['r-1', 'r-0'],
+      'l-0': 'r-0',
+      'l-1': 'r-1',
+    }));
+    expect(result.current.isQuestionAnswered(question)).toBe(true);
   });
 
   it('claims the reward with the saved result id and shows completion at zero correct', async () => {

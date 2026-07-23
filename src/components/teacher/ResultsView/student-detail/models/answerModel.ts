@@ -7,12 +7,17 @@ export interface NormalizedAnswer {
     snapshot?: QuestionSnapshot;
 }
 
-export const isAnswerSkipped = (value: any): boolean => (
-    value === undefined || value === null || value === '' ||
-    (Array.isArray(value) && value.length === 0) ||
-    (typeof value === 'object' && value !== null && !Array.isArray(value)
-        && Object.keys(value).length === 0)
-);
+export const isAnswerSkipped = (value: any): boolean => {
+    if (value === undefined || value === null || value === '') return true;
+    if (Array.isArray(value)) return value.length === 0;
+    if (typeof value === 'object') {
+        const meaningfulEntries = Object.entries(value)
+            .filter(([key]) => key !== 'selectedLeft' && key !== '__shuffledIds');
+        return meaningfulEntries.length === 0
+            || meaningfulEntries.every(([, item]) => isAnswerSkipped(item));
+    }
+    return false;
+};
 
 export const normalizeResultAnswer = (
     result: StudentResult,

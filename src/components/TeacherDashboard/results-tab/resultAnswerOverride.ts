@@ -2,13 +2,17 @@ import type { Quiz, StudentResult } from '../../../types';
 import { checkAnswer } from '../../../utils/question/scoring.util';
 import type { ResultDisplayOverride } from './types';
 
-const isAnswerSkipped = (value: unknown): boolean => (
-  value === undefined
-  || value === null
-  || value === ''
-  || (Array.isArray(value) && value.length === 0)
-  || (typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0)
-);
+const isAnswerSkipped = (value: unknown): boolean => {
+  if (value === undefined || value === null || value === '') return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === 'object') {
+    const meaningfulEntries = Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => key !== 'selectedLeft' && key !== '__shuffledIds');
+    return meaningfulEntries.length === 0
+      || meaningfulEntries.every(([, item]) => isAnswerSkipped(item));
+  }
+  return false;
+};
 
 export const calculateOverrideFromAnswers = (
   result: StudentResult,
@@ -26,12 +30,17 @@ export const calculateOverrideFromAnswers = (
     if (answerData && typeof answerData === 'object' && ('selectedAnswer' in answerData || 'questionSnapshot' in answerData)) {
       const selectedAnswer = (answerData as any).selectedAnswer;
       if (isAnswerSkipped(selectedAnswer)) return;
-      const gradingQuestion = (answerData as any).questionSnapshot || questionsById.get(String(questionId));
-      if (gradingQuestion?.type) {
-        if (checkAnswer(gradingQuestion, selectedAnswer).isCorrect) correctedCount += 1;
+
+      const storedIsCorrect = (answerData as any).isCorrect;
+      if (typeof storedIsCorrect === 'boolean') {
+        if (storedIsCorrect) correctedCount += 1;
         return;
       }
-      if ((answerData as any).isCorrect === true) correctedCount += 1;
+
+      const gradingQuestion = (answerData as any).questionSnapshot || questionsById.get(String(questionId));
+      if (gradingQuestion?.type && checkAnswer(gradingQuestion, selectedAnswer).isCorrect) {
+        correctedCount += 1;
+      }
       return;
     }
     if (isAnswerSkipped(answerData)) return;

@@ -407,6 +407,25 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
                 return Array.isArray(val) && val.length === (q as any).letters?.length;
             case QuestionType.ERROR_CORRECTION:
                 return !!val.wrongWord && !!val.correctWord;
+            case QuestionType.MATCHING: {
+                if (typeof val !== 'object' || Array.isArray(val)) return false;
+                const configuredPairs = Array.isArray((q as any).pairs) ? (q as any).pairs : [];
+                const leftItems = Array.isArray((q as any).leftItems) ? (q as any).leftItems : [];
+                const legacyItems = Array.isArray((q as any).items) ? (q as any).items : [];
+                const legacyPairCount = legacyItems.length > 0
+                    ? (legacyItems[0] && typeof legacyItems[0] === 'object' && 'left' in legacyItems[0]
+                        ? legacyItems.length
+                        : Math.ceil(legacyItems.length / 2))
+                    : 0;
+                const expectedPairCount = configuredPairs.length || leftItems.length || legacyPairCount;
+                const pairedCount = Object.entries(val).filter(([key, value]) => (
+                    key !== 'selectedLeft'
+                    && key !== '__shuffledIds'
+                    && typeof value === 'string'
+                    && value.length > 0
+                )).length;
+                return expectedPairCount > 0 && pairedCount === expectedPairCount;
+            }
             default:
                 return true;
         }

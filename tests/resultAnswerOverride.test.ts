@@ -43,6 +43,34 @@ describe('calculateOverrideFromAnswers', () => {
     });
   });
 
+  it('keeps canonical stored grading when sanitized snapshots omit answer keys', () => {
+    const answers = Object.fromEntries(
+      Array.from({ length: 10 }, (_, index) => [
+        `q${index + 1}`,
+        {
+          selectedAnswer: index === 7 ? undefined : index % 2 === 0 ? 'C' : 'A',
+          isCorrect: index < 5,
+          questionSnapshot: {
+            id: `q${index + 1}`,
+            type: 'MCQ',
+            question: `Question ${index + 1}`,
+            options: ['A', 'B', 'C', 'D'],
+          },
+        },
+      ]),
+    );
+
+    expect(calculateOverrideFromAnswers({
+      ...createResult(),
+      score: 5,
+      correctCount: 5,
+    }, answers)).toEqual({
+      correctCount: 5,
+      totalQuestions: 10,
+      score: 5,
+    });
+  });
+
   it('uses the quiz question when a saved answer has no question snapshot', () => {
     const answers = Object.fromEntries(
       Array.from({ length: 10 }, (_, index) => [
