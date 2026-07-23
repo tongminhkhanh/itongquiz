@@ -16,6 +16,11 @@ const runtime = (): ParentHistoryRouteRuntime => ({
   } : null),
   listAssignments: vi.fn(async () => page),
   listCertificates: vi.fn(async () => page),
+  getCertificateImage: vi.fn(async (_studentId, id) => id === 'certificate-a'
+    ? new Response(new Uint8Array([1, 2, 3]), {
+      headers: { 'Content-Type': 'image/png', 'Cache-Control': 'private, no-store' },
+    })
+    : null),
 });
 
 const request = (path: string) => new Request(`https://phuhuynh.thitong.site${path}`);
@@ -53,6 +58,35 @@ describe('parent year history isolation', () => {
     );
     expect(response?.status).toBe(404);
     expect(rt.getResult).toHaveBeenCalledWith('student-a', 'result-b');
+  });
+
+  it('serves a certificate image through the authenticated parent session', async () => {
+    const rt = runtime();
+    const response = await handleParentHistoryRoutes(
+      request('/api/parent/certificates/certificate-a/image'),
+      { DB: {} } as any,
+      '/api/parent/certificates/certificate-a/image',
+      'GET',
+      rt,
+    );
+
+    expect(response?.status).toBe(200);
+    expect(response?.headers.get('Content-Type')).toBe('image/png');
+    expect(rt.getCertificateImage).toHaveBeenCalledWith('student-a', 'certificate-a');
+  });
+
+  it('does not reveal a certificate image outside the linked student scope', async () => {
+    const rt = runtime();
+    const response = await handleParentHistoryRoutes(
+      request('/api/parent/certificates/certificate-b/image'),
+      { DB: {} } as any,
+      '/api/parent/certificates/certificate-b/image',
+      'GET',
+      rt,
+    );
+
+    expect(response?.status).toBe(404);
+    expect(rt.getCertificateImage).toHaveBeenCalledWith('student-a', 'certificate-b');
   });
 
   it('never selects or returns answer-level result data', async () => {

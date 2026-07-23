@@ -72,6 +72,9 @@ describe('parent history pages', () => {
     render(<MemoryRouter><ParentCertificatesPage /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: /Hoàn thành xuất sắc/ }));
     expect(screen.getByRole('dialog', { name: 'Chi tiết chứng nhận' })).toBeInTheDocument();
-    expect(screen.getByAltText('Chứng nhận Hoàn thành xuất sắc')).toHaveAttribute('src', 'https://r2.thitong.site/cert.png');
+    expect(screen.getByAltText('Chứng nhận Hoàn thành xuất sắc')).toHaveAttribute(
+      'src',
+      '/api/parent/certificates/c-1/image',
+    );
   });
 });
