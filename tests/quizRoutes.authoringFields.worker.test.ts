@@ -26,6 +26,9 @@ class Database {
     executed: Statement[] = [];
     prepare(sql: string) { return new Statement(sql, this); }
     first(sql: string) {
+        if (sql.includes('FROM teachers t')) {
+            return { username: 'teacher-a', full_name: 'Cô A', full_name_count: 1 };
+        }
         if (sql.includes('SELECT created_by FROM quizzes')) return { created_by: 'teacher-a' };
         if (sql.includes('SELECT * FROM quizzes WHERE id')) {
             return {

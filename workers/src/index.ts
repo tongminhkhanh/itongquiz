@@ -40,10 +40,12 @@ import { handleAdminCertificateRoutes } from './routes/adminCertificates';
 import { handleCertificateRoutes } from './routes/certificates';
 import { handlePhieuSubdomain, handlePublicPhieuApi, handlePhieuRoutes } from './routes/phieu';
 import { handleResultReportRoutes } from './routes/resultReports';
+import { handleParentPortalRoutes } from './routes/parentPortal';
 import { Env } from './types';
 import { rateLimit } from './middleware/rateLimit';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
 import { checkAndAutoCloseExpiredExams } from './services/liveExamService';
+import { createDueHomeworkReminders } from './parentPortal/deadlineReminderService';
 
 export default {
     async fetch(request: Request, env: Env): Promise<Response> {
@@ -68,6 +70,17 @@ export default {
             const rateLimitRes = await rateLimit(request, env, {
                 windowMs: 60 * 1000,
                 maxRequests: 20,
+                failureMode: 'closed',
+            });
+            if (rateLimitRes) return addCors(rateLimitRes, request, env);
+        }
+
+        const isParentLoginAttempt = method === 'POST'
+            && (path === '/api/parent/activate' || path === '/api/parent/login');
+        if (isParentLoginAttempt) {
+            const rateLimitRes = await rateLimit(request, env, {
+                windowMs: 5 * 60 * 1000,
+                maxRequests: 10,
                 failureMode: 'closed',
             });
             if (rateLimitRes) return addCors(rateLimitRes, request, env);
@@ -118,6 +131,15 @@ export default {
 
         const publicPhieuResponse = await handlePublicPhieuApi(env.DB, path, method);
         if (publicPhieuResponse) return addCors(publicPhieuResponse, request, env);
+
+        const isParentRoute = path.startsWith('/api/parent/')
+            || path.startsWith('/api/parent-links')
+            || path.startsWith('/api/parent-announcements')
+            || path.startsWith('/api/parent-delivery');
+        if (isParentRoute) {
+            const parentResponse = await handleParentPortalRoutes(request, env, path, method);
+            return addCors(parentResponse, request, env);
+        }
 
         // Auth check from header
         const authError = verifyToken(request, env);
@@ -191,13 +213,16 @@ export default {
         }
     },
 
-    // Week 2: Scheduled handler for weekly leaderboard rewards
+    // Scheduled maintenance, reminders, and weekly leaderboard rewards.
     async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-        console.log('[Cron] Running weekly leaderboard rewards...');
-        
+        if (event.cron === '0 23 * * *') {
+            await createDueHomeworkReminders(env.DB, new Date());
+            return;
+        }
+
         try {
             await checkAndAutoCloseExpiredExams(env.DB);
-
+            if (event.cron !== '0 0 * * 1') return;
             const db = env.DB;
             const lastWeekKey = getLastWeekKey();
             

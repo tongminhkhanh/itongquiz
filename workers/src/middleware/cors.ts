@@ -7,6 +7,7 @@ const PRODUCTION_ORIGINS = new Set([
     'https://thitong.site',
     'https://www.thitong.site',
     'https://phieu.thitong.site',
+    'https://phuhuynh.thitong.site',
     'https://itongquiz1.vercel.app',
 ]);
 

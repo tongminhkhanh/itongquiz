@@ -81,9 +81,15 @@ describe('live exam P0 authorization and integrity', () => {
 
   it('rejects creating a session from another teacher quiz', async () => {
     const db = new FakeDB();
-    db.first = (sql) => sql.includes('SELECT id, title, created_by FROM quizzes')
-      ? { id: 'quiz-1', title: 'Đề người khác', created_by: 'teacher-b' }
-      : null;
+    db.first = (sql) => {
+      if (sql.includes('FROM teachers t')) {
+        return { username: 'teacher-a', full_name: 'Cô A', full_name_count: 1 };
+      }
+      if (sql.includes('SELECT id, title, created_by FROM quizzes')) {
+        return { id: 'quiz-1', title: 'Đề người khác', created_by: 'teacher-b' };
+      }
+      return null;
+    };
 
     await expect(LiveExamService.createLiveExam(db as any, createParams())).rejects.toSatisfy((error: unknown) => {
       expectServiceError(error, 403, /do not own this quiz/i);
@@ -95,8 +101,8 @@ describe('live exam P0 authorization and integrity', () => {
   it('rejects creating a session for another teacher class', async () => {
     const db = new FakeDB();
     db.first = (sql) => {
+      if (sql.includes('FROM teachers t')) return { username: 'teacher-a', full_name: 'Cô A', full_name_count: 1 };
       if (sql.includes('SELECT id, title, created_by FROM quizzes')) return { id: 'quiz-1', title: 'Toán', created_by: 'teacher-a' };
-      if (sql.includes('SELECT username FROM teachers')) return { username: 'teacher-a' };
       if (sql.includes('SELECT id, name, teacher_username FROM classes')) return { id: 'class-a', name: '4A', teacher_username: 'teacher-b' };
       return null;
     };
@@ -105,6 +111,21 @@ describe('live exam P0 authorization and integrity', () => {
       expectServiceError(error, 403, /do not own this class/i);
       return true;
     });
+  });
+
+  it('creates a session from a uniquely matched legacy display-name owner', async () => {
+    const db = new FakeDB();
+    db.first = (sql) => {
+      if (sql.includes('FROM teachers t')) return { username: 'teacher-a', full_name: 'Cô A', full_name_count: 1 };
+      if (sql.includes('SELECT id, title, created_by FROM quizzes')) return { id: 'quiz-1', title: 'Toán', created_by: 'Cô A' };
+      if (sql.includes('SELECT id, name, teacher_username FROM classes')) return { id: 'class-a', name: '4A', teacher_username: 'teacher-a' };
+      return null;
+    };
+
+    const result = await LiveExamService.createLiveExam(db as any, createParams());
+
+    expect(result).toMatchObject({ quizId: 'quiz-1', teacherId: 'teacher-a', classId: 'class-a' });
+    expect(db.executed.some((statement) => statement.sql.includes('INSERT INTO live_exam_sessions'))).toBe(true);
   });
 
   it('does not allow joining while a session is only scheduled', async () => {

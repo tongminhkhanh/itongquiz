@@ -35,6 +35,9 @@ class Database {
   };
   prepare(sql: string) { return new Statement(sql, this); }
   first(sql: string, bindings: unknown[]) {
+    if (sql.includes('FROM teachers t')) {
+      return { username: 'teacher-a', full_name: 'Cô A', full_name_count: 1 };
+    }
     if (sql.includes('SELECT created_by FROM quizzes')) {
       return { created_by: bindings[0] === 'quiz-b' ? 'teacher-b' : 'teacher-a' };
     }
@@ -109,6 +112,24 @@ describe('quiz answer confidentiality and ownership', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).not.toHaveProperty('correct_answer');
     expect(JSON.parse(rows[0].items)[0]).not.toHaveProperty('isCorrect');
+  });
+
+  it('loads full question data for a uniquely matched legacy display-name owner', async () => {
+    currentUser = { username: 'teacher-a', fullName: 'Cô A', role: 'teacher' };
+    const db = new Database();
+
+    const response = await handleQuizRoutes(
+      authRequest('https://test/api/questions'),
+      env(db),
+      '/api/questions',
+      'GET',
+    );
+    const rows = await response.json() as any[];
+
+    expect(response.status).toBe(200);
+    expect(rows[0].correct_answer).toBe('B');
+    const scopedQuery = db.executed.find((statement) => statement.sql.includes('LOWER(TRIM(z.created_by))'));
+    expect(scopedQuery?.bindings).toEqual(['teacher-a', 'Cô A', 'Cô A']);
   });
 
   it('hides drag-drop order while preserving a shuffled choice pool', () => {

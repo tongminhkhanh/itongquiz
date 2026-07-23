@@ -32,6 +32,7 @@ vi.mock('../src/components/common/Footer', () => ({
 vi.mock('../src/components/schoolPage/AboutPage', () => ({ default: () => <div>about-page</div> }));
 vi.mock('../src/components/schoolPage/ContactPage', () => ({ default: () => <div>contact-page</div> }));
 vi.mock('../src/pages/PhieuPublicPage', () => ({ default: () => <div>phieu-public-page</div> }));
+vi.mock('../src/features/parent-portal/ParentPortalApp', () => ({ default: () => <div>parent-portal-app</div> }));
 
 const originalQuizState = useQuizStore.getState();
 const originalAuthState = useAuthStore.getState();
@@ -99,6 +100,20 @@ describe('App shell routing contracts', () => {
 
     afterEach(() => {
         vi.unstubAllEnvs();
+    });
+
+    it('renders only the parent app for explicit localhost parent mode', async () => {
+        vi.stubEnv('VITE_FEATURE_PARENT_PORTAL_V1', 'true');
+        window.history.replaceState({}, '', '/?portal=parent');
+        renderApp('/?portal=parent');
+
+        expect(await screen.findByText('parent-portal-app')).toBeInTheDocument();
+        expect(screen.queryByText('home-page')).not.toBeInTheDocument();
+        expect(screen.queryByText('chatbot')).not.toBeInTheDocument();
+        expect(screen.queryByText('footer-public')).not.toBeInTheDocument();
+        expect(useQuizStore.getState().loadQuizzes).not.toHaveBeenCalled();
+        expect(useAuthStore.getState().restoreSession).not.toHaveBeenCalled();
+        expect(useClassroomStore.getState().restoreStudentSession).not.toHaveBeenCalled();
     });
 
     it('loads quizzes and system settings on mount while showing public shell globals', async () => {
@@ -174,11 +189,11 @@ describe('App shell routing contracts', () => {
 
         renderApp();
 
-        expect(await screen.findByText('Dang tai cau hoi...')).toBeInTheDocument();
+        expect(await screen.findByText('Chưa tải được câu hỏi')).toBeInTheDocument();
         expect(screen.getByText('Question load failed')).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Thu lai' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
         expect(loadQuizQuestions).toHaveBeenCalledWith('quiz-1');
-        fireEvent.click(screen.getByRole('button', { name: 'Ve trang chu' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Về trang chủ' }));
         expect(goHome).toHaveBeenCalledTimes(1);
     });
 

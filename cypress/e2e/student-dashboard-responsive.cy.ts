@@ -52,10 +52,11 @@ const assertNoHorizontalOverflow = () => {
 };
 
 const assertDashboardRegions = () => {
-  cy.get('h1').contains('Chào ngày mới').should('be.visible');
+  cy.get('h1').should('contain.text', 'Chào ').and('be.visible');
   cy.contains('h2', 'Bài được giao').should('be.visible');
   cy.contains('h2', 'Bài tập tự luận').should('be.visible');
-  cy.contains('Hành trình hôm nay').should('be.visible');
+  cy.contains('h2', 'Nhiệm vụ tuần').should('be.visible');
+  cy.contains('h2', 'Nhịp học tuần này').should('be.visible');
   cy.contains('h2', 'Rương thưởng ngày').should('be.visible');
   cy.contains('h2', 'Thư viện luyện tập').should('be.visible');
 };
@@ -108,7 +109,8 @@ const assertAccountMenuKeyboardFlow = () => {
 };
 
 const assertNoDistractingPulse = () => {
-  cy.contains('button', 'Điểm danh nhận thưởng').should('not.have.class', 'animate-pulse');
+  cy.contains('button', /Điểm danh nhận thưởng|Đã điểm danh hôm nay/)
+    .should('not.have.class', 'animate-pulse');
   cy.get('button[aria-label="Thi trực tiếp"]').should('not.have.class', 'animate-pulse');
 };
 
@@ -137,10 +139,10 @@ describe('Authenticated student dashboard responsive regression', () => {
 
       if (width === 375) {
         cy.contains('h2', 'Bài được giao').then(($assigned) => {
-          cy.contains('Hành trình hôm nay').then(($progress) => {
+          cy.contains('h2', 'Nhiệm vụ tuần').then(($progress) => {
             expect(
               $assigned[0].getBoundingClientRect().top,
-              'assigned work appears above learning progress',
+              'assigned work appears above the weekly mission',
             ).to.be.lessThan($progress[0].getBoundingClientRect().top);
           });
         });
@@ -165,8 +167,16 @@ describe('Authenticated student dashboard responsive regression', () => {
 
     loginAsStudent();
     cy.get('.student-dashboard button').first().then(($button) => {
-      const styles = getComputedStyle($button[0]);
-      expect(styles.transitionDuration).to.match(/0\.00001s|0\.01ms/);
+      const durationsInMs = getComputedStyle($button[0]).transitionDuration
+        .split(',')
+        .map((duration) => {
+          const value = Number.parseFloat(duration);
+          return duration.trim().endsWith('ms') ? value : value * 1000;
+        });
+      expect(
+        Math.max(...durationsInMs),
+        'transition duration in reduced-motion mode',
+      ).to.be.lte(0.01);
     });
 
     cy.wrap(

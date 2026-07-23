@@ -1,5 +1,6 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import type { LiveExamSession, LiveExamStatus } from '../../../../src/types/liveExam.types';
+import { loadTeacherQuizOwnerIdentity, quizOwnerMatchesIdentity } from '../quizOwnership';
 import { LiveExamServiceError } from './errors';
 import type { CreateLiveExamParams } from './types';
 import { generateAccessCode, generateId, now } from './utils';
@@ -12,20 +13,17 @@ export async function createLiveExam(
   const accessCode = generateAccessCode();
   const timestamp = now();
 
+  const teacherIdentity = await loadTeacherQuizOwnerIdentity(db, params.teacherId);
+  if (!teacherIdentity) throw new LiveExamServiceError('Teacher not found', 404);
+
   const quiz = await db
     .prepare('SELECT id, title, created_by FROM quizzes WHERE id = ?')
     .bind(params.quizId)
     .first<{ id: string; title: string; created_by: string | null }>();
   if (!quiz) throw new LiveExamServiceError('Quiz not found', 404);
-  if (params.actorRole !== 'admin' && quiz.created_by !== params.teacherId) {
+  if (params.actorRole !== 'admin' && !quizOwnerMatchesIdentity(quiz.created_by, teacherIdentity)) {
     throw new LiveExamServiceError('Forbidden: You do not own this quiz', 403);
   }
-
-  const teacher = await db
-    .prepare('SELECT username FROM teachers WHERE username = ?')
-    .bind(params.teacherId)
-    .first();
-  if (!teacher) throw new LiveExamServiceError('Teacher not found', 404);
 
   const classroom = await db
     .prepare('SELECT id, name, teacher_username FROM classes WHERE id = ? AND archived_at IS NULL')

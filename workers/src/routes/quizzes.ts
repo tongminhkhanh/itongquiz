@@ -14,6 +14,11 @@ import { JWTPayload } from '../utils/jwt';
 import { withD1Retry } from '../utils/d1';
 import { internalErrorResponse } from '../utils/internalError';
 import {
+    loadTeacherQuizOwnerIdentity,
+    quizOwnerMatchesIdentity,
+    teacherQuizOwnerQueryValues,
+} from '../services/quizOwnership';
+import {
     auditPersistedQuestionRow,
     CURRENT_MATH_FORMAT_VERSION,
     normalizePersistedQuestionRow,
@@ -25,10 +30,13 @@ const canAccessQuiz = async (db: D1Database, user: JWTPayload, quizId: string): 
     if (requireAdmin(user)) return true;
     if (user.role !== 'teacher') return false;
 
-    const quiz = await db.prepare('SELECT created_by FROM quizzes WHERE id = ?').bind(quizId).first<{ created_by: string }>();
-    if (!quiz) return false;
+    const [quiz, identity] = await Promise.all([
+        db.prepare('SELECT created_by FROM quizzes WHERE id = ?').bind(quizId).first<{ created_by: string }>(),
+        loadTeacherQuizOwnerIdentity(db, user.username),
+    ]);
+    if (!quiz || !identity) return false;
 
-    return quiz.created_by === user.username;
+    return quizOwnerMatchesIdentity(quiz.created_by, identity);
 };
 
 const parseJsonArray = (value: unknown): any[] => {
@@ -216,9 +224,16 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         } else if (requireAdmin(user)) {
             rows = await withD1Retry(() => db.prepare('SELECT * FROM questions').all<any>(), 'GET /api/questions admin');
         } else if (user.role === 'teacher') {
+            const identity = await loadTeacherQuizOwnerIdentity(db, user.username);
+            if (!identity) return errorResponse('Teacher not found', 404);
             rows = await withD1Retry(
-                () => db.prepare('SELECT q.* FROM questions q JOIN quizzes z ON z.id = q.quiz_id WHERE z.created_by = ?')
-                    .bind(user.username).all<any>(),
+                () => db.prepare(`
+                    SELECT q.*
+                    FROM questions q
+                    JOIN quizzes z ON z.id = q.quiz_id
+                    WHERE LOWER(TRIM(z.created_by)) = LOWER(TRIM(?))
+                       OR (? IS NOT NULL AND LOWER(TRIM(z.created_by)) = LOWER(TRIM(?)))
+                `).bind(...teacherQuizOwnerQueryValues(identity)).all<any>(),
                 'GET /api/questions teacher',
             );
         } else {

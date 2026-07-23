@@ -67,6 +67,18 @@ const unavailable = () => new Response(JSON.stringify({ status: 'error', message
 });
 
 describe('Worker root route dispatch', () => {
+  it('dispatches parent portal routes before the shared authentication fallback', async () => {
+    const source = await import('../workers/src/index?raw');
+    const parentRoute = source.default.indexOf('handleParentPortalRoutes(request, env, path, method)');
+    const sharedAuth = source.default.indexOf('const authError = verifyToken(request, env)');
+
+    expect(parentRoute).toBeGreaterThan(-1);
+    expect(sharedAuth).toBeGreaterThan(parentRoute);
+
+    const response = await worker.fetch(request('/api/parent-links'), env);
+    expect(response.status).toBe(401);
+  });
+
   it('registers manual quiz drafts before the broader quiz routes', async () => {
     const source = await import('../workers/src/index?raw');
     const draftRoute = source.default.indexOf("path.startsWith('/api/quiz-drafts/')");
@@ -104,6 +116,22 @@ describe('Worker root route dispatch', () => {
 
     expect(response.status).toBe(401);
     expect(rateLimitMock).not.toHaveBeenCalled();
+  });
+
+  it('fails closed for parent activation and login when limiter storage is unavailable', async () => {
+    rateLimitMock.mockResolvedValueOnce(unavailable());
+    const response = await worker.fetch(request('/api/parent/login', 'POST'), env);
+
+    expect(response.status).toBe(503);
+    expect(rateLimitMock).toHaveBeenCalledWith(
+      expect.any(Request),
+      env,
+      expect.objectContaining({
+        windowMs: 5 * 60 * 1000,
+        maxRequests: 10,
+        failureMode: 'closed',
+      }),
+    );
   });
 
   it('fails closed for student login when limiter storage is unavailable', async () => {

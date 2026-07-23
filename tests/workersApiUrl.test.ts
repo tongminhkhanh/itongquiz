@@ -28,6 +28,11 @@ describe('normalizeWorkersApiUrl', () => {
       isDev: false,
       hostname: 'thitong.site',
     })).toBe('https://phieu.thitong.site');
+    expect(resolveWorkersApiBaseUrl({
+      configuredUrl: 'https://phieu.thitong.site',
+      isDev: false,
+      hostname: 'phuhuynh.thitong.site',
+    })).toBe('');
   });
 
   it('orders the external API rewrite before the SPA fallback', () => {

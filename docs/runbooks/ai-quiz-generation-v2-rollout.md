@@ -1,16 +1,16 @@
 # Runbook: AI Quiz Generation V2
 
-## Mục tiêu
+## Má»¥c tiÃªu
 
-Triển khai có kiểm soát luồng tạo đề AI V2 gồm:
+Triá»ƒn khai cÃ³ kiá»ƒm soÃ¡t luá»“ng táº¡o Ä‘á» AI V2 gá»“m:
 
-- ma trận số câu theo dạng và độ khó;
-- phân biệt rõ đề thi và đề ôn tập;
-- OCR theo trang, cho phép giáo viên chọn trang;
-- tiến trình thật và hủy yêu cầu;
-- schema Zod, kiểm tra blueprint, phát hiện câu gần trùng;
-- tối đa một lần sửa có mục tiêu;
-- hạn mức và idempotency được cưỡng chế tại Worker.
+- ma tráº­n sá»‘ cÃ¢u theo dáº¡ng vÃ  Ä‘á»™ khÃ³;
+- phÃ¢n biá»‡t rÃµ Ä‘á» thi vÃ  Ä‘á» Ã´n táº­p;
+- OCR theo trang, cho phÃ©p giÃ¡o viÃªn chá»n trang;
+- tiáº¿n trÃ¬nh tháº­t vÃ  há»§y yÃªu cáº§u;
+- schema Zod, kiá»ƒm tra blueprint, phÃ¡t hiá»‡n cÃ¢u gáº§n trÃ¹ng;
+- tá»‘i Ä‘a má»™t láº§n sá»­a cÃ³ má»¥c tiÃªu;
+- háº¡n má»©c vÃ  idempotency Ä‘Æ°á»£c cÆ°á»¡ng cháº¿ táº¡i Worker.
 
 Feature flag frontend:
 
@@ -18,18 +18,18 @@ Feature flag frontend:
 VITE_FEATURE_AI_QUIZ_V2=false
 ```
 
-Mặc định phải là `false`. Thay đổi flag cần build và deploy lại frontend.
+Máº·c Ä‘á»‹nh pháº£i lÃ  `false`. Thay Ä‘á»•i flag cáº§n build vÃ  deploy láº¡i frontend.
 
-## Điều kiện trước khi bật
+## Äiá»u kiá»‡n trÆ°á»›c khi báº­t
 
-1. Migration D1 `0037_create_ai_generation_actions.sql` đã áp dụng thành công.
-2. Worker production đã có phiên bản kiểm tra quyền, workflow, quota và `actionId`.
-3. `JWT_SECRET` và `CLIPROXY_TOKEN` tồn tại dưới dạng Cloudflare Worker secrets.
-4. Test tập trung AI, toàn bộ Vitest, TypeScript, security scan và production build đều đạt.
-5. Smoke test tài khoản giáo viên và admin đã đạt trên preview/staging.
-6. Có người trực giám sát ít nhất 30 phút sau mỗi bước mở rộng rollout.
+1. Migration D1 `0039_create_ai_generation_actions.sql` Ä‘Ã£ Ã¡p dá»¥ng thÃ nh cÃ´ng.
+2. Worker production Ä‘Ã£ cÃ³ phiÃªn báº£n kiá»ƒm tra quyá»n, workflow, quota vÃ  `actionId`.
+3. `JWT_SECRET` vÃ  `CLIPROXY_TOKEN` tá»“n táº¡i dÆ°á»›i dáº¡ng Cloudflare Worker secrets.
+4. Test táº­p trung AI, toÃ n bá»™ Vitest, TypeScript, security scan vÃ  production build Ä‘á»u Ä‘áº¡t.
+5. Smoke test tÃ i khoáº£n giÃ¡o viÃªn vÃ  admin Ä‘Ã£ Ä‘áº¡t trÃªn preview/staging.
+6. CÃ³ ngÆ°á»i trá»±c giÃ¡m sÃ¡t Ã­t nháº¥t 30 phÃºt sau má»—i bÆ°á»›c má»Ÿ rá»™ng rollout.
 
-## Kiểm tra trước deploy
+## Kiá»ƒm tra trÆ°á»›c deploy
 
 ```bash
 npx vitest run \
@@ -50,7 +50,7 @@ npm run security:scan
 npm run build
 ```
 
-Chạy Cypress với frontend được build/dev bằng flag V2:
+Cháº¡y Cypress vá»›i frontend Ä‘Æ°á»£c build/dev báº±ng flag V2:
 
 ```bash
 set VITE_FEATURE_AI_QUIZ_V2=true
@@ -66,174 +66,174 @@ npm run dev -- --port 3001
 npx cypress run --spec cypress/e2e/ai-quiz-generation-v2.cy.ts
 ```
 
-## Trình tự rollout
+## TrÃ¬nh tá»± rollout
 
-### Bước 0 — deploy code, giữ flag tắt
+### BÆ°á»›c 0 â€” deploy code, giá»¯ flag táº¯t
 
-- Deploy Worker trước.
-- Deploy frontend với `VITE_FEATURE_AI_QUIZ_V2=false`.
-- Xác minh luồng cũ vẫn tạo được đề từ chủ đề và tài liệu.
-- Xác minh gọi trực tiếp `/api/ai/chat` không có metadata bị từ chối.
+- Deploy Worker trÆ°á»›c.
+- Deploy frontend vá»›i `VITE_FEATURE_AI_QUIZ_V2=false`.
+- XÃ¡c minh luá»“ng cÅ© váº«n táº¡o Ä‘Æ°á»£c Ä‘á» tá»« chá»§ Ä‘á» vÃ  tÃ i liá»‡u.
+- XÃ¡c minh gá»i trá»±c tiáº¿p `/api/ai/chat` khÃ´ng cÃ³ metadata bá»‹ tá»« chá»‘i.
 
-Tiêu chí qua bước:
+TiÃªu chÃ­ qua bÆ°á»›c:
 
-- không tăng lỗi 4xx/5xx bất thường;
-- quota đọc đúng;
-- luồng cũ không hồi quy.
+- khÃ´ng tÄƒng lá»—i 4xx/5xx báº¥t thÆ°á»ng;
+- quota Ä‘á»c Ä‘Ãºng;
+- luá»“ng cÅ© khÃ´ng há»“i quy.
 
-### Bước 1 — preview/staging
+### BÆ°á»›c 1 â€” preview/staging
 
-Bật:
+Báº­t:
 
 ```env
 VITE_FEATURE_AI_QUIZ_V2=true
 ```
 
-Kiểm tra bằng ít nhất ba bộ dữ liệu:
+Kiá»ƒm tra báº±ng Ã­t nháº¥t ba bá»™ dá»¯ liá»‡u:
 
-1. Toán lớp 4, 10 câu, 4 dạng;
-2. Tiếng Việt lớp 3, tài liệu 3 trang, bỏ chọn trang 2;
-3. Tiếng Anh lớp 5, đề thi không gợi ý.
+1. ToÃ¡n lá»›p 4, 10 cÃ¢u, 4 dáº¡ng;
+2. Tiáº¿ng Viá»‡t lá»›p 3, tÃ i liá»‡u 3 trang, bá» chá»n trang 2;
+3. Tiáº¿ng Anh lá»›p 5, Ä‘á» thi khÃ´ng gá»£i Ã½.
 
-Với mỗi đề, xác nhận:
+Vá»›i má»—i Ä‘á», xÃ¡c nháº­n:
 
-- tổng số câu đúng;
-- phân bổ dạng câu đúng;
-- phân bổ độ khó đúng;
-- không có câu gần trùng;
-- đáp án thuộc lựa chọn;
-- lời giải tồn tại;
-- nút hủy giữ nguyên biểu mẫu;
-- reviewer lỗi vẫn giữ bản hợp lệ bằng mã;
-- sinh lại một câu thành công tính một lượt mới.
+- tá»•ng sá»‘ cÃ¢u Ä‘Ãºng;
+- phÃ¢n bá»• dáº¡ng cÃ¢u Ä‘Ãºng;
+- phÃ¢n bá»• Ä‘á»™ khÃ³ Ä‘Ãºng;
+- khÃ´ng cÃ³ cÃ¢u gáº§n trÃ¹ng;
+- Ä‘Ã¡p Ã¡n thuá»™c lá»±a chá»n;
+- lá»i giáº£i tá»“n táº¡i;
+- nÃºt há»§y giá»¯ nguyÃªn biá»ƒu máº«u;
+- reviewer lá»—i váº«n giá»¯ báº£n há»£p lá»‡ báº±ng mÃ£;
+- sinh láº¡i má»™t cÃ¢u thÃ nh cÃ´ng tÃ­nh má»™t lÆ°á»£t má»›i.
 
-### Bước 2 — nhóm nội bộ nhỏ
+### BÆ°á»›c 2 â€” nhÃ³m ná»™i bá»™ nhá»
 
-- Bật V2 cho môi trường/đợt deploy dành cho nhóm giáo viên thử nghiệm.
-- Quy mô đề xuất: 5–10 giáo viên trong 1 ngày học.
-- Không thay đổi hạn mức trong giai đoạn thử nghiệm.
-- Thu thập lỗi bằng `actionId`; không ghi prompt, nội dung câu hỏi hoặc OCR vào log.
+- Báº­t V2 cho mÃ´i trÆ°á»ng/Ä‘á»£t deploy dÃ nh cho nhÃ³m giÃ¡o viÃªn thá»­ nghiá»‡m.
+- Quy mÃ´ Ä‘á» xuáº¥t: 5â€“10 giÃ¡o viÃªn trong 1 ngÃ y há»c.
+- KhÃ´ng thay Ä‘á»•i háº¡n má»©c trong giai Ä‘oáº¡n thá»­ nghiá»‡m.
+- Thu tháº­p lá»—i báº±ng `actionId`; khÃ´ng ghi prompt, ná»™i dung cÃ¢u há»i hoáº·c OCR vÃ o log.
 
-Tiêu chí mở rộng:
+TiÃªu chÃ­ má»Ÿ rá»™ng:
 
-- không có truy cập trái quyền;
-- không có trừ lượt trùng;
-- tỷ lệ schema hợp lệ sau repair đạt mục tiêu;
-- không có lỗi chặn lưu đề;
-- phản hồi OCR/chọn trang hiểu được với giáo viên.
+- khÃ´ng cÃ³ truy cáº­p trÃ¡i quyá»n;
+- khÃ´ng cÃ³ trá»« lÆ°á»£t trÃ¹ng;
+- tá»· lá»‡ schema há»£p lá»‡ sau repair Ä‘áº¡t má»¥c tiÃªu;
+- khÃ´ng cÃ³ lá»—i cháº·n lÆ°u Ä‘á»;
+- pháº£n há»“i OCR/chá»n trang hiá»ƒu Ä‘Æ°á»£c vá»›i giÃ¡o viÃªn.
 
-### Bước 3 — mở rộng 25% rồi 100%
+### BÆ°á»›c 3 â€” má»Ÿ rá»™ng 25% rá»“i 100%
 
-Do flag hiện ở cấp build, triển khai theo từng môi trường hoặc nhóm phân phối frontend:
+Do flag hiá»‡n á»Ÿ cáº¥p build, triá»ƒn khai theo tá»«ng mÃ´i trÆ°á»ng hoáº·c nhÃ³m phÃ¢n phá»‘i frontend:
 
-1. 25% giáo viên, theo dõi tối thiểu 30 phút và một phiên sử dụng thực tế;
-2. 100% sau khi các chỉ số ổn định.
+1. 25% giÃ¡o viÃªn, theo dÃµi tá»‘i thiá»ƒu 30 phÃºt vÃ  má»™t phiÃªn sá»­ dá»¥ng thá»±c táº¿;
+2. 100% sau khi cÃ¡c chá»‰ sá»‘ á»•n Ä‘á»‹nh.
 
-Không mở rộng nếu có lỗi P0/P1 hoặc tỷ lệ tạo đề thất bại tăng đáng kể so với baseline.
+KhÃ´ng má»Ÿ rá»™ng náº¿u cÃ³ lá»—i P0/P1 hoáº·c tá»· lá»‡ táº¡o Ä‘á» tháº¥t báº¡i tÄƒng Ä‘Ã¡ng ká»ƒ so vá»›i baseline.
 
-## Chỉ số cần theo dõi
+## Chá»‰ sá»‘ cáº§n theo dÃµi
 
-Theo `actionId`, `workflow`, `stage`, provider và mã lỗi; tuyệt đối không log nội dung học sinh/giáo viên.
+Theo `actionId`, `workflow`, `stage`, provider vÃ  mÃ£ lá»—i; tuyá»‡t Ä‘á»‘i khÃ´ng log ná»™i dung há»c sinh/giÃ¡o viÃªn.
 
-- số action `QUIZ_CREATE` bắt đầu, hoàn tất, hủy và thất bại;
-- thời gian OCR, GENERATE, REPAIR, REVIEW;
-- tỷ lệ cần REPAIR;
-- tỷ lệ reviewer lỗi;
-- tỷ lệ schema/audit không đạt sau một lần repair;
-- số lỗi `QUOTA_EXCEEDED`, `ACTION_STAGE_INVALID`, `ACTION_STAGE_LIMIT_EXCEEDED`;
-- số action bị hoàn lượt và chốt lượt;
-- tỷ lệ 429/503/timeout;
-- số lần giáo viên bỏ chọn trang OCR;
-- số lần sinh lại một câu.
+- sá»‘ action `QUIZ_CREATE` báº¯t Ä‘áº§u, hoÃ n táº¥t, há»§y vÃ  tháº¥t báº¡i;
+- thá»i gian OCR, GENERATE, REPAIR, REVIEW;
+- tá»· lá»‡ cáº§n REPAIR;
+- tá»· lá»‡ reviewer lá»—i;
+- tá»· lá»‡ schema/audit khÃ´ng Ä‘áº¡t sau má»™t láº§n repair;
+- sá»‘ lá»—i `QUOTA_EXCEEDED`, `ACTION_STAGE_INVALID`, `ACTION_STAGE_LIMIT_EXCEEDED`;
+- sá»‘ action bá»‹ hoÃ n lÆ°á»£t vÃ  chá»‘t lÆ°á»£t;
+- tá»· lá»‡ 429/503/timeout;
+- sá»‘ láº§n giÃ¡o viÃªn bá» chá»n trang OCR;
+- sá»‘ láº§n sinh láº¡i má»™t cÃ¢u.
 
 ## Smoke test production
 
-Dùng tài khoản giáo viên thử nghiệm:
+DÃ¹ng tÃ i khoáº£n giÃ¡o viÃªn thá»­ nghiá»‡m:
 
-1. Mở tab **Tạo đề mới**.
-2. Xác nhận có **Dạng câu hỏi & ma trận** khi flag bật.
-3. Chọn 10 câu, tổng dạng câu phải bằng 10.
-4. Tải PDF ba trang.
-5. Xác nhận trạng thái **Đang đọc tài liệu**.
-6. Bỏ chọn một trang và tạo đề.
-7. Xác nhận tiến trình GENERATE/REPAIR/REVIEW phản ánh đúng request thực tế.
-8. Xác nhận đề có đúng 10 câu và nút **Lưu đề** hoạt động.
-9. Hủy một request khác và kiểm tra dữ liệu biểu mẫu còn nguyên.
-10. Sinh lại riêng một câu; xác nhận số lượt giảm đúng một khi thành công.
+1. Má»Ÿ tab **Táº¡o Ä‘á» má»›i**.
+2. XÃ¡c nháº­n cÃ³ **Dáº¡ng cÃ¢u há»i & ma tráº­n** khi flag báº­t.
+3. Chá»n 10 cÃ¢u, tá»•ng dáº¡ng cÃ¢u pháº£i báº±ng 10.
+4. Táº£i PDF ba trang.
+5. XÃ¡c nháº­n tráº¡ng thÃ¡i **Äang Ä‘á»c tÃ i liá»‡u**.
+6. Bá» chá»n má»™t trang vÃ  táº¡o Ä‘á».
+7. XÃ¡c nháº­n tiáº¿n trÃ¬nh GENERATE/REPAIR/REVIEW pháº£n Ã¡nh Ä‘Ãºng request thá»±c táº¿.
+8. XÃ¡c nháº­n Ä‘á» cÃ³ Ä‘Ãºng 10 cÃ¢u vÃ  nÃºt **LÆ°u Ä‘á»** hoáº¡t Ä‘á»™ng.
+9. Há»§y má»™t request khÃ¡c vÃ  kiá»ƒm tra dá»¯ liá»‡u biá»ƒu máº«u cÃ²n nguyÃªn.
+10. Sinh láº¡i riÃªng má»™t cÃ¢u; xÃ¡c nháº­n sá»‘ lÆ°á»£t giáº£m Ä‘Ãºng má»™t khi thÃ nh cÃ´ng.
 
-Dùng tài khoản học sinh:
+DÃ¹ng tÃ i khoáº£n há»c sinh:
 
-1. Gọi UI tạo đề không được hiển thị.
-2. Gọi trực tiếp `/api/ai/chat` phải bị từ chối.
+1. Gá»i UI táº¡o Ä‘á» khÃ´ng Ä‘Æ°á»£c hiá»ƒn thá»‹.
+2. Gá»i trá»±c tiáº¿p `/api/ai/chat` pháº£i bá»‹ tá»« chá»‘i.
 
 ## Rollback
 
 ### Rollback nhanh frontend
 
-Đặt:
+Äáº·t:
 
 ```env
 VITE_FEATURE_AI_QUIZ_V2=false
 ```
 
-Build và deploy lại frontend. Luồng cũ vẫn callable; không cần rollback dữ liệu D1.
+Build vÃ  deploy láº¡i frontend. Luá»“ng cÅ© váº«n callable; khÃ´ng cáº§n rollback dá»¯ liá»‡u D1.
 
-### Khi nào rollback ngay
+### Khi nÃ o rollback ngay
 
-- học sinh hoặc người không đúng vai trò gọi AI thành công;
-- một action bị trừ nhiều lượt;
-- action thất bại vẫn bị chốt lượt;
-- lỗi schema làm mất/sai đáp án;
-- không thể lưu đề sau khi tạo;
-- lỗi 5xx tăng mạnh hoặc Worker không ổn định;
-- OCR gửi lại file ở stage GENERATE;
-- phát hiện log chứa prompt, OCR hoặc nội dung câu hỏi.
+- há»c sinh hoáº·c ngÆ°á»i khÃ´ng Ä‘Ãºng vai trÃ² gá»i AI thÃ nh cÃ´ng;
+- má»™t action bá»‹ trá»« nhiá»u lÆ°á»£t;
+- action tháº¥t báº¡i váº«n bá»‹ chá»‘t lÆ°á»£t;
+- lá»—i schema lÃ m máº¥t/sai Ä‘Ã¡p Ã¡n;
+- khÃ´ng thá»ƒ lÆ°u Ä‘á» sau khi táº¡o;
+- lá»—i 5xx tÄƒng máº¡nh hoáº·c Worker khÃ´ng á»•n Ä‘á»‹nh;
+- OCR gá»­i láº¡i file á»Ÿ stage GENERATE;
+- phÃ¡t hiá»‡n log chá»©a prompt, OCR hoáº·c ná»™i dung cÃ¢u há»i.
 
 ### Rollback Worker
 
-Chỉ rollback Worker nếu lỗi nằm ở backend và frontend flag tắt chưa đủ. Không xóa hai bảng quota/action. Giữ migration vì dữ liệu có thể cần phục vụ điều tra và phiên bản mới vẫn tương thích.
+Chá»‰ rollback Worker náº¿u lá»—i náº±m á»Ÿ backend vÃ  frontend flag táº¯t chÆ°a Ä‘á»§. KhÃ´ng xÃ³a hai báº£ng quota/action. Giá»¯ migration vÃ¬ dá»¯ liá»‡u cÃ³ thá»ƒ cáº§n phá»¥c vá»¥ Ä‘iá»u tra vÃ  phiÃªn báº£n má»›i váº«n tÆ°Æ¡ng thÃ­ch.
 
-Thứ tự:
+Thá»© tá»±:
 
-1. tắt frontend V2;
-2. deploy lại Worker phiên bản ổn định gần nhất;
-3. smoke test quyền/quota;
-4. xác nhận action đang treo không tiếp tục bị chốt sai;
-5. lập báo cáo sự cố trước khi bật lại.
+1. táº¯t frontend V2;
+2. deploy láº¡i Worker phiÃªn báº£n á»•n Ä‘á»‹nh gáº§n nháº¥t;
+3. smoke test quyá»n/quota;
+4. xÃ¡c nháº­n action Ä‘ang treo khÃ´ng tiáº¿p tá»¥c bá»‹ chá»‘t sai;
+5. láº­p bÃ¡o cÃ¡o sá»± cá»‘ trÆ°á»›c khi báº­t láº¡i.
 
-## Xử lý sự cố thường gặp
+## Xá»­ lÃ½ sá»± cá»‘ thÆ°á»ng gáº·p
 
-### OCR xong nhưng không có trang
+### OCR xong nhÆ°ng khÃ´ng cÃ³ trang
 
-- kiểm tra response OCR có JSON đúng schema;
-- kiểm tra `pages[].pageNumber` không trùng và `text` không rỗng;
-- thử file rõ hơn;
-- không tự chuyển sang tạo đề bằng nội dung rỗng.
+- kiá»ƒm tra response OCR cÃ³ JSON Ä‘Ãºng schema;
+- kiá»ƒm tra `pages[].pageNumber` khÃ´ng trÃ¹ng vÃ  `text` khÃ´ng rá»—ng;
+- thá»­ file rÃµ hÆ¡n;
+- khÃ´ng tá»± chuyá»ƒn sang táº¡o Ä‘á» báº±ng ná»™i dung rá»—ng.
 
-### Ma trận không khớp
+### Ma tráº­n khÃ´ng khá»›p
 
-- dùng **AI tự cân đối**;
-- tổng số câu theo dạng phải bằng tổng độ khó;
-- không cho gửi request khi validation còn lỗi.
+- dÃ¹ng **AI tá»± cÃ¢n Ä‘á»‘i**;
+- tá»•ng sá»‘ cÃ¢u theo dáº¡ng pháº£i báº±ng tá»•ng Ä‘á»™ khÃ³;
+- khÃ´ng cho gá»­i request khi validation cÃ²n lá»—i.
 
-### Reviewer lỗi
+### Reviewer lá»—i
 
-- giữ bản đã qua schema và audit;
-- không gọi reviewer lặp vô hạn;
-- ghi mã lỗi và stage, không ghi nội dung đề.
+- giá»¯ báº£n Ä‘Ã£ qua schema vÃ  audit;
+- khÃ´ng gá»i reviewer láº·p vÃ´ háº¡n;
+- ghi mÃ£ lá»—i vÃ  stage, khÃ´ng ghi ná»™i dung Ä‘á».
 
-### Repair vẫn không đạt
+### Repair váº«n khÃ´ng Ä‘áº¡t
 
-- dừng sau một lần repair;
-- hiển thị lỗi rõ ràng để giáo viên thử lại;
-- không cắt bớt hoặc tự bịa câu hỏi.
+- dá»«ng sau má»™t láº§n repair;
+- hiá»ƒn thá»‹ lá»—i rÃµ rÃ ng Ä‘á»ƒ giÃ¡o viÃªn thá»­ láº¡i;
+- khÃ´ng cáº¯t bá»›t hoáº·c tá»± bá»‹a cÃ¢u há»i.
 
-## Kết thúc rollout
+## Káº¿t thÃºc rollout
 
-Rollout được xem là hoàn tất khi:
+Rollout Ä‘Æ°á»£c xem lÃ  hoÃ n táº¥t khi:
 
-- 100% nhóm mục tiêu dùng V2 ổn định;
-- không có P0/P1 trong thời gian giám sát;
-- quyền, quota và idempotency đạt yêu cầu;
-- ba môn smoke test đạt;
-- tài liệu hỗ trợ giáo viên và quy trình rollback đã được xác nhận.
+- 100% nhÃ³m má»¥c tiÃªu dÃ¹ng V2 á»•n Ä‘á»‹nh;
+- khÃ´ng cÃ³ P0/P1 trong thá»i gian giÃ¡m sÃ¡t;
+- quyá»n, quota vÃ  idempotency Ä‘áº¡t yÃªu cáº§u;
+- ba mÃ´n smoke test Ä‘áº¡t;
+- tÃ i liá»‡u há»— trá»£ giÃ¡o viÃªn vÃ  quy trÃ¬nh rollback Ä‘Ã£ Ä‘Æ°á»£c xÃ¡c nháº­n.

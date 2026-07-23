@@ -14,9 +14,11 @@ export function resolveWorkersApiBaseUrl({
     hostname,
 }: WorkersApiResolutionInput): string {
     const normalizedUrl = configuredUrl.replace(/\/$/, '');
-    const isVercelPreview = typeof hostname === 'string' && /\.vercel\.app$/i.test(hostname);
+    const normalizedHostname = typeof hostname === 'string' ? hostname.trim().toLowerCase() : '';
+    const isVercelPreview = /\.vercel\.app$/i.test(normalizedHostname);
+    const isParentPortal = normalizedHostname === 'phuhuynh.thitong.site';
 
-    if (isVercelPreview) return '';
+    if (isVercelPreview || isParentPortal) return '';
     if (isDev && normalizedUrl === REMOTE_WORKERS_API_URL) return '';
     return normalizedUrl;
 }

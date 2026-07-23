@@ -38,3 +38,8 @@ export const isAiBlueprintV3Enabled = (): boolean => resolveFeatureFlag(
     import.meta.env.VITE_FEATURE_AI_BLUEPRINT_V3,
     false,
 );
+
+export const isParentPortalEnabled = (): boolean => resolveFeatureFlag(
+    import.meta.env.VITE_FEATURE_PARENT_PORTAL_V1,
+    false,
+);
