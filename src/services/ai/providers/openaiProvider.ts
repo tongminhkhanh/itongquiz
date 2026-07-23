@@ -104,7 +104,8 @@ export const generateWithOpenAIResilient = async (
         temperature: 0.4,
         response_format: { type: 'json_object' },
       }, toWorkerOptions(execution));
-      const draft = validateAndFixQuiz(parseAndRepairJSON(formatMathSigns(text))) as Record<string, unknown>;
+      const parsed = parseAndRepairJSON(formatMathSigns(text)) as Record<string, unknown>;
+      const draft = systemInstruction ? parsed : validateAndFixQuiz(parsed) as Record<string, unknown>;
       return resolveImageLibrary(draft, imageLibraryItems);
     } catch (error) {
       lastError = error;

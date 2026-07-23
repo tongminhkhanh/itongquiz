@@ -14,6 +14,9 @@ import { generateTrangNguyenQuiz } from '../../../services/trangNguyenGeminiServ
 import { showError } from '../../../utils/toast';
 import { normalizeAiCategory, normalizeTags } from '../utils/quizNormalizers';
 import { buildQuizGenerationOptions } from '../domain/buildQuizGenerationRequest';
+import { buildQuestionRegenerationPrompt } from '../../../services/ai/prompts/questionRegenerationPrompt';
+import { isAiSelectableQuestionType } from '../../../services/ai/question-contracts/questionTypeAvailability';
+import type { GeneratedQuestionV3 } from '../../../services/ai/question-contracts/questionContract.types';
 import { validateQuizGenerationInput } from '../domain/quizCreationValidation';
 import type { GenerationStep, QuizMode } from '../domain/quizCreation.types';
 import type { useQuizFormState } from './useQuizFormState';
@@ -27,6 +30,7 @@ interface UseQuizGenerationOptions {
     username: string | null;
     teacherName: string | null;
     aiQuizV2Enabled: boolean;
+    aiBlueprintV3Enabled: boolean;
 }
 
 interface ActiveGeneration {
@@ -45,6 +49,7 @@ export const useQuizGeneration = ({
     username,
     teacherName,
     aiQuizV2Enabled,
+    aiBlueprintV3Enabled,
 }: UseQuizGenerationOptions) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStep, setGenerationStep] = useState<GenerationStep>('idle');
@@ -274,6 +279,8 @@ export const useQuizGeneration = ({
                     || form.uploadedFile?.name?.replace(/\.[^/.]+$/, '')
                     || 'Bài kiểm tra'
                 }`,
+                topic: generationTopic,
+                classLevel: form.classLevel,
                 questionCount: validation.questionCount,
                 questionTypes: validation.enabledTypes,
                 typeAllocations: form.questionTypeAllocations,
@@ -288,8 +295,11 @@ export const useQuizGeneration = ({
                         ? 'PRACTICE'
                         : form.quizIntent,
                 sourceMode: isPdfMode ? 'DOCUMENT' : 'TOPIC',
+                sourceRefs: isPdfMode
+                    ? form.selectedOcrPageNumbers.map((pageNumber) => `page-${pageNumber}`)
+                    : undefined,
                 isPdfMode,
-            });
+            }, { enableBlueprintV3: aiBlueprintV3Enabled });
 
             const result = await generateQuiz(
                 generationTopic,
@@ -345,30 +355,72 @@ export const useQuizGeneration = ({
         const action = createAiAction('QUESTION_REGENERATE');
         const controller = new AbortController();
         try {
-            const prompt = `Yêu cầu: Sinh lại câu hỏi dựa trên: ${JSON.stringify(question)}`;
+            const topic = form.topic || form.generatedQuiz?.title || 'T?ng h?p';
+            const useV3Regeneration = aiBlueprintV3Enabled && isAiSelectableQuestionType(question.type);
+            const supportedSubject = question.subject === 'math' || question.subject === 'vietnamese'
+                ? question.subject
+                : undefined;
+            const regenerationOptions = buildQuizGenerationOptions({
+                title: form.quizTitle || `Sinh l?i c?u h?i: ${form.topic || 'B?i ki?m tra'}`,
+                topic,
+                classLevel: form.classLevel,
+                questionCount: 1,
+                questionTypes: [question.type],
+                typeAllocations: [{ type: question.type, count: 1 }],
+                difficultyLevels: {
+                    level1: question.difficulty === 1 ? 1 : 0,
+                    level2: question.difficulty === 2 || !question.difficulty ? 1 : 0,
+                    level3: question.difficulty === 3 ? 1 : 0,
+                },
+                promptProfile: form.promptProfile,
+                imageLibrary: form.imageLibrary,
+                customPrompt: `T?o n?i dung m?i d?a tr?n c?u hi?n t?i: ${JSON.stringify(question)}`,
+                quizMode: form.quizMode,
+                intent: form.quizIntent,
+                sourceMode: form.quizMode === 'pdf' ? 'DOCUMENT' : 'TOPIC',
+                subject: supportedSubject,
+                skillCode: question.skillCode,
+                subskillCode: question.subskillCode,
+                isPdfMode: false,
+            }, { enableBlueprintV3: useV3Regeneration });
+
+            if (useV3Regeneration && regenerationOptions.blueprintV3) {
+                const slot = regenerationOptions.blueprintV3.slots[0];
+                const summarize = (candidate: Question): string => {
+                    const record = candidate as unknown as Record<string, unknown>;
+                    return String(
+                        record.question
+                        ?? record.mainQuestion
+                        ?? record.sentence
+                        ?? record.text
+                        ?? candidate.type,
+                    ).slice(0, 220);
+                };
+                regenerationOptions.customPrompt = buildQuestionRegenerationPrompt({
+                    slot,
+                    currentQuestion: {
+                        ...(question as unknown as Record<string, unknown>),
+                        slotId: slot.slotId,
+                        type: slot.type,
+                        difficulty: slot.difficulty,
+                        explanation: question.explanation || 'C?u hi?n t?i ch?a c? l?i gi?i.',
+                    } as GeneratedQuestionV3,
+                    otherQuestionSummaries: (form.generatedQuiz?.questions ?? [])
+                        .filter((candidate) => candidate.id !== question.id)
+                        .map((candidate) => ({
+                            slotId: candidate.id,
+                            normalizedPrompt: summarize(candidate),
+                        })),
+                    teacherInstruction: 'T?o m?t c?u m?i kh?c n?i dung, gi? nguy?n k? n?ng v? c?u tr?c t??ng t?c.',
+                });
+            }
+
             const result = await generateQuiz(
-                form.topic || form.generatedQuiz?.title || 'Tổng hợp',
+                topic,
                 form.classLevel,
                 form.content,
                 undefined,
-                buildQuizGenerationOptions({
-                    title: form.quizTitle || `Sinh lại câu hỏi: ${form.topic || 'Bài kiểm tra'}`,
-                    questionCount: 1,
-                    questionTypes: [question.type],
-                    typeAllocations: [{ type: question.type, count: 1 }],
-                    difficultyLevels: {
-                        level1: question.difficulty === 1 ? 1 : 0,
-                        level2: question.difficulty === 2 || !question.difficulty ? 1 : 0,
-                        level3: question.difficulty === 3 ? 1 : 0,
-                    },
-                    promptProfile: form.promptProfile,
-                    imageLibrary: form.imageLibrary,
-                    customPrompt: prompt,
-                    quizMode: form.quizMode,
-                    intent: form.quizIntent,
-                    sourceMode: form.quizMode === 'pdf' ? 'DOCUMENT' : 'TOPIC',
-                    isPdfMode: false,
-                }),
+                regenerationOptions,
                 undefined,
                 form.aiProvider,
                 undefined,

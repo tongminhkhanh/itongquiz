@@ -8,6 +8,11 @@ import { generateImage, checkImageServiceAvailability } from './imageGenerationS
 import { QuestionType } from '../types';
 import { parseAndRepairJSON, validateAndFixQuiz } from './ai/utils/jsonRepair';
 import { buildPrompt } from './ai/prompts/quizPromptBuilder';
+import { buildGeneratorSystemPrompt } from './ai/prompts/systemPromptBuilder';
+import {
+  buildReviewerSystemPromptV3,
+  buildReviewerUserPromptV3,
+} from './ai/prompts/reviewerPromptBuilder';
 import { generateWithGemini } from './ai/providers/geminiProvider';
 import { generateWithOpenAIResilient } from './ai/providers/openaiProvider';
 import { generateWithPerplexity } from './ai/providers/perplexityProvider';
@@ -17,17 +22,27 @@ import type {
   QuizBlueprint,
   QuizBlueprintV3,
 } from '../features/quiz-generator/domain/quizBlueprint';
-import { auditGeneratedQuiz } from './ai/quizAudit';
+import {
+  auditGeneratedQuiz,
+  auditGeneratedQuizV3,
+} from './ai/quizAudit';
 import {
   buildQuizRepairPrompt,
+  buildQuizSlotRepairPrompt,
   createQuizRepairPlan,
+  createQuizSlotRepairPlan,
   mergeRepairedQuestions,
+  mergeRepairedSlots,
   QuizGenerationValidationError,
 } from './ai/quizRepair';
 import {
   parseGeneratedQuiz,
+  parseGeneratedQuizV3,
   type GeneratedQuizPayload,
 } from './ai/schemas/quizGenerationSchema';
+import { normalizeGeneratedQuizV3Compatibility } from './ai/schemas/generatedQuizV3Normalizer';
+import type { GeneratedQuizV3 } from './ai/question-contracts/questionContract.types';
+import { mapGeneratedQuizV3ToDomain } from './ai/quizDomainAdapter';
 
 export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux' | 'localhost' | 'native-ocr';
 export type LearnerPromptMode = 'default' | 'gifted' | 'remedial';
@@ -169,6 +184,91 @@ const runDeterministicQualityPipeline = async (
   return finalQuiz;
 };
 
+const parseGeneratedQuizV3Compatibility = (raw: unknown): GeneratedQuizV3 => parseGeneratedQuizV3(
+  normalizeGeneratedQuizV3Compatibility(raw, {
+    allowV2DifficultyAlias: true,
+    expectedPromptVersion: 'ai-blueprint-v3',
+  }),
+);
+
+const runV3QualityPipeline = async (
+  result: unknown,
+  blueprint: QuizBlueprintV3,
+  execution: QuizAiExecutionContext | undefined,
+  onStepChange?: (step: QuizGenerationStep) => void,
+): Promise<GeneratedQuizV3> => {
+  let finalQuiz = parseGeneratedQuizV3Compatibility(result);
+  let issues = auditGeneratedQuizV3(finalQuiz, blueprint);
+
+  if (issues.some((issue) => !issue.repairable)) {
+    throw new QuizGenerationValidationError(issues);
+  }
+
+  const canUseAuxiliaryStages = execution?.action.workflow === 'QUIZ_CREATE';
+  if (issues.length > 0) {
+    if (!canUseAuxiliaryStages) {
+      throw new QuizGenerationValidationError(issues);
+    }
+
+    const repairPlan = createQuizSlotRepairPlan(issues, blueprint);
+    if (repairPlan.requestedCount === 0) {
+      throw new QuizGenerationValidationError(issues);
+    }
+
+    onStepChange?.('repairing');
+    const repairedText = await requestWorkerAiText({
+      model: 'gemini-2.5-flash',
+      messages: [
+        {
+          role: 'system',
+          content: 'Bạn sửa đúng các slot bị lỗi. Chỉ trả về JSON V3 hợp lệ và giữ nguyên slotId, type, difficulty.',
+        },
+        {
+          role: 'user',
+          content: buildQuizSlotRepairPrompt({ blueprint, quiz: finalQuiz, issues }),
+        },
+      ],
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+    }, toWorkerOptions({ ...execution, stage: 'REPAIR' }));
+    const repairedQuiz = parseGeneratedQuizV3Compatibility(parseAndRepairJSON(repairedText));
+    finalQuiz = mergeRepairedSlots(finalQuiz, repairedQuiz, repairPlan, blueprint);
+    issues = auditGeneratedQuizV3(finalQuiz, blueprint);
+    if (issues.length > 0) {
+      throw new QuizGenerationValidationError(issues);
+    }
+  }
+
+  if (canUseAuxiliaryStages) {
+    onStepChange?.('reviewing');
+    try {
+      const reviewedText = await requestWorkerAiText({
+        model: 'gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: buildReviewerSystemPromptV3() },
+          { role: 'user', content: buildReviewerUserPromptV3({ blueprint, quiz: finalQuiz }) },
+        ],
+        temperature: 0.1,
+        response_format: { type: 'json_object' },
+      }, toWorkerOptions({ ...execution, stage: 'REVIEW' }));
+      const reviewedQuiz = parseGeneratedQuizV3Compatibility(parseAndRepairJSON(reviewedText));
+      if (auditGeneratedQuizV3(reviewedQuiz, blueprint).length === 0) {
+        finalQuiz = reviewedQuiz;
+      }
+    } catch (error) {
+      console.warn('[AI Validation Chain V3] Reviewer output was ignored.', error);
+    }
+  }
+
+  return finalQuiz;
+};
+
+const getProviderCapabilities = (provider: AIProvider) => ({
+  provider,
+  supportsRetrievalContext: provider === 'perplexity',
+  supportsImages: provider !== 'perplexity' && provider !== 'native-ocr',
+});
+
 const resolveGeneratedImages = async (result: unknown): Promise<unknown> => {
   if (!result || typeof result !== 'object') return result;
   const resultObject = result as Record<string, unknown>;
@@ -213,11 +313,18 @@ export const generateQuiz = async (
 ): Promise<any> => {
   onStepChange?.('generating');
   const promptText = buildPrompt(topic, classLevel, content, options);
-  const requestedCount = options?.blueprint?.totalQuestions ?? options?.questionCount ?? 10;
+  const useV3 = options?.promptVersion === 'ai-blueprint-v3' && Boolean(options.blueprintV3);
+  const systemInstruction = useV3
+    ? buildGeneratorSystemPrompt(getProviderCapabilities(provider), 'ai-blueprint-v3')
+    : undefined;
+  const requestedCount = options?.blueprintV3?.totalQuestions
+    ?? options?.blueprint?.totalQuestions
+    ?? options?.questionCount
+    ?? 10;
   let result: unknown;
 
   if (provider === 'perplexity') {
-    result = await generateWithPerplexity(promptText, '', execution);
+    result = await generateWithPerplexity(promptText, '', execution, systemInstruction);
   } else if (provider === 'openai') {
     result = await generateWithOpenAIResilient(
       promptText,
@@ -227,6 +334,7 @@ export const generateQuiz = async (
       '',
       onStepChange,
       execution,
+      systemInstruction,
     );
   } else if (provider === 'llm-mux' || provider === 'localhost') {
     result = await generateWithOpenAIResilient(
@@ -237,6 +345,7 @@ export const generateQuiz = async (
       'https://api.thitong.site/v1',
       onStepChange,
       execution,
+      systemInstruction,
     );
   } else {
     result = await generateWithGemini(
@@ -246,10 +355,19 @@ export const generateQuiz = async (
       options?.imageLibrary,
       onStepChange,
       execution,
+      systemInstruction,
     );
   }
 
-  if (options?.blueprint) {
+  if (useV3 && options?.blueprintV3) {
+    const finalQuizV3 = await runV3QualityPipeline(
+      result,
+      options.blueprintV3,
+      execution,
+      onStepChange,
+    );
+    result = mapGeneratedQuizV3ToDomain(finalQuizV3);
+  } else if (options?.blueprint) {
     result = await runDeterministicQualityPipeline(
       result,
       options.blueprint,

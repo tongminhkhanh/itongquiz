@@ -43,14 +43,23 @@ export const makeGeneratedQuizV3Fixture = (
   promptVersion: 'ai-blueprint-v3',
   blueprintVersion: 3,
   title: 'Đề fixture V3',
-  questions: blueprint.slots.map((slot) => ({
-    ...getAiQuestionContract(slot.type).validFixture,
-    slotId: slot.slotId,
-    type: slot.type,
-    difficulty: slot.difficulty,
-    explanation: 'Lời giải fixture hợp lệ.',
-    subject: slot.subject,
-    skillCode: slot.skillCode,
-    subskillCode: slot.subskillCode,
-  })) as GeneratedQuestionV3[],
+  questions: blueprint.slots.map((slot) => {
+    const fixture = { ...getAiQuestionContract(slot.type).validFixture } as Record<string, unknown>;
+    const variantLabel = String.fromCharCode(64 + slot.ordinal);
+    if (typeof fixture.question === 'string') {
+      fixture.question = `${fixture.question} (biến thể ${variantLabel})`;
+    } else if (typeof fixture.mainQuestion === 'string') {
+      fixture.mainQuestion = `${fixture.mainQuestion} (biến thể ${variantLabel})`;
+    }
+    return {
+      ...fixture,
+      slotId: slot.slotId,
+      type: slot.type,
+      difficulty: slot.difficulty,
+      explanation: `Lời giải fixture hợp lệ cho slot ${slot.ordinal}.`,
+      subject: slot.subject,
+      skillCode: slot.skillCode,
+      subskillCode: slot.subskillCode,
+    } as GeneratedQuestionV3;
+  }),
 });

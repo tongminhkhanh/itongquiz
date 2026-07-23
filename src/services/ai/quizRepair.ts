@@ -21,7 +21,7 @@ export interface QuizRepairPlan {
 }
 
 export class QuizGenerationValidationError extends Error {
-  constructor(public readonly issues: QuizAuditIssue[]) {
+  constructor(public readonly issues: Array<QuizAuditIssue | QuizSlotAuditIssue>) {
     super(issues.map((issue) => issue.message).join(' '));
     this.name = 'QuizGenerationValidationError';
   }

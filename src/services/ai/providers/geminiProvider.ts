@@ -95,7 +95,8 @@ export const generateWithGemini = async (
         temperature: 0.4,
         response_format: { type: 'json_object' },
       }, toWorkerOptions(execution));
-      const quizData = validateAndFixQuiz(parseAndRepairJSON(formatMathSigns(text))) as Record<string, unknown>;
+      const parsed = parseAndRepairJSON(formatMathSigns(text)) as Record<string, unknown>;
+      const quizData = systemInstruction ? parsed : validateAndFixQuiz(parsed) as Record<string, unknown>;
       return resolveImageLibrary(quizData, imageLibrary || []);
     } catch (error) {
       lastError = error;

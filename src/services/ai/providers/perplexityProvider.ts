@@ -30,5 +30,6 @@ export const generateWithPerplexity = async (
     signal: execution.signal,
   } : undefined);
 
-  return validateAndFixQuiz(parseAndRepairJSON(text));
+  const parsed = parseAndRepairJSON(text);
+  return systemInstruction ? parsed : validateAndFixQuiz(parsed);
 };

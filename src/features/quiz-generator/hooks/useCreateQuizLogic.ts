@@ -42,6 +42,7 @@ export const useCreateQuizLogic = ({
         username: authStore.username,
         teacherName: authStore.teacherName,
         aiQuizV2Enabled,
+        aiBlueprintV3Enabled,
     });
     const persistence = useQuizPersistence({
         form,
