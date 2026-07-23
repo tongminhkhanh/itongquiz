@@ -26,6 +26,12 @@ const forbidden = [
   'B?i ki?m tra',
 ];
 
+const documentationFiles = [
+  'docs/runbooks/ai-quiz-generation-v2-rollout.md',
+  'docs/superpowers/plans/2026-07-22-ai-quiz-generation-v2.md',
+];
+
+const mojibakeTokens = ['Ã', 'Ä', 'á»', 'áº', 'â€', 'Æ°'];
 const requiredGeneralInfoLabels = [
   'Gợi ý từ AI',
   'Áp dụng môn học',
@@ -39,6 +45,13 @@ describe('AI quiz UTF-8 source guard', () => {
     const source = fs.readFileSync(path.resolve(process.cwd(), file), 'utf8');
     for (const token of forbidden) {
       expect(source, `${file} contains ${token}`).not.toContain(token);
+    }
+  });
+
+  it.each(documentationFiles)('keeps AI documentation in valid Vietnamese UTF-8: %s', (file) => {
+    const source = fs.readFileSync(path.resolve(process.cwd(), file), 'utf8');
+    for (const token of mojibakeTokens) {
+      expect(source, `${file} contains mojibake token ${token}`).not.toContain(token);
     }
   });
 
