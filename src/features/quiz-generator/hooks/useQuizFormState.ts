@@ -123,7 +123,7 @@ export const useQuizFormState = ({
     );
     const questionBlueprintV3 = useMemo<QuizBlueprintV3 | null>(() => {
         if (blueprintErrors.length > 0 || !classLevel.trim()) return null;
-        const objective = topic.trim() || quizTitle.trim() || 'B?i ki?m tra';
+        const objective = topic.trim() || quizTitle.trim() || 'Bài kiểm tra';
         try {
             return {
                 version: 3,

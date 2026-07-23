@@ -68,6 +68,7 @@ const toWorkerOptions = (execution?: QuizAiExecutionContext) => execution ? {
   action: {
     ...execution.action,
     stage: execution.stage,
+    ...(execution.diagnostics ?? {}),
   },
   signal: execution.signal,
 } : undefined;

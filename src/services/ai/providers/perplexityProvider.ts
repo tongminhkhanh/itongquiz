@@ -26,6 +26,7 @@ export const generateWithPerplexity = async (
     action: {
       ...execution.action,
       stage: execution.stage,
+      ...(execution.diagnostics ?? {}),
     },
     signal: execution.signal,
   } : undefined);

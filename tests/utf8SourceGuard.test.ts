@@ -8,6 +8,7 @@ const files = [
   'src/services/teacherAiQuotaService.ts',
   'src/services/ai/extractTextFromPdf.ts',
   'src/services/ai/workerAiClient.ts',
+  'src/features/quiz-generator/hooks/useQuizFormState.ts',
 ];
 
 const forbidden = [
@@ -22,6 +23,7 @@ const forbidden = [
   'Bam Thong tu 27',
   'AI Suggestions:',
   '>Apply ',
+  'B?i ki?m tra',
 ];
 
 const requiredGeneralInfoLabels = [
