@@ -5,6 +5,12 @@ import { withD1Retry } from '../utils/d1';
 import { requireAdmin, verifyJWTMiddleware } from '../middleware/jwtAuth';
 import { auditStatement } from '../utils/audit';
 import { extractJWTFromRequest } from '../utils/jwt';
+import {
+    isAnnouncementChannel,
+    isNotificationPriority,
+    type AnnouncementChannel,
+    type NotificationPriority,
+} from '../../../shared/notifications.contract';
 
 type AnnouncementStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'EXPIRED' | 'ARCHIVED';
 type AnnouncementAudience = 'ALL' | 'TEACHERS' | 'STUDENTS';
@@ -27,10 +33,41 @@ type AnnouncementRow = {
     created_by: string | null;
     updated_by: string | null;
     created_at: string | null;
+    priority: string | null;
+    channels_json: string | null;
+    dismissible: number | string | null;
+    cta_label: string | null;
+    surface_overrides_json: string | null;
 };
 
 function requestId(request: Request): string {
     return request.headers.get('cf-ray') || request.headers.get('x-request-id') || crypto.randomUUID();
+}
+
+function parseChannels(row: AnnouncementRow): AnnouncementChannel[] {
+    try {
+        const channels = JSON.parse(row.channels_json || '[]');
+        if (Array.isArray(channels)) {
+            const valid = channels.filter(isAnnouncementChannel);
+            if (valid.length > 0 || row.channels_json) return valid;
+        }
+    } catch {
+        // Fall through to legacy flags.
+    }
+
+    const channels: AnnouncementChannel[] = [];
+    if (row.is_active === 'true' || row.is_active === 'TRUE') channels.push('TICKER');
+    if (row.is_banner_active === 'true' || row.is_banner_active === 'TRUE') channels.push('BANNER');
+    return channels;
+}
+
+function parseSurfaceOverrides(value: string | null): Record<string, unknown> {
+    try {
+        const parsed = JSON.parse(value || '{}');
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+        return {};
+    }
 }
 
 function mapAnnouncement(row: AnnouncementRow) {
@@ -59,6 +96,11 @@ function mapAnnouncement(row: AnnouncementRow) {
         createdAt: row.created_at,
         createdBy: row.created_by,
         updatedBy: row.updated_by,
+        priority: isNotificationPriority(row.priority) ? row.priority : 'INFO',
+        channels: parseChannels(row),
+        dismissible: row.dismissible === 1 || row.dismissible === '1',
+        ctaLabel: row.cta_label || '',
+        surfaceOverrides: parseSurfaceOverrides(row.surface_overrides_json),
         isCurrentlyVisible: ['PUBLISHED', 'SCHEDULED'].includes(row.status)
             && (starts === null || starts <= now)
             && (ends === null || ends > now),
@@ -116,12 +158,48 @@ function validateBody(body: Record<string, any>, request: Request, env: Env): { 
     if (status === 'SCHEDULED' && !startsAt) {
         return { error: errorResponse('Thông báo lên lịch phải có thời gian bắt đầu.', 400) };
     }
+    const priority: NotificationPriority = isNotificationPriority(body.priority)
+        ? body.priority
+        : 'INFO';
+    const legacyChannels: AnnouncementChannel[] = [
+        ...(body.isActive ? ['TICKER' as const] : []),
+        ...(body.isBannerActive ? ['BANNER' as const] : []),
+    ];
+    const channelsInput = body.channels === undefined ? legacyChannels : body.channels;
+    if (!Array.isArray(channelsInput) || channelsInput.some((channel) => !isAnnouncementChannel(channel))) {
+        return { error: errorResponse('Kênh hiển thị thông báo không hợp lệ.', 400) };
+    }
+    const channels = [...new Set(channelsInput)] as AnnouncementChannel[];
+    const requiresPublishValidation = status === 'PUBLISHED' || status === 'SCHEDULED';
+    if (requiresPublishValidation && channels.length === 0) {
+        return { error: errorResponse('Thông báo xuất bản phải có ít nhất một kênh hiển thị.', 400) };
+    }
+    if (requiresPublishValidation && priority === 'URGENT' && !channels.includes('CRITICAL_STRIP')) {
+        return { error: errorResponse('Cảnh báo khẩn phải dùng kênh Cảnh báo khẩn.', 400) };
+    }
+    const ctaLabel = typeof body.ctaLabel === 'string' ? body.ctaLabel.trim() : '';
+    if (ctaLabel.length > 80) {
+        return { error: errorResponse('Nhãn liên kết vượt quá độ dài cho phép.', 400) };
+    }
+    if (requiresPublishValidation && ctaLabel && !link) {
+        return { error: errorResponse('Nhãn hành động phải đi kèm liên kết hợp lệ.', 400) };
+    }
+    const surfaceOverrides = body.surfaceOverrides
+        && typeof body.surfaceOverrides === 'object'
+        && !Array.isArray(body.surfaceOverrides)
+        ? body.surfaceOverrides
+        : {};
     return { value: {
         title, subtitle, content, link, image, audience, status,
         startsAt: status === 'PUBLISHED' && !startsAt ? new Date().toISOString() : startsAt?.toISOString() || null,
         endsAt: endsAt?.toISOString() || null,
         isBannerActive: Boolean(body.isBannerActive),
         isActive: Boolean(body.isActive),
+        priority,
+        channels,
+        dismissible: body.dismissible !== false,
+        ctaLabel,
+        surfaceOverrides,
     } };
 }
 
@@ -150,14 +228,27 @@ export async function handleAnnouncementRoutes(request: Request, env: Env, path:
               AND (starts_at IS NULL OR starts_at <= ?)
               AND (ends_at IS NULL OR ends_at > ?)
               AND ${audienceSql}
-            ORDER BY CASE WHEN audience = 'ALL' THEN 1 ELSE 0 END, updated_at DESC
-            LIMIT 1
+            ORDER BY
+              CASE priority
+                WHEN 'URGENT' THEN 4
+                WHEN 'IMPORTANT' THEN 3
+                WHEN 'REMINDER' THEN 2
+                ELSE 1
+              END DESC,
+              starts_at DESC,
+              updated_at DESC
+            LIMIT 20
         `);
-        const row = await withD1Retry(
-            () => (audience === 'ALL' ? statement.bind(now, now) : statement.bind(now, now, audience)).first<AnnouncementRow>(),
+        const result = await withD1Retry(
+            () => (audience === 'ALL' ? statement.bind(now, now) : statement.bind(now, now, audience)).all<AnnouncementRow>(),
             'GET /api/announcements/current',
         );
-        return jsonResponse({ status: 'success', announcement: row ? mapAnnouncement(row) : null });
+        const items = (result.results || []).map(mapAnnouncement);
+        return jsonResponse({
+            status: 'success',
+            data: { items, generatedAt: now },
+            announcement: items[0] || null,
+        });
     }
 
     const authResult = await verifyJWTMiddleware(request, env);
@@ -176,7 +267,14 @@ export async function handleAnnouncementRoutes(request: Request, env: Env, path:
     if ((path === '/api/admin/announcements' && method === 'POST') || legacySave) {
         const body = await parseBody(request);
         if (!body) return errorResponse('Invalid JSON body');
-        const validation = validateBody(legacySave ? { ...body, status: body.isBannerActive || body.isActive ? 'PUBLISHED' : 'DRAFT' } : body, request, env);
+        const validation = validateBody(legacySave ? {
+            ...body,
+            status: body.isBannerActive || body.isActive ? 'PUBLISHED' : 'DRAFT',
+            channels: body.channels ?? [
+                ...(body.isActive ? ['TICKER'] : []),
+                ...(body.isBannerActive ? ['BANNER'] : []),
+            ],
+        } : body, request, env);
         if (validation.error) return validation.error;
         const value = validation.value;
         const id = legacySave ? '1' : `announcement-${crypto.randomUUID()}`;
@@ -186,21 +284,26 @@ export async function handleAnnouncementRoutes(request: Request, env: Env, path:
             ? db.prepare(`
                 UPDATE announcements SET content = ?, is_active = ?, updated_at = ?, banner_title = ?,
                     banner_subtitle = ?, banner_link = ?, banner_image = ?, is_banner_active = ?,
-                    days_to_live = ?, status = ?, audience = ?, starts_at = ?, ends_at = ?, updated_by = ?
+                    days_to_live = ?, status = ?, audience = ?, starts_at = ?, ends_at = ?, updated_by = ?,
+                    priority = ?, channels_json = ?, dismissible = ?, cta_label = ?, surface_overrides_json = ?
                 WHERE id = ?
             `).bind(value.content, String(value.isActive), now, value.title, value.subtitle, value.link, value.image,
                 String(value.isBannerActive), Number(body.daysToLive ?? 7), value.status, value.audience,
-                value.startsAt, value.endsAt, authResult.user.username, id)
+                value.startsAt, value.endsAt, authResult.user.username, value.priority,
+                JSON.stringify(value.channels), value.dismissible ? 1 : 0, value.ctaLabel,
+                JSON.stringify(value.surfaceOverrides), id)
             : db.prepare(`
                 INSERT INTO announcements
                 (id, content, is_active, updated_at, banner_title, banner_subtitle, banner_link,
                  banner_image, is_banner_active, days_to_live, status, audience, starts_at, ends_at,
-                 created_by, updated_by, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 created_by, updated_by, created_at, priority, channels_json, dismissible, cta_label,
+                 surface_overrides_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).bind(id, value.content, String(value.isActive), now, value.title, value.subtitle, value.link,
                 value.image, String(value.isBannerActive), Number(body.daysToLive ?? 7), value.status,
                 value.audience, value.startsAt, value.endsAt, authResult.user.username,
-                authResult.user.username, now);
+                authResult.user.username, now, value.priority, JSON.stringify(value.channels),
+                value.dismissible ? 1 : 0, value.ctaLabel, JSON.stringify(value.surfaceOverrides));
         await db.batch([statement, auditStatement(db, {
             actorUsername: authResult.user.username,
             action: existing ? 'ANNOUNCEMENT_UPDATED' : 'ANNOUNCEMENT_CREATED',
@@ -230,10 +333,14 @@ export async function handleAnnouncementRoutes(request: Request, env: Env, path:
             db.prepare(`
                 UPDATE announcements SET content = ?, is_active = ?, updated_at = ?, banner_title = ?,
                     banner_subtitle = ?, banner_link = ?, banner_image = ?, is_banner_active = ?,
-                    status = ?, audience = ?, starts_at = ?, ends_at = ?, updated_by = ? WHERE id = ?
+                    status = ?, audience = ?, starts_at = ?, ends_at = ?, updated_by = ?,
+                    priority = ?, channels_json = ?, dismissible = ?, cta_label = ?,
+                    surface_overrides_json = ? WHERE id = ?
             `).bind(value.content, String(value.isActive), now, value.title, value.subtitle, value.link,
                 value.image, String(value.isBannerActive), value.status, value.audience,
-                value.startsAt, value.endsAt, authResult.user.username, id),
+                value.startsAt, value.endsAt, authResult.user.username, value.priority,
+                JSON.stringify(value.channels), value.dismissible ? 1 : 0, value.ctaLabel,
+                JSON.stringify(value.surfaceOverrides), id),
             auditStatement(db, {
                 actorUsername: authResult.user.username, action: 'ANNOUNCEMENT_UPDATED',
                 targetType: 'announcement', targetId: id, requestId: requestId(request),
