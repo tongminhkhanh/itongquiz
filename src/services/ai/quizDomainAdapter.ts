@@ -16,6 +16,18 @@ const mapQuestion = (question: GeneratedQuestionV3): Question => {
   } = question;
   const record = { ...payload } as Record<string, unknown>;
 
+  if (question.type === QuestionType.TRUE_FALSE && Array.isArray(record.items)) {
+    record.items = record.items.map((item, index) => {
+      const itemRecord = item as Record<string, unknown>;
+      return {
+        ...itemRecord,
+        id: typeof itemRecord.id === 'string' && itemRecord.id.trim()
+          ? itemRecord.id
+          : `${slotId}-item-${index + 1}`,
+      };
+    });
+  }
+
   if (question.type === QuestionType.UNDERLINE) {
     const sentence = String(record.sentence ?? '');
     const targetWords = Array.isArray(record.targetWords)
