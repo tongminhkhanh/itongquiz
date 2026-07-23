@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import { QuestionType } from '../../../types';
+import type {
+  GeneratedQuestionV3,
+  GeneratedQuizV3,
+} from '../question-contracts/questionContract.types';
+import { getAiQuestionContract } from '../question-contracts/questionContractRegistry';
 
 const NonEmptyText = z.string().trim().min(1);
 const QuestionText = NonEmptyText.max(4000);
@@ -302,4 +307,47 @@ export type GeneratedQuizPayload = z.infer<typeof GeneratedQuizSchema>;
 
 export function parseGeneratedQuiz(raw: unknown): GeneratedQuizPayload {
   return GeneratedQuizSchema.parse(raw);
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
+export const GeneratedQuestionV3Schema = z.custom<GeneratedQuestionV3>((value) => {
+  if (!isRecord(value) || typeof value.type !== 'string') return false;
+  try {
+    return getAiQuestionContract(value.type as QuestionType).schema.safeParse(value).success;
+  } catch {
+    return false;
+  }
+}, { message: 'Câu hỏi không khớp hợp đồng AI V3.' });
+
+export const GeneratedQuizV3Schema = z.object({
+  promptVersion: z.literal('ai-blueprint-v3'),
+  blueprintVersion: z.literal(3),
+  title: NonEmptyText.max(500),
+  detectedCategory: z.string().trim().min(1).max(100).optional(),
+  detectedLesson: z.string().trim().min(1).max(500).optional(),
+  suggestedTags: z.array(z.string().trim().min(1).max(100)).max(10).optional(),
+  timeLimit: z.number().int().min(1).max(600).optional(),
+  questions: z.array(GeneratedQuestionV3Schema).min(1).max(40),
+}).superRefine((quiz, ctx) => {
+  const slotIds = quiz.questions.map((question) => question.slotId);
+  if (new Set(slotIds).size !== slotIds.length) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['questions'],
+      message: 'Mỗi câu hỏi phải có slotId duy nhất.',
+    });
+  }
+});
+
+export function parseGeneratedQuizV3(raw: unknown): GeneratedQuizV3 {
+  const parsed = GeneratedQuizV3Schema.parse(raw);
+  return {
+    ...parsed,
+    questions: parsed.questions.map((question) => (
+      getAiQuestionContract(question.type).schema.parse(question) as GeneratedQuestionV3
+    )),
+  };
 }
