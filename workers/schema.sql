@@ -307,7 +307,13 @@ CREATE TABLE IF NOT EXISTS announcements (
   ends_at TEXT,
   created_by TEXT,
   updated_by TEXT,
-  created_at TEXT
+  created_at TEXT,
+  priority TEXT NOT NULL DEFAULT 'INFO'
+    CHECK (priority IN ('INFO', 'REMINDER', 'IMPORTANT', 'URGENT')),
+  channels_json TEXT NOT NULL DEFAULT '["TICKER"]',
+  dismissible INTEGER NOT NULL DEFAULT 1 CHECK (dismissible IN (0, 1)),
+  cta_label TEXT,
+  surface_overrides_json TEXT NOT NULL DEFAULT '{}'
 );
 
 CREATE INDEX IF NOT EXISTS idx_announcements_delivery ON announcements(status, audience, starts_at, ends_at);
@@ -694,11 +700,22 @@ CREATE TABLE IF NOT EXISTS notifications (
   body TEXT,
   data TEXT NOT NULL DEFAULT '{}',
   is_read INTEGER NOT NULL DEFAULT 0 CHECK(is_read IN (0, 1)),
+  priority TEXT NOT NULL DEFAULT 'INFO'
+    CHECK (priority IN ('INFO', 'REMINDER', 'IMPORTANT', 'URGENT')),
+  action_url TEXT,
+  source_type TEXT,
+  source_id TEXT,
+  expires_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, user_role, is_read);
 CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_inbox
+  ON notifications(user_id, user_role, is_read, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_notifications_source_dedupe
+  ON notifications(user_id, user_role, source_type, source_id, type)
+  WHERE source_type IS NOT NULL AND source_id IS NOT NULL;
 
 -- Parent Portal access and one-way communication
 CREATE TABLE IF NOT EXISTS parent_links (

@@ -34,7 +34,7 @@ describe('D1 migration layout', () => {
     expect(registered).toHaveLength(25);
     const numericPrefixes = migrations.map((name) => name.slice(0, 4));
     expect(new Set(numericPrefixes).size).toBe(numericPrefixes.length);
-    expect(migrations.at(-1)).toBe('0040_scope_results_to_assignments.sql');
+    expect(migrations.at(-1)).toBe('0042_unified_notifications.sql');
   });
 
   it('stores assignment-scoped result identity in migration 0040', () => {
