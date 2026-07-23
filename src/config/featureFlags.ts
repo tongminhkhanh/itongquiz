@@ -30,3 +30,11 @@ export const isAiQuizV2Enabled = (): boolean => resolveFeatureFlag(
     import.meta.env.VITE_FEATURE_AI_QUIZ_V2,
     false,
 );
+
+/**
+ * Per-question blueprint V3 rolls out independently and requires V2 to remain enabled.
+ */
+export const isAiBlueprintV3Enabled = (): boolean => resolveFeatureFlag(
+    import.meta.env.VITE_FEATURE_AI_BLUEPRINT_V3,
+    false,
+);

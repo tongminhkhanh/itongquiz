@@ -13,7 +13,10 @@ import { generateWithOpenAIResilient } from './ai/providers/openaiProvider';
 import { generateWithPerplexity } from './ai/providers/perplexityProvider';
 import { requestWorkerAiText } from './ai/workerAiClient';
 import type { QuizAiExecutionContext } from './ai/aiAction';
-import type { QuizBlueprint } from '../features/quiz-generator/domain/quizBlueprint';
+import type {
+  QuizBlueprint,
+  QuizBlueprintV3,
+} from '../features/quiz-generator/domain/quizBlueprint';
 import { auditGeneratedQuiz } from './ai/quizAudit';
 import {
   buildQuizRepairPrompt,
@@ -46,6 +49,8 @@ export const AI_CORE_SUBJECT_IDS = [
 export interface QuizGenerationOptions {
   title: string;
   blueprint?: QuizBlueprint;
+  blueprintV3?: QuizBlueprintV3;
+  promptVersion?: 'ai-blueprint-v3';
   questionCount: number;
   questionTypes: QuestionType[];
   difficultyLevels?: { level1: number; level2: number; level3: number };
