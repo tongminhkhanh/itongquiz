@@ -25,6 +25,7 @@ describe('unified notification contract', () => {
     ]);
     expect(NOTIFICATION_TYPES).toContain('assignment_created');
     expect(NOTIFICATION_TYPES).toContain('certificate_issued');
+    expect(NOTIFICATION_TYPES).toContain('result_report_published');
 
     expect(isNotificationPriority('URGENT')).toBe(true);
     expect(isNotificationPriority('critical')).toBe(false);
@@ -46,6 +47,12 @@ describe('unified notification contract', () => {
       data: { certificate_id: 'certificate-1' },
       actionUrl: null,
     })).toEqual({ kind: 'certificate', certificateId: 'certificate-1' });
+
+    expect(resolveNotificationTarget({
+      type: 'result_report_published',
+      data: { phieu_id: 'phieu-1' },
+      actionUrl: null,
+    })).toEqual({ kind: 'result-report', reportId: 'phieu-1' });
 
     expect(resolveNotificationTarget({
       type: 'system',

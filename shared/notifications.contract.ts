@@ -19,6 +19,7 @@ export const NOTIFICATION_TYPES = [
   'homework_graded',
   'live_exam_ready',
   'result_report_ready',
+  'result_report_published',
   'certificate_issued',
   'certificate_batch_completed',
   'delivery_failed',
@@ -99,6 +100,11 @@ export function resolveNotificationTarget(
 
   if (input.type === 'result_report_ready') {
     const reportId = payloadId(input.data, 'report_id');
+    return reportId ? { kind: 'result-report', reportId } : null;
+  }
+
+  if (input.type === 'result_report_published') {
+    const reportId = payloadId(input.data, 'phieu_id');
     return reportId ? { kind: 'result-report', reportId } : null;
   }
 
