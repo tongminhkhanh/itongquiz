@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 import { getParentActivation } from '../parentPortalService';
 import type { ParentActivationPreview } from '../types';
 import { useParentPortalStore } from '../useParentPortalStore';

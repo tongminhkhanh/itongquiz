@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useAuthStore } from '../../stores/authStore';
 import { useQuizStore } from '../../stores/quizStore';
 import { useClassroomStore } from '../stores/useClassroomStore';

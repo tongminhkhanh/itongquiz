@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import { useQuizStore } from '../../stores/quizStore';
 import { useSeo } from '../hooks/useSeo';
 import { AppGlobals } from './AppGlobals';

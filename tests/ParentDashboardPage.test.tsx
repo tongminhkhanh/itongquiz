@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import ParentDashboardPage from '../src/features/parent-portal/pages/ParentDashboardPage';
 import { ParentPortalLayout } from '../src/features/parent-portal/layout/ParentPortalLayout';
 import { useParentPortalStore } from '../src/features/parent-portal/useParentPortalStore';

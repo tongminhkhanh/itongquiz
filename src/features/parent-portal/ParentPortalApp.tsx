@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router';
 import { ParentPortalFallback, ParentPortalLayout } from './layout/ParentPortalLayout';
 import ParentActivatePage from './pages/ParentActivatePage';
 import ParentAssignmentsPage from './pages/ParentAssignmentsPage';

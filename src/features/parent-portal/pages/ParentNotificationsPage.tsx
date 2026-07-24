@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Award, Bell, BookOpen, ClipboardCheck, FileText, Megaphone } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import type { ParentNotificationItem, ParentNotificationKind } from '../../../../shared/parent-portal.contract';
 import { markAllNotificationsRead } from '../parentPortalService';
 import { useParentPortalStore } from '../useParentPortalStore';

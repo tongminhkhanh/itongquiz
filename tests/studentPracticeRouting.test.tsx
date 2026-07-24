@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import StudentDashboardUI from '../src/components/HomePage/StudentDashboardUI';
 import { useStudentPracticeCatalog } from '../src/features/student-dashboard/hooks/useStudentPracticeCatalog';

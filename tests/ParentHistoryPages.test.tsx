@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import ParentAssignmentsPage from '../src/features/parent-portal/pages/ParentAssignmentsPage';
 import ParentCertificatesPage from '../src/features/parent-portal/pages/ParentCertificatesPage';
 import ParentResultDetailPage from '../src/features/parent-portal/pages/ParentResultDetailPage';

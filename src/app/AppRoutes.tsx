@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes, useNavigate } from 'react-router';
 import { useQuizStore } from '../../stores/quizStore';
 import { AboutPage, ContactPage, ManualQuizWorkspacePage, PhieuPublicPage, PrivacyPolicy, TeacherResultDetailPage, TermsOfService } from './lazyViews';
 import { PageLoading } from './PageLoading';

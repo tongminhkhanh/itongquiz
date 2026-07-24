@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { StudentDetailModal } from '../teacher/ResultsView';
 import { fetchResultAnswers } from '../../services/results/resultAnswersService';
 import { useQuizStore } from '../../../stores/quizStore';

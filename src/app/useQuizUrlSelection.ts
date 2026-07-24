@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import { useQuizStore } from '../../stores/quizStore';
 
 export const useQuizUrlSelection = () => {

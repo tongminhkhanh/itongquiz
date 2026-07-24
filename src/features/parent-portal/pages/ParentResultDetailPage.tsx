@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, CheckCircle2, Heart, Target } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import type { ParentResultHistoryItem } from '../../../../shared/parent-portal.contract';
 import { getResult } from '../parentPortalService';
 

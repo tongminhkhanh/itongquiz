@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowLeft, CheckCircle2, Eye, List, Settings2, ShieldCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useManualQuizWorkspaceStore } from '../store/useManualQuizWorkspaceStore';
 
 const SAVE_STATUS_COPY = {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router';
 import ParentNotificationsPage from '../src/features/parent-portal/pages/ParentNotificationsPage';
 import { useParentPortalStore } from '../src/features/parent-portal/useParentPortalStore';
 

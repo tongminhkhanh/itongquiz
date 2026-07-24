@@ -1,6 +1,6 @@
 import React from 'react';
 import { Award, Building2, CalendarDays, Flag, School, Sparkles, Trophy } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 const milestones = [
     { year: '2016', title: 'Khởi động hành trình', desc: 'Trường bắt đầu xây dựng môi trường học tập thân thiện và sáng tạo.' },
