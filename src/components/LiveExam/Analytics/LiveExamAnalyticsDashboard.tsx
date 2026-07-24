@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, RefreshCw, BarChart3, AlertCircle } from 'lucide-react';
 import { useLiveExamAnalytics } from '../../../hooks/useLiveExamAnalytics';
 import { ProgressCard } from './ProgressCard';

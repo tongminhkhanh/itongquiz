@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { WORKERS_API_URL } from '../config/constants';
 import { Loader2, Printer } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import { Button } from '../components/common';
 import { PhieuKetQuaCardV2 } from '../features/results/components/PhieuKetQuaCardV2';
 import { phieuService } from '../features/homework/services/phieuService';

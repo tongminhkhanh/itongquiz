@@ -1,6 +1,6 @@
 import React from 'react';
 import { LogOut, ShieldCheck, UserRound } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useParentPortalStore } from '../useParentPortalStore';
 
 export default function ParentProfilePage() {

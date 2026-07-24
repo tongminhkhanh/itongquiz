@@ -1,6 +1,6 @@
 import React from 'react';
 import { Award, Bell, BookOpen, GraduationCap, Home, LogOut, UserRound } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router';
 import { useParentPortalStore } from '../useParentPortalStore';
 
 const navItems = [

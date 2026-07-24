@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import type { PracticeSubjectId } from '../../../components/HomePage/student-dashboard/dashboard.types';
 import { buildPracticeCatalog } from '../model';
 import { usePracticeTopics } from './usePracticeTopics';

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import type { StudentResult } from '../../../types';
 import { showError } from '../../../utils/toast';
 import { useQuizStore } from '../../../../stores/quizStore';

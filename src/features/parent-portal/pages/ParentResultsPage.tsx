@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Filter } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router';
 import type { ParentResultHistoryItem } from '../../../../shared/parent-portal.contract';
 import { listResults } from '../parentPortalService';
 

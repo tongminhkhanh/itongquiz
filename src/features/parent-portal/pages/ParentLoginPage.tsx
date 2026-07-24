@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { KeyRound } from 'lucide-react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router';
 import { useParentPortalStore } from '../useParentPortalStore';
 
 export default function ParentLoginPage() {
