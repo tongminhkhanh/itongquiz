@@ -16,6 +16,11 @@ describe('resolveApiRoute', () => {
         expect(r.query?.({ quizId: 'a b' })?.toString()).toBe('quizId=a+b');
     });
 
+    it('resolves result dashboard summary as a protected GET', () => {
+        const route = resolveApiRoute('get_results_summary');
+        expect(route).toMatchObject({ method: 'GET', auth: 'session' });
+        expect(route.path({})).toBe('/api/results/summary');
+    });
     it('resolves delete_quiz without body', () => {
         const r = resolveApiRoute('delete_quiz');
         expect(r.method).toBe('DELETE');
@@ -85,8 +90,8 @@ describe('resolveApiRoute', () => {
         const upsertResult = resolveApiRoute('upsert_result_phieu');
         expect(upsertResult.method).toBe('POST');
         expect(upsertResult.path({ resultId: 'result 1' })).toBe('/api/phieu/results/result%201');
-        expect(upsertResult.body?.('upsert_result_phieu', { resultId: 'r1', nhan_xet: 'Tốt' }))
-            .toEqual({ nhan_xet: 'Tốt' });
+        expect(upsertResult.body?.('upsert_result_phieu', { resultId: 'r1', nhan_xet: 'TÃ¡Â»â€˜t' }))
+            .toEqual({ nhan_xet: 'TÃ¡Â»â€˜t' });
 
         expect(resolveApiRoute('publish_phieu_batch').path({})).toBe('/api/phieu/batches');
         expect(resolveApiRoute('deactivate_public_phieu_link').path({ publicToken: 'tok 1' }))

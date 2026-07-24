@@ -6,6 +6,11 @@ export const resultRoutes: RouteRegistry = {
         auth: 'session',
         path: () => '/api/results',
     },
+    get_results_summary: {
+        method: 'GET',
+        auth: 'session',
+        path: () => '/api/results/summary',
+    },
     get_result_answers: {
         method: 'GET',
         auth: 'session',
