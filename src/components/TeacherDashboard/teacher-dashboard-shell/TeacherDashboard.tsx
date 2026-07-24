@@ -66,6 +66,9 @@ const TeacherDashboard = () => {
       resultsLoadState={bootstrap.resultsLoadState}
       resultsLoadError={bootstrap.resultsLoadError}
       loadTeacherResults={bootstrap.loadTeacherResults}
+      resultSummary={bootstrap.resultSummary}
+      summaryLoadState={bootstrap.summaryLoadState}
+      summaryLoadError={bootstrap.summaryLoadError}
       filteredResults={filterTeacherResults(quizStore.results, authStore.isAdmin, authStore.teacherClass)}
       quizzes={quizStore.quizzes}
       editingQuiz={editingQuiz}

@@ -68,6 +68,9 @@ export const TeacherDashboardLayout = (props: TeacherDashboardLayoutProps) => {
           resultsLoadState={props.resultsLoadState}
           resultsLoadError={props.resultsLoadError}
           loadTeacherResults={props.loadTeacherResults}
+          resultSummary={props.resultSummary}
+          summaryLoadState={props.summaryLoadState}
+          summaryLoadError={props.summaryLoadError}
           filteredResults={props.filteredResults}
           quizzes={props.quizzes}
           editingQuiz={props.editingQuiz}

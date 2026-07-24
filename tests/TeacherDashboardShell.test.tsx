@@ -71,9 +71,19 @@ vi.mock('../src/components/TeacherDashboard/BottomNavigation', () => ({
 }));
 
 vi.mock('../src/components/TeacherDashboard/OverviewTab', () => ({
-  default: ({ resultsLoadState, resultsError, onRetryResults }: any) => (
+  default: ({
+    resultsLoadState,
+    resultsError,
+    resultSummary,
+    summaryLoadState,
+    summaryError,
+    onRetryResults,
+  }: any) => (
     <div data-testid="overview-tab">
-      {resultsLoadState}:{resultsError || ''}
+      <span data-testid="overview-results-state">{resultsLoadState}:{resultsError || ''}</span>
+      <span data-testid="overview-summary-state">
+        {summaryLoadState}:{summaryError || ''}:{resultSummary?.totalSubmissions ?? ''}
+      </span>
       <button onClick={onRetryResults}>Thử lại kết quả</button>
     </div>
   ),
@@ -125,6 +135,33 @@ const result = (id: string, studentName: string, studentClass: string) => ({
   answers: {},
 });
 
+const summaryFixture = {
+  totalSubmissions: 285,
+  uniqueCompletedWorks: 188,
+  todaySubmissions: 0,
+  uniqueStudents: 18,
+  attemptPolicy: 'latest',
+  timezone: 'Asia/Ho_Chi_Minh',
+  statistics: {
+    totalResults: 188,
+    mean: 5.76,
+    median: 6,
+    stdDev: 2.1,
+    min: 0,
+    max: 10,
+    passRate: 67,
+    passCount: 125,
+    failCount: 63,
+    scoreDistribution: [
+      { range: '0-2', count: 20, percentage: 10.64 },
+      { range: '3-4', count: 43, percentage: 22.87 },
+      { range: '5-6', count: 50, percentage: 26.6 },
+      { range: '7-8', count: 45, percentage: 23.94 },
+      { range: '9-10', count: 30, percentage: 15.96 },
+    ],
+  },
+} as const;
+
 const resetStores = () => {
   const logout = vi.fn();
   const loginSuccess = vi.fn();
@@ -168,7 +205,10 @@ describe('TeacherDashboard shell contracts', () => {
   beforeEach(() => {
     resetStores();
     mocks.navigate.mockReset();
-    mocks.callApi.mockReset().mockResolvedValue({ data: { mustChangePassword: false } });
+    mocks.callApi.mockReset().mockImplementation(async (action: string) => {
+      if (action === 'get_results_summary') return { data: summaryFixture };
+      return { data: { mustChangePassword: false } };
+    });
     mocks.invalidatePrefix.mockReset();
     mocks.showSuccess.mockReset();
     mocks.showError.mockReset();
@@ -183,11 +223,34 @@ describe('TeacherDashboard shell contracts', () => {
 
     await waitFor(() => expect(useQuizStore.getState().loadQuizzes).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(useQuizStore.getState().loadResults).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.callApi).toHaveBeenCalledWith('get_results_summary'));
+    expect(screen.getByTestId('overview-summary-state')).toHaveTextContent('success::285');
 
     expect(mocks.invalidatePrefix).not.toHaveBeenCalled();
 
     view.unmount();
 
+  });
+
+  it('keeps result-list success separate from a summary error and retries both sources', async () => {
+    mocks.callApi.mockImplementation(async (action: string) => {
+      if (action === 'get_results_summary') throw new Error('Không thể tải số liệu tổng quan.');
+      return { data: { mustChangePassword: false } };
+    });
+
+    render(<TeacherDashboard />);
+
+    await waitFor(() => expect(screen.getByTestId('overview-results-state')).toHaveTextContent('success:'));
+    await waitFor(() => expect(screen.getByTestId('overview-summary-state')).toHaveTextContent(
+      'error:Không thể tải số liệu tổng quan.:',
+    ));
+    expect(useQuizStore.getState().loadResults).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thử lại kết quả' }));
+    await waitFor(() => expect(useQuizStore.getState().loadResults).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(
+      mocks.callApi.mock.calls.filter(([action]) => action === 'get_results_summary'),
+    ).toHaveLength(2));
   });
 
   it('opens the mobile drawer from the header and removes the fixed bottom navigation', async () => {

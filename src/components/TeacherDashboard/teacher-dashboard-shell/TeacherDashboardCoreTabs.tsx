@@ -1,3 +1,4 @@
+import type { ResultDashboardSummary } from '../../../../shared/result-summary.contract';
 import { useQuizStore } from '../../../../stores/quizStore';
 import type { TeacherDashboardTab } from '../../../stores/useTeacherDashboardUIStore';
 import type { Quiz, StudentResult } from '../../../types';
@@ -9,6 +10,9 @@ interface TeacherDashboardCoreTabsProps {
   resultsLoadState: ResultsLoadState;
   resultsLoadError: string | null;
   loadTeacherResults: () => Promise<void>;
+  resultSummary: ResultDashboardSummary | null;
+  summaryLoadState: ResultsLoadState;
+  summaryLoadError: string | null;
   filteredResults: StudentResult[];
   quizzes: Quiz[];
   editingQuiz: Quiz | null;
@@ -27,6 +31,9 @@ export const TeacherDashboardCoreTabs = (props: TeacherDashboardCoreTabsProps) =
         resultsLoadState={props.resultsLoadState}
         resultsError={props.resultsLoadError}
         onRetryResults={props.loadTeacherResults}
+        resultSummary={props.resultSummary}
+        summaryLoadState={props.summaryLoadState}
+        summaryError={props.summaryLoadError}
       />
     )}
     {props.activeTab === 'results' && (

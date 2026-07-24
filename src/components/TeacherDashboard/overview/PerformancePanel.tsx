@@ -1,13 +1,14 @@
 import React from 'react';
 import { BarChart3, Target } from 'lucide-react';
-import type { ResultsStatistics } from '../../../utils/statisticsUtils';
+import type { ResultSummaryStatistics } from '../../../../shared/result-summary.contract';
 
 interface PerformancePanelProps {
-    statistics: ResultsStatistics;
+    statistics: ResultSummaryStatistics;
     isLoading: boolean;
+    hasError?: boolean;
 }
 
-const PerformancePanel: React.FC<PerformancePanelProps> = ({ statistics, isLoading }) => {
+const PerformancePanel: React.FC<PerformancePanelProps> = ({ statistics, isLoading, hasError = false }) => {
     if (isLoading) {
         return (
             <section aria-label="Đang tải tình hình học tập" className="rounded-[14px] border border-[#E5E7EB] bg-white p-5 sm:p-6">
@@ -16,6 +17,18 @@ const PerformancePanel: React.FC<PerformancePanelProps> = ({ statistics, isLoadi
                     <div className="h-64 animate-pulse rounded-[12px] bg-[#F1F5F9]" />
                     <div className="h-64 animate-pulse rounded-[12px] bg-[#F1F5F9]" />
                 </div>
+            </section>
+        );
+    }
+
+    if (hasError) {
+        return (
+            <section className="rounded-[14px] border border-dashed border-[#F3B5A7] bg-white px-5 py-12 text-center sm:px-8">
+                <BarChart3 aria-hidden="true" className="mx-auto size-8 text-[#E76F51]" />
+                <h2 className="mt-4 text-xl font-semibold text-[#172033]">Không thể tải tình hình điểm số</h2>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#526174]">
+                    Dữ liệu tổng hợp chưa sẵn sàng. Hãy thử tải lại để xem các chỉ số đầy đủ.
+                </p>
             </section>
         );
     }
@@ -43,7 +56,7 @@ const PerformancePanel: React.FC<PerformancePanelProps> = ({ statistics, isLoadi
                         Tình hình điểm số
                     </h2>
                     <p className="mt-1 text-sm text-[#526174]">
-                        Tổng hợp từ {statistics.totalResults} bài đã nộp trong phạm vi đang xem.
+                        Tổng hợp từ {statistics.totalResults} bài hoàn thành; mỗi bài lấy lần nộp cuối cùng.
                     </p>
                 </div>
                 <span className="inline-flex w-fit items-center gap-2 rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1.5 text-xs font-medium text-[#526174]">

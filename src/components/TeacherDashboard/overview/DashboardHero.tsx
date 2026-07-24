@@ -13,9 +13,9 @@ interface DashboardHeroProps {
     dateLabel: string;
     scopeLabel: string;
     isAdmin: boolean;
-    todaySubmissionCount: number;
-    passRate: number;
-    uniqueStudents: number;
+    todaySubmissionCount: number | string;
+    passRate: number | string;
+    uniqueStudents: number | string;
     onCreateQuiz: () => void;
     onViewResults: () => void;
 }
@@ -81,12 +81,12 @@ const DashboardHero: React.FC<DashboardHeroProps> = ({
 
             <dl className="grid grid-cols-3 divide-x divide-[#E5E7EB] rounded-[12px] border border-[#E5E7EB] bg-[#F8FAFC] px-2 py-4 sm:px-3">
                 <div className="min-w-0 px-2 text-center sm:px-3">
-                    <dt className="text-[11px] font-medium leading-4 text-[#7A8796] sm:text-xs">Bài nộp hôm nay</dt>
+                    <dt className="text-[11px] font-medium leading-4 text-[#7A8796] sm:text-xs">Lượt nộp hôm nay</dt>
                     <dd className="mt-2 text-2xl font-bold text-[#172033]">{todaySubmissionCount}</dd>
                 </div>
                 <div className="min-w-0 px-2 text-center sm:px-3">
                     <dt className="text-[11px] font-medium leading-4 text-[#7A8796] sm:text-xs">Tỷ lệ đạt</dt>
-                    <dd className="mt-2 text-2xl font-bold text-[#172033]">{passRate}%</dd>
+                    <dd className="mt-2 text-2xl font-bold text-[#172033]">{typeof passRate === 'number' ? `${passRate}%` : passRate}</dd>
                 </div>
                 <div className="min-w-0 px-2 text-center sm:px-3">
                     <dt className="text-[11px] font-medium leading-4 text-[#7A8796] sm:text-xs">Học sinh</dt>
