@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuestionType } from '../src/types';
 import type { QuizGenerationOptions } from '../src/services/geminiService';
+import { buildQuizSchemaRepairPrompt } from '../src/services/ai/quizRepair';
 
 const mocks = vi.hoisted(() => ({
   generateWithOpenAIResilient: vi.fn(),
@@ -79,6 +80,29 @@ describe('quiz generation quality pipeline', () => {
       }
       throw new Error(`Unexpected stage ${String(stage)}`);
     });
+  });
+
+  it('builds a schema repair prompt with safe issue paths and the raw draft', () => {
+    const prompt = buildQuizSchemaRepairPrompt({
+      quiz: {
+        title: 'Bản nháp lỗi',
+        questions: [{
+          type: QuestionType.CATEGORIZATION,
+          items: [{ id: 'item-1', content: 'Mục', categoryId: '' }],
+        }],
+      },
+      issues: [{
+        path: ['questions', 0, 'items', 0, 'categoryId'],
+        code: 'too_small',
+        message: 'Invalid input',
+      }],
+    });
+
+    expect(prompt).toContain('[LỖI SCHEMA]');
+    expect(prompt).toContain('questions.0.items.0.categoryId');
+    expect(prompt).toContain('too_small');
+    expect(prompt).toContain('"title":"Bản nháp lỗi"');
+    expect(prompt).toContain('Không được bỏ câu hợp lệ');
   });
 
   it('runs one targeted repair and one optional review with the same action', async () => {
