@@ -59,7 +59,7 @@ describe('student LaTeX dropdown menu', () => {
 
         cy.get('[role="listbox"]')
           .should('be.visible')
-          .then(($menu) => {
+          .should(($menu) => {
             const triggerRect = $trigger[0].getBoundingClientRect();
             const menuRect = $menu[0].getBoundingClientRect();
             expect($menu.closest('.question-renderer-shell')).to.have.length(0);
@@ -72,6 +72,11 @@ describe('student LaTeX dropdown menu', () => {
           });
       });
 
+    cy.get('[role="option"]')
+      .should('have.length', 4)
+      .each(($option) => {
+        cy.wrap($option).find('mjx-container').should('be.visible');
+      });
     cy.get('[role="option"]').first().click();
     cy.get('[data-testid="selected-answer"]').should('have.text', '$4a^2$');
     cy.get('[role="listbox"]').should('not.exist');
