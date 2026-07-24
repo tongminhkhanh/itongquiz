@@ -23,7 +23,7 @@ export const useLiveExamQuizPreparation = (
       setIsPreparing(true);
       setLoadError(null);
       try {
-        await loadQuizzes();
+        await loadQuizzes({ force: true });
         const loaded = useQuizStore.getState().quizzes
           .find((quiz) => quiz.id === joinedExam.quizId);
         if (loaded && (!Array.isArray(loaded.questions) || loaded.questions.length === 0)) {

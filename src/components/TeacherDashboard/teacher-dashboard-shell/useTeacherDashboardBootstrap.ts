@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQuizStore } from '../../../../stores/quizStore';
-
-import { cacheService } from '../../../services/CacheService';
 import type { ResultsLoadState } from './types';
 
 export const useTeacherDashboardBootstrap = () => {
-  const quizStore = useQuizStore();
+  const loadQuizzes = useQuizStore((state) => state.loadQuizzes);
   const [resultsLoadState, setResultsLoadState] = useState<ResultsLoadState>('loading');
   const [resultsLoadError, setResultsLoadError] = useState<string | null>(null);
 
@@ -24,11 +22,9 @@ export const useTeacherDashboardBootstrap = () => {
   }, []);
 
   useEffect(() => {
-
-    cacheService.invalidatePrefix('quizzes:');
-    quizStore.loadQuizzes();
+    void loadQuizzes();
     void loadTeacherResults();
-  }, [loadTeacherResults]);
+  }, [loadQuizzes, loadTeacherResults]);
 
   return { resultsLoadState, resultsLoadError, loadTeacherResults };
 };

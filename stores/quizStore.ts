@@ -5,6 +5,13 @@ import { callApi } from '../src/services/apiAdapter';
 import { serializeQuizForSave } from '../src/domain/quiz/quizSerializer';
 import { cacheService } from '../src/services/CacheService';
 import { filterActiveQuizzes, isArchivedQuizCategory } from '../src/domain/quiz/quizCategoryPolicy';
+import {
+    isQuizCatalogFresh,
+    type QuizLoadOptions,
+} from '../src/domain/quiz/quizLoadPolicy';
+import { logger } from '../src/services/logger';
+
+let activeQuizLoad: Promise<void> | null = null;
 
 type ViewType = 'home' | 'student' | 'teacher_login' | 'teacher_dash' | 'student_portal' | 'shop';
 
@@ -128,6 +135,7 @@ interface QuizState {
     results: StudentResult[];
     isLoading: boolean;
     error: string | null;
+    quizzesLoadedAt: number | null;
 
     // View actions
     setView: (view: ViewType) => void;
@@ -151,7 +159,7 @@ interface QuizState {
     setError: (error: string | null) => void;
 
     // Async Actions
-    loadQuizzes: () => Promise<void>;
+    loadQuizzes: (options?: QuizLoadOptions) => Promise<void>;
     loadQuizQuestions: (quizId: string) => Promise<Quiz | null>;
     loadResults: () => Promise<void>;
     createQuiz: (quiz: Quiz) => Promise<void>;
@@ -174,6 +182,7 @@ export const useQuizStore = create<QuizState>()(
             results: [],
             isLoading: false,
             error: null,
+            quizzesLoadedAt: null,
 
             // View actions
             setView: (view) => set({ view }),
@@ -226,7 +235,7 @@ export const useQuizStore = create<QuizState>()(
                     const res = await callApi<any>('duplicate_quiz', { quizId });
                     if (res?.status === 'success') {
                         // Reload to get the new quiz with all questions
-                        await get().loadQuizzes();
+                        await get().loadQuizzes({ force: true });
                         return true;
                     }
                     return false;
@@ -237,66 +246,122 @@ export const useQuizStore = create<QuizState>()(
             },
 
             // Async Actions - All routes through Cloudflare Workers D1
-            loadQuizzes: async () => {
-                set({ isLoading: true, error: null });
-                try {
-                    const [quizData, questionData] = await Promise.all([
-                        callApi<any[]>('get_quizzes'),
-                        callApi<any[]>('get_questions')
-                    ]);
+            loadQuizzes: (options = {}) => {
+                const state = get();
+                const force = options.force === true;
 
-                    if (!quizData || !Array.isArray(quizData)) {
-                        set({ quizzes: [], isLoading: false });
-                        return;
-                    }
+                if (!force && isQuizCatalogFresh({
+                    hasQuizzes: state.quizzes.length > 0,
+                    loadedAt: state.quizzesLoadedAt,
+                    now: Date.now(),
+                    maxAgeMs: options.maxAgeMs,
+                })) {
+                    return Promise.resolve();
+                }
 
-                    const existingById = new Map(get().quizzes.map((quiz) => [quiz.id, quiz]));
-                    const questionsByQuizId = new Map<string, any[]>();
+                if (force) {
+                    cacheService.invalidatePrefix('quizzes:');
+                }
 
-                    if (Array.isArray(questionData)) {
-                        questionData.forEach((row: any) => {
-                            const question = normalizeQuestionRow(row);
-                            const quizId = question.quizId || row.quiz_id;
-                            if (!quizId) return;
+                if (activeQuizLoad) return activeQuizLoad;
 
-                            const questions = questionsByQuizId.get(quizId) || [];
-                            questions.push(question);
-                            questionsByQuizId.set(quizId, questions);
+                const request = (async () => {
+                    set({ isLoading: true, error: null });
+                    try {
+                        const [quizData, questionData] = await Promise.all([
+                            callApi<any[]>('get_quizzes'),
+                            callApi<any[]>('get_questions'),
+                        ]);
+
+                        if (!Array.isArray(quizData)) {
+                            set({ quizzes: [], isLoading: false, quizzesLoadedAt: null });
+                            return;
+                        }
+
+                        const existingById = new Map(
+                            get().quizzes.map((quiz) => [quiz.id, quiz]),
+                        );
+                        const questionsByQuizId = new Map<string, any[]>();
+
+                        if (Array.isArray(questionData)) {
+                            questionData.forEach((row: any) => {
+                                const question = normalizeQuestionRow(row);
+                                const quizId = question.quizId || row.quiz_id;
+                                if (!quizId) return;
+
+                                const questions = questionsByQuizId.get(quizId) || [];
+                                questions.push(question);
+                                questionsByQuizId.set(quizId, questions);
+                            });
+                        }
+
+                        const quizzes: Quiz[] = filterActiveQuizzes(quizData).map((row: any) => ({
+                            id: row.id,
+                            title: row.title || '',
+                            classLevel: row.classLevel || row.class_level || '',
+                            category: row.category || '',
+                            timeLimit: parseInt(row.timeLimit || row.time_limit) || 30,
+                            createdAt: row.createdAt || row.created_at || new Date().toISOString(),
+                            createdBy: row.createdBy || row.created_by || '',
+                            accessCode: row.accessCode || row.access_code || undefined,
+                            requireCode:
+                                row.requireCode === true
+                                || row.requireCode === 'TRUE'
+                                || row.requireCode === 1
+                                || row.require_code === true
+                                || row.require_code === 'TRUE'
+                                || row.require_code === 1,
+                            showOnHome: !(
+                                row.showOnHome === false
+                                || row.showOnHome === 'FALSE'
+                                || row.showOnHome === 0
+                                || row.show_on_home === false
+                                || row.show_on_home === 'FALSE'
+                                || row.show_on_home === 0
+                            ),
+                            tags: (() => {
+                                if (typeof row.tags === 'string') {
+                                    try {
+                                        return JSON.parse(row.tags);
+                                    } catch {
+                                        return [];
+                                    }
+                                }
+                                return Array.isArray(row.tags) ? row.tags : [];
+                            })(),
+                            questions:
+                                questionsByQuizId.get(row.id)
+                                || existingById.get(row.id)?.questions
+                                || [],
+                        }));
+
+                        const currentSelectedQuiz = get().selectedQuiz;
+                        const updatedSelectedQuiz = currentSelectedQuiz
+                            ? quizzes.find((quiz) => quiz.id === currentSelectedQuiz.id) || null
+                            : null;
+
+                        logger.debug(`Loaded ${quizzes.length} quizzes from D1`, {
+                            module: 'QuizStore',
+                        });
+                        set({
+                            quizzes,
+                            selectedQuiz: updatedSelectedQuiz,
+                            isLoading: false,
+                            quizzesLoadedAt: Date.now(),
+                        });
+                    } catch (err: any) {
+                        set({
+                            error: err.message || 'Failed to load quizzes',
+                            isLoading: false,
+                            quizzesLoadedAt: null,
                         });
                     }
+                })();
 
-                    // Build Quiz objects
-                    const quizzes: Quiz[] = filterActiveQuizzes(quizData).map((row: any) => ({
-                        id: row.id,
-                        title: row.title || '',
-                        classLevel: row.classLevel || row.class_level || '',
-                        category: row.category || '',
-                        timeLimit: parseInt(row.timeLimit || row.time_limit) || 30,
-                        createdAt: row.createdAt || row.created_at || new Date().toISOString(),
-                        createdBy: row.createdBy || row.created_by || '',
-                        accessCode: row.accessCode || row.access_code || undefined,
-                        requireCode: row.requireCode === true || row.requireCode === 'TRUE' || row.requireCode === 1 || row.require_code === true || row.require_code === 'TRUE' || row.require_code === 1,
-                        showOnHome: !(row.showOnHome === false || row.showOnHome === 'FALSE' || row.showOnHome === 0 || row.show_on_home === false || row.show_on_home === 'FALSE' || row.show_on_home === 0),
-                        tags: (() => {
-                            if (typeof row.tags === 'string') {
-                                try { return JSON.parse(row.tags); } catch { return []; }
-                            }
-                            return Array.isArray(row.tags) ? row.tags : [];
-                        })(),
-                        questions: questionsByQuizId.get(row.id) || existingById.get(row.id)?.questions || []
-                    }));
-
-                    // Sync selectedQuiz with fresh data
-                    const currentSelectedQuiz = get().selectedQuiz;
-                    const updatedSelectedQuiz = currentSelectedQuiz
-                        ? quizzes.find(q => q.id === currentSelectedQuiz.id) || null
-                        : null;
-
-                    console.log(`[quizStore] Loaded ${quizzes.length} quizzes from D1`);
-                    set({ quizzes, selectedQuiz: updatedSelectedQuiz, isLoading: false });
-                } catch (err: any) {
-                    set({ error: err.message || 'Failed to load quizzes', isLoading: false });
-                }
+                activeQuizLoad = request.finally(() => {
+                    activeQuizLoad = null;
+                });
+                return activeQuizLoad;
             },
 
             loadQuizQuestions: async (quizId: string) => {

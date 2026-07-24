@@ -146,6 +146,7 @@ const resetStores = () => {
       result('3', 'Chi', '13A'),
     ],
     error: null,
+    quizzesLoadedAt: null,
     loadQuizzes: vi.fn().mockResolvedValue(undefined),
     loadResults: vi.fn().mockResolvedValue(undefined),
     setError: vi.fn((error: string | null) => useQuizStore.setState({ error })),
@@ -177,13 +178,13 @@ describe('TeacherDashboard shell contracts', () => {
     vi.restoreAllMocks();
   });
 
-  it('bootstraps teacher data using the HttpOnly cookie session', async () => {
+  it('bootstraps teacher data without forcing a duplicate quiz refresh', async () => {
     const view = render(<TeacherDashboard />);
 
     await waitFor(() => expect(useQuizStore.getState().loadQuizzes).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(useQuizStore.getState().loadResults).toHaveBeenCalledTimes(1));
 
-    expect(mocks.invalidatePrefix).toHaveBeenCalledWith('quizzes:');
+    expect(mocks.invalidatePrefix).not.toHaveBeenCalled();
 
     view.unmount();
 
