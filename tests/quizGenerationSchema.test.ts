@@ -90,4 +90,38 @@ describe('generated quiz schema', () => {
       }],
     })).toThrow();
   });
+
+  it('rejects categorization items whose categoryId is empty or unknown', () => {
+    expect(() => parseGeneratedQuiz({
+      title: 'Đề phân loại',
+      questions: [{
+        type: 'CATEGORIZATION',
+        question: 'Phân loại',
+        categories: [
+          { id: 'nhom-1', name: 'Nhóm 1' },
+          { id: 'nhom-2', name: 'Nhóm 2' },
+        ],
+        items: [
+          { id: 'item-1', content: 'Mục hợp lệ', categoryId: 'nhom-1' },
+          { id: 'item-2', content: 'Mục lỗi', categoryId: '' },
+        ],
+        explanation: 'Giải thích đầy đủ.',
+        difficultyLevel: 2,
+      }],
+    })).toThrow();
+  });
+
+  it('rejects dropdown blanks represented as plain strings', () => {
+    expect(() => parseGeneratedQuiz({
+      title: 'Đề dropdown',
+      questions: [{
+        type: 'DROPDOWN',
+        question: 'Chọn đáp án',
+        text: 'Thủ đô Việt Nam là [1].',
+        blanks: ['Hà Nội'],
+        explanation: 'Hà Nội là thủ đô Việt Nam.',
+        difficultyLevel: 1,
+      }],
+    })).toThrow();
+  });
 });
