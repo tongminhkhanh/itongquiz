@@ -12,6 +12,7 @@ import {
 } from '../../../services/ai/schemas/ocrDocumentSchema';
 import { generateTrangNguyenQuiz } from '../../../services/trangNguyenGeminiService';
 import { showError } from '../../../utils/toast';
+import { getQuizGenerationUserMessage } from '../../../services/ai/quizGenerationErrors';
 import { normalizeAiCategory, normalizeTags } from '../utils/quizNormalizers';
 import { buildQuizGenerationOptions } from '../domain/buildQuizGenerationRequest';
 import { buildQuestionRegenerationPrompt } from '../../../services/ai/prompts/questionRegenerationPrompt';
@@ -338,8 +339,7 @@ export const useQuizGeneration = ({
             if (controller.signal.aborted) {
                 setGenerationStep('cancelled');
             } else {
-                const normalizedError = error instanceof Error ? error : new Error(String(error));
-                showError(normalizedError.message || 'Đã xảy ra lỗi khi tạo đề');
+                showError(getQuizGenerationUserMessage(error));
                 setGenerationStep('idle');
             }
         } finally {

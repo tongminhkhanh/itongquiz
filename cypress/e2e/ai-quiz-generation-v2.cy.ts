@@ -141,7 +141,22 @@ const validTenQuestionQuiz = {
   ],
 };
 
-type AiMode = 'success' | 'failure' | 'cancel';
+const malformedTenQuestionQuiz = {
+  ...validTenQuestionQuiz,
+  questions: validTenQuestionQuiz.questions.map((question, index) => (
+    index === 0 ? { ...question, options: [] } : question
+  )),
+};
+
+const SCHEMA_ERROR_MESSAGE =
+  'AI tạo một số câu chưa đúng cấu trúc. Vui lòng thử tạo lại đề hoặc giảm số dạng câu trong một lần.';
+
+type AiMode =
+  | 'success'
+  | 'failure'
+  | 'cancel'
+  | 'schema-repair-success'
+  | 'schema-repair-failure';
 
 const aiResponse = (payload: unknown) => ({
   choices: [{ message: { content: JSON.stringify(payload) } }],
@@ -211,6 +226,30 @@ const interceptAi = (mode: AiMode) => {
       });
       return;
     }
+    if (stage === 'GENERATE' && mode.startsWith('schema-repair-')) {
+      request.reply({
+        statusCode: 200,
+        delay: 450,
+        body: aiResponse(malformedTenQuestionQuiz),
+      });
+      return;
+    }
+    if (stage === 'REPAIR' && mode === 'schema-repair-success') {
+      request.reply({
+        statusCode: 200,
+        delay: 450,
+        body: aiResponse(validTenQuestionQuiz),
+      });
+      return;
+    }
+    if (stage === 'REPAIR' && mode === 'schema-repair-failure') {
+      request.reply({
+        statusCode: 200,
+        delay: 450,
+        body: aiResponse(malformedTenQuestionQuiz),
+      });
+      return;
+    }
     request.reply({
       statusCode: 200,
       delay: stage === 'REVIEW' ? 700 : 450,
@@ -224,7 +263,7 @@ const visitCreateTab = (mode: AiMode) => {
   interceptAi(mode);
   cy.visit('/', { onBeforeLoad: installSession });
   cy.contains('Tạo đề kiểm tra mới', { timeout: 15_000 }).should('be.visible');
-  cy.contains('Dạng câu hỏi & ma trận').should('be.visible');
+  cy.contains(/^Dạng câu hỏi(?: & ma trận)?$/).should('be.visible');
   cy.contains('Lượt tạo đề AI hôm nay:').should('contain.text', '5/5');
 };
 
@@ -239,11 +278,20 @@ const enterTopicAndUploadPdf = () => {
 };
 
 const readDocumentAndChoosePages = () => {
-  cy.contains('button', 'ĐỌC VÀ XEM TRƯỚC').click();
+  cy.contains('button', /ĐỌC VÀ XEM TRƯỚC/).click();
   cy.contains('Đang đọc tài liệu').should('be.visible');
   cy.wait('@aiChat');
   cy.get('input[aria-label="Trang 2"]').uncheck();
   cy.contains('Đã chọn 2/3 trang').should('be.visible');
+};
+
+const expectAiStages = (expectedStages: string[]) => {
+  cy.get('@aiChat.all').should((interceptions) => {
+    const calls = interceptions as Array<{
+      request: { body?: { _meta?: { stage?: string } } };
+    }>;
+    expect(calls.map((call) => call.request.body?._meta?.stage)).to.deep.equal(expectedStages);
+  });
 };
 
 describe('AI quiz generation V2', () => {
@@ -257,6 +305,33 @@ describe('AI quiz generation V2', () => {
     cy.contains('Đang kiểm tra đáp án', { timeout: 10_000 }).should('be.visible');
     cy.contains('10 câu', { timeout: 15_000 }).should('be.visible');
     cy.contains('button', 'Lưu đề').should('be.enabled');
+  });
+
+  it('repairs a malformed schema once before review and enables saving', () => {
+    visitCreateTab('schema-repair-success');
+    enterTopicAndUploadPdf();
+    readDocumentAndChoosePages();
+
+    cy.contains('button', 'TẠO ĐỀ TỪ 2 TRANG ĐÃ CHỌN').click();
+    cy.contains('Đang tạo câu hỏi').should('be.visible');
+    cy.contains('Đang sửa các câu chưa đạt', { timeout: 10_000 }).should('be.visible');
+    cy.contains('Đang kiểm tra đáp án', { timeout: 10_000 }).should('be.visible');
+    cy.contains('10 câu', { timeout: 15_000 }).should('be.visible');
+    cy.contains('button', 'Lưu đề').should('be.enabled');
+    expectAiStages(['OCR', 'GENERATE', 'REPAIR', 'REVIEW']);
+  });
+
+  it('stops after one malformed schema repair and shows a concise error', () => {
+    visitCreateTab('schema-repair-failure');
+    enterTopicAndUploadPdf();
+    readDocumentAndChoosePages();
+
+    cy.contains('button', 'TẠO ĐỀ TỪ 2 TRANG ĐÃ CHỌN').click();
+    cy.contains(SCHEMA_ERROR_MESSAGE, { timeout: 10_000 }).should('be.visible');
+    cy.get('body').should('not.contain.text', 'too_small');
+    cy.get('body').should('not.contain.text', 'invalid_type');
+    cy.get('body').should('not.contain.text', 'questions');
+    expectAiStages(['OCR', 'GENERATE', 'REPAIR']);
   });
 
   it('keeps quota and form values after a 503 generation failure', () => {

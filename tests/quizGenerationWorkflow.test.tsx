@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuestionType, type Question } from '../src/types';
 import { useQuizGeneration } from '../src/features/quiz-generator/hooks/useQuizGeneration';
 import type { OcrDocument } from '../src/services/ai/schemas/ocrDocumentSchema';
+import { GeneratedQuizSchema } from '../src/services/ai/schemas/quizGenerationSchema';
+import { GENERATED_QUIZ_SCHEMA_USER_MESSAGE } from '../src/services/ai/quizGenerationErrors';
+import { showError } from '../src/utils/toast';
 
 const aiMocks = vi.hoisted(() => ({
   extractTextFromPdf: vi.fn(),
@@ -42,6 +45,8 @@ vi.mock('../src/features/quiz-generator/domain/quizCreationValidation', () => ({
 vi.mock('../src/utils/toast', () => ({
   showError: vi.fn(),
 }));
+
+const showErrorMock = vi.mocked(showError);
 
 const makeOcrDocument = (): OcrDocument => ({
   pages: [
@@ -106,6 +111,7 @@ const renderGeneration = (
   username: 'teacher-a',
   teacherName: 'Cô A',
   aiQuizV2Enabled,
+  aiBlueprintV3Enabled: false,
 }));
 
 const prepareAndGeneratePdf = async (
@@ -202,6 +208,50 @@ describe('quiz AI workflow', () => {
     const generationContext = aiMocks.generateQuiz.mock.calls[0][8];
     expect(generationContext.action.workflow).toBe('QUESTION_REGENERATE');
     expect(generationContext.stage).toBe('REGENERATE');
+  });
+
+  it('shows a concise message instead of raw schema issue JSON', async () => {
+    const form = makeForm();
+    const schemaResult = GeneratedQuizSchema.safeParse({
+      title: 'Đề lỗi',
+      questions: [{
+        type: QuestionType.CATEGORIZATION,
+        question: 'Phân loại',
+        categories: [
+          { id: 'nhom-1', name: 'Nhóm 1' },
+          { id: 'nhom-2', name: 'Nhóm 2' },
+        ],
+        items: [{ id: 'item-1', content: 'Mục lỗi', categoryId: '' }],
+        explanation: 'Giải thích.',
+        difficultyLevel: 1,
+      }],
+    });
+    if (schemaResult.success) throw new Error('Expected schema fixture to be invalid.');
+    aiMocks.generateQuiz.mockRejectedValue(schemaResult.error);
+    const { result } = renderGeneration(form);
+
+    await act(async () => {
+      await result.current.handleGenerate('exam');
+    });
+
+    expect(showErrorMock).toHaveBeenCalledWith(GENERATED_QUIZ_SCHEMA_USER_MESSAGE);
+    expect(String(showErrorMock.mock.calls[0][0])).not.toContain('too_small');
+    expect(String(showErrorMock.mock.calls[0][0])).not.toContain('questions');
+    expect(String(showErrorMock.mock.calls[0][0])).not.toMatch(/^\s*\[/);
+  });
+
+  it('preserves actionable messages for non-schema generation errors', async () => {
+    const form = makeForm();
+    aiMocks.generateQuiz.mockRejectedValue(
+      new Error('Đã hết lượt tạo đề AI hôm nay.'),
+    );
+    const { result } = renderGeneration(form);
+
+    await act(async () => {
+      await result.current.handleGenerate('exam');
+    });
+
+    expect(showErrorMock).toHaveBeenCalledWith('Đã hết lượt tạo đề AI hôm nay.');
   });
 
   it('exposes cancellation for the active generation request', async () => {

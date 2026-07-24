@@ -5,6 +5,7 @@ import type {
 import type { GeneratedQuizV3 } from './question-contracts/questionContract.types';
 import { getSelectedContractPromptFragments } from './question-contracts/questionContractRegistry';
 import type { QuizAuditIssue, QuizSlotAuditIssue } from './quizAudit';
+import type { GeneratedQuizSchemaIssue } from './quizGenerationErrors';
 import type { GeneratedQuestion, GeneratedQuizPayload } from './schemas/quizGenerationSchema';
 
 export interface QuizRepairRequest {
@@ -18,6 +19,33 @@ export interface QuizRepairPlan {
   replacementIndexes: number[];
   missingCount: number;
   requestedCount: number;
+}
+
+export interface QuizSchemaRepairRequest {
+  quiz: unknown;
+  issues: GeneratedQuizSchemaIssue[];
+}
+
+export function buildQuizSchemaRepairPrompt(input: QuizSchemaRepairRequest): string {
+  const issueLines = input.issues.map((issue) => {
+    const path = issue.path.join('.') || '<root>';
+    return `- ${path} | ${issue.code} | ${issue.message}`;
+  });
+
+  return [
+    'Bạn đang sửa cấu trúc JSON của một đề do AI tạo.',
+    'Chỉ trả về một JSON object hoàn chỉnh, không dùng markdown hoặc lời dẫn.',
+    '[LỖI SCHEMA]',
+    ...issueLines,
+    '[BẢN NHÁP]',
+    JSON.stringify(input.quiz),
+    '[YÊU CẦU]',
+    'Sửa đúng các trường sai cấu trúc theo lỗi schema.',
+    'Không được bỏ câu hợp lệ, không đổi nội dung đúng nếu không cần thiết.',
+    'Không tự giảm số câu và không thêm dạng câu ngoài bản nháp.',
+    'Mọi items[].categoryId phải trùng với một categories[].id.',
+    'Mọi DROPDOWN.blanks[] phải là object gồm id, options và correctAnswer.',
+  ].join('\n');
 }
 
 export class QuizGenerationValidationError extends Error {
