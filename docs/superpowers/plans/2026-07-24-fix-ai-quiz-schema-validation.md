@@ -806,7 +806,7 @@ aiBlueprintV3Enabled: false,
 ```ts
 it('shows a concise message instead of raw schema issue JSON', async () => {
   const form = makeForm();
-  aiMocks.generateQuiz.mockRejectedValue(new GeneratedQuizSchemaError([{ 
+  aiMocks.generateQuiz.mockRejectedValue(new GeneratedQuizSchemaError([{
     path: ['questions', 0, 'items', 3, 'categoryId'],
     code: 'too_small',
     message: 'Invalid input',
