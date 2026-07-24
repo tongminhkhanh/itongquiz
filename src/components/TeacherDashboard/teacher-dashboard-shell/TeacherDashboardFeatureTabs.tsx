@@ -23,7 +23,7 @@ interface TeacherDashboardFeatureTabsProps {
 export const TeacherDashboardFeatureTabs = (props: TeacherDashboardFeatureTabsProps) => (
   <>
     {props.activeTab === 'announcements' && props.isAdmin && (
-      <div className="max-w-4xl mx-auto"><AnnouncementSettings /></div>
+      <div className="mx-auto w-full max-w-[1440px]"><AnnouncementSettings /></div>
     )}
     {props.activeTab === 'classes' && (
       <ClassManagementTab isAdmin={props.isAdmin || false} username={props.username || null} />

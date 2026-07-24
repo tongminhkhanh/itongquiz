@@ -112,8 +112,14 @@ export function AnnouncementComposer({
           </ul>
         </div>
       )}
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(260px,0.9fr)_minmax(300px,1fr)]">
-        <section className="space-y-4 rounded-2xl border bg-white p-5">
+      <div
+        data-testid="announcement-composer-layout"
+        className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]"
+      >
+        <section
+          data-testid="announcement-content-panel"
+          className="min-w-0 space-y-4 rounded-2xl border bg-white p-5"
+        >
           <h3 className="text-lg font-bold text-slate-900">Nội dung</h3>
           <label className="block text-sm font-semibold">
             Tiêu đề
@@ -168,47 +174,54 @@ export function AnnouncementComposer({
             />
           </label>
         </section>
-        <div className="rounded-2xl border bg-white p-5">
-          <AnnouncementDistributionFields
-            draft={draft}
-            errors={errors}
-            onChange={updateDraft}
-          />
+
+        <div
+          data-testid="announcement-composer-rail"
+          className="min-w-0 space-y-5"
+        >
+          <div className="rounded-2xl border bg-white p-5">
+            <AnnouncementDistributionFields
+              draft={draft}
+              errors={errors}
+              onChange={updateDraft}
+            />
+          </div>
+
+          <section className="space-y-4 rounded-2xl border bg-slate-50 p-5 xl:sticky xl:top-20">
+            <h3 className="text-lg font-bold text-slate-900">Xem trước</h3>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ['LOGIN', 'Đăng nhập'],
+                ['TEACHER_DASHBOARD', 'Giáo viên'],
+                ['STUDENT_DASHBOARD', 'Học sinh'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={surface === value}
+                  onClick={() => setSurface(value)}
+                  className="rounded-full border bg-white px-3 py-2 text-sm"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              {(['desktop', 'mobile'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={device === value}
+                  onClick={() => setDevice(value)}
+                  className="rounded-full border bg-white px-3 py-2 text-sm capitalize"
+                >
+                  {value === 'desktop' ? 'Desktop' : 'Mobile'}
+                </button>
+              ))}
+            </div>
+            <AnnouncementPreview draft={draft} surface={surface} device={device} />
+          </section>
         </div>
-        <section className="space-y-4 rounded-2xl border bg-slate-50 p-5 xl:sticky xl:top-20 xl:self-start">
-          <h3 className="text-lg font-bold text-slate-900">Xem trước</h3>
-          <div className="flex flex-wrap gap-2">
-            {([
-              ['LOGIN', 'Đăng nhập'],
-              ['TEACHER_DASHBOARD', 'Giáo viên'],
-              ['STUDENT_DASHBOARD', 'Học sinh'],
-            ] as const).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={surface === value}
-                onClick={() => setSurface(value)}
-                className="rounded-full border bg-white px-3 py-2 text-sm"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            {(['desktop', 'mobile'] as const).map((value) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={device === value}
-                onClick={() => setDevice(value)}
-                className="rounded-full border bg-white px-3 py-2 text-sm capitalize"
-              >
-                {value === 'desktop' ? 'Desktop' : 'Mobile'}
-              </button>
-            ))}
-          </div>
-          <AnnouncementPreview draft={draft} surface={surface} device={device} />
-        </section>
       </div>
       <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
         <button type="button" disabled={saving} onClick={() => void saveDraft()} className="rounded-xl border px-4 py-2 font-semibold">
