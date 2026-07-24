@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ResultDashboardSummary } from '../shared/result-summary.contract';
 import OverviewTab from '../src/components/TeacherDashboard/OverviewTab';
 import { useAuthStore } from '../stores/authStore';
 import { useQuizStore } from '../stores/quizStore';
@@ -25,6 +26,47 @@ const makeResult = (
     submittedAt,
     answers: {},
 });
+
+
+const summaryFixture: ResultDashboardSummary = {
+    totalSubmissions: 285,
+    uniqueCompletedWorks: 188,
+    todaySubmissions: 0,
+    uniqueStudents: 18,
+    attemptPolicy: 'latest',
+    timezone: 'Asia/Ho_Chi_Minh',
+    statistics: {
+        totalResults: 188,
+        mean: 5.76,
+        median: 6,
+        stdDev: 2.1,
+        min: 0,
+        max: 10,
+        passRate: 67,
+        passCount: 125,
+        failCount: 63,
+        scoreDistribution: [
+            { range: '0-2', count: 20, percentage: 10.64 },
+            { range: '3-4', count: 43, percentage: 22.87 },
+            { range: '5-6', count: 50, percentage: 26.6 },
+            { range: '7-8', count: 45, percentage: 23.94 },
+            { range: '9-10', count: 30, percentage: 15.96 },
+        ],
+    },
+};
+
+const renderOverview = (
+    overrides: Partial<React.ComponentProps<typeof OverviewTab>> = {},
+) => render(
+    <OverviewTab
+        resultsLoadState="success"
+        onRetryResults={vi.fn()}
+        resultSummary={summaryFixture}
+        summaryLoadState="success"
+        summaryError={null}
+        {...overrides}
+    />,
+);
 
 describe('TeacherDashboard OverviewTab', () => {
     beforeEach(() => {
@@ -71,21 +113,22 @@ describe('TeacherDashboard OverviewTab', () => {
     });
 
     it('uses exact normalized class matching and only shows submissions from today', () => {
-        render(
-            <OverviewTab
-                resultsLoadState="success"
-                onRetryResults={vi.fn()}
-            />,
-        );
+        renderOverview();
 
-        const quizCard = screen.getByText('Đề kiểm tra').parentElement;
-        const resultCard = screen.getByText('Số bài đã nộp').parentElement;
-        const studentCard = screen.getByText('Học sinh tham gia').parentElement;
+        const quizCard = screen.getByText('Đề kiểm tra').closest('article');
+        const resultCard = screen.getByText('Tổng lượt nộp').closest('article');
+        const studentCard = screen.getByText('Học sinh tham gia').closest('article');
+        const averageCard = screen.getAllByText('Điểm trung bình')[0].closest('article');
 
         expect(quizCard && within(quizCard).getByText('1')).toBeTruthy();
-        expect(resultCard && within(resultCard).getByText('2')).toBeTruthy();
-        expect(studentCard && within(studentCard).getByText('2')).toBeTruthy();
+        expect(resultCard && within(resultCard).getByText('285')).toBeTruthy();
+        expect(resultCard?.textContent).toContain('188 bài hoàn thành · 0 lượt hôm nay');
+        expect(studentCard && within(studentCard).getByText('18')).toBeTruthy();
+        expect(averageCard && within(averageCard).getByText('5.8')).toBeTruthy();
+        expect(averageCard?.textContent).toContain('67% bài đạt từ 5 điểm trở lên');
+        expect(screen.queryByText('Số bài đã nộp')).toBeNull();
         expect(screen.getByRole('heading', { name: 'Tình hình điểm số' })).toBeTruthy();
+        expect(screen.getByText('Tổng hợp từ 188 bài hoàn thành; mỗi bài lấy lần nộp cuối cùng.')).toBeTruthy();
         const recentSubmission = screen.getByText('vừa nộp').parentElement?.textContent || '';
         expect(recentSubmission).toContain('Bài kiểm tra');
         expect(document.body.textContent).not.toContain('Bình');
@@ -93,12 +136,7 @@ describe('TeacherDashboard OverviewTab', () => {
     });
 
     it('uses the warm flat teacher dashboard palette for the hero', () => {
-        render(
-            <OverviewTab
-                resultsLoadState="success"
-                onRetryResults={vi.fn()}
-            />,
-        );
+        renderOverview();
 
         const heroHeading = screen.getByRole('heading', { name: 'Chào buổi sáng, Cô An!' });
         const heroSection = heroHeading.closest('section');
@@ -111,12 +149,7 @@ describe('TeacherDashboard OverviewTab', () => {
     });
 
     it('uses restrained flat cards without hover lift', () => {
-        render(
-            <OverviewTab
-                resultsLoadState="success"
-                onRetryResults={vi.fn()}
-            />,
-        );
+        renderOverview();
 
         const quickActionsHeading = screen.getByRole('heading', { name: 'Bạn muốn làm gì?' });
         const quickActionsSection = quickActionsHeading.closest('section');
@@ -133,12 +166,7 @@ describe('TeacherDashboard OverviewTab', () => {
     });
 
     it('uses flat bordered analysis and activity panels', () => {
-        render(
-            <OverviewTab
-                resultsLoadState="success"
-                onRetryResults={vi.fn()}
-            />,
-        );
+        renderOverview();
 
         const performancePanel = screen.getByRole('heading', { name: 'Tình hình điểm số' }).closest('section');
         const submissionsPanel = screen.getByRole('heading', { name: 'Bài vừa nộp' }).closest('section');
@@ -159,12 +187,7 @@ describe('TeacherDashboard OverviewTab', () => {
         ['Quản lý lớp', 'classes'],
         ['Cấp chứng nhận', 'certificates'],
     ] as const)('opens %s from the quick action area', (label, expectedTab) => {
-        render(
-            <OverviewTab
-                resultsLoadState="success"
-                onRetryResults={vi.fn()}
-            />,
-        );
+        renderOverview();
 
         const quickActionsHeading = screen.getByRole('heading', { name: 'Bạn muốn làm gì?' });
         const quickActionsSection = quickActionsHeading.closest('section');
@@ -175,12 +198,7 @@ describe('TeacherDashboard OverviewTab', () => {
     });
 
     it('shows recent quizzes and opens the quiz management tab', () => {
-        render(
-            <OverviewTab
-                resultsLoadState="success"
-                onRetryResults={vi.fn()}
-            />,
-        );
+        renderOverview();
 
         expect(screen.getByRole('heading', { name: 'Đề kiểm tra gần đây' })).toBeTruthy();
         expect(screen.getAllByText('Đề lớp 3A').length).toBeGreaterThan(0);
@@ -193,15 +211,26 @@ describe('TeacherDashboard OverviewTab', () => {
         expect(useTeacherDashboardUIStore.getState().activeTab).toBe('manage');
     });
 
+    it('does not fall back to the paginated result array when summary loading fails', () => {
+        renderOverview({
+            resultSummary: null,
+            summaryLoadState: 'error',
+            summaryError: 'Không thể tải số liệu tổng quan.',
+        });
+
+        const resultCard = screen.getByText('Tổng lượt nộp').parentElement;
+        expect(resultCard && within(resultCard).getByText('—')).toBeTruthy();
+        expect(screen.getByRole('alert').textContent).toContain('Không thể tải số liệu tổng quan.');
+        expect(screen.getByRole('heading', { name: 'Không thể tải tình hình điểm số' })).toBeTruthy();
+    });
+
     it('shows a retry action when loading results fails', () => {
         const onRetryResults = vi.fn();
-        render(
-            <OverviewTab
-                resultsLoadState="error"
-                resultsError="Phiên đăng nhập đã hết hạn"
-                onRetryResults={onRetryResults}
-            />,
-        );
+        renderOverview({
+            resultsLoadState: 'error',
+            resultsError: 'Phiên đăng nhập đã hết hạn',
+            onRetryResults,
+        });
 
         expect(screen.getByRole('alert').textContent).toContain('Phiên đăng nhập đã hết hạn');
         fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
