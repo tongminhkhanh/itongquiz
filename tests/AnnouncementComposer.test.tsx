@@ -63,6 +63,23 @@ describe('AnnouncementComposer', () => {
       .toHaveAttribute('data-device', 'mobile');
   });
 
+  it('keeps the content editor in a flexible main column instead of a collapsing three-column grid', () => {
+    render(<AnnouncementComposer />);
+
+    const layout = screen.getByTestId('announcement-composer-layout');
+    const main = screen.getByTestId('announcement-content-panel');
+    const rail = screen.getByTestId('announcement-composer-rail');
+
+    expect(layout).toContainElement(main);
+    expect(layout).toContainElement(rail);
+    expect(layout.className).not.toContain(
+      'xl:grid-cols-[minmax(0,1.25fr)_minmax(260px,0.9fr)_minmax(300px,1fr)]',
+    );
+    expect(layout.className).toContain(
+      'xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]',
+    );
+  });
+
   it('saves a draft, validates publish, and keeps send-test separate', async () => {
     const onSaveDraft = vi.fn().mockResolvedValue(undefined);
     const onPublish = vi.fn().mockResolvedValue(undefined);
