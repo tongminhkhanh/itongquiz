@@ -19,11 +19,14 @@ export const ChangePasswordModal = ({ account }: { account: StudentAccountContro
           </div>
           <div className="space-y-4">
             <PasswordField label="Mật khẩu cũ" value={account.currentPassword}
-              onChange={account.setCurrentPassword} placeholder="Nhập mật khẩu hiện tại" autoFocus />
+              onChange={account.setCurrentPassword} placeholder="Nhập mật khẩu hiện tại"
+              autoComplete="current-password" autoFocus />
             <PasswordField label="Mật khẩu mới" value={account.newPassword}
-              onChange={account.setNewPassword} placeholder="Tối thiểu 6 ký tự" />
+              onChange={account.setNewPassword} placeholder="Tối thiểu 6 ký tự"
+              autoComplete="new-password" />
             <PasswordField label="Nhập lại mật khẩu mới" value={account.confirmNewPassword}
-              onChange={account.setConfirmNewPassword} placeholder="Nhập lại mật khẩu mới" />
+              onChange={account.setConfirmNewPassword} placeholder="Nhập lại mật khẩu mới"
+              autoComplete="new-password" />
           </div>
           {account.errorMessage && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold px-4 py-3">{account.errorMessage}</div>}
           <div className="mt-6 flex items-center justify-end gap-3">
@@ -40,9 +43,22 @@ export const ChangePasswordModal = ({ account }: { account: StudentAccountContro
   </AnimatePresence>
 );
 
-const PasswordField = ({ label, value, onChange, placeholder, autoFocus = false }: {
-  label: string; value: string; onChange: (value: string) => void; placeholder: string; autoFocus?: boolean;
+const PasswordField = ({
+  label,
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+  autoFocus = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  autoComplete: 'current-password' | 'new-password';
+  autoFocus?: boolean;
 }) => <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{label}</label>
-  <input type="password" value={value} onChange={(event) => onChange(event.target.value)}
+  <input type="password" autoComplete={autoComplete} value={value}
+    onChange={(event) => onChange(event.target.value)}
     className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
     placeholder={placeholder} autoFocus={autoFocus} /></div>;
