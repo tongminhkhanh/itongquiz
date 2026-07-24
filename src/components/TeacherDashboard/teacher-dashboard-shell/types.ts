@@ -1,4 +1,5 @@
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
+import type { ResultDashboardSummary } from '../../../../shared/result-summary.contract';
 import type { Quiz, StudentResult } from '../../../types';
 import type { TeacherDashboardTab } from '../../../stores/useTeacherDashboardUIStore';
 
@@ -28,6 +29,9 @@ export interface TeacherDashboardLayoutProps {
   resultsLoadState: ResultsLoadState;
   resultsLoadError: string | null;
   loadTeacherResults: () => Promise<void>;
+  resultSummary: ResultDashboardSummary | null;
+  summaryLoadState: ResultsLoadState;
+  summaryLoadError: string | null;
   filteredResults: StudentResult[];
   quizzes: Quiz[];
   editingQuiz: Quiz | null;

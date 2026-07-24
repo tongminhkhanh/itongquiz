@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import type { ResultDashboardSummary } from '../../../shared/result-summary.contract';
 import {
     AlertCircle,
     Award,
@@ -34,6 +35,9 @@ interface OverviewTabProps {
     resultsLoadState: ResultsLoadState;
     resultsError?: string | null;
     onRetryResults: () => void | Promise<void>;
+    resultSummary?: ResultDashboardSummary | null;
+    summaryLoadState?: ResultsLoadState;
+    summaryError?: string | null;
 }
 
 const isSameLocalDay = (first: Date, second: Date): boolean => (

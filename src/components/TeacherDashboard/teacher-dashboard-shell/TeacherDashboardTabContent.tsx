@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
 import { ErrorBoundary } from '../../common';
 import type { TeacherDashboardTab } from '../../../stores/useTeacherDashboardUIStore';
+import type { ResultDashboardSummary } from '../../../../shared/result-summary.contract';
 import type { Quiz, StudentResult } from '../../../types';
 import type { ResultsLoadState } from './types';
 import { TeacherDashboardCoreTabs } from './TeacherDashboardCoreTabs';
@@ -13,6 +14,9 @@ interface TeacherDashboardTabContentProps {
   resultsLoadState: ResultsLoadState;
   resultsLoadError: string | null;
   loadTeacherResults: () => Promise<void>;
+  resultSummary: ResultDashboardSummary | null;
+  summaryLoadState: ResultsLoadState;
+  summaryLoadError: string | null;
   filteredResults: StudentResult[];
   quizzes: Quiz[];
   editingQuiz: Quiz | null;
