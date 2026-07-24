@@ -5,7 +5,7 @@ export const useLoadQuizzes = () => {
     const loadQuizzes = useQuizStore((state) => state.loadQuizzes);
 
     useEffect(() => {
-        loadQuizzes();
+        void loadQuizzes();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 };

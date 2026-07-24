@@ -2,16 +2,7 @@ import React, { useState } from 'react';
 import { MathJaxContext } from 'better-react-mathjax';
 import QuestionRenderer from '../../src/features/quiz-player/components/QuestionRenderer';
 import { QuestionType, type Question } from '../../src/types';
-
-const mathJaxConfig = {
-  loader: { load: ['input/tex', 'output/chtml', '[tex]/ams', '[tex]/noerrors', '[tex]/noundefined'] },
-  tex: {
-    packages: { '[+]': ['ams', 'noerrors', 'noundefined'] },
-    inlineMath: [['$', '$'], [String.raw`\(`, String.raw`\)`]],
-    displayMath: [['$$', '$$'], [String.raw`\[`, String.raw`\]`]],
-    processEscapes: true,
-  },
-};
+import { mathJaxConfig } from '../../src/config/mathJaxConfig';
 
 const question = {
   id: 'dropdown-overflow',
@@ -64,12 +55,12 @@ describe('student LaTeX dropdown menu', () => {
     cy.get('button[aria-haspopup="listbox"]')
       .should('be.visible')
       .then(($trigger) => {
-        const triggerRect = $trigger[0].getBoundingClientRect();
         cy.wrap($trigger).click();
 
         cy.get('[role="listbox"]')
           .should('be.visible')
-          .then(($menu) => {
+          .should(($menu) => {
+            const triggerRect = $trigger[0].getBoundingClientRect();
             const menuRect = $menu[0].getBoundingClientRect();
             expect($menu.closest('.question-renderer-shell')).to.have.length(0);
             expect($menu[0].parentElement).to.equal(Cypress.$('body')[0]);
@@ -81,6 +72,11 @@ describe('student LaTeX dropdown menu', () => {
           });
       });
 
+    cy.get('[role="option"]')
+      .should('have.length', 4)
+      .each(($option) => {
+        cy.wrap($option).find('mjx-container').should('be.visible');
+      });
     cy.get('[role="option"]').first().click();
     cy.get('[data-testid="selected-answer"]').should('have.text', '$4a^2$');
     cy.get('[role="listbox"]').should('not.exist');

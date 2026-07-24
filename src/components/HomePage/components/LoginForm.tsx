@@ -69,6 +69,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
                             <UserRound size={18} className="text-[#9ca3af] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                             <input
                                 type="text"
+                                autoComplete="username"
                                 className="w-full pl-11 pr-4 py-3 bg-[#f9fafb] border-2 border-[#f3f4f6] rounded-[14px] text-[0.95rem] text-[#1f2937] outline-none transition-all focus:border-[#22c55e] focus:bg-white focus:ring-4 focus:ring-green-500/10 placeholder:text-[#9ca3af] placeholder:font-medium"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
@@ -87,6 +88,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
                             <Lock size={18} className="text-[#9ca3af] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                             <input
                                 type="password"
+                                autoComplete="current-password"
                                 className="w-full pl-11 pr-4 py-3 bg-[#f9fafb] border-2 border-[#f3f4f6] rounded-[14px] text-[0.95rem] text-[#1f2937] outline-none transition-all focus:border-[#22c55e] focus:bg-white focus:ring-4 focus:ring-green-500/10 placeholder:text-[#9ca3af] placeholder:font-medium"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}

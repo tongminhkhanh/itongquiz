@@ -83,7 +83,7 @@ export const useManualQuizPublish = ({
             }
 
             try {
-                await loadQuizzes();
+                await loadQuizzes({ force: true });
             } catch {
                 setCleanupWarning((current) => current || (
                     'Đề đã xuất bản thành công nhưng danh sách đề chưa làm mới. Hãy tải lại trang Quản lý.'

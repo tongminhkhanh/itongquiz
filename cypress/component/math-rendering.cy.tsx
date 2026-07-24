@@ -4,16 +4,7 @@ import QuestionRenderer from '../../src/features/quiz-player/components/Question
 import InteractiveMathText from '../../src/features/quiz-player/components/QuestionRenderer/atoms/InteractiveMathText';
 import ExplanationContent from '../../src/components/common/ExplanationContent';
 import { QuestionType, type Question } from '../../src/types';
-
-const mathJaxConfig = {
-  loader: { load: ['input/tex', 'output/chtml', '[tex]/ams', '[tex]/noerrors', '[tex]/noundefined'] },
-  tex: {
-    packages: { '[+]': ['ams', 'noerrors', 'noundefined'] },
-    inlineMath: [['$', '$'], [String.raw`\(`, String.raw`\)`]],
-    displayMath: [['$$', '$$'], [String.raw`\[`, String.raw`\]`]],
-    processEscapes: true,
-  },
-};
+import { mathJaxConfig } from '../../src/config/mathJaxConfig';
 
 type VisualQuestionName = 'mcq' | 'matching' | 'drag-drop' | 'fill-blank';
 
