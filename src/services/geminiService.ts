@@ -28,6 +28,7 @@ import {
 } from './ai/quizAudit';
 import {
   buildQuizRepairPrompt,
+  buildQuizSchemaRepairPrompt,
   buildQuizSlotRepairPrompt,
   createQuizRepairPlan,
   createQuizSlotRepairPlan,
@@ -36,10 +37,15 @@ import {
   QuizGenerationValidationError,
 } from './ai/quizRepair';
 import {
+  GeneratedQuizSchema,
   parseGeneratedQuiz,
   parseGeneratedQuizV3,
   type GeneratedQuizPayload,
 } from './ai/schemas/quizGenerationSchema';
+import {
+  GeneratedQuizSchemaError,
+  toGeneratedQuizSchemaIssues,
+} from './ai/quizGenerationErrors';
 import { normalizeGeneratedQuizV3Compatibility } from './ai/schemas/generatedQuizV3Normalizer';
 import type { GeneratedQuizV3 } from './ai/question-contracts/questionContract.types';
 import { mapGeneratedQuizV3ToDomain } from './ai/quizDomainAdapter';
@@ -110,13 +116,58 @@ export const validateQuizWithAI = async (
   }
 };
 
+const parseDraftWithOneSchemaRepair = async (
+  result: unknown,
+  execution: QuizAiExecutionContext | undefined,
+  onStepChange?: (step: QuizGenerationStep) => void,
+): Promise<GeneratedQuizPayload> => {
+  const normalized = validateAndFixQuiz(result);
+  const initial = GeneratedQuizSchema.safeParse(normalized);
+  if (initial.success) return initial.data;
+
+  const initialIssues = toGeneratedQuizSchemaIssues(initial.error.issues);
+  if (execution?.action.workflow !== 'QUIZ_CREATE') {
+    throw new GeneratedQuizSchemaError(initialIssues);
+  }
+
+  onStepChange?.('repairing');
+  const repairedText = await requestWorkerAiText({
+    model: 'gemini-2.5-flash',
+    messages: [
+      {
+        role: 'system',
+        content: 'Bạn sửa cấu trúc JSON đề thi. Chỉ trả về JSON object hợp lệ.',
+      },
+      {
+        role: 'user',
+        content: buildQuizSchemaRepairPrompt({ quiz: normalized, issues: initialIssues }),
+      },
+    ],
+    temperature: 0.1,
+    response_format: { type: 'json_object' },
+  }, toWorkerOptions({ ...execution, stage: 'REPAIR' }));
+
+  const repairedRaw = validateAndFixQuiz(parseAndRepairJSON(repairedText));
+  const repaired = GeneratedQuizSchema.safeParse(repairedRaw);
+  if (!repaired.success) {
+    throw new GeneratedQuizSchemaError(
+      toGeneratedQuizSchemaIssues(repaired.error.issues),
+    );
+  }
+  return repaired.data;
+};
+
 const runDeterministicQualityPipeline = async (
   result: unknown,
   blueprint: QuizBlueprint,
   execution: QuizAiExecutionContext | undefined,
   onStepChange?: (step: QuizGenerationStep) => void,
 ): Promise<GeneratedQuizPayload> => {
-  const parsedDraft = parseGeneratedQuiz(validateAndFixQuiz(result));
+  const parsedDraft = await parseDraftWithOneSchemaRepair(
+    result,
+    execution,
+    onStepChange,
+  );
   let finalQuiz = parsedDraft;
   let issues = auditGeneratedQuiz(finalQuiz, blueprint);
 
