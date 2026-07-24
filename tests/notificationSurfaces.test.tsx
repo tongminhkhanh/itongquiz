@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Announcement } from '../src/services/announcementService';
 import {
@@ -27,28 +27,13 @@ describe('notification announcement surfaces', () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     })));
-    vi.stubGlobal('ResizeObserver', class {
-      constructor(private callback: ResizeObserverCallback) {}
-      observe(target: Element) {
-        this.callback([{ target } as ResizeObserverEntry], this as unknown as ResizeObserver);
-      }
-      disconnect() {}
-      unobserve() {}
-    });
   });
 
-  it('runs ticker only on overflow and supports pause by button, hover, and focus', () => {
-    const { rerender } = render(<AnnouncementTicker announcement={announcement} />);
+  it('runs ticker even when the message fits and supports pause by button, hover, and focus', () => {
+    render(<AnnouncementTicker announcement={announcement} />);
     const region = screen.getByRole('region', { name: 'Thông báo chung' });
     const track = screen.getByTestId('notification-ticker-track');
 
-    Object.defineProperty(track, 'scrollWidth', { configurable: true, value: 500 });
-    Object.defineProperty(track.parentElement, 'clientWidth', {
-      configurable: true,
-      value: 200,
-    });
-    act(() => window.dispatchEvent(new Event('resize')));
-    rerender(<AnnouncementTicker announcement={announcement} />);
     expect(track).toHaveClass('notification-ticker__track--animated');
 
     const pause = screen.getByRole('button', { name: 'Tạm dừng tin chạy' });

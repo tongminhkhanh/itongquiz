@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Megaphone, Pause, Play } from 'lucide-react';
 import type { Announcement } from '../../../services/announcementService';
 
@@ -23,35 +23,10 @@ function usePrefersReducedMotion(): boolean {
 }
 
 export function AnnouncementTicker({ announcement }: AnnouncementTickerProps) {
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLSpanElement>(null);
-  const [overflows, setOverflows] = useState(false);
   const [manualPause, setManualPause] = useState(false);
   const [interactionPause, setInteractionPause] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
-
-  useEffect(() => {
-    const measure = () => {
-      const viewport = viewportRef.current;
-      const track = trackRef.current;
-      setOverflows(Boolean(
-        viewport && track && track.scrollWidth > viewport.clientWidth,
-      ));
-    };
-    const observer = typeof ResizeObserver === 'undefined'
-      ? null
-      : new ResizeObserver(measure);
-    if (viewportRef.current) observer?.observe(viewportRef.current);
-    if (trackRef.current) observer?.observe(trackRef.current);
-    window.addEventListener('resize', measure);
-    measure();
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener('resize', measure);
-    };
-  }, [announcement.content]);
-
-  const animated = overflows && !reducedMotion;
+  const animated = !reducedMotion;
   const paused = manualPause || interactionPause;
 
   return (
@@ -66,9 +41,8 @@ export function AnnouncementTicker({ announcement }: AnnouncementTickerProps) {
       onBlur={() => setInteractionPause(false)}
     >
       <Megaphone aria-hidden="true" className="h-4 w-4 shrink-0 text-sky-700" />
-      <div ref={viewportRef} className="min-w-0 flex-1 overflow-hidden whitespace-nowrap">
+      <div className="min-w-0 flex-1 overflow-hidden whitespace-nowrap">
         <span
-          ref={trackRef}
           data-testid="notification-ticker-track"
           className={[
             'notification-ticker__track inline-block',
