@@ -114,6 +114,9 @@ function renderCreationHook(overrides: Partial<{
 
 describe('quiz creation workflows', () => {
     beforeEach(() => {
+        vi.unstubAllEnvs();
+        vi.stubEnv('VITE_FEATURE_AI_FAST_PATH', 'true');
+        vi.stubEnv('VITE_FEATURE_AI_DEFER_IMAGES', 'true');
         localStorage.clear();
         vi.clearAllMocks();
         mockedGetQuota.mockResolvedValue({

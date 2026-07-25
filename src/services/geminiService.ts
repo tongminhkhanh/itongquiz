@@ -4,7 +4,8 @@
  */
 
 import { REVIEWER_INSTRUCTION } from '../config/constants';
-import { generateImage, checkImageServiceAvailability } from './imageGenerationService';
+import { generateImage } from './imageGenerationService';
+import { hydrateGeneratedImages, prepareGeneratedImageJobs } from './ai/generatedImageHydration';
 import { QuestionType } from '../types';
 import { parseAndRepairJSON, validateAndFixQuiz } from './ai/utils/jsonRepair';
 import { buildPrompt } from './ai/prompts/quizPromptBuilder';
@@ -352,33 +353,25 @@ export const resolveGeneratedImagesBlocking = async (
   execution?: QuizAiExecutionContext,
 ): Promise<unknown> => {
   if (!result || typeof result !== 'object') return result;
-  const resultObject = result as Record<string, unknown>;
-  if (!Array.isArray(resultObject.questions)) return result;
-
-  const imageQuestions = (resultObject.questions as Record<string, unknown>[]).filter(
-    (question) => question.type === 'IMAGE_QUESTION'
-      && typeof question.image === 'string'
-      && question.image.startsWith('IMAGE_PROMPT:'),
+  const prepared = prepareGeneratedImageJobs(
+    result as { questions?: Array<Record<string, unknown>> },
   );
+  if (prepared.jobs.length === 0 || !execution) return prepared.quiz;
 
-  if (imageQuestions.length === 0) return resultObject;
-  const imageServiceAvailable = await checkImageServiceAvailability();
-  for (const question of resultObject.questions as Record<string, unknown>[]) {
-    if (question.type !== 'IMAGE_QUESTION'
-      || typeof question.image !== 'string'
-      || !question.image.startsWith('IMAGE_PROMPT:')) continue;
-
-    const prompt = question.image.replace('IMAGE_PROMPT:', '').trim();
-    if (imageServiceAvailable && execution) {
+  await hydrateGeneratedImages(prepared.jobs, {
+    concurrency: 1,
+    signal: execution.signal,
+    generate: async (prompt) => {
       const generated = await generateImage(prompt, { ...execution, stage: 'IMAGE' });
-      question.image = generated.success && generated.data
-        ? generated.data
-        : `https://placehold.co/600x400?text=${encodeURIComponent(prompt.slice(0, 20))}`;
-    } else {
-      question.image = `https://placehold.co/600x400?text=${encodeURIComponent(prompt.slice(0, 20))}`;
-    }
-  }
-  return resultObject;
+      return generated.success ? generated.data ?? null : null;
+    },
+    onResolved: (questionIndex, image) => {
+      const questions = prepared.quiz.questions ?? [];
+      const question = questions[questionIndex];
+      if (question) question.image = image;
+    },
+  });
+  return prepared.quiz;
 };
 
 export const generateQuiz = async (

@@ -135,6 +135,9 @@ const prepareAndGeneratePdf = async (
 };
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
+  vi.stubEnv('VITE_FEATURE_AI_FAST_PATH', 'true');
+  vi.stubEnv('VITE_FEATURE_AI_DEFER_IMAGES', 'true');
   vi.clearAllMocks();
   aiMocks.extractTextFromPdf.mockResolvedValue(makeOcrDocument());
   aiMocks.generateQuiz.mockResolvedValue({ title: 'Đề đã tạo', questions: [] });
@@ -210,6 +213,37 @@ describe('quiz AI workflow', () => {
     expect(aiMocks.extractTextFromPdf).toHaveBeenCalledOnce();
     expect(aiMocks.generateQuiz).toHaveBeenCalledOnce();
     expect(aiMocks.generateQuiz.mock.calls[0][3]).toBeUndefined();
+  });
+
+  it('uses strict review and blocking images when rollout flags are off', async () => {
+    vi.stubEnv('VITE_FEATURE_AI_FAST_PATH', 'false');
+    vi.stubEnv('VITE_FEATURE_AI_DEFER_IMAGES', 'false');
+    aiMocks.generateQuiz.mockResolvedValue({
+      title: 'Đề rollback',
+      questions: [{
+        id: 'image-q',
+        type: QuestionType.IMAGE_QUESTION,
+        question: 'Nhìn hình và chọn đáp án',
+        image: 'IMAGE_PROMPT: hình tam giác',
+        options: ['Tam giác', 'Hình tròn'],
+        correctAnswer: 'A',
+        explanation: 'Đây là tam giác.',
+        difficulty: 1,
+      }],
+    });
+    aiMocks.generateImage.mockResolvedValue({ success: true, data: 'https://img.test/blocking.png' });
+    const form = makeForm();
+    const { result } = renderGeneration(form);
+
+    await act(async () => {
+      await result.current.handleGenerate('exam');
+    });
+
+    expect(aiMocks.generateQuiz.mock.calls[0][4]).toMatchObject({ reviewMode: 'strict' });
+    expect(aiMocks.generateImage).toHaveBeenCalledOnce();
+    expect(form.generatedQuiz.questions[0].image).toBe('https://img.test/blocking.png');
+    expect(result.current.isHydratingImages).toBe(false);
+    expect(result.current.generationStep).toBe('completed');
   });
 
   it('shows the quiz before image generation finishes and hydrates the image in place', async () => {

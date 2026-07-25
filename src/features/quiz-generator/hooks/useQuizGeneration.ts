@@ -4,6 +4,7 @@ import { QuestionType } from '../../../types';
 import {
     extractTextFromPdf,
     generateQuiz,
+    resolveGeneratedImagesBlocking,
     type AIProvider,
 } from '../../../services/geminiService';
 import {
@@ -24,6 +25,8 @@ import type { useQuizFormState } from './useQuizFormState';
 import { createAiAction, type ClientAiAction } from '../../../services/ai/aiAction';
 import { hydrateGeneratedImages, prepareGeneratedImageJobs } from '../../../services/ai/generatedImageHydration';
 import { generateImage } from '../../../services/imageGenerationService';
+import { isAiDeferredImagesEnabled, isAiFastPathEnabled } from '../../../config/featureFlags';
+import { resolveQuizGenerationRolloutPolicy } from '../../../services/ai/quizGenerationRolloutPolicy';
 import { useTeacherAiQuota } from './useTeacherAiQuota';
 
 interface UseQuizGenerationOptions {
@@ -61,6 +64,11 @@ export const useQuizGeneration = ({
     const activeGenerationRef = useRef<ActiveGeneration | null>(null);
     const imageHydrationControllerRef = useRef<AbortController | null>(null);
     const quota = useTeacherAiQuota({ isTeacherAccount, username });
+    const rolloutPolicy = resolveQuizGenerationRolloutPolicy({
+        fastPathEnabled: isAiFastPathEnabled(),
+        deferredImagesEnabled: isAiDeferredImagesEnabled(),
+        requestedReviewMode: form.reviewMode,
+    });
 
     useEffect(() => () => {
         activeGenerationRef.current?.controller.abort();
@@ -304,7 +312,7 @@ export const useQuizGeneration = ({
                 difficultyLevels: form.difficultyLevels,
                 promptProfile: form.promptProfile,
                 explanationDetail: form.explanationDetail,
-                reviewMode: form.reviewMode,
+                reviewMode: rolloutPolicy.effectiveReviewMode,
                 imageLibrary: form.imageLibrary,
                 customPrompt: form.customPrompt,
                 quizMode: activeQuizMode,
@@ -338,7 +346,19 @@ export const useQuizGeneration = ({
                 },
             ) as Record<string, unknown>;
 
-            const prepared = prepareGeneratedImageJobs(result);
+            let prepared;
+            if (rolloutPolicy.shouldDeferImages) {
+                prepared = prepareGeneratedImageJobs(result);
+            } else {
+                const pendingImages = prepareGeneratedImageJobs(result).jobs.length;
+                if (pendingImages > 0) setGenerationStep('generating_images');
+                const resolved = await resolveGeneratedImagesBlocking(result, {
+                    action,
+                    stage: 'IMAGE',
+                    signal: controller.signal,
+                });
+                prepared = { quiz: resolved as Record<string, unknown>, jobs: [] };
+            }
             const preparedQuiz = prepared.quiz as Record<string, unknown>;
             const detectedCategory = normalizeAiCategory(preparedQuiz.detectedCategory);
             const detectedLesson = typeof preparedQuiz.detectedLesson === 'string'
@@ -432,7 +452,7 @@ export const useQuizGeneration = ({
                 },
                 promptProfile: form.promptProfile,
                 explanationDetail: form.explanationDetail,
-                reviewMode: form.reviewMode,
+                reviewMode: rolloutPolicy.effectiveReviewMode,
                 imageLibrary: form.imageLibrary,
                 customPrompt: `T?o n?i dung m?i d?a tr?n c?u hi?n t?i: ${JSON.stringify(question)}`,
                 quizMode: form.quizMode,

@@ -9,6 +9,8 @@ import {
 } from '../src/services/telemetryService';
 import {
     isAiBlueprintV3Enabled,
+    isAiDeferredImagesEnabled,
+    isAiFastPathEnabled,
     isAiQuizV2Enabled,
     isManualQuizWorkspaceEnabled,
     resolveFeatureFlag,
@@ -92,6 +94,20 @@ describe('AI blueprint V3 feature flag', () => {
         }
         vi.stubEnv('VITE_FEATURE_AI_BLUEPRINT_V3', 'false');
         expect(isAiBlueprintV3Enabled()).toBe(false);
+        vi.unstubAllEnvs();
+    });
+});
+
+describe('AI performance rollout feature flags', () => {
+    it('defaults both performance flags off and supports explicit enablement', () => {
+        vi.unstubAllEnvs();
+        expect(isAiFastPathEnabled()).toBe(false);
+        expect(isAiDeferredImagesEnabled()).toBe(false);
+
+        vi.stubEnv('VITE_FEATURE_AI_FAST_PATH', 'true');
+        vi.stubEnv('VITE_FEATURE_AI_DEFER_IMAGES', 'enabled');
+        expect(isAiFastPathEnabled()).toBe(true);
+        expect(isAiDeferredImagesEnabled()).toBe(true);
         vi.unstubAllEnvs();
     });
 });
