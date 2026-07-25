@@ -21,6 +21,8 @@ import * as gamificationService from '../services/gamificationService';
 import { StorageKeys } from '../constants/storageKeys';
 
 const TOP_GOLD_CACHE_TTL_MS = 60_000;
+let topGoldLeaderboardRequest: Promise<void> | null = null;
+let topGoldLeaderboardRequestVersion = 0;
 
 // --- Store Interface ---
 
@@ -240,33 +242,46 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
         }
     },
 
-    fetchTopGoldLeaderboard: async (force = false) => {
-        const { topGoldLeaderboardFetchedAt, topGoldLeaderboardLoading } = get();
-        if (topGoldLeaderboardLoading) return;
+    fetchTopGoldLeaderboard: (force = false) => {
+        if (topGoldLeaderboardRequest) return topGoldLeaderboardRequest;
 
+        const { topGoldLeaderboardFetchedAt } = get();
         const cacheIsFresh = topGoldLeaderboardFetchedAt !== null
             && Date.now() - topGoldLeaderboardFetchedAt < TOP_GOLD_CACHE_TTL_MS;
-        if (!force && cacheIsFresh) return;
+        if (!force && cacheIsFresh) return Promise.resolve();
 
+        const requestVersion = topGoldLeaderboardRequestVersion;
         set({
             topGoldLeaderboardLoading: true,
             topGoldLeaderboardError: null,
         });
 
-        try {
-            const topGoldLeaderboard = await gamificationService.getTopGoldLeaderboard();
-            set({
-                topGoldLeaderboard,
-                topGoldLeaderboardLoading: false,
-                topGoldLeaderboardError: null,
-                topGoldLeaderboardFetchedAt: Date.now(),
-            });
-        } catch {
-            set({
-                topGoldLeaderboardLoading: false,
-                topGoldLeaderboardError: 'Chưa cập nhật được Bảng vàng. Vui lòng thử lại.',
-            });
-        }
+        let request: Promise<void>;
+        request = (async () => {
+            try {
+                const topGoldLeaderboard = await gamificationService.getTopGoldLeaderboard();
+                if (requestVersion !== topGoldLeaderboardRequestVersion) return;
+                set({
+                    topGoldLeaderboard,
+                    topGoldLeaderboardLoading: false,
+                    topGoldLeaderboardError: null,
+                    topGoldLeaderboardFetchedAt: Date.now(),
+                });
+            } catch {
+                if (requestVersion !== topGoldLeaderboardRequestVersion) return;
+                set({
+                    topGoldLeaderboardLoading: false,
+                    topGoldLeaderboardError: 'Chưa cập nhật được Bảng vàng. Vui lòng thử lại.',
+                });
+            } finally {
+                if (topGoldLeaderboardRequest === request) {
+                    topGoldLeaderboardRequest = null;
+                }
+            }
+        })();
+
+        topGoldLeaderboardRequest = request;
+        return request;
     },
 
     /**
@@ -278,6 +293,8 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
      * Clear all gamification data (on logout)
      */
     clearGamification: () => {
+        topGoldLeaderboardRequestVersion += 1;
+        topGoldLeaderboardRequest = null;
         localStorage.removeItem(StorageKeys.GAMIFICATION);
         set({
             pet: null,

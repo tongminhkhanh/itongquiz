@@ -9,7 +9,7 @@ const students = Array.from({ length: 10 }, (_, index) => ({
   coins: 1000 - index * 50,
 }));
 
-const mountLeaderboard = () => {
+const mountLeaderboard = (withMobileNav = false) => {
   useGamificationStore.setState({
     topGoldLeaderboard: students,
     topGoldLeaderboardLoading: false,
@@ -19,6 +19,13 @@ const mountLeaderboard = () => {
   });
   cy.mount(
     <div className="min-h-dvh bg-[#FFFDF7]">
+      {withMobileNav ? (
+        <nav
+          data-testid="student-mobile-nav"
+          className="fixed inset-x-0 bottom-0 z-50 h-16 bg-white"
+          aria-label="Điều hướng học sinh trên điện thoại"
+        />
+      ) : null}
       <StudentFloatingSidebar currentUsername="student-4" />
     </div>,
   );
@@ -41,12 +48,19 @@ describe('student gold leaderboard visual behavior', () => {
     assertNoHorizontalOverflow();
   });
 
-  it('renders a bottom sheet without overflow on mobile', () => {
+  it('stays above mobile navigation and opens without overflow', () => {
     cy.viewport(360, 800);
-    mountLeaderboard();
+    mountLeaderboard(true);
     cy.get('button[aria-label="Mở Bảng vàng học sinh"]')
       .should('have.css', 'height', '56px')
-      .click();
+      .then(($button) => {
+        cy.get('[data-testid="student-mobile-nav"]').then(($nav) => {
+          const buttonRect = $button[0].getBoundingClientRect();
+          const navRect = $nav[0].getBoundingClientRect();
+          expect(buttonRect.bottom).to.be.lte(navRect.top - 8);
+        });
+      });
+    cy.get('button[aria-label="Mở Bảng vàng học sinh"]').click();
     cy.get('section[role="dialog"][aria-label="Bảng vàng học sinh"]').should('be.visible');
     cy.get('button[aria-label="Đóng Bảng vàng"]').should('be.visible');
     assertNoHorizontalOverflow();

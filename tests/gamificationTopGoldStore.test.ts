@@ -51,6 +51,18 @@ describe('useGamificationStore top gold leaderboard', () => {
     expect(mockedGetTopGold).not.toHaveBeenCalled();
   });
 
+  it('refreshes a stale cache', async () => {
+    mockedGetTopGold.mockResolvedValue(rows);
+    useGamificationStore.setState({
+      topGoldLeaderboard: rows,
+      topGoldLeaderboardFetchedAt: Date.now() - 60_001,
+    });
+
+    await useGamificationStore.getState().fetchTopGoldLeaderboard();
+
+    expect(mockedGetTopGold).toHaveBeenCalledTimes(1);
+  });
+
   it('force refreshes a fresh cache', async () => {
     mockedGetTopGold.mockResolvedValue(rows);
     useGamificationStore.setState({
@@ -63,18 +75,42 @@ describe('useGamificationStore top gold leaderboard', () => {
     expect(mockedGetTopGold).toHaveBeenCalledTimes(1);
   });
 
-  it('deduplicates concurrent requests', async () => {
+  it('shares completion across concurrent requests', async () => {
     let resolveRequest: ((value: typeof rows) => void) | undefined;
     mockedGetTopGold.mockImplementation(() => new Promise((resolve) => {
       resolveRequest = resolve;
     }));
 
     const first = useGamificationStore.getState().fetchTopGoldLeaderboard();
-    const second = useGamificationStore.getState().fetchTopGoldLeaderboard();
+    let secondFinished = false;
+    const second = useGamificationStore.getState().fetchTopGoldLeaderboard().then(() => {
+      secondFinished = true;
+    });
 
+    await Promise.resolve();
     expect(mockedGetTopGold).toHaveBeenCalledTimes(1);
+    expect(secondFinished).toBe(false);
+
     resolveRequest?.(rows);
     await Promise.all([first, second]);
+    expect(secondFinished).toBe(true);
+  });
+
+  it('ignores an in-flight response after gamification is cleared', async () => {
+    let resolveRequest: ((value: typeof rows) => void) | undefined;
+    mockedGetTopGold.mockImplementation(() => new Promise((resolve) => {
+      resolveRequest = resolve;
+    }));
+
+    const request = useGamificationStore.getState().fetchTopGoldLeaderboard();
+    useGamificationStore.getState().clearGamification();
+    resolveRequest?.(rows);
+    await request;
+
+    const state = useGamificationStore.getState();
+    expect(state.topGoldLeaderboard).toEqual([]);
+    expect(state.topGoldLeaderboardFetchedAt).toBeNull();
+    expect(state.topGoldLeaderboardLoading).toBe(false);
   });
 
   it('keeps cached rows when refresh fails', async () => {

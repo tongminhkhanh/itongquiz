@@ -33,7 +33,7 @@ export const StudentFloatingSidebar: React.FC<StudentFloatingSidebarProps> = ({
 
   return (
     <>
-      <div className="fixed bottom-5 right-4 z-30 sm:right-5 md:bottom-6 md:right-6">
+      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-30 sm:right-5 md:bottom-6 md:right-6">
         <div className="group relative">
           <motion.button
             ref={triggerRef}
