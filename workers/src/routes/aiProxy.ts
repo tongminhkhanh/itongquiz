@@ -15,6 +15,7 @@ import {
     reserveAiAction,
     succeedAiAction,
 } from '../services/teacherAiQuotaLedger';
+import { recordAiStageMetric } from '../services/aiPerformanceTelemetry';
 import { Env } from '../types';
 import { errorResponse, jsonResponse } from '../utils/response';
 
@@ -69,6 +70,7 @@ export async function handleAiProxy(
     env: Env,
     path: string,
     method: string,
+    ctx?: ExecutionContext,
 ): Promise<Response | null> {
     if (path !== '/api/ai/chat' || method !== 'POST') return null;
 
@@ -137,6 +139,30 @@ export async function handleAiProxy(
         stream: isImageModel ? false : true,
     };
 
+    const upstreamJson = JSON.stringify(upstreamBody);
+    const requestBytes = new TextEncoder().encode(upstreamJson).byteLength;
+    const upstreamStartedAt = Date.now();
+    const scheduleMetric = (
+        status: 'SUCCEEDED' | 'FAILED',
+        ttfbMs: number | null,
+        errorCode?: string,
+    ): void => {
+        const metricPromise = recordAiStageMetric(env.DB, {
+            actionId: meta.actionId,
+            username: authResult.user.username,
+            workflow: meta.workflow,
+            stage: meta.stage,
+            model,
+            status,
+            requestBytes,
+            ttfbMs,
+            errorCode,
+            createdAt: new Date().toISOString(),
+        }).catch(() => console.error('[AI Proxy] Failed to persist performance metric'));
+        if (ctx) ctx.waitUntil(metricPromise);
+        else void metricPromise;
+    };
+
     let aiResponse: Response;
     try {
         aiResponse = await fetch(`${env.CLIPROXY_API.replace(/\/$/, '')}/chat/completions`, {
@@ -145,9 +171,10 @@ export async function handleAiProxy(
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${env.CLIPROXY_TOKEN}`,
             },
-            body: JSON.stringify(upstreamBody),
+            body: upstreamJson,
         });
     } catch {
+        scheduleMetric('FAILED', null, 'UPSTREAM_NETWORK_ERROR');
         try {
             await releaseFailedAction(env, meta, authResult.user.username, 'UPSTREAM_NETWORK_ERROR');
         } catch {
@@ -155,6 +182,13 @@ export async function handleAiProxy(
         }
         return codedErrorResponse('AI_UPSTREAM_UNAVAILABLE', 'Dịch vụ AI tạm thời không khả dụng.', 503);
     }
+
+    const ttfbMs = Date.now() - upstreamStartedAt;
+    scheduleMetric(
+        aiResponse.ok ? 'SUCCEEDED' : 'FAILED',
+        ttfbMs,
+        aiResponse.ok ? undefined : `UPSTREAM_${aiResponse.status}`,
+    );
 
     if (!aiResponse.ok) {
         try {
@@ -198,6 +232,8 @@ export async function handleAiProxy(
         headers: {
             'Content-Type': isSse ? 'text/event-stream' : (upstreamType || 'application/json'),
             'Cache-Control': 'no-store',
+            'Server-Timing': `ai-upstream;dur=${ttfbMs}`,
+            'X-AI-Stage': meta.stage,
             ...(isSse ? { Connection: 'keep-alive' } : {}),
             ...corsHeaders(request, env),
         },

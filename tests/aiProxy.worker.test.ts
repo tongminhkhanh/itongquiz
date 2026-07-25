@@ -353,6 +353,31 @@ describe('/api/ai/chat', () => {
     expect(key).not.toContain('teacher-a');
   });
 
+  it('returns stage timing headers and schedules metric persistence without blocking', async () => {
+    const pending: Promise<unknown>[] = [];
+    const ctx = {
+      waitUntil(promise: Promise<unknown>) {
+        pending.push(promise);
+      },
+    } as ExecutionContext;
+
+    const response = await handleAiProxy(
+      request({
+        model: 'gemini-2.5-flash',
+        messages: [{}],
+        _meta: { actionId, workflow: 'QUIZ_CREATE', stage: 'GENERATE' },
+      }),
+      env,
+      '/api/ai/chat',
+      'POST',
+      ctx,
+    );
+
+    expect(response?.headers.get('X-AI-Stage')).toBe('GENERATE');
+    expect(response?.headers.get('Server-Timing')).toMatch(/^ai-upstream;dur=\d+$/);
+    expect(pending).toHaveLength(1);
+    await Promise.all(pending);
+  });
   it('accepts allow-listed V3 diagnostics without logging prompt content', async () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     const response = await handleAiProxy(
