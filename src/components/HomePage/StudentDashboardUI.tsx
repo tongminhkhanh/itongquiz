@@ -78,7 +78,7 @@ const StudentDashboardUI = () => {
         onCloseAvatar={controller.closeAvatar}
         onCloseBadgeGallery={controller.closeBadgeGallery}
       />
-      <StudentFloatingSidebar />
+      <StudentFloatingSidebar currentUsername={studentSession.username} />
     </div>
   );
 };

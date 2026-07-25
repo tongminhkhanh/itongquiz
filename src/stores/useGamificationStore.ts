@@ -20,6 +20,10 @@ import {
 import * as gamificationService from '../services/gamificationService';
 import { StorageKeys } from '../constants/storageKeys';
 
+const TOP_GOLD_CACHE_TTL_MS = 60_000;
+let topGoldLeaderboardRequest: Promise<void> | null = null;
+let topGoldLeaderboardRequestVersion = 0;
+
 // --- Store Interface ---
 
 interface GamificationStore {
@@ -29,6 +33,9 @@ interface GamificationStore {
     shopItems: ShopItem[];
     leaderboard: LeaderboardEntry[];
     topGoldLeaderboard: TopGoldStudent[];
+    topGoldLeaderboardLoading: boolean;
+    topGoldLeaderboardError: string | null;
+    topGoldLeaderboardFetchedAt: number | null;
     isLoading: boolean;
     error: string | null;
 
@@ -48,7 +55,7 @@ interface GamificationStore {
     fetchPetData: (username: string) => Promise<void>;
     buyItem: (username: string, itemId: string) => Promise<boolean>;
     fetchLeaderboard: () => Promise<void>;
-    fetchTopGoldLeaderboard: () => Promise<void>;
+    fetchTopGoldLeaderboard: (force?: boolean) => Promise<void>;
     clearReward: () => void;
     clearGamification: () => void;
     clearError: () => void;
@@ -71,6 +78,9 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
     shopItems: [],
     leaderboard: [],
     topGoldLeaderboard: [],
+    topGoldLeaderboardLoading: false,
+    topGoldLeaderboardError: null,
+    topGoldLeaderboardFetchedAt: null,
     isLoading: false,
     error: null,
     lastReward: null,
@@ -232,13 +242,46 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
         }
     },
 
-    fetchTopGoldLeaderboard: async () => {
-        try {
-            const topGoldLeaderboard = await gamificationService.getTopGoldLeaderboard();
-            set({ topGoldLeaderboard });
-        } catch {
-            console.error('[GamificationStore] Failed to fetch top gold leaderboard');
-        }
+    fetchTopGoldLeaderboard: (force = false) => {
+        if (topGoldLeaderboardRequest) return topGoldLeaderboardRequest;
+
+        const { topGoldLeaderboardFetchedAt } = get();
+        const cacheIsFresh = topGoldLeaderboardFetchedAt !== null
+            && Date.now() - topGoldLeaderboardFetchedAt < TOP_GOLD_CACHE_TTL_MS;
+        if (!force && cacheIsFresh) return Promise.resolve();
+
+        const requestVersion = topGoldLeaderboardRequestVersion;
+        set({
+            topGoldLeaderboardLoading: true,
+            topGoldLeaderboardError: null,
+        });
+
+        let request: Promise<void>;
+        request = (async () => {
+            try {
+                const topGoldLeaderboard = await gamificationService.getTopGoldLeaderboard();
+                if (requestVersion !== topGoldLeaderboardRequestVersion) return;
+                set({
+                    topGoldLeaderboard,
+                    topGoldLeaderboardLoading: false,
+                    topGoldLeaderboardError: null,
+                    topGoldLeaderboardFetchedAt: Date.now(),
+                });
+            } catch {
+                if (requestVersion !== topGoldLeaderboardRequestVersion) return;
+                set({
+                    topGoldLeaderboardLoading: false,
+                    topGoldLeaderboardError: 'Chưa cập nhật được Bảng vàng. Vui lòng thử lại.',
+                });
+            } finally {
+                if (topGoldLeaderboardRequest === request) {
+                    topGoldLeaderboardRequest = null;
+                }
+            }
+        })();
+
+        topGoldLeaderboardRequest = request;
+        return request;
     },
 
     /**
@@ -250,11 +293,17 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
      * Clear all gamification data (on logout)
      */
     clearGamification: () => {
+        topGoldLeaderboardRequestVersion += 1;
+        topGoldLeaderboardRequest = null;
         localStorage.removeItem(StorageKeys.GAMIFICATION);
         set({
             pet: null,
             coins: 0,
             shopItems: [],
+            topGoldLeaderboard: [],
+            topGoldLeaderboardLoading: false,
+            topGoldLeaderboardError: null,
+            topGoldLeaderboardFetchedAt: null,
             lastReward: null,
             error: null,
         });
