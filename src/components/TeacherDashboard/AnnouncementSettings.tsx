@@ -207,9 +207,13 @@ const AnnouncementSettings: React.FC = () => {
                     initialDraft={form}
                     saving={saving}
                     onChange={setForm}
-                    onSaveDraft={(draft) => save(draft)}
+                    onSaveDraft={async (draft) => {
+                        await save(draft);
+                    }}
                     onPublish={publish}
-                    onSendTest={async () => showSuccess('Bản xem thử đã sẵn sàng; chưa công bố thông báo.')}
+                    onSendTest={() => {
+                        showSuccess('Bản xem thử đã sẵn sàng; chưa công bố thông báo.');
+                    }}
                 />
                 {form.id && (
                     <div className="mt-3 flex flex-wrap justify-end gap-2">
