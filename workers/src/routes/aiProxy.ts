@@ -83,7 +83,7 @@ export async function handleAiProxy(
     const role = authResult.user.role === 'admin' ? 'admin' : 'teacher';
     const rateLimitResponse = await rateLimit(request, env, {
         windowMs: 60 * 1000,
-        maxRequests: 10,
+        maxRequests: 20,
         failureMode: 'closed',
         keyGenerator: (rateLimitedRequest) => {
             const requestPath = new URL(rateLimitedRequest.url).pathname;

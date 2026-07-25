@@ -8,6 +8,7 @@ interface QuizPreviewToolbarProps {
     quiz: Quiz;
     onSave: () => void;
     isSaving: boolean;
+    isHydratingImages: boolean;
     onOpenWorksheet: () => void;
 }
 
@@ -15,6 +16,7 @@ const QuizPreviewToolbar: React.FC<QuizPreviewToolbarProps> = ({
     quiz,
     onSave,
     isSaving,
+    isHydratingImages,
     onOpenWorksheet,
 }) => (
     <div className="flex items-center justify-between">
@@ -36,8 +38,15 @@ const QuizPreviewToolbar: React.FC<QuizPreviewToolbarProps> = ({
                 <BookOpen className="w-4 h-4" />
                 <span className="hidden sm:inline">Xuất Vở</span>
             </button>
-            <Button onClick={onSave} variant="success" loading={isSaving} icon={<Save className="w-4 h-4" />}>
-                {isSaving ? 'Đang lưu...' : 'Lưu đề'}
+            <Button
+                onClick={onSave}
+                variant="success"
+                loading={isSaving}
+                disabled={isHydratingImages}
+                title={isHydratingImages ? 'Chờ hoàn thiện hình ảnh trước khi lưu đề' : undefined}
+                icon={<Save className="w-4 h-4" />}
+            >
+                {isHydratingImages ? 'Đang hoàn thiện ảnh...' : isSaving ? 'Đang lưu...' : 'Lưu đề'}
             </Button>
         </div>
     </div>

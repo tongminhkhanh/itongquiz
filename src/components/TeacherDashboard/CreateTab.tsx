@@ -300,6 +300,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     quiz={logic.generatedQuiz}
                     onSave={logic.handleSaveQuiz}
                     isSaving={logic.isSaving}
+                    isHydratingImages={logic.isHydratingImages}
                     onUpdateQuestions={(questions) => {
                         if (logic.generatedQuiz) {
                             logic.setGeneratedQuiz({ ...logic.generatedQuiz, questions });

@@ -83,6 +83,7 @@ export const useCreateQuizLogic = ({
         isGenerating: generation.isGenerating,
         generationStep: generation.generationStep,
         generationStartedAt: generation.generationStartedAt,
+        isHydratingImages: generation.isHydratingImages,
         questionCount: generation.questionCount,
         generatedQuiz: form.generatedQuiz,
         setGeneratedQuiz: form.setGeneratedQuiz,

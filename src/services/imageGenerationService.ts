@@ -1,3 +1,4 @@
+import type { QuizAiExecutionContext } from './ai/aiAction';
 import { requestWorkerAi } from './ai/workerAiClient';
 
 const DEFAULT_MODEL = 'gemini-3-pro-image-preview';
@@ -38,12 +39,18 @@ const findImageUrl = (value: unknown, depth = 0): string => {
 
 export const checkImageServiceAvailability = async (): Promise<boolean> => true;
 
-export const generateImage = async (prompt: string): Promise<ImageGenerationResult> => {
+export const generateImage = async (
+  prompt: string,
+  execution: QuizAiExecutionContext,
+): Promise<ImageGenerationResult> => {
   try {
     const result = await requestWorkerAi({
       model: DEFAULT_MODEL,
       messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
       max_tokens: 4096,
+    }, {
+      action: { ...execution.action, stage: 'IMAGE' },
+      signal: execution.signal,
     });
     const imageUrl = findImageUrl([...result.payloads, result.text]);
     if (!imageUrl) throw new Error('AI kh?ng tr? v? d? li?u h?nh ?nh.');

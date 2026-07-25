@@ -1,6 +1,6 @@
 import type { AiWorkflow } from './teacherAiQuotaLedger';
 
-export type AiStage = 'OCR' | 'GENERATE' | 'REVIEW' | 'REPAIR' | 'REGENERATE' | 'GENERIC';
+export type AiStage = 'OCR' | 'GENERATE' | 'REVIEW' | 'REPAIR' | 'REGENERATE' | 'IMAGE' | 'GENERIC';
 
 export interface AiRequestMeta {
   actionId: string;
@@ -23,26 +23,34 @@ interface AiActionPolicyRow {
   generate_calls: number;
   review_calls: number;
   repair_calls: number;
+  image_calls: number;
 }
 
 const ACTION_ID = /^ai-[a-z0-9-]{20,80}$/i;
 const WORKFLOWS = new Set<AiWorkflow>(['QUIZ_CREATE', 'QUESTION_REGENERATE', 'GENERIC']);
-const STAGES = new Set<AiStage>(['OCR', 'GENERATE', 'REVIEW', 'REPAIR', 'REGENERATE', 'GENERIC']);
+const STAGES = new Set<AiStage>(['OCR', 'GENERATE', 'REVIEW', 'REPAIR', 'REGENERATE', 'IMAGE', 'GENERIC']);
 
 const WORKFLOW_STAGES: Record<AiWorkflow, ReadonlySet<AiStage>> = {
-  QUIZ_CREATE: new Set<AiStage>(['OCR', 'GENERATE', 'REVIEW', 'REPAIR']),
+  QUIZ_CREATE: new Set<AiStage>(['OCR', 'GENERATE', 'REVIEW', 'REPAIR', 'IMAGE']),
   QUESTION_REGENERATE: new Set<AiStage>(['REGENERATE']),
   GENERIC: new Set<AiStage>(['GENERIC']),
 };
 
-const STAGE_COLUMNS: Record<AiStage, 'ocr_calls' | 'generate_calls' | 'review_calls' | 'repair_calls'> = {
+const IMAGE_CALL_LIMIT = 10;
+
+type StageColumn = 'ocr_calls' | 'generate_calls' | 'review_calls' | 'repair_calls' | 'image_calls';
+
+const STAGE_COLUMNS: Record<AiStage, StageColumn> = {
   OCR: 'ocr_calls',
   GENERATE: 'generate_calls',
   REVIEW: 'review_calls',
   REPAIR: 'repair_calls',
   REGENERATE: 'generate_calls',
+  IMAGE: 'image_calls',
   GENERIC: 'generate_calls',
 };
+
+const stageLimit = (stage: AiStage): number => stage === 'IMAGE' ? IMAGE_CALL_LIMIT : 1;
 
 export class AiRequestPolicyError extends Error {
   constructor(public readonly code: AiRequestPolicyCode) {
@@ -125,7 +133,8 @@ const readAction = async (
     ocr_calls,
     generate_calls,
     review_calls,
-    repair_calls
+    repair_calls,
+    image_calls
   FROM ai_generation_actions
   WHERE action_id = ?
     AND username = ?
@@ -144,14 +153,15 @@ function assertActionCanRun(
   }
 
   const count = Number(action[STAGE_COLUMNS[meta.stage]] ?? 0);
-  if (!Number.isFinite(count) || count >= 1) {
+  if (!Number.isFinite(count) || count >= stageLimit(meta.stage)) {
     throw new AiRequestPolicyError('AI_STAGE_CONFLICT');
   }
 
   if (meta.stage === 'OCR' && action.generate_calls > 0) {
     throw new AiRequestPolicyError('AI_STAGE_CONFLICT');
   }
-  if ((meta.stage === 'REVIEW' || meta.stage === 'REPAIR') && action.generate_calls !== 1) {
+  if ((meta.stage === 'REVIEW' || meta.stage === 'REPAIR' || meta.stage === 'IMAGE')
+    && action.generate_calls !== 1) {
     throw new AiRequestPolicyError('AI_STAGE_CONFLICT');
   }
 }
@@ -167,7 +177,7 @@ export async function authorizeAiStage(
 
 const stageOrderCondition = (stage: AiStage): string => {
   if (stage === 'OCR') return 'AND generate_calls = 0';
-  if (stage === 'REVIEW' || stage === 'REPAIR') return 'AND generate_calls = 1';
+  if (stage === 'REVIEW' || stage === 'REPAIR' || stage === 'IMAGE') return 'AND generate_calls = 1';
   return '';
 };
 
@@ -178,13 +188,14 @@ export async function recordAiStageSuccess(
   now = new Date(),
 ): Promise<void> {
   const column = STAGE_COLUMNS[meta.stage];
+  const limit = stageLimit(meta.stage);
   const updated = await db.prepare(`
     UPDATE ai_generation_actions
     SET ${column} = ${column} + 1,
         upstream_calls = upstream_calls + 1,
         updated_at = ?
     WHERE workflow = ?
-      AND ${column} < 1
+      AND ${column} < ${limit}
       ${stageOrderCondition(meta.stage)}
       AND status IN ('RESERVED', 'SUCCEEDED')
       AND action_id = ?

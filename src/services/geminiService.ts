@@ -347,7 +347,10 @@ const getProviderCapabilities = (provider: AIProvider) => ({
   supportsImages: provider !== 'perplexity' && provider !== 'native-ocr',
 });
 
-const resolveGeneratedImages = async (result: unknown): Promise<unknown> => {
+export const resolveGeneratedImagesBlocking = async (
+  result: unknown,
+  execution?: QuizAiExecutionContext,
+): Promise<unknown> => {
   if (!result || typeof result !== 'object') return result;
   const resultObject = result as Record<string, unknown>;
   if (!Array.isArray(resultObject.questions)) return result;
@@ -366,8 +369,8 @@ const resolveGeneratedImages = async (result: unknown): Promise<unknown> => {
       || !question.image.startsWith('IMAGE_PROMPT:')) continue;
 
     const prompt = question.image.replace('IMAGE_PROMPT:', '').trim();
-    if (imageServiceAvailable) {
-      const generated = await generateImage(prompt);
+    if (imageServiceAvailable && execution) {
+      const generated = await generateImage(prompt, { ...execution, stage: 'IMAGE' });
       question.image = generated.success && generated.data
         ? generated.data
         : `https://placehold.co/600x400?text=${encodeURIComponent(prompt.slice(0, 20))}`;
@@ -474,7 +477,6 @@ export const generateQuiz = async (
     }
   }
 
-  result = await resolveGeneratedImages(result);
   onStepChange?.('completed');
   return result;
 };
