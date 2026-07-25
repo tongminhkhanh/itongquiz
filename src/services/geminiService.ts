@@ -18,6 +18,7 @@ import { generateWithOpenAIResilient } from './ai/providers/openaiProvider';
 import { generateWithPerplexity } from './ai/providers/perplexityProvider';
 import { requestWorkerAiText } from './ai/workerAiClient';
 import type { QuizAiExecutionContext } from './ai/aiAction';
+import { shouldRunAiReviewer, type QuizReviewMode } from './ai/quizQualityPolicy';
 import type {
   QuizBlueprint,
   QuizBlueprintV3,
@@ -79,6 +80,7 @@ export interface QuizGenerationOptions {
   imageLibrary?: Array<{ id: string; name: string; data?: string }>;
   customPrompt?: string;
   isPdfMode?: boolean;
+  reviewMode?: QuizReviewMode;
 }
 
 const toWorkerOptions = (execution?: QuizAiExecutionContext) => execution ? {
@@ -116,14 +118,21 @@ export const validateQuizWithAI = async (
   }
 };
 
+interface ParsedDraftResult {
+  quiz: GeneratedQuizPayload;
+  repairCallUsed: boolean;
+}
+
 const parseDraftWithOneSchemaRepair = async (
   result: unknown,
   execution: QuizAiExecutionContext | undefined,
   onStepChange?: (step: QuizGenerationStep) => void,
-): Promise<GeneratedQuizPayload> => {
+): Promise<ParsedDraftResult> => {
   const normalized = validateAndFixQuiz(result);
   const initial = GeneratedQuizSchema.safeParse(normalized);
-  if (initial.success) return initial.data;
+  if (initial.success) {
+    return { quiz: initial.data, repairCallUsed: false };
+  }
 
   const initialIssues = toGeneratedQuizSchemaIssues(initial.error.issues);
   if (execution?.action.workflow !== 'QUIZ_CREATE') {
@@ -145,7 +154,7 @@ const parseDraftWithOneSchemaRepair = async (
     ],
     temperature: 0.1,
     response_format: { type: 'json_object' },
-  }, toWorkerOptions({ ...execution, stage: 'REPAIR' }));
+  }, toWorkerOptions(execution ? { ...execution, stage: 'REPAIR' } : undefined));
 
   const repairedRaw = validateAndFixQuiz(parseAndRepairJSON(repairedText));
   const repaired = GeneratedQuizSchema.safeParse(repairedRaw);
@@ -154,21 +163,41 @@ const parseDraftWithOneSchemaRepair = async (
       toGeneratedQuizSchemaIssues(repaired.error.issues),
     );
   }
-  return repaired.data;
+  return { quiz: repaired.data, repairCallUsed: true };
+};
+
+const reviewGeneratedQuiz = async (
+  finalQuiz: GeneratedQuizPayload,
+  blueprint: QuizBlueprint,
+  execution: QuizAiExecutionContext | undefined,
+  onStepChange?: (step: QuizGenerationStep) => void,
+): Promise<GeneratedQuizPayload> => {
+  onStepChange?.('reviewing');
+  try {
+    const reviewedRaw = await validateQuizWithAI(
+      finalQuiz,
+      '',
+      execution ? { ...execution, stage: 'REVIEW' } : undefined,
+    );
+    const reviewedQuiz = parseGeneratedQuiz(reviewedRaw);
+    return auditGeneratedQuiz(reviewedQuiz, blueprint).length === 0
+      ? reviewedQuiz
+      : finalQuiz;
+  } catch (error) {
+    console.warn('[AI Validation Chain] Reviewer output was ignored.', error);
+    return finalQuiz;
+  }
 };
 
 const runDeterministicQualityPipeline = async (
   result: unknown,
   blueprint: QuizBlueprint,
+  reviewMode: QuizReviewMode,
   execution: QuizAiExecutionContext | undefined,
   onStepChange?: (step: QuizGenerationStep) => void,
 ): Promise<GeneratedQuizPayload> => {
-  const parsedDraft = await parseDraftWithOneSchemaRepair(
-    result,
-    execution,
-    onStepChange,
-  );
-  let finalQuiz = parsedDraft;
+  const parsed = await parseDraftWithOneSchemaRepair(result, execution, onStepChange);
+  let finalQuiz = parsed.quiz;
   let issues = auditGeneratedQuiz(finalQuiz, blueprint);
 
   if (issues.some((issue) => !issue.repairable)) {
@@ -177,38 +206,33 @@ const runDeterministicQualityPipeline = async (
 
   const canUseAuxiliaryStages = execution?.action.workflow === 'QUIZ_CREATE';
   if (issues.length > 0) {
-    if (!canUseAuxiliaryStages) {
+    if (!canUseAuxiliaryStages || parsed.repairCallUsed) {
       throw new QuizGenerationValidationError(issues);
     }
 
     const repairInput = { blueprint, quiz: finalQuiz, issues };
     const repairPlan = createQuizRepairPlan(repairInput);
-    let repairedQuiz: GeneratedQuizPayload;
-
-    if (repairPlan.requestedCount > 0) {
-      onStepChange?.('repairing');
-      const repairedText = await requestWorkerAiText({
-        model: 'gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: 'Bạn sửa đúng các câu bị lỗi trong đề. Chỉ trả về JSON hợp lệ.',
-          },
-          {
-            role: 'user',
-            content: buildQuizRepairPrompt(repairInput),
-          },
-        ],
-        temperature: 0.2,
-        response_format: { type: 'json_object' },
-      }, toWorkerOptions({ ...execution, stage: 'REPAIR' }));
-      repairedQuiz = parseGeneratedQuiz(
-        validateAndFixQuiz(parseAndRepairJSON(repairedText)),
-      );
-    } else {
-      repairedQuiz = { ...finalQuiz, questions: [] };
+    if (repairPlan.requestedCount === 0) {
+      throw new QuizGenerationValidationError(issues);
     }
 
+    onStepChange?.('repairing');
+    const repairedText = await requestWorkerAiText({
+      model: 'gemini-2.5-flash',
+      messages: [
+        {
+          role: 'system',
+          content: 'Bạn sửa đúng các câu bị lỗi trong đề. Chỉ trả về JSON hợp lệ.',
+        },
+        { role: 'user', content: buildQuizRepairPrompt(repairInput) },
+      ],
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+    }, toWorkerOptions(execution ? { ...execution, stage: 'REPAIR' } : undefined));
+
+    const repairedQuiz = parseGeneratedQuiz(
+      validateAndFixQuiz(parseAndRepairJSON(repairedText)),
+    );
     finalQuiz = mergeRepairedQuestions(finalQuiz, repairedQuiz, issues);
     issues = auditGeneratedQuiz(finalQuiz, blueprint);
     if (issues.length > 0) {
@@ -216,21 +240,9 @@ const runDeterministicQualityPipeline = async (
     }
   }
 
-  if (canUseAuxiliaryStages) {
-    onStepChange?.('reviewing');
-    try {
-      const reviewedRaw = await validateQuizWithAI(
-        finalQuiz,
-        '',
-        { ...execution, stage: 'REVIEW' },
-      );
-      const reviewedQuiz = parseGeneratedQuiz(reviewedRaw);
-      if (auditGeneratedQuiz(reviewedQuiz, blueprint).length === 0) {
-        finalQuiz = reviewedQuiz;
-      }
-    } catch (error) {
-      console.warn('[AI Validation Chain] Reviewer output was ignored.', error);
-    }
+  const workflow = execution?.action.workflow ?? 'GENERIC';
+  if (shouldRunAiReviewer({ workflow, reviewMode })) {
+    finalQuiz = await reviewGeneratedQuiz(finalQuiz, blueprint, execution, onStepChange);
   }
 
   return finalQuiz;
@@ -243,9 +255,37 @@ const parseGeneratedQuizV3Compatibility = (raw: unknown): GeneratedQuizV3 => par
   }),
 );
 
+const reviewGeneratedQuizV3 = async (
+  finalQuiz: GeneratedQuizV3,
+  blueprint: QuizBlueprintV3,
+  execution: QuizAiExecutionContext | undefined,
+  onStepChange?: (step: QuizGenerationStep) => void,
+): Promise<GeneratedQuizV3> => {
+  onStepChange?.('reviewing');
+  try {
+    const reviewedText = await requestWorkerAiText({
+      model: 'gemini-2.5-flash',
+      messages: [
+        { role: 'system', content: buildReviewerSystemPromptV3() },
+        { role: 'user', content: buildReviewerUserPromptV3({ blueprint, quiz: finalQuiz }) },
+      ],
+      temperature: 0.1,
+      response_format: { type: 'json_object' },
+    }, toWorkerOptions(execution ? { ...execution, stage: 'REVIEW' } : undefined));
+    const reviewedQuiz = parseGeneratedQuizV3Compatibility(parseAndRepairJSON(reviewedText));
+    return auditGeneratedQuizV3(reviewedQuiz, blueprint).length === 0
+      ? reviewedQuiz
+      : finalQuiz;
+  } catch (error) {
+    console.warn('[AI Validation Chain V3] Reviewer output was ignored.', error);
+    return finalQuiz;
+  }
+};
+
 const runV3QualityPipeline = async (
   result: unknown,
   blueprint: QuizBlueprintV3,
+  reviewMode: QuizReviewMode,
   execution: QuizAiExecutionContext | undefined,
   onStepChange?: (step: QuizGenerationStep) => void,
 ): Promise<GeneratedQuizV3> => {
@@ -282,7 +322,7 @@ const runV3QualityPipeline = async (
       ],
       temperature: 0.2,
       response_format: { type: 'json_object' },
-    }, toWorkerOptions({ ...execution, stage: 'REPAIR' }));
+    }, toWorkerOptions(execution ? { ...execution, stage: 'REPAIR' } : undefined));
     const repairedQuiz = parseGeneratedQuizV3Compatibility(parseAndRepairJSON(repairedText));
     finalQuiz = mergeRepairedSlots(finalQuiz, repairedQuiz, repairPlan, blueprint);
     issues = auditGeneratedQuizV3(finalQuiz, blueprint);
@@ -291,25 +331,9 @@ const runV3QualityPipeline = async (
     }
   }
 
-  if (canUseAuxiliaryStages) {
-    onStepChange?.('reviewing');
-    try {
-      const reviewedText = await requestWorkerAiText({
-        model: 'gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: buildReviewerSystemPromptV3() },
-          { role: 'user', content: buildReviewerUserPromptV3({ blueprint, quiz: finalQuiz }) },
-        ],
-        temperature: 0.1,
-        response_format: { type: 'json_object' },
-      }, toWorkerOptions({ ...execution, stage: 'REVIEW' }));
-      const reviewedQuiz = parseGeneratedQuizV3Compatibility(parseAndRepairJSON(reviewedText));
-      if (auditGeneratedQuizV3(reviewedQuiz, blueprint).length === 0) {
-        finalQuiz = reviewedQuiz;
-      }
-    } catch (error) {
-      console.warn('[AI Validation Chain V3] Reviewer output was ignored.', error);
-    }
+  const workflow = execution?.action.workflow ?? 'GENERIC';
+  if (shouldRunAiReviewer({ workflow, reviewMode })) {
+    finalQuiz = await reviewGeneratedQuizV3(finalQuiz, blueprint, execution, onStepChange);
   }
 
   return finalQuiz;
@@ -383,6 +407,7 @@ export const generateQuiz = async (
     ?? options?.blueprint?.totalQuestions
     ?? options?.questionCount
     ?? 10;
+  const reviewMode = options?.reviewMode ?? 'fast';
   let result: unknown;
 
   if (provider === 'perplexity') {
@@ -425,6 +450,7 @@ export const generateQuiz = async (
     const finalQuizV3 = await runV3QualityPipeline(
       result,
       options.blueprintV3,
+      reviewMode,
       requestExecution,
       onStepChange,
     );
@@ -433,6 +459,7 @@ export const generateQuiz = async (
     result = await runDeterministicQualityPipeline(
       result,
       options.blueprint,
+      reviewMode,
       execution,
       onStepChange,
     );
