@@ -1,5 +1,6 @@
 import type { Quiz } from '../../../types';
-import type { AIProvider, PromptProfileOptions } from '../../../services/geminiService';
+import type { AIProvider, ExplanationDetail, PromptProfileOptions } from '../../../services/geminiService';
+import type { QuizReviewMode } from '../../../services/ai/quizQualityPolicy';
 import type { QuestionTypeAllocation, QuizIntent, QuizSourceMode } from './quizBlueprint';
 
 export type QuizMode = 'exam' | 'practice' | 'pdf';
@@ -54,6 +55,8 @@ export interface QuizGenerationFormSnapshot {
     questionTypeAllocations?: QuestionTypeAllocation[];
     difficultyLevels: DifficultyLevels;
     promptProfile: PromptProfileOptions;
+    explanationDetail: ExplanationDetail;
+    reviewMode: QuizReviewMode;
     requireCode: boolean;
     accessCode: string;
     showOnHome: boolean;

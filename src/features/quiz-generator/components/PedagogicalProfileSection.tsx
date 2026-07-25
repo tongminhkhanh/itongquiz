@@ -1,7 +1,8 @@
 import React from 'react';
 import { BookMarked, GraduationCap, HeartHandshake, ShieldCheck } from 'lucide-react';
 import CollapsibleSection from './CollapsibleSection';
-import type { LearnerPromptMode, PromptProfileOptions } from '../../../services/geminiService';
+import type { ExplanationDetail, LearnerPromptMode, PromptProfileOptions } from '../../../services/geminiService';
+import type { QuizReviewMode } from '../../../services/ai/quizQualityPolicy';
 
 interface PedagogicalProfileSectionProps {
     promptProfile: PromptProfileOptions;
@@ -10,6 +11,10 @@ interface PedagogicalProfileSectionProps {
     onToggle: (id: string) => void;
     onToggleThongTu27: () => void;
     onSelectLearnerMode: (mode: LearnerPromptMode) => void;
+    explanationDetail: ExplanationDetail;
+    onExplanationDetailChange: (value: ExplanationDetail) => void;
+    reviewMode: QuizReviewMode;
+    onReviewModeChange: (value: QuizReviewMode) => void;
 }
 
 const baseCardClass = 'w-full rounded-2xl border p-4 text-left transition-colors shadow-sm';
@@ -21,6 +26,10 @@ const PedagogicalProfileSection: React.FC<PedagogicalProfileSectionProps> = ({
     onToggle,
     onToggleThongTu27,
     onSelectLearnerMode,
+    explanationDetail,
+    onExplanationDetailChange,
+    reviewMode,
+    onReviewModeChange,
 }) => {
     const isThongTu27Enabled = promptProfile.useThongTu27;
 
@@ -144,6 +153,57 @@ const PedagogicalProfileSection: React.FC<PedagogicalProfileSectionProps> = ({
                             </div>
                         </div>
                     </button>
+                </div>
+
+                <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div>
+                        <p className="text-sm font-bold text-slate-800">Độ chi tiết lời giải</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                            Lời giải ngắn giúp tạo đề nhanh hơn; lời giải chi tiết phù hợp khi cần tài liệu ôn tập sâu.
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <button
+                            type="button"
+                            aria-pressed={explanationDetail === 'concise'}
+                            onClick={() => onExplanationDetailChange('concise')}
+                            className={`${baseCardClass} ${explanationDetail === 'concise'
+                                ? 'border-emerald-500 bg-emerald-50 text-emerald-900'
+                                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                            }`}
+                        >
+                            <span className="text-sm font-bold">Lời giải ngắn — nhanh hơn</span>
+                            <span className="mt-1 block text-xs leading-5 text-slate-600">1–2 câu, nêu trực tiếp lý do đúng.</span>
+                        </button>
+                        <button
+                            type="button"
+                            aria-pressed={explanationDetail === 'detailed'}
+                            onClick={() => onExplanationDetailChange('detailed')}
+                            className={`${baseCardClass} ${explanationDetail === 'detailed'
+                                ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
+                                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                            }`}
+                        >
+                            <span className="text-sm font-bold">Lời giải chi tiết — lâu hơn</span>
+                            <span className="mt-1 block text-xs leading-5 text-slate-600">2–4 câu, có bước suy luận và mẹo nhớ.</span>
+                        </button>
+                    </div>
+                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                        <input
+                            type="checkbox"
+                            className="mt-1 size-4 accent-amber-600"
+                            checked={reviewMode === 'strict'}
+                            onChange={(event) => onReviewModeChange(event.target.checked ? 'strict' : 'fast')}
+                        />
+                        <span>
+                            <span className="block text-sm font-bold text-amber-900">
+                                Kiểm tra nâng cao bằng AI — chất lượng cao hơn nhưng chậm hơn
+                            </span>
+                            <span className="mt-1 block text-xs leading-5 text-amber-800">
+                                Chỉ bật khi cần AI duyệt lại toàn bộ đề sau bước kiểm tra tự động.
+                            </span>
+                        </span>
+                    </label>
                 </div>
 
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3">

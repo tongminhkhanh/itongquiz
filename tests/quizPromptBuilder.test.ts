@@ -45,6 +45,28 @@ const interactiveOptions: QuizGenerationOptions = {
 };
 
 describe('quiz prompt builder blueprint contract', () => {
+  it('requests concise explanations by default', () => {
+    const prompt = buildPrompt('Phân số', '4', '', {
+      title: 'Ôn tập',
+      questionCount: 10,
+      questionTypes: [QuestionType.MCQ],
+    });
+
+    expect(prompt).toContain('Lời giải ngắn 1-2 câu');
+    expect(prompt).not.toContain('bài giảng mini 2-4 câu');
+  });
+
+  it('supports detailed explanations when explicitly enabled', () => {
+    const prompt = buildPrompt('Phân số', '4', '', {
+      title: 'Ôn tập',
+      questionCount: 10,
+      questionTypes: [QuestionType.MCQ],
+      explanationDetail: 'detailed',
+    });
+
+    expect(prompt).toContain('Lời giải chi tiết 2-4 câu');
+  });
+
   it('writes exact question counts for every selected type', () => {
     const prompt = buildPrompt('Phân số', '4', '', makeOptions('EXAM'));
 
@@ -66,7 +88,7 @@ describe('quiz prompt builder blueprint contract', () => {
     const prompt = buildPrompt('Phân số', '4', '', makeOptions('PRACTICE'));
 
     expect(prompt).toContain('[INTENT: PRACTICE]');
-    expect(prompt).toContain('Lời giải phải hướng dẫn từng bước');
+    expect(prompt).toContain('Lời giải nêu bước chính');
     expect(prompt).not.toContain('Không đưa gợi ý trong nội dung câu hỏi');
   });
 

@@ -53,6 +53,7 @@ import { mapGeneratedQuizV3ToDomain } from './ai/quizDomainAdapter';
 
 export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux' | 'localhost' | 'native-ocr';
 export type LearnerPromptMode = 'default' | 'gifted' | 'remedial';
+export type ExplanationDetail = 'concise' | 'detailed';
 export type QuizGenerationStep = 'generating' | 'reviewing' | 'repairing' | 'completed';
 
 export interface PromptProfileOptions {
@@ -81,6 +82,7 @@ export interface QuizGenerationOptions {
   customPrompt?: string;
   isPdfMode?: boolean;
   reviewMode?: QuizReviewMode;
+  explanationDetail?: ExplanationDetail;
 }
 
 const toWorkerOptions = (execution?: QuizAiExecutionContext) => execution ? {

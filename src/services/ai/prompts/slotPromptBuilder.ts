@@ -37,14 +37,12 @@ const buildPedagogicalProfile = (
   options: QuizGenerationOptions,
 ): string => {
   const rules = blueprint.intent === 'EXAM'
-    ? [
-      'Câu hỏi ngắn gọn, trung lập và không lộ gợi ý trong đề bài.',
-      'Lời giải đầy đủ để giáo viên duyệt nhưng không xuất hiện khi học sinh đang làm bài.',
-    ]
-    : [
-      'Sắp xếp từ kiến thức cốt lõi đến vận dụng.',
-      'Lời giải hướng dẫn từng bước, nêu lỗi sai thường gặp và khích lệ học sinh.',
-    ];
+    ? ['Câu hỏi ngắn gọn, trung lập và không lộ gợi ý trong đề bài.']
+    : ['Sắp xếp từ kiến thức cốt lõi đến vận dụng.'];
+
+  rules.push(options.explanationDetail === 'detailed'
+    ? 'Lời giải chi tiết 2-4 câu; nêu đáp án, bước suy luận và một mẹo nhớ ngắn.'
+    : 'Lời giải ngắn 1-2 câu; nêu trực tiếp lý do đáp án đúng.');
 
   if (options.promptProfile?.useThongTu27) {
     rules.push('Bám yêu cầu cần đạt tiểu học, đánh giá vì sự tiến bộ của học sinh theo Thông tư 27.');

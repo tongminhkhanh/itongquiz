@@ -49,6 +49,7 @@ const expectedPublicKeys = [
     'deadline',
     'difficultyLevels',
     'error',
+    'explanationDetail',
     'expandedSections',
     'fileInputRef',
     'generateRandomCode',
@@ -72,6 +73,7 @@ const expectedPublicKeys = [
     'manualTimeLimit',
     'maxAttempts',
     'profilePresetNotice',
+    'reviewMode',
     'promptProfile',
     'quizMode',
     'quizTitle',
@@ -89,12 +91,14 @@ const expectedPublicKeys = [
     'setDeadline',
     'setDifficultyLevels',
     'setError',
+    'setExplanationDetail',
     'setGeneratedQuiz',
     'setManualTimeLimit',
     'setMaxAttempts',
     'setQuizMode',
     'setQuizTitle',
     'setRequireCode',
+    'setReviewMode',
     'setSelectedClassId',
     'setSelectedTypes',
     'setShowLinkModal',
@@ -188,6 +192,8 @@ describe('useCreateQuizLogic public contract', () => {
         }));
 
         await waitFor(() => expect(result.current.dailyAiLimit).toBe(5));
+        expect(result.current.explanationDetail).toBe('concise');
+        expect(result.current.reviewMode).toBe('fast');
         expect(Object.keys(result.current).sort()).toEqual(expectedPublicKeys);
     });
 

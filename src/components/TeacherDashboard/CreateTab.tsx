@@ -132,6 +132,10 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     onToggle={logic.toggleSection}
                     onToggleThongTu27={logic.handleToggleThongTu27}
                     onSelectLearnerMode={logic.handleSelectLearnerMode}
+                    explanationDetail={logic.explanationDetail}
+                    onExplanationDetailChange={logic.setExplanationDetail}
+                    reviewMode={logic.reviewMode}
+                    onReviewModeChange={logic.setReviewMode}
                 />
 
                 <ContentSourceSection

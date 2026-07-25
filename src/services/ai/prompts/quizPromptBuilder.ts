@@ -3,7 +3,7 @@
  * Builds the full prompt sent to AI providers for quiz generation.
  */
 
-import type { QuizGenerationOptions } from '../../geminiService';
+import type { ExplanationDetail, QuizGenerationOptions } from '../../geminiService';
 import { buildPromptV3 as buildPromptV3Internal } from './slotPromptBuilder';
 export { buildPromptV3 } from './slotPromptBuilder';
 
@@ -15,14 +15,19 @@ const SCIENTIFIC_GROUNDING_PROMPT = `
     3. Tim cac tinh huong doi thuong gan gui de long ghep vao cau hoi, giup bai thi khong bi kho khan.
 `;
 
-const PEDAGOGICAL_EXPLANATION_PROMPT = `
-    [EXPLANATION GENERATOR RULE]:
-    Truong "explanation" phai la mot bai giang mini 2-4 cau theo cau truc:
-    - Khang dinh dap an dung va ly do chon.
-    - Giai thich buoc di tu duy hoac quy tac ap dung.
-    - Dua ra mot meo nho hoac lien he thuc te de hoc sinh nho lau hon.
-    - Tuyet doi khong viet kieu "Dap an A la dung" mot cach don dieu.
-`;
+const buildExplanationPrompt = (
+  detail: ExplanationDetail = 'concise',
+): string => detail === 'detailed'
+  ? `
+    [EXPLANATION RULE - DETAILED]
+    - Lời giải chi tiết 2-4 câu.
+    - Nêu đáp án, quy tắc hoặc bước suy luận, và một mẹo nhớ ngắn.
+  `
+  : `
+    [EXPLANATION RULE - CONCISE]
+    - Lời giải ngắn 1-2 câu.
+    - Nêu trực tiếp lý do đáp án đúng; không lặp lại nguyên câu hỏi.
+  `;
 
 const THONG_TU_27_PROMPT = `
     [PEDAGOGICAL POLICY PROFILE - THONG TU 27]:
@@ -59,7 +64,7 @@ const INTENT_PROMPTS = {
   PRACTICE: `
     [INTENT: PRACTICE]
     - Sắp xếp từ kiến thức cốt lõi đến vận dụng.
-    - Lời giải phải hướng dẫn từng bước, nêu lỗi sai thường gặp và một mẹo nhớ ngắn.
+    - Lời giải nêu bước chính, lỗi sai thường gặp và phản hồi khuyến khích.
     - Ngôn ngữ khuyến khích, không gây áp lực.`,
 } as const;
 
@@ -138,6 +143,7 @@ export const buildPrompt = (
   const customPrompt = options?.customPrompt?.trim();
   const images = options?.imageLibrary || [];
   const intentSection = blueprint ? INTENT_PROMPTS[blueprint.intent] : '';
+  const explanationPrompt = buildExplanationPrompt(options?.explanationDetail);
   const typeAllocationSection = blueprint
     ? `
     TYPE ALLOCATION - BẮT BUỘC ĐÚNG CHÍNH XÁC:
@@ -194,7 +200,7 @@ export const buildPrompt = (
     ${customPromptSection}
 
     ${SCIENTIFIC_GROUNDING_PROMPT}
-    ${PEDAGOGICAL_EXPLANATION_PROMPT}
+    ${explanationPrompt}
     ${intentSection}
     ${pedagogicalPolicySection}
     ${learnerProfileSection}
