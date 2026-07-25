@@ -20,6 +20,8 @@ import {
 import * as gamificationService from '../services/gamificationService';
 import { StorageKeys } from '../constants/storageKeys';
 
+const TOP_GOLD_CACHE_TTL_MS = 60_000;
+
 // --- Store Interface ---
 
 interface GamificationStore {
@@ -29,6 +31,9 @@ interface GamificationStore {
     shopItems: ShopItem[];
     leaderboard: LeaderboardEntry[];
     topGoldLeaderboard: TopGoldStudent[];
+    topGoldLeaderboardLoading: boolean;
+    topGoldLeaderboardError: string | null;
+    topGoldLeaderboardFetchedAt: number | null;
     isLoading: boolean;
     error: string | null;
 
@@ -48,7 +53,7 @@ interface GamificationStore {
     fetchPetData: (username: string) => Promise<void>;
     buyItem: (username: string, itemId: string) => Promise<boolean>;
     fetchLeaderboard: () => Promise<void>;
-    fetchTopGoldLeaderboard: () => Promise<void>;
+    fetchTopGoldLeaderboard: (force?: boolean) => Promise<void>;
     clearReward: () => void;
     clearGamification: () => void;
     clearError: () => void;
@@ -71,6 +76,9 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
     shopItems: [],
     leaderboard: [],
     topGoldLeaderboard: [],
+    topGoldLeaderboardLoading: false,
+    topGoldLeaderboardError: null,
+    topGoldLeaderboardFetchedAt: null,
     isLoading: false,
     error: null,
     lastReward: null,
@@ -232,12 +240,32 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
         }
     },
 
-    fetchTopGoldLeaderboard: async () => {
+    fetchTopGoldLeaderboard: async (force = false) => {
+        const { topGoldLeaderboardFetchedAt, topGoldLeaderboardLoading } = get();
+        if (topGoldLeaderboardLoading) return;
+
+        const cacheIsFresh = topGoldLeaderboardFetchedAt !== null
+            && Date.now() - topGoldLeaderboardFetchedAt < TOP_GOLD_CACHE_TTL_MS;
+        if (!force && cacheIsFresh) return;
+
+        set({
+            topGoldLeaderboardLoading: true,
+            topGoldLeaderboardError: null,
+        });
+
         try {
             const topGoldLeaderboard = await gamificationService.getTopGoldLeaderboard();
-            set({ topGoldLeaderboard });
+            set({
+                topGoldLeaderboard,
+                topGoldLeaderboardLoading: false,
+                topGoldLeaderboardError: null,
+                topGoldLeaderboardFetchedAt: Date.now(),
+            });
         } catch {
-            console.error('[GamificationStore] Failed to fetch top gold leaderboard');
+            set({
+                topGoldLeaderboardLoading: false,
+                topGoldLeaderboardError: 'Chưa cập nhật được Bảng vàng. Vui lòng thử lại.',
+            });
         }
     },
 
@@ -255,6 +283,10 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
             pet: null,
             coins: 0,
             shopItems: [],
+            topGoldLeaderboard: [],
+            topGoldLeaderboardLoading: false,
+            topGoldLeaderboardError: null,
+            topGoldLeaderboardFetchedAt: null,
             lastReward: null,
             error: null,
         });

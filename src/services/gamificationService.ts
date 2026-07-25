@@ -130,15 +130,11 @@ export const getLeaderboard = async (): Promise<LeaderboardEntry[]> => {
 };
 
 export const getTopGoldLeaderboard = async (): Promise<TopGoldStudent[]> => {
-    try {
-        const res = await callWorkerApi<TopGoldStudent[]>('get_top_gold_leaderboard');
-        if (res.status === 'success' && Array.isArray(res.data)) {
-            return res.data;
-        }
-    } catch (e) {
-        console.error('[GamificationService] fetch top gold failed:', e);
+    const res = await callWorkerApi<TopGoldStudent[]>('get_top_gold_leaderboard');
+    if (res.status === 'success' && Array.isArray(res.data)) {
+        return res.data;
     }
-    return [];
+    throw new Error(res.message || 'Không thể tải Bảng vàng.');
 };
 
 
