@@ -67,6 +67,7 @@ const expectedPublicKeys = [
     'hasAiQuota',
     'isClassLocked',
     'isGenerating',
+    'isHydratingImages',
     'isSaving',
     'isTeacherAccount',
     'linkCopied',

@@ -46,7 +46,7 @@ Không chấp nhận lỗi TypeScript mới ngoài hai lỗi này.
 npx wrangler d1 migrations apply itongquiz-db --remote --config workers/wrangler.toml
 ```
 
-Phải thấy `0040_create_ai_stage_metrics.sql` và `0041_add_ai_image_stage.sql` được áp dụng.
+Phải thấy `0043_create_ai_stage_metrics.sql` và `0044_add_ai_image_stage.sql` được áp dụng.
 
 3. Deploy Worker và frontend.
 4. Thu baseline tối thiểu 20 action `QUIZ_CREATE` hoặc 24 giờ, tùy điều kiện nào đến sau.
@@ -182,6 +182,6 @@ Chỉ coi rollout hoàn tất khi cửa sổ 24 giờ gần nhất đạt đủ:
 
 ## Không rollback schema
 
-Migration `0040` và `0041` đều additive. Khi rollback frontend/Worker, giữ nguyên bảng telemetry và cột `image_calls`; không chạy migration ngược.
+Migration `0043` và `0041` đều additive. Khi rollback frontend/Worker, giữ nguyên bảng telemetry và cột `image_calls`; không chạy migration ngược.
 
 Nếu telemetry persistence có vấn đề, tắt lời gọi `recordAiStageMetric` trong Worker và giữ schema. Nếu timeout tạo false timeout, tăng riêng stage bị ảnh hưởng; không quay lại timeout chung 300 giây.

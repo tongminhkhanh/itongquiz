@@ -34,7 +34,7 @@ describe('D1 migration layout', () => {
     expect(registered).toHaveLength(25);
     const numericPrefixes = migrations.map((name) => name.slice(0, 4));
     expect(new Set(numericPrefixes).size).toBe(numericPrefixes.length);
-    expect(migrations.at(-1)).toBe('0042_unified_notifications.sql');
+    expect(migrations.at(-1)).toBe('0044_add_ai_image_stage.sql');
   });
 
   it('stores assignment-scoped result identity in migration 0040', () => {
@@ -46,6 +46,21 @@ describe('D1 migration layout', () => {
     expect(sql).toContain('ALTER TABLE results ADD COLUMN assignment_id TEXT');
     expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_results_assignment_student');
     expect(sql).toContain('UPDATE results');
+  });
+
+  it('stores AI stage telemetry and image call counters in migrations', () => {
+    const telemetrySql = fs.readFileSync(
+      path.join(migrationsDir, '0043_create_ai_stage_metrics.sql'),
+      'utf8',
+    );
+    const imageSql = fs.readFileSync(
+      path.join(migrationsDir, '0044_add_ai_image_stage.sql'),
+      'utf8',
+    );
+
+    expect(telemetrySql).toContain('CREATE TABLE IF NOT EXISTS ai_generation_stage_metrics');
+    expect(telemetrySql).not.toContain('prompt');
+    expect(imageSql).toContain('ADD COLUMN image_calls INTEGER NOT NULL DEFAULT 0');
   });
 
   it('stores teacher AI quota and action reservations in migrations', () => {

@@ -52,8 +52,8 @@
 
 ### Worker và D1
 
-- Create: `workers/migrations/0040_create_ai_stage_metrics.sql` — telemetry theo stage.
-- Create: `workers/migrations/0041_add_ai_image_stage.sql` — quota-safe image stage.
+- Create: `workers/migrations/0043_create_ai_stage_metrics.sql` — telemetry theo stage.
+- Create: `workers/migrations/0044_add_ai_image_stage.sql` — quota-safe image stage.
 - Create: `workers/src/services/aiPerformanceTelemetry.ts` — ghi metric bất đồng bộ.
 - Modify: `workers/src/index.ts` — nhận `ExecutionContext` và chuyển vào AI route.
 - Modify: `workers/src/routes/aiProxy.ts` — đo upstream TTFB, response headers, stage `IMAGE`.
@@ -77,7 +77,7 @@
 
 **Files:**
 - Create: `shared/ai-performance.contract.ts`
-- Create: `workers/migrations/0040_create_ai_stage_metrics.sql`
+- Create: `workers/migrations/0043_create_ai_stage_metrics.sql`
 - Create: `workers/src/services/aiPerformanceTelemetry.ts`
 - Create: `tests/aiPerformanceTelemetry.worker.test.ts`
 - Modify: `workers/src/index.ts`
@@ -161,7 +161,7 @@ Expected: FAIL vì module `aiPerformanceTelemetry` chưa tồn tại.
 
 Create `shared/ai-performance.contract.ts` với interface ở phần Interfaces.
 
-Create `workers/migrations/0040_create_ai_stage_metrics.sql`:
+Create `workers/migrations/0043_create_ai_stage_metrics.sql`:
 
 ```sql
 CREATE TABLE IF NOT EXISTS ai_generation_stage_metrics (
@@ -329,7 +329,7 @@ Expected: PASS.
 
 ```bash
 git add shared/ai-performance.contract.ts \
-  workers/migrations/0040_create_ai_stage_metrics.sql \
+  workers/migrations/0043_create_ai_stage_metrics.sql \
   workers/src/services/aiPerformanceTelemetry.ts \
   workers/src/index.ts workers/src/routes/aiProxy.ts \
   tests/aiPerformanceTelemetry.worker.test.ts tests/aiProxy.worker.test.ts
@@ -1163,7 +1163,7 @@ git commit -m "feat(ai): show real generation stages and elapsed time"
 ### Task 5: Hiển thị đề trước và hydrate ảnh nền với concurrency 2
 
 **Files:**
-- Create: `workers/migrations/0041_add_ai_image_stage.sql`
+- Create: `workers/migrations/0044_add_ai_image_stage.sql`
 - Create: `src/services/ai/generatedImageHydration.ts`
 - Create: `tests/generatedImageHydration.test.ts`
 - Modify: `src/services/ai/aiAction.ts`
@@ -1282,7 +1282,7 @@ export async function hydrateGeneratedImages(
 
 - [ ] **Step 3: Thêm IMAGE stage không trừ quota**
 
-Create migration `0041_add_ai_image_stage.sql`:
+Create migration `0044_add_ai_image_stage.sql`:
 
 ```sql
 ALTER TABLE ai_generation_actions
@@ -1502,7 +1502,7 @@ npx tsc -p workers/tsconfig.json --noEmit
 - [ ] **Step 8: Commit**
 
 ```bash
-git add workers/migrations/0041_add_ai_image_stage.sql \
+git add workers/migrations/0044_add_ai_image_stage.sql \
   src/services/ai/generatedImageHydration.ts \
   src/services/ai/aiAction.ts workers/src/services/aiRequestPolicy.ts \
   workers/src/routes/aiProxy.ts src/services/ai/imageGenerationService.ts \
@@ -1581,7 +1581,7 @@ Chỉ gọi `prepareGeneratedImageJobs` và background hydration khi `shouldDefe
 
 Create `docs/runbooks/ai-generation-performance-rollout.md` với thứ tự:
 
-1. Deploy migration `0040` và code telemetry, giữ cả hai flags `false`.
+1. Deploy migration `0043` và code telemetry, giữ cả hai flags `false`.
 2. Thu baseline tối thiểu 20 action hoặc 24 giờ.
 3. Bật `VITE_FEATURE_AI_FAST_PATH=true`, deploy frontend.
 4. Theo dõi 24 giờ; rollback nếu validation failure tăng >2 điểm phần trăm hoặc P95 >60 giây.
@@ -1628,7 +1628,7 @@ Expected:
 npx wrangler d1 migrations apply itongquiz-db --remote --config workers/wrangler.toml
 ```
 
-Expected: migrations `0040` và `0041` applied.
+Expected: migrations `0043` và `0044` applied.
 
 - [ ] **Step 6: Query benchmark production**
 
@@ -1707,6 +1707,6 @@ git commit -m "docs(ai): add performance rollout and acceptance gates"
 
 - Tắt `VITE_FEATURE_AI_DEFER_IMAGES` trước nếu có lỗi ảnh hoặc lưu đề.
 - Tắt `VITE_FEATURE_AI_FAST_PATH` để quay về reviewer blocking.
-- Không rollback migration `0040` hoặc `0041`; bảng/cột additive và tương thích ngược.
+- Không rollback migration `0043` hoặc `0041`; bảng/cột additive và tương thích ngược.
 - Nếu Worker telemetry gây lỗi, tắt phần gọi `recordAiStageMetric` nhưng giữ bảng để không cần migration ngược.
 - Nếu timeout mới gây false timeout, tăng riêng stage bị ảnh hưởng; không quay lại timeout 300 giây cho toàn bộ pipeline.
