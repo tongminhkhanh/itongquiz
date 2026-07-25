@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StudentFloatingSidebar } from '../src/components/gamification/StudentFloatingSidebar';
 import { useGamificationStore } from '../src/stores/useGamificationStore';
@@ -55,6 +55,19 @@ describe('StudentFloatingSidebar', () => {
     expect(screen.getByText('Lê Ngọc Chi')).toBeInTheDocument();
     expect(screen.getByText('Phạm Hoàng Dũng')).toBeInTheDocument();
     expect(screen.getByText('Em')).toBeInTheDocument();
+  });
+
+  it('keeps the podium in rank order for screen readers', () => {
+    useGamificationStore.setState({ topGoldLeaderboard: students });
+    render(<StudentFloatingSidebar currentUsername="an" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mở Bảng vàng học sinh' }));
+
+    const podium = screen.getByRole('list', { name: 'Ba học sinh dẫn đầu' });
+    const rankedItems = within(podium).getAllByRole('listitem');
+    expect(rankedItems[0]).toHaveTextContent('Hạng 1');
+    expect(rankedItems[1]).toHaveTextContent('Hạng 2');
+    expect(rankedItems[2]).toHaveTextContent('Hạng 3');
   });
 
   it('closes from Escape, backdrop and close button', () => {
