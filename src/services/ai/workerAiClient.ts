@@ -1,5 +1,6 @@
 import { getWorkersApiBaseUrl } from '../api/config';
 import { type AiActionOptions, resolveAiActionMeta } from './aiAction';
+import { resolveAiTimeoutMs } from './aiTimeoutPolicy';
 import { extractAIContent, extractAIErrorMessage } from './utils/aiResponseParser';
 
 export interface WorkerAiRequest extends Record<string, unknown> {
@@ -72,6 +73,7 @@ export const requestWorkerAi = async (
   const path = '/api/ai/chat';
   const controller = new AbortController();
   const actionMeta = resolveAiActionMeta(options);
+  const timeoutMs = resolveAiTimeoutMs(actionMeta.stage, options.timeoutMs);
   let timedOut = false;
 
   const abortFromCaller = () => controller.abort(options.signal?.reason);
@@ -84,7 +86,7 @@ export const requestWorkerAi = async (
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, options.timeoutMs ?? 300_000);
+  }, timeoutMs);
 
   try {
     const response = await fetch(`${getWorkersApiBaseUrl()}${path}`, {

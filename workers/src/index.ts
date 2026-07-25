@@ -49,7 +49,7 @@ import { checkAndAutoCloseExpiredExams } from './services/liveExamService';
 import { createDueHomeworkReminders } from './parentPortal/deadlineReminderService';
 
 export default {
-    async fetch(request: Request, env: Env): Promise<Response> {
+    async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
         const path = url.pathname;
         const method = request.method;
@@ -171,7 +171,7 @@ export default {
                 if (rateLimitRes) return addCors(rateLimitRes, request, env);
                 response = await handleAiTutorRoutes(request, env, path, method);
             } else if (path.startsWith('/api/ai/')) {
-                response = await handleAiProxy(request, env, path, method);
+                response = await handleAiProxy(request, env, path, method, ctx);
             } else if (path.startsWith('/api/practice')) {
                 response = await handlePracticeRoutes(request, env, path, method);
             } else if (path.startsWith('/api/gift-shop')) {

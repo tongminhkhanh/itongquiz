@@ -17,6 +17,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
     quiz,
     onSave,
     isSaving = false,
+    isHydratingImages = false,
     onUpdateQuestions,
     onStartManual,
     onRegenerateQuestion,
@@ -52,6 +53,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({
                             quiz={quiz}
                             onSave={onSave}
                             isSaving={isSaving}
+                            isHydratingImages={isHydratingImages}
                             onOpenWorksheet={() => setShowWorksheetModal(true)}
                         />
                         <QuestionList

@@ -64,8 +64,8 @@ vi.mock('../src/components/common', () => ({
             {children}
         </section>
     ),
-    Button: ({ children, onClick, loading, variant }: any) => (
-        <button type="button" onClick={onClick} disabled={loading} data-variant={variant}>
+    Button: ({ children, onClick, loading, disabled, title, variant }: any) => (
+        <button type="button" onClick={onClick} disabled={loading || disabled} title={title} data-variant={variant}>
             {children}
         </button>
     ),
@@ -212,6 +212,21 @@ describe('QuizPreview contracts', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Lưu đề' }));
         expect(onSave).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the quiz immediately but disables save while images are hydrating', () => {
+        render(
+            <QuizPreview
+                quiz={makeQuiz()}
+                onSave={vi.fn()}
+                isHydratingImages
+            />,
+        );
+
+        expect(screen.getByText('Quiz title')).toBeInTheDocument();
+        const saveButton = screen.getByRole('button', { name: 'Đang hoàn thiện ảnh...' });
+        expect(saveButton).toBeDisabled();
+        expect(saveButton).toHaveAttribute('title', 'Chờ hoàn thiện hình ảnh trước khi lưu đề');
     });
 
     it('renders each question and wires edit, delete, and list distractor callbacks', () => {

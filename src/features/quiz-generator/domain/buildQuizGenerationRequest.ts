@@ -1,6 +1,7 @@
 import type { ImageLibraryItem, QuestionType } from '../../../types';
 import type { SupportedSkillSubject } from '../../../shared/skillTaxonomy';
-import type { PromptProfileOptions, QuizGenerationOptions } from '../../../services/geminiService';
+import type { ExplanationDetail, PromptProfileOptions, QuizGenerationOptions } from '../../../services/geminiService';
+import type { QuizReviewMode } from '../../../services/ai/quizQualityPolicy';
 import type { DifficultyLevels, QuizMode } from './quizCreation.types';
 import {
     buildBalancedTypeAllocations,
@@ -33,6 +34,8 @@ interface BuildQuizGenerationOptionsInput {
     skillCode?: string;
     subskillCode?: string;
     sourceRefs?: string[];
+    reviewMode?: QuizReviewMode;
+    explanationDetail?: ExplanationDetail;
 }
 
 interface BuildQuizGenerationOptionsConfig {
@@ -119,5 +122,7 @@ export const buildQuizGenerationOptions = (
             ? buildPdfCustomPrompt(input.customPrompt)
             : input.customPrompt.trim() || undefined,
         isPdfMode: blueprint.sourceMode === 'DOCUMENT',
+        reviewMode: input.reviewMode ?? 'fast',
+        explanationDetail: input.explanationDetail ?? 'concise',
     };
 };

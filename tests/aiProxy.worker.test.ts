@@ -33,6 +33,7 @@ type ActionRow = {
   generate_calls: number;
   review_calls: number;
   repair_calls: number;
+  image_calls: number;
   failure_code: string | null;
   created_at: string;
   updated_at: string;
@@ -88,6 +89,7 @@ class FakeAiDb {
       generate_calls: 0,
       review_calls: 0,
       repair_calls: 0,
+      image_calls: 0,
       failure_code: null,
       created_at: timestamp,
       updated_at: timestamp,
@@ -127,10 +129,10 @@ class FakeAiDb {
       const action = this.actions.get(actionId);
       if (!action || action.username !== username) return null;
 
-      const stageColumn = ['OCR_CALLS', 'GENERATE_CALLS', 'REVIEW_CALLS', 'REPAIR_CALLS']
+      const stageColumn = ['OCR_CALLS', 'GENERATE_CALLS', 'REVIEW_CALLS', 'REPAIR_CALLS', 'IMAGE_CALLS']
         .find((column) => normalized.includes(`${column} = ${column} + 1`));
       if (!stageColumn) return null;
-      const property = stageColumn.toLowerCase() as 'ocr_calls' | 'generate_calls' | 'review_calls' | 'repair_calls';
+      const property = stageColumn.toLowerCase() as 'ocr_calls' | 'generate_calls' | 'review_calls' | 'repair_calls' | 'image_calls';
       action[property] += 1;
       action.upstream_calls += 1;
       action.updated_at = String(values[0]);
@@ -184,6 +186,7 @@ class FakeAiDb {
         generate_calls: 0,
         review_calls: 0,
         repair_calls: 0,
+        image_calls: 0,
         failure_code: null,
         created_at: createdAt,
         updated_at: updatedAt,
@@ -256,7 +259,7 @@ describe('AI request policy', () => {
       .toThrowError(expect.objectContaining({ code: 'AI_META_INVALID' }));
   });
 
-  it('allows at most OCR -> GENERATE -> REVIEW for one quiz action', async () => {
+  it('allows OCR -> GENERATE -> REVIEW for one quiz action', async () => {
     const base = { actionId, workflow: 'QUIZ_CREATE' as const };
     fakeDb.seedAction({ ...base, stage: 'OCR' });
 
@@ -267,6 +270,18 @@ describe('AI request policy', () => {
     }
 
     await expect(authorizeAiStage(env.DB, 'teacher-a', { ...base, stage: 'REVIEW' }))
+      .rejects.toMatchObject({ code: 'AI_STAGE_CONFLICT' });
+  });
+
+  it('rejects the eleventh IMAGE call for one quiz action', async () => {
+    const meta = { actionId, workflow: 'QUIZ_CREATE' as const, stage: 'IMAGE' as const };
+    fakeDb.seedAction(meta);
+    const action = fakeDb.actions.get(actionId)!;
+    action.status = 'SUCCEEDED';
+    action.generate_calls = 1;
+    action.image_calls = 10;
+
+    await expect(authorizeAiStage(env.DB, 'teacher-a', meta))
       .rejects.toMatchObject({ code: 'AI_STAGE_CONFLICT' });
   });
 
@@ -310,6 +325,29 @@ describe('/api/ai/chat', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it('reuses a completed quiz action for IMAGE without increasing daily quota', async () => {
+    fakeDb.usedCount = 1;
+    fakeDb.seedAction({ actionId, workflow: 'QUIZ_CREATE', stage: 'GENERATE' });
+    const action = fakeDb.actions.get(actionId)!;
+    action.status = 'SUCCEEDED';
+    action.generate_calls = 1;
+
+    const response = await handleAiProxy(
+      request({
+        model: 'gemini-3-pro-image-preview',
+        messages: [{ role: 'user', content: 'draw a square' }],
+        _meta: { actionId, workflow: 'QUIZ_CREATE', stage: 'IMAGE' },
+      }),
+      env,
+      '/api/ai/chat',
+      'POST',
+    );
+
+    expect(response?.status).toBe(200);
+    expect(fakeDb.usedCount).toBe(1);
+    expect(fakeDb.actions.get(actionId)?.image_calls).toBe(1);
+  });
+
   it('releases the reservation on upstream 503 during GENERATE', async () => {
     fetchSpy.mockResolvedValueOnce(new Response('down', { status: 503 }));
 
@@ -344,7 +382,7 @@ describe('/api/ai/chat', () => {
     expect(rateLimitMock).toHaveBeenCalledWith(
       expect.any(Request),
       env,
-      expect.objectContaining({ failureMode: 'closed', maxRequests: 10 }),
+      expect.objectContaining({ failureMode: 'closed', maxRequests: 20 }),
     );
     const options = rateLimitMock.mock.calls[0][2];
     const key = options.keyGenerator(request({}));
@@ -353,6 +391,31 @@ describe('/api/ai/chat', () => {
     expect(key).not.toContain('teacher-a');
   });
 
+  it('returns stage timing headers and schedules metric persistence without blocking', async () => {
+    const pending: Promise<unknown>[] = [];
+    const ctx = {
+      waitUntil(promise: Promise<unknown>) {
+        pending.push(promise);
+      },
+    } as ExecutionContext;
+
+    const response = await handleAiProxy(
+      request({
+        model: 'gemini-2.5-flash',
+        messages: [{}],
+        _meta: { actionId, workflow: 'QUIZ_CREATE', stage: 'GENERATE' },
+      }),
+      env,
+      '/api/ai/chat',
+      'POST',
+      ctx,
+    );
+
+    expect(response?.headers.get('X-AI-Stage')).toBe('GENERATE');
+    expect(response?.headers.get('Server-Timing')).toMatch(/^ai-upstream;dur=\d+$/);
+    expect(pending).toHaveLength(1);
+    await Promise.all(pending);
+  });
   it('accepts allow-listed V3 diagnostics without logging prompt content', async () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     const response = await handleAiProxy(

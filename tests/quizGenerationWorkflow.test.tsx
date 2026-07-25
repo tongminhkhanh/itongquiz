@@ -10,6 +10,7 @@ import { showError } from '../src/utils/toast';
 const aiMocks = vi.hoisted(() => ({
   extractTextFromPdf: vi.fn(),
   generateQuiz: vi.fn(),
+  generateImage: vi.fn(),
 }));
 const quotaMocks = vi.hoisted(() => ({
   refresh: vi.fn(async () => undefined),
@@ -23,6 +24,10 @@ vi.mock('../src/services/geminiService', async (importOriginal) => {
     generateQuiz: aiMocks.generateQuiz,
   };
 });
+
+vi.mock('../src/services/imageGenerationService', () => ({
+  generateImage: aiMocks.generateImage,
+}));
 
 vi.mock('../src/features/quiz-generator/hooks/useTeacherAiQuota', () => ({
   useTeacherAiQuota: () => ({
@@ -85,6 +90,8 @@ const makeForm = (uploadedFile: File | null = null) => {
     aiProvider: 'llm-mux',
     quizTitle: 'Đề kiểm tra',
     promptProfile: { useThongTu27: true, learnerMode: 'default' },
+    explanationDetail: 'concise',
+    reviewMode: 'fast',
     imageLibrary: [],
     customPrompt: '',
     manualTimeLimit: 15,
@@ -92,11 +99,13 @@ const makeForm = (uploadedFile: File | null = null) => {
     accessCode: '',
     showOnHome: false,
     tags: [],
-    generatedQuiz: null,
+    generatedQuiz: null as any,
     setAiDetectedCategory: vi.fn(),
     setAiDetectedLesson: vi.fn(),
     setAiSuggestedTags: vi.fn(),
-    setGeneratedQuiz: vi.fn(),
+    setGeneratedQuiz: vi.fn((next: any) => {
+      form.generatedQuiz = typeof next === 'function' ? next(form.generatedQuiz) : next;
+    }),
   };
   return form;
 };
@@ -126,12 +135,30 @@ const prepareAndGeneratePdf = async (
 };
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
+  vi.stubEnv('VITE_FEATURE_AI_FAST_PATH', 'true');
+  vi.stubEnv('VITE_FEATURE_AI_DEFER_IMAGES', 'true');
   vi.clearAllMocks();
   aiMocks.extractTextFromPdf.mockResolvedValue(makeOcrDocument());
   aiMocks.generateQuiz.mockResolvedValue({ title: 'Đề đã tạo', questions: [] });
+  aiMocks.generateImage.mockResolvedValue({ success: true, data: 'https://img.test/default.png' });
 });
 
 describe('quiz AI workflow', () => {
+  it('exposes generation start time and question count', async () => {
+    const form = makeForm();
+    const { result } = renderGeneration(form);
+
+    expect(result.current.generationStartedAt).toBeNull();
+    expect(result.current.questionCount).toBe(1);
+
+    await act(async () => {
+      await result.current.handleGenerate('exam');
+    });
+
+    expect(result.current.generationStartedAt).toEqual(expect.any(Number));
+  });
+
   it('uses the same action id for OCR and generate after page review', async () => {
     const form = makeForm(new File(['pdf'], 'nguon.pdf', { type: 'application/pdf' }));
     const { result } = renderGeneration(form);
@@ -186,6 +213,81 @@ describe('quiz AI workflow', () => {
     expect(aiMocks.extractTextFromPdf).toHaveBeenCalledOnce();
     expect(aiMocks.generateQuiz).toHaveBeenCalledOnce();
     expect(aiMocks.generateQuiz.mock.calls[0][3]).toBeUndefined();
+  });
+
+  it('uses strict review and blocking images when rollout flags are off', async () => {
+    vi.stubEnv('VITE_FEATURE_AI_FAST_PATH', 'false');
+    vi.stubEnv('VITE_FEATURE_AI_DEFER_IMAGES', 'false');
+    aiMocks.generateQuiz.mockResolvedValue({
+      title: 'Đề rollback',
+      questions: [{
+        id: 'image-q',
+        type: QuestionType.IMAGE_QUESTION,
+        question: 'Nhìn hình và chọn đáp án',
+        image: 'IMAGE_PROMPT: hình tam giác',
+        options: ['Tam giác', 'Hình tròn'],
+        correctAnswer: 'A',
+        explanation: 'Đây là tam giác.',
+        difficulty: 1,
+      }],
+    });
+    aiMocks.generateImage.mockResolvedValue({ success: true, data: 'https://img.test/blocking.png' });
+    const form = makeForm();
+    const { result } = renderGeneration(form);
+
+    await act(async () => {
+      await result.current.handleGenerate('exam');
+    });
+
+    expect(aiMocks.generateQuiz.mock.calls[0][4]).toMatchObject({ reviewMode: 'strict' });
+    expect(aiMocks.generateImage).toHaveBeenCalledOnce();
+    expect(form.generatedQuiz.questions[0].image).toBe('https://img.test/blocking.png');
+    expect(result.current.isHydratingImages).toBe(false);
+    expect(result.current.generationStep).toBe('completed');
+  });
+
+  it('shows the quiz before image generation finishes and hydrates the image in place', async () => {
+    let resolveImage!: (value: { success: boolean; data: string }) => void;
+    aiMocks.generateQuiz.mockResolvedValue({
+      title: 'Đề có ảnh',
+      questions: [{
+        id: 'image-q',
+        type: QuestionType.IMAGE_QUESTION,
+        question: 'Nhìn hình và chọn đáp án',
+        image: 'IMAGE_PROMPT: hình vuông màu xanh',
+        options: ['Hình vuông', 'Hình tròn'],
+        correctAnswer: 'A',
+        explanation: 'Đây là hình vuông.',
+        difficulty: 1,
+      }],
+    });
+    aiMocks.generateImage.mockImplementation(() => new Promise((resolve) => {
+      resolveImage = resolve;
+    }));
+    const form = makeForm();
+    const { result } = renderGeneration(form);
+
+    await act(async () => {
+      await result.current.handleGenerate('exam');
+    });
+
+    expect(form.generatedQuiz.questions[0].image).toContain('placehold.co');
+    expect(result.current.isHydratingImages).toBe(true);
+    expect(result.current.generationStep).toBe('generating_images');
+    await vi.waitFor(() => expect(aiMocks.generateImage).toHaveBeenCalledOnce());
+    const imageContext = aiMocks.generateImage.mock.calls[0][1];
+    const generationContext = aiMocks.generateQuiz.mock.calls[0][8];
+    expect(imageContext.action.actionId).toBe(generationContext.action.actionId);
+    expect(imageContext.stage).toBe('IMAGE');
+
+    await act(async () => {
+      resolveImage({ success: true, data: 'https://img.test/final.png' });
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => expect(result.current.isHydratingImages).toBe(false));
+    expect(result.current.generationStep).toBe('completed');
+    expect(form.generatedQuiz.questions[0].image).toBe('https://img.test/final.png');
   });
 
   it('uses a new QUESTION_REGENERATE action for a manual single-question retry', async () => {

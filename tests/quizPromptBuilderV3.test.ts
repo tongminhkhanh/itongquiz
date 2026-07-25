@@ -28,6 +28,17 @@ const makeInput = (blueprintV3: QuizBlueprintV3) => ({
 });
 
 describe('quiz prompt builder V3', () => {
+  it('uses concise explanations by default and detailed only when requested', () => {
+    const input = makeInput(makeBlueprintV3Fixture());
+    expect(buildPromptV3(input)).toContain('Lời giải ngắn 1-2 câu');
+
+    const detailed = {
+      ...input,
+      options: { ...input.options, explanationDetail: 'detailed' as const },
+    };
+    expect(buildPromptV3(detailed)).toContain('Lời giải chi tiết 2-4 câu');
+  });
+
   it('prints every slot exactly once in the exact slot table', () => {
     const input = makeInput(makeBlueprintV3Fixture());
     const prompt = buildPromptV3(input);

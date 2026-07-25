@@ -102,13 +102,13 @@ describe('quiz generation V3 quality pipeline', () => {
     });
   });
 
-  it('repairs one wrong slot, ignores an invalid reviewer and maps to domain', async () => {
+  it('uses only REPAIR for an invalid V3 draft in fast mode and maps to domain', async () => {
     const result = await generateQuiz(
       blueprint.topic,
       blueprint.classLevel,
       '',
       undefined,
-      options,
+      { ...options, reviewMode: 'fast' },
       undefined,
       'openai',
       undefined,
@@ -120,16 +120,31 @@ describe('quiz generation V3 quality pipeline', () => {
     );
     expect(repairCalls).toHaveLength(1);
     expect(repairCalls[0][0].messages[1].content).toContain('slot-3');
-    expect(mocks.requestWorkerAiText.mock.calls.map((call) => call[1]?.action?.stage)).toEqual([
-      'REPAIR',
-      'REVIEW',
-    ]);
+    expect(mocks.requestWorkerAiText.mock.calls.map((call) => call[1]?.action?.stage))
+      .toEqual(['REPAIR']);
     expect(result.questions).toHaveLength(blueprint.slots.length);
     expect(result.questions[0].type).toBe(validQuiz.questions[0].type);
     expect(result.questions[0].id).toBe('slot-1');
     expect(result.questions[0].difficulty).toBe(blueprint.slots[0].difficulty);
     expect(result.questions[0].skillCode).toBe('phan_so');
     expect((result.questions[0] as any).slotId).toBeUndefined();
+  });
+
+  it('uses REPAIR then REVIEW for an invalid V3 draft in strict mode', async () => {
+    await generateQuiz(
+      blueprint.topic,
+      blueprint.classLevel,
+      '',
+      undefined,
+      { ...options, reviewMode: 'strict' },
+      undefined,
+      'openai',
+      undefined,
+      execution,
+    );
+
+    expect(mocks.requestWorkerAiText.mock.calls.map((call) => call[1]?.action?.stage))
+      .toEqual(['REPAIR', 'REVIEW']);
   });
 
   it('passes the capability-aware V3 system instruction to the provider', async () => {

@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Quiz, Question } from '../../../types';
 import { QuestionType } from '../../../types';
 import {
     extractTextFromPdf,
     generateQuiz,
+    resolveGeneratedImagesBlocking,
     type AIProvider,
 } from '../../../services/geminiService';
 import {
@@ -22,6 +23,10 @@ import { validateQuizGenerationInput } from '../domain/quizCreationValidation';
 import type { GenerationStep, QuizMode } from '../domain/quizCreation.types';
 import type { useQuizFormState } from './useQuizFormState';
 import { createAiAction, type ClientAiAction } from '../../../services/ai/aiAction';
+import { hydrateGeneratedImages, prepareGeneratedImageJobs } from '../../../services/ai/generatedImageHydration';
+import { generateImage } from '../../../services/imageGenerationService';
+import { isAiDeferredImagesEnabled, isAiFastPathEnabled } from '../../../config/featureFlags';
+import { resolveQuizGenerationRolloutPolicy } from '../../../services/ai/quizGenerationRolloutPolicy';
 import { useTeacherAiQuota } from './useTeacherAiQuota';
 
 interface UseQuizGenerationOptions {
@@ -54,8 +59,21 @@ export const useQuizGeneration = ({
 }: UseQuizGenerationOptions) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStep, setGenerationStep] = useState<GenerationStep>('idle');
+    const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
+    const [isHydratingImages, setIsHydratingImages] = useState(false);
     const activeGenerationRef = useRef<ActiveGeneration | null>(null);
+    const imageHydrationControllerRef = useRef<AbortController | null>(null);
     const quota = useTeacherAiQuota({ isTeacherAccount, username });
+    const rolloutPolicy = resolveQuizGenerationRolloutPolicy({
+        fastPathEnabled: isAiFastPathEnabled(),
+        deferredImagesEnabled: isAiDeferredImagesEnabled(),
+        requestedReviewMode: form.reviewMode,
+    });
+
+    useEffect(() => () => {
+        activeGenerationRef.current?.controller.abort();
+        imageHydrationControllerRef.current?.abort();
+    }, []);
 
     const createQuizFromResult = (
         result: Record<string, unknown>,
@@ -95,6 +113,7 @@ export const useQuizGeneration = ({
         const sourceFileKey = fileKey(file);
         activeGenerationRef.current = { action, controller, phase: 'ocr', sourceFileKey };
         form.clearOcrDocument();
+        setGenerationStartedAt(Date.now());
         setIsGenerating(true);
         setGenerationStep('reading_document');
 
@@ -131,12 +150,16 @@ export const useQuizGeneration = ({
             }
             return null;
         } finally {
-            setIsGenerating(false);
+            if (!imageHydrationControllerRef.current) setIsGenerating(false);
             void quota.refresh();
         }
     };
 
     const handleGenerate = async (modeOverride?: QuizMode) => {
+        imageHydrationControllerRef.current?.abort();
+        imageHydrationControllerRef.current = null;
+        setIsHydratingImages(false);
+
         const activeQuizMode = modeOverride ?? form.quizMode;
         const isPdfMode = activeQuizMode === 'pdf';
         form.setQuizMode(activeQuizMode);
@@ -195,6 +218,7 @@ export const useQuizGeneration = ({
             sourceFileKey: pendingAction?.sourceFileKey,
         };
 
+        if (!pendingAction) setGenerationStartedAt(Date.now());
         setIsGenerating(true);
         setGenerationStep('generating');
         form.setAiDetectedCategory(null);
@@ -287,6 +311,8 @@ export const useQuizGeneration = ({
                 typeAllocations: form.questionTypeAllocations,
                 difficultyLevels: form.difficultyLevels,
                 promptProfile: form.promptProfile,
+                explanationDetail: form.explanationDetail,
+                reviewMode: rolloutPolicy.effectiveReviewMode,
                 imageLibrary: form.imageLibrary,
                 customPrompt: form.customPrompt,
                 quizMode: activeQuizMode,
@@ -310,7 +336,9 @@ export const useQuizGeneration = ({
                 options,
                 undefined,
                 form.aiProvider,
-                setGenerationStep,
+                (step) => {
+                    if (step !== 'completed') setGenerationStep(step);
+                },
                 {
                     action,
                     stage: 'GENERATE',
@@ -318,23 +346,73 @@ export const useQuizGeneration = ({
                 },
             ) as Record<string, unknown>;
 
-            const detectedCategory = normalizeAiCategory(result.detectedCategory);
-            const detectedLesson = typeof result.detectedLesson === 'string'
-                ? result.detectedLesson.trim()
+            let prepared;
+            if (rolloutPolicy.shouldDeferImages) {
+                prepared = prepareGeneratedImageJobs(result);
+            } else {
+                const pendingImages = prepareGeneratedImageJobs(result).jobs.length;
+                if (pendingImages > 0) setGenerationStep('generating_images');
+                const resolved = await resolveGeneratedImagesBlocking(result, {
+                    action,
+                    stage: 'IMAGE',
+                    signal: controller.signal,
+                });
+                prepared = { quiz: resolved as Record<string, unknown>, jobs: [] };
+            }
+            const preparedQuiz = prepared.quiz as Record<string, unknown>;
+            const detectedCategory = normalizeAiCategory(preparedQuiz.detectedCategory);
+            const detectedLesson = typeof preparedQuiz.detectedLesson === 'string'
+                ? preparedQuiz.detectedLesson.trim()
                 : '';
-            const suggestedTags = normalizeTags(result.suggestedTags);
+            const suggestedTags = normalizeTags(preparedQuiz.suggestedTags);
 
             form.setAiDetectedCategory(detectedCategory);
             form.setAiDetectedLesson(detectedLesson);
             form.setAiSuggestedTags(suggestedTags);
             form.setGeneratedQuiz(createQuizFromResult(
-                result,
+                preparedQuiz,
                 options.title,
                 detectedCategory,
                 detectedLesson,
                 suggestedTags,
             ));
-            setGenerationStep('completed');
+
+            if (prepared.jobs.length === 0) {
+                setGenerationStep('completed');
+            } else {
+                const imageController = new AbortController();
+                imageHydrationControllerRef.current = imageController;
+                setIsHydratingImages(true);
+                setGenerationStep('generating_images');
+
+                void hydrateGeneratedImages(prepared.jobs, {
+                    concurrency: 2,
+                    signal: imageController.signal,
+                    generate: async (prompt) => {
+                        const generated = await generateImage(prompt, {
+                            action,
+                            stage: 'IMAGE',
+                            signal: imageController.signal,
+                        });
+                        return generated.success ? generated.data ?? null : null;
+                    },
+                    onResolved: (questionIndex, image) => {
+                        form.setGeneratedQuiz((current) => {
+                            if (!current) return current;
+                            const questions = current.questions.map((question, index) => (
+                                index === questionIndex ? { ...question, image } : question
+                            ));
+                            return { ...current, questions };
+                        });
+                    },
+                }).finally(() => {
+                    if (imageHydrationControllerRef.current !== imageController) return;
+                    imageHydrationControllerRef.current = null;
+                    setIsHydratingImages(false);
+                    setIsGenerating(false);
+                    if (!imageController.signal.aborted) setGenerationStep('completed');
+                });
+            }
         } catch (error: unknown) {
             if (controller.signal.aborted) {
                 setGenerationStep('cancelled');
@@ -373,6 +451,8 @@ export const useQuizGeneration = ({
                     level3: question.difficulty === 3 ? 1 : 0,
                 },
                 promptProfile: form.promptProfile,
+                explanationDetail: form.explanationDetail,
+                reviewMode: rolloutPolicy.effectiveReviewMode,
                 imageLibrary: form.imageLibrary,
                 customPrompt: `T?o n?i dung m?i d?a tr?n c?u hi?n t?i: ${JSON.stringify(question)}`,
                 quizMode: form.quizMode,
@@ -443,6 +523,11 @@ export const useQuizGeneration = ({
     return {
         isGenerating,
         generationStep,
+        generationStartedAt,
+        isHydratingImages,
+        questionCount: form.difficultyLevels.level1
+            + form.difficultyLevels.level2
+            + form.difficultyLevels.level3,
         aiUsageCount: quota.aiUsageCount,
         aiUsageRemaining: quota.aiUsageRemaining,
         hasAiQuota: quota.hasAiQuota,
@@ -451,9 +536,11 @@ export const useQuizGeneration = ({
         handleRegenerateSingle,
         cancelGeneration: () => {
             const activeGeneration = activeGenerationRef.current;
-            if (!activeGeneration) return;
+            const imageController = imageHydrationControllerRef.current;
+            if (!activeGeneration && !imageController) return;
             setGenerationStep('cancelled');
-            activeGeneration.controller.abort();
+            activeGeneration?.controller.abort();
+            imageController?.abort();
         },
     };
 };

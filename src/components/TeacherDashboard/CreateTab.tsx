@@ -132,6 +132,10 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     onToggle={logic.toggleSection}
                     onToggleThongTu27={logic.handleToggleThongTu27}
                     onSelectLearnerMode={logic.handleSelectLearnerMode}
+                    explanationDetail={logic.explanationDetail}
+                    onExplanationDetailChange={logic.setExplanationDetail}
+                    reviewMode={logic.reviewMode}
+                    onReviewModeChange={logic.setReviewMode}
                 />
 
                 <ContentSourceSection
@@ -200,6 +204,8 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     {aiQuizV2Enabled && logic.generationStep !== 'idle' && (
                         <GenerationProgressPanel
                             step={logic.generationStep}
+                            startedAt={logic.generationStartedAt}
+                            questionCount={logic.questionCount}
                             onCancel={logic.cancelGeneration}
                         />
                     )}
@@ -294,6 +300,7 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     quiz={logic.generatedQuiz}
                     onSave={logic.handleSaveQuiz}
                     isSaving={logic.isSaving}
+                    isHydratingImages={logic.isHydratingImages}
                     onUpdateQuestions={(questions) => {
                         if (logic.generatedQuiz) {
                             logic.setGeneratedQuiz({ ...logic.generatedQuiz, questions });

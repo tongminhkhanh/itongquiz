@@ -200,7 +200,7 @@ describe('quiz generation quality pipeline', () => {
       '4',
       '',
       undefined,
-      interactivePipelineOptions,
+      { ...interactivePipelineOptions, reviewMode: 'fast' },
       undefined,
       'openai',
       undefined,
@@ -215,10 +215,10 @@ describe('quiz generation quality pipeline', () => {
       correctAnswer: 'Hà Nội',
     });
     expect(mocks.requestWorkerAiText.mock.calls.map((call) => call[1]?.action?.stage))
-      .toEqual(['REPAIR', 'REVIEW']);
+      .toEqual(['REPAIR']);
   });
 
-  it('does not add a schema repair call when the provider draft is already valid', async () => {
+  it('does not add a schema repair or reviewer call when the provider draft is already valid in fast mode', async () => {
     mocks.generateWithOpenAIResilient.mockResolvedValue({
       title: 'Đề hợp lệ',
       questions: [makeMcq(1), makeMcq(2)],
@@ -238,7 +238,7 @@ describe('quiz generation quality pipeline', () => {
       '4',
       '',
       undefined,
-      options,
+      { ...options, reviewMode: 'fast' },
       undefined,
       'openai',
       undefined,
@@ -246,8 +246,7 @@ describe('quiz generation quality pipeline', () => {
     );
 
     expect(result.questions).toHaveLength(2);
-    expect(mocks.requestWorkerAiText.mock.calls.map((call) => call[1]?.action?.stage))
-      .toEqual(['REVIEW']);
+    expect(mocks.requestWorkerAiText).not.toHaveBeenCalled();
   });
 
   it('stops after one schema repair when the repaired response is still invalid', async () => {
@@ -270,6 +269,33 @@ describe('quiz generation quality pipeline', () => {
     });
 
     expect(mocks.requestWorkerAiText).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not spend a second REPAIR call after schema repair leaves semantic issues', async () => {
+    const schemaValidButSemanticallyInvalid = {
+      ...repairedInteractiveDraft,
+      questions: repairedInteractiveDraft.questions.map((question) => ({
+        ...question,
+        question: 'Câu hỏi giống nhau hoàn toàn',
+      })),
+    };
+    mocks.generateWithOpenAIResilient.mockResolvedValue(malformedInteractiveDraft);
+    mocks.requestWorkerAiText.mockResolvedValue(JSON.stringify(schemaValidButSemanticallyInvalid));
+
+    await expect(generateQuiz(
+      'Từ loại',
+      '4',
+      '',
+      undefined,
+      { ...interactivePipelineOptions, reviewMode: 'fast' },
+      undefined,
+      'openai',
+      undefined,
+      execution,
+    )).rejects.toMatchObject({ name: 'QuizGenerationValidationError' });
+
+    expect(mocks.requestWorkerAiText).toHaveBeenCalledTimes(1);
+    expect(mocks.requestWorkerAiText.mock.calls[0][1]?.action?.stage).toBe('REPAIR');
   });
 
   it('does not schema-repair an invalid single-question regeneration response', async () => {
@@ -311,14 +337,14 @@ describe('quiz generation quality pipeline', () => {
     expect(mocks.requestWorkerAiText).not.toHaveBeenCalled();
   });
 
-  it('runs one targeted repair and one optional review with the same action', async () => {
+  it('uses only GENERATE + REPAIR in fast mode', async () => {
     const steps: string[] = [];
     const result = await generateQuiz(
       'Phân số',
       '4',
       '',
       undefined,
-      options,
+      { ...options, reviewMode: 'fast' },
       undefined,
       'openai',
       (step) => steps.push(step),
@@ -326,11 +352,50 @@ describe('quiz generation quality pipeline', () => {
     );
 
     expect(result.questions).toHaveLength(2);
-    expect(mocks.requestWorkerAiText).toHaveBeenCalledTimes(2);
-    expect(mocks.requestWorkerAiText.mock.calls.map((call) => call[1]?.action?.stage)).toEqual(['REPAIR', 'REVIEW']);
-    expect(mocks.requestWorkerAiText.mock.calls.every((call) => call[1]?.action?.actionId === execution.action.actionId)).toBe(true);
+    expect(mocks.requestWorkerAiText).toHaveBeenCalledTimes(1);
+    expect(mocks.requestWorkerAiText.mock.calls.map((call) => call[1]?.action?.stage)).toEqual(['REPAIR']);
     expect(steps).toContain('repairing');
-    expect(steps).toContain('reviewing');
+    expect(steps).not.toContain('reviewing');
+  });
+
+  it('emits generating, validating and completed on a valid fast path', async () => {
+    mocks.generateWithOpenAIResilient.mockResolvedValue({
+      title: 'Đề hợp lệ',
+      questions: [makeMcq(1), makeMcq(2)],
+    });
+    const steps: string[] = [];
+
+    await generateQuiz(
+      'Phân số',
+      '4',
+      '',
+      undefined,
+      { ...options, reviewMode: 'fast' },
+      undefined,
+      'openai',
+      (step) => steps.push(step),
+      execution,
+    );
+
+    expect(steps).toEqual(['generating', 'validating', 'completed']);
+  });
+
+  it('keeps reviewer for strict mode', async () => {
+    const result = await generateQuiz(
+      'Phân số',
+      '4',
+      '',
+      undefined,
+      { ...options, reviewMode: 'strict' },
+      undefined,
+      'openai',
+      undefined,
+      execution,
+    );
+
+    expect(result.questions).toHaveLength(2);
+    expect(mocks.requestWorkerAiText.mock.calls.map((call) => call[1]?.action?.stage))
+      .toEqual(['REPAIR', 'REVIEW']);
   });
 
   it('does not use repair or review stages for a single-question regeneration action', async () => {
@@ -385,7 +450,7 @@ describe('quiz generation quality pipeline', () => {
       '4',
       '',
       undefined,
-      options,
+      { ...options, reviewMode: 'strict' },
       undefined,
       'openai',
       undefined,

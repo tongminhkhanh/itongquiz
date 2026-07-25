@@ -114,6 +114,9 @@ function renderCreationHook(overrides: Partial<{
 
 describe('quiz creation workflows', () => {
     beforeEach(() => {
+        vi.unstubAllEnvs();
+        vi.stubEnv('VITE_FEATURE_AI_FAST_PATH', 'true');
+        vi.stubEnv('VITE_FEATURE_AI_DEFER_IMAGES', 'true');
         localStorage.clear();
         vi.clearAllMocks();
         mockedGetQuota.mockResolvedValue({
@@ -180,6 +183,10 @@ describe('quiz creation workflows', () => {
         await act(async () => result.current.handleGenerate('practice'));
 
         expect(mockedGenerateQuiz).toHaveBeenCalledTimes(1);
+        expect(mockedGenerateQuiz.mock.calls[0][4]).toMatchObject({
+            explanationDetail: 'concise',
+            reviewMode: 'fast',
+        });
         expect(result.current.generatedQuiz).toEqual(expect.objectContaining({
             title: 'Generated fractions quiz',
             classLevel: '4A',

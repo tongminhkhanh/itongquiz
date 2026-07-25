@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { QuestionType, type ImageLibraryItem, type Quiz } from '../../../types';
 import type {
     AIProvider,
+    ExplanationDetail,
     LearnerPromptMode,
     PromptProfileOptions,
 } from '../../../services/geminiService';
+import type { QuizReviewMode } from '../../../services/ai/quizQualityPolicy';
 import { normalizeAiCategory, normalizeTagValue, normalizeTags } from '../utils/quizNormalizers';
 import {
     createDefaultDeadline,
@@ -88,6 +90,8 @@ export const useQuizFormState = ({
         createDefaultDifficultyLevels,
     );
     const [promptProfile, setPromptProfile] = useState<PromptProfileOptions>(DEFAULT_PROMPT_PROFILE);
+    const [explanationDetail, setExplanationDetail] = useState<ExplanationDetail>('concise');
+    const [reviewMode, setReviewMode] = useState<QuizReviewMode>('fast');
     const [profilePresetNotice, setProfilePresetNotice] = useState<string | null>(null);
     const [requireCode, setRequireCode] = useState(false);
     const [accessCode, setAccessCode] = useState('');
@@ -264,6 +268,8 @@ export const useQuizFormState = ({
         setAiSuggestedTags([]);
         setPromptProfile(DEFAULT_PROMPT_PROFILE);
         setProfilePresetNotice(null);
+        setExplanationDetail('concise');
+        setReviewMode('fast');
         setQuizMode('practice');
         setQuizIntent('PRACTICE');
     };
@@ -289,6 +295,8 @@ export const useQuizFormState = ({
             setAiSuggestedTags(normalizeTags(editingQuiz.suggestedTags));
             setPromptProfile(DEFAULT_PROMPT_PROFILE);
             setProfilePresetNotice(null);
+            setExplanationDetail('concise');
+            setReviewMode('fast');
             setQuizIntent(editingQuiz.isPractice ? 'PRACTICE' : 'EXAM');
             setQuizMode(editingQuiz.isPractice ? 'practice' : 'exam');
             return;
@@ -313,6 +321,8 @@ export const useQuizFormState = ({
         setAiSuggestedTags([]);
         setPromptProfile(DEFAULT_PROMPT_PROFILE);
         setProfilePresetNotice(null);
+        setExplanationDetail('concise');
+        setReviewMode('fast');
         setQuizMode('practice');
         setQuizIntent('PRACTICE');
     }, [editingQuiz, isClassLocked, lockedClass]);
@@ -387,6 +397,10 @@ export const useQuizFormState = ({
         setDifficultyLevels,
         promptProfile,
         profilePresetNotice,
+        explanationDetail,
+        setExplanationDetail,
+        reviewMode,
+        setReviewMode,
         requireCode,
         setRequireCode,
         accessCode,

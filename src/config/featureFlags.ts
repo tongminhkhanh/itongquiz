@@ -39,6 +39,16 @@ export const isAiBlueprintV3Enabled = (): boolean => resolveFeatureFlag(
     false,
 );
 
+export const isAiFastPathEnabled = (): boolean => resolveFeatureFlag(
+    import.meta.env.VITE_FEATURE_AI_FAST_PATH,
+    false,
+);
+
+export const isAiDeferredImagesEnabled = (): boolean => resolveFeatureFlag(
+    import.meta.env.VITE_FEATURE_AI_DEFER_IMAGES,
+    false,
+);
+
 export const isParentPortalEnabled = (): boolean => resolveFeatureFlag(
     import.meta.env.VITE_FEATURE_PARENT_PORTAL_V1,
     false,
