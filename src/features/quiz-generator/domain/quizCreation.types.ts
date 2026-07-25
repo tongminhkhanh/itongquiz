@@ -8,8 +8,10 @@ export type GenerationStep =
     | 'idle'
     | 'reading_document'
     | 'generating'
+    | 'validating'
     | 'reviewing'
     | 'repairing'
+    | 'generating_images'
     | 'completed'
     | 'cancelled';
 export type TrangNguyenSearchMode = 'search' | 'quick';

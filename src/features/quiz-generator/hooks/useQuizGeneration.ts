@@ -54,6 +54,7 @@ export const useQuizGeneration = ({
 }: UseQuizGenerationOptions) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStep, setGenerationStep] = useState<GenerationStep>('idle');
+    const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
     const activeGenerationRef = useRef<ActiveGeneration | null>(null);
     const quota = useTeacherAiQuota({ isTeacherAccount, username });
 
@@ -95,6 +96,7 @@ export const useQuizGeneration = ({
         const sourceFileKey = fileKey(file);
         activeGenerationRef.current = { action, controller, phase: 'ocr', sourceFileKey };
         form.clearOcrDocument();
+        setGenerationStartedAt(Date.now());
         setIsGenerating(true);
         setGenerationStep('reading_document');
 
@@ -195,6 +197,7 @@ export const useQuizGeneration = ({
             sourceFileKey: pendingAction?.sourceFileKey,
         };
 
+        if (!pendingAction) setGenerationStartedAt(Date.now());
         setIsGenerating(true);
         setGenerationStep('generating');
         form.setAiDetectedCategory(null);
@@ -447,6 +450,10 @@ export const useQuizGeneration = ({
     return {
         isGenerating,
         generationStep,
+        generationStartedAt,
+        questionCount: form.difficultyLevels.level1
+            + form.difficultyLevels.level2
+            + form.difficultyLevels.level3,
         aiUsageCount: quota.aiUsageCount,
         aiUsageRemaining: quota.aiUsageRemaining,
         hasAiQuota: quota.hasAiQuota,

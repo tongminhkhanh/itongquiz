@@ -54,7 +54,7 @@ import { mapGeneratedQuizV3ToDomain } from './ai/quizDomainAdapter';
 export type AIProvider = 'gemini' | 'perplexity' | 'openai' | 'llm-mux' | 'localhost' | 'native-ocr';
 export type LearnerPromptMode = 'default' | 'gifted' | 'remedial';
 export type ExplanationDetail = 'concise' | 'detailed';
-export type QuizGenerationStep = 'generating' | 'reviewing' | 'repairing' | 'completed';
+export type QuizGenerationStep = 'generating' | 'validating' | 'reviewing' | 'repairing' | 'generating_images' | 'completed';
 
 export interface PromptProfileOptions {
   useThongTu27: boolean;
@@ -447,6 +447,8 @@ export const generateQuiz = async (
       systemInstruction,
     );
   }
+
+  onStepChange?.('validating');
 
   if (useV3 && options?.blueprintV3) {
     const finalQuizV3 = await runV3QualityPipeline(

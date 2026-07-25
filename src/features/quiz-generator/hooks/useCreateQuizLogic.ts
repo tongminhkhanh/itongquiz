@@ -82,6 +82,8 @@ export const useCreateQuizLogic = ({
         setManualTimeLimit: form.setManualTimeLimit,
         isGenerating: generation.isGenerating,
         generationStep: generation.generationStep,
+        generationStartedAt: generation.generationStartedAt,
+        questionCount: generation.questionCount,
         generatedQuiz: form.generatedQuiz,
         setGeneratedQuiz: form.setGeneratedQuiz,
         error: form.error,

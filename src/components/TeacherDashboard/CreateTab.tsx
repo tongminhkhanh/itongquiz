@@ -204,6 +204,8 @@ const CreateTab: React.FC<CreateTabProps> = ({ editingQuiz, onSaveQuiz, onUpdate
                     {aiQuizV2Enabled && logic.generationStep !== 'idle' && (
                         <GenerationProgressPanel
                             step={logic.generationStep}
+                            startedAt={logic.generationStartedAt}
+                            questionCount={logic.questionCount}
                             onCancel={logic.cancelGeneration}
                         />
                     )}

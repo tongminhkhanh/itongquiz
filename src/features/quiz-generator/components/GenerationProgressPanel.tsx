@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check, Circle, Loader2, XCircle } from 'lucide-react';
 import type { GenerationStep } from '../domain/quizCreation.types';
 
 const STEP_COPY: Record<GenerationStep, string> = {
   idle: '',
-  reading_document: 'Đang đọc tài liệu',
-  generating: 'Đang tạo câu hỏi',
-  reviewing: 'Đang kiểm tra đáp án',
-  repairing: 'Đang sửa các câu chưa đạt',
+  reading_document: 'Đang đọc và nhận dạng tài liệu',
+  generating: 'AI đang tạo câu hỏi',
+  validating: 'Đang kiểm tra cấu trúc và đáp án',
+  repairing: 'Đang sửa đúng các câu chưa đạt',
+  reviewing: 'Đang kiểm tra nâng cao bằng AI',
+  generating_images: 'Đang hoàn thiện hình ảnh',
   completed: 'Đã hoàn thành',
   cancelled: 'Đã hủy yêu cầu',
 };
@@ -15,17 +17,41 @@ const STEP_COPY: Record<GenerationStep, string> = {
 const ORDERED_STEPS: GenerationStep[] = [
   'reading_document',
   'generating',
+  'validating',
   'repairing',
   'reviewing',
+  'generating_images',
   'completed',
 ];
 
 interface GenerationProgressPanelProps {
   step: GenerationStep;
+  startedAt: number | null;
+  questionCount: number;
   onCancel: () => void;
 }
 
-const GenerationProgressPanel: React.FC<GenerationProgressPanelProps> = ({ step, onCancel }) => {
+const elapsedFrom = (startedAt: number | null): number => (
+  startedAt === null ? 0 : Math.max(0, Math.floor((Date.now() - startedAt) / 1000))
+);
+
+const GenerationProgressPanel: React.FC<GenerationProgressPanelProps> = ({
+  step,
+  startedAt,
+  questionCount,
+  onCancel,
+}) => {
+  const [elapsedSeconds, setElapsedSeconds] = useState(() => elapsedFrom(startedAt));
+
+  useEffect(() => {
+    setElapsedSeconds(elapsedFrom(startedAt));
+    if (startedAt === null || ['completed', 'cancelled'].includes(step)) return undefined;
+    const interval = window.setInterval(() => {
+      setElapsedSeconds(elapsedFrom(startedAt));
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [startedAt, step]);
+
   if (step === 'idle') return null;
 
   const currentIndex = ORDERED_STEPS.indexOf(step);
@@ -40,6 +66,11 @@ const GenerationProgressPanel: React.FC<GenerationProgressPanelProps> = ({ step,
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Tiến trình tạo đề</p>
           <p className="mt-1 text-base font-bold text-gray-900">{STEP_COPY[step]}</p>
+          {startedAt !== null && (
+            <p className="mt-1 text-xs text-slate-500">
+              Đã chờ {elapsedSeconds} giây · Mục tiêu {questionCount} câu
+            </p>
+          )}
         </div>
         {canCancel && (
           <button
@@ -56,7 +87,7 @@ const GenerationProgressPanel: React.FC<GenerationProgressPanelProps> = ({ step,
       {step === 'cancelled' ? (
         <p className="mt-3 text-sm text-gray-600">Thông tin đã nhập vẫn được giữ lại để bạn chỉnh sửa hoặc tạo lại.</p>
       ) : (
-        <ol className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-5">
+        <ol className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-7">
           {ORDERED_STEPS.map((item, index) => {
             const completed = step === 'completed' || (currentIndex >= 0 && index < currentIndex);
             const current = item === step;

@@ -358,6 +358,28 @@ describe('quiz generation quality pipeline', () => {
     expect(steps).not.toContain('reviewing');
   });
 
+  it('emits generating, validating and completed on a valid fast path', async () => {
+    mocks.generateWithOpenAIResilient.mockResolvedValue({
+      title: 'Đề hợp lệ',
+      questions: [makeMcq(1), makeMcq(2)],
+    });
+    const steps: string[] = [];
+
+    await generateQuiz(
+      'Phân số',
+      '4',
+      '',
+      undefined,
+      { ...options, reviewMode: 'fast' },
+      undefined,
+      'openai',
+      (step) => steps.push(step),
+      execution,
+    );
+
+    expect(steps).toEqual(['generating', 'validating', 'completed']);
+  });
+
   it('keeps reviewer for strict mode', async () => {
     const result = await generateQuiz(
       'Phân số',

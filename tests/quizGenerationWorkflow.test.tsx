@@ -85,6 +85,8 @@ const makeForm = (uploadedFile: File | null = null) => {
     aiProvider: 'llm-mux',
     quizTitle: 'Đề kiểm tra',
     promptProfile: { useThongTu27: true, learnerMode: 'default' },
+    explanationDetail: 'concise',
+    reviewMode: 'fast',
     imageLibrary: [],
     customPrompt: '',
     manualTimeLimit: 15,
@@ -132,6 +134,20 @@ beforeEach(() => {
 });
 
 describe('quiz AI workflow', () => {
+  it('exposes generation start time and question count', async () => {
+    const form = makeForm();
+    const { result } = renderGeneration(form);
+
+    expect(result.current.generationStartedAt).toBeNull();
+    expect(result.current.questionCount).toBe(1);
+
+    await act(async () => {
+      await result.current.handleGenerate('exam');
+    });
+
+    expect(result.current.generationStartedAt).toEqual(expect.any(Number));
+  });
+
   it('uses the same action id for OCR and generate after page review', async () => {
     const form = makeForm(new File(['pdf'], 'nguon.pdf', { type: 'application/pdf' }));
     const { result } = renderGeneration(form);
