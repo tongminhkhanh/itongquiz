@@ -77,7 +77,6 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     } = useQuestionReviewState(displayQuestions);
     const { correctCount, wrongCount } = getQuestionResultCounts(displayQuestions);
     return (
-      <LazyMathJaxBoundary>
         <div className={embedded ? 'min-h-screen bg-slate-50' : 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4'}>
             <div className={embedded ? 'bg-white w-full min-h-screen overflow-hidden flex flex-col' : 'bg-white w-full h-dvh md:h-auto md:max-h-[92vh] md:max-w-[96vw] rounded-none md:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300'}>
                 
@@ -92,18 +91,20 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 {/* Content Area */}
                 <div className="flex-1 overflow-hidden flex flex-col bg-slate-50/50">
                     {activeTab === 'review' ? (
-                        <ReviewPanel
-                            hasAnyData={hasAnyData}
-                            displayQuestions={displayQuestions}
-                            filteredQuestions={filteredQuestions}
-                            correctCount={correctCount}
-                            wrongCount={wrongCount}
-                            filterMode={filterMode}
-                            selectedQuestionIndex={selectedQuestionIndex}
-                            selectedQuestion={selectedQuestion}
-                            setFilterMode={setFilterMode}
-                            setSelectedQuestionIndex={setSelectedQuestionIndex}
-                        />
+                        <LazyMathJaxBoundary>
+                            <ReviewPanel
+                                hasAnyData={hasAnyData}
+                                displayQuestions={displayQuestions}
+                                filteredQuestions={filteredQuestions}
+                                correctCount={correctCount}
+                                wrongCount={wrongCount}
+                                filterMode={filterMode}
+                                selectedQuestionIndex={selectedQuestionIndex}
+                                selectedQuestion={selectedQuestion}
+                                setFilterMode={setFilterMode}
+                                setSelectedQuestionIndex={setSelectedQuestionIndex}
+                            />
+                        </LazyMathJaxBoundary>
                     ) : (
                         <AnalyticsPanel
                             reportRef={reportRef}
@@ -143,7 +144,6 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
         </div>
-      </LazyMathJaxBoundary>
     );
 };
 

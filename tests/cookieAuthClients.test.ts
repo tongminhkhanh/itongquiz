@@ -33,7 +33,8 @@ describe('cookie-only feature clients', () => {
   it('loads protected certificate images with cookie credentials only', async () => {
     fetchMock.mockResolvedValue(new Response(new Blob(['png']), { status: 200 }));
 
-    await expect(fetchCertificateImageBlob('/api/certificates/cert-1/image')).resolves.toBeInstanceOf(Blob);
+    const image = await fetchCertificateImageBlob('/api/certificates/cert-1/image');
+    expect(Object.prototype.toString.call(image)).toBe('[object Blob]');
     assertCookieRequest(fetchMock.mock.calls[0]?.[1]);
   });
 
