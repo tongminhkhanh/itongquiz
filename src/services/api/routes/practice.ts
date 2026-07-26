@@ -3,12 +3,12 @@ import type { RouteRegistry } from '../types';
 export const practiceRoutes: RouteRegistry = {
     get_practice_topics: {
         method: 'GET',
-        auth: 'public', // Public practice content
+        auth: 'studentSession',
         path: () => '/api/practice/topics',
     },
     get_practice_quiz: {
         method: 'GET',
-        auth: 'public',
+        auth: 'studentSession',
         path: () => '/api/practice',
         query: ({ topic, limit }) => {
             const q = new URLSearchParams();
@@ -16,5 +16,10 @@ export const practiceRoutes: RouteRegistry = {
             if (limit) q.append('limit', limit);
             return q;
         },
+    },
+    submit_practice_answers: {
+        method: 'POST',
+        auth: 'studentSession',
+        path: () => '/api/practice/submissions',
     },
 };

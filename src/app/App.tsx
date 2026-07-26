@@ -15,6 +15,7 @@ import { resolveHostContext } from './hostContext';
 import { isParentPortalEnabled } from '../config/featureFlags';
 import { ParentPortalApp } from './lazyViews';
 import { ParentPortalFallback } from '../features/parent-portal/layout/ParentPortalLayout';
+import { LazyMathJaxBoundary } from './LazyMathJaxBoundary';
 
 const MainApp: React.FC = () => {
     const quizStore = useQuizStore();
@@ -35,12 +36,21 @@ const MainApp: React.FC = () => {
     const aiAssistantEnabled = useSystemSettings();
     useQuizUrlSelection();
 
-    return (
+    const content = (
         <>
             <AppRoutes giftShopEnabled={giftShopEnabled} />
             <AppGlobals showChatbot={aiAssistantEnabled && quizStore.view !== 'student'} />
         </>
     );
+
+    const pathNeedsMath = location.pathname.startsWith('/teacher/results/')
+        || location.pathname.startsWith('/teacher/quizzes/manual/');
+    const needsMathRuntime = quizStore.view === 'student'
+        || pathNeedsMath;
+
+    return needsMathRuntime
+        ? <LazyMathJaxBoundary>{content}</LazyMathJaxBoundary>
+        : content;
 };
 
 const ParentPortalUnavailable = () => (

@@ -4,6 +4,7 @@ import { QuestionType, type Quiz, type StudentResult } from '../src/types';
 
 const mocks = vi.hoisted(() => ({
   validateAnswersOnServer: vi.fn(),
+  submitPracticeAnswers: vi.fn(),
   calculateStudentScore: vi.fn(),
   onSaveResult: vi.fn(),
   trackQuizActivity: vi.fn(),
@@ -25,6 +26,11 @@ vi.mock('../src/stores/useGameLoopStore', () => ({
 }));
 vi.mock('../src/services/quizValidationService', () => ({
   validateAnswersOnServer: mocks.validateAnswersOnServer,
+}));
+vi.mock('../src/services/practiceService', () => ({
+  practiceService: {
+    submitPracticeAnswers: mocks.submitPracticeAnswers,
+  },
 }));
 vi.mock('../src/features/quiz-player/utils/quizScoring', () => ({
   calculateStudentScore: mocks.calculateStudentScore,
@@ -63,6 +69,17 @@ describe('assigned quiz result payload', () => {
       details: [{ questionId: 'q1', isCorrect: true }],
     });
     mocks.onSaveResult.mockImplementation(async (result: StudentResult) => result);
+    mocks.submitPracticeAnswers.mockResolvedValue({
+      status: 'success',
+      score: 10,
+      correctCount: 1,
+      total: 1,
+      details: [{ questionId: 'q1', isCorrect: true }],
+      reviewQuestions: [{
+        id: 'q1', quizId: 'practice-week-30', type: QuestionType.MULTIPLE_CHOICE,
+        question: '1 + 1?', options: ['1', '2'], correctAnswer: 'B',
+      }],
+    });
   });
 
   it('includes the active assignment id when submitting the result', async () => {
@@ -80,5 +97,40 @@ describe('assigned quiz result payload', () => {
       quizId: 'quiz-week-30',
       assignmentId: 'assignment-current-3-attempts',
     }));
+  });
+
+  it('submits a signed practice attempt and stores answer-bearing review snapshots', async () => {
+    const practiceQuiz = {
+      ...quiz,
+      id: 'practice-week-30',
+      isPractice: true,
+      practiceAttemptToken: 'signed-practice-attempt',
+      _assignmentData: undefined,
+      questions: [{
+        id: 'q1', quizId: 'practice-week-30', type: QuestionType.MULTIPLE_CHOICE,
+        question: '1 + 1?', options: ['1', '2'],
+      }],
+    } as unknown as Quiz;
+    const { result } = renderHook(() => useQuizPlayer({
+      quiz: practiceQuiz,
+      onExit: vi.fn(),
+      onSaveResult: mocks.onSaveResult,
+    }));
+
+    await waitFor(() => expect(result.current.step).toBe('quiz'));
+    act(() => result.current.handleAnswerChange('q1', 'B'));
+    await act(async () => result.current.handleSubmit());
+
+    expect(mocks.submitPracticeAnswers).toHaveBeenCalledWith({
+      attemptToken: 'signed-practice-attempt',
+      answers: { q1: 'B' },
+    });
+    expect(mocks.validateAnswersOnServer).not.toHaveBeenCalled();
+    expect(mocks.onSaveResult).not.toHaveBeenCalled();
+    expect((result.current.result?.answers as any).q1).toMatchObject({
+      selectedAnswer: 'B',
+      isCorrect: true,
+      questionSnapshot: expect.objectContaining({ id: 'q1', correctAnswer: 'B' }),
+    });
   });
 });

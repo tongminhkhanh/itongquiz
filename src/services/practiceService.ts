@@ -1,5 +1,19 @@
 import { callApi } from './apiAdapter';
-import { Quiz } from '../types';
+import { Question, Quiz } from '../types';
+
+export interface PracticeSubmissionInput {
+    attemptToken: string;
+    answers: Record<string, any>;
+}
+
+export interface PracticeSubmissionResponse {
+    status: 'success';
+    score: number;
+    correctCount: number;
+    total: number;
+    details: { questionId: string; isCorrect: boolean }[];
+    reviewQuestions: Question[];
+}
 
 export const practiceService = {
     /**
@@ -23,6 +37,12 @@ export const practiceService = {
             console.error('Error fetching practice quiz:', error);
             return null;
         }
-    }
+    },
+
+    submitPracticeAnswers: async (
+        input: PracticeSubmissionInput,
+    ): Promise<PracticeSubmissionResponse> => (
+        callApi<PracticeSubmissionResponse>('submit_practice_answers', input)
+    ),
 };
 

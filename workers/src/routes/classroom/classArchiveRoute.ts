@@ -19,7 +19,11 @@ export async function handleClassArchiveRoute(context: ClassroomRouteContext): P
             if (shouldArchive) {
                 await db.batch([
                     db.prepare('UPDATE classes SET archived_at = ? WHERE id = ?').bind(archivedAt, classId),
-                    db.prepare("UPDATE students SET archived_at = ? WHERE class_id = ? AND COALESCE(archived_at, '') = ''").bind(archivedAt, classId),
+                    db.prepare(`
+                        UPDATE students
+                        SET archived_at = ?, token_version = token_version + 1
+                        WHERE class_id = ? AND COALESCE(archived_at, '') = ''
+                    `).bind(archivedAt, classId),
                 ]);
             } else {
                 const previousArchivedAt = String(classroom.archived_at || '');

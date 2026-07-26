@@ -14,8 +14,6 @@ export function verifyToken(request: Request, _env: Env): Response | null {
     if ((path === '/api/announcements' || path === '/api/announcements/current') && method === 'GET') return null;
     if (path === '/api/system-settings' && method === 'GET') return null;
     if (path === '/api/login' || path === '/api/student-login') return null;
-    if (path.startsWith('/api/practice')) return null;
-
     const routeHandlerOwnsAuthentication = [
         '/api/logout',
         '/api/teachers',
@@ -60,6 +58,7 @@ export function verifyToken(request: Request, _env: Env): Response | null {
         '/api/help',
         '/api/teacher-ai-quota',
         '/api/test-bank',
+        '/api/practice',
     ].some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 
     if (routeHandlerOwnsAuthentication) return null;

@@ -1,4 +1,4 @@
-name: Security checks
+name: Quality and security gates
 
 on:
   push:
@@ -31,5 +31,75 @@ jobs:
       - name: Scan repository for secrets and sensitive exports
         run: npm run security:scan
 
-      - name: Audit production dependencies
-        run: npm run audit:dependencies:enforce
+      - name: Audit all dependencies
+        run: npm audit --audit-level=high
+
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.22.0
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm run typecheck:worker
+
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.22.0
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run test:coverage
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.22.0
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run assets:budget
+      - run: npm run build:frontend
+      - run: npx wrangler deploy --config workers/wrangler.toml --dry-run --outdir dist-worker
+
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.22.0
+          cache: npm
+      - run: npm ci
+      - run: npm run build:frontend
+      - name: Start frontend
+        run: |
+          npm run preview:ci > /tmp/itongquiz-vite.log 2>&1 &
+          for attempt in {1..60}; do
+            curl --fail --silent http://127.0.0.1:3001/ > /dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/itongquiz-vite.log
+          exit 1
+      - name: Smoke login and signed practice
+        run: npx cypress run --browser electron --spec cypress/e2e/audit-hardening-smoke.cy.ts

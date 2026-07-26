@@ -1,6 +1,8 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JWTPayload } from '../workers/src/utils/jwt';
 import { ClassroomDatabase, classroomEnv, classroomRequest } from './fixtures/classroomWorkerFixture';
+import { hashPassword } from '../workers/src/utils/response';
 
 const { authState, verifyJWTMiddleware } = vi.hoisted(() => ({
     authState: { currentUser: null as JWTPayload | null },
@@ -106,6 +108,77 @@ describe('Classroom route contracts', () => {
             JSON.stringify({ currentPassword: 'secret1', newPassword: 'secret2' }),
         );
         expect(response.status).toBe(403);
+    });
+
+    it('rotates the student session after a successful self-service password change', async () => {
+        asStudent();
+        const db = new ClassroomDatabase({
+            student: {
+                id: 'student-a', username: 'student-a', full_name: 'Lan', class_id: 'class-a',
+                password_hash: await hashPassword('secret1'), token_version: 2,
+            },
+        });
+        const response = await callRoute(
+            '/api/students/student-a/change-password', 'POST', db,
+            JSON.stringify({ currentPassword: 'secret1', newPassword: 'secret2' }),
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.headers.get('Set-Cookie')).toContain('auth_token=');
+        expect(db.executed.some(statement => (
+            statement.sql.includes('token_version = token_version + 1')
+            && statement.sql.includes('password_hash = ?')
+        ))).toBe(true);
+    });
+
+    it('revokes student sessions when a teacher resets the password', async () => {
+        authState.currentUser = { username: 'teacher-a', role: 'teacher' };
+        const db = new ClassroomDatabase({
+            classroom: { id: 'class-a', teacher_username: 'teacher-a', archived_at: '' },
+            student: { id: 'student-a', username: 'student-a', class_id: 'class-a' },
+        });
+        const response = await callRoute(
+            '/api/students/student-a/reset-password', 'POST', db,
+            JSON.stringify({ newPassword: 'secret2' }),
+        );
+
+        expect(response.status).toBe(200);
+        expect(db.executed.some(statement => (
+            statement.sql.includes('token_version = token_version + 1')
+            && statement.sql.includes('password_hash = ?')
+        ))).toBe(true);
+    });
+
+    it('revokes sessions when a student is archived', async () => {
+        authState.currentUser = { username: 'teacher-a', role: 'teacher' };
+        const db = new ClassroomDatabase({
+            classroom: { id: 'class-a', teacher_username: 'teacher-a', archived_at: '' },
+            student: { id: 'student-a', username: 'student-a', class_id: 'class-a' },
+        });
+        const response = await callRoute('/api/students/student-a', 'DELETE', db);
+
+        expect(response.status).toBe(200);
+        expect(db.executed.some(statement => (
+            /UPDATE\s+students\s+SET\s+archived_at\s*=\s*\?/u.test(statement.sql)
+            && statement.sql.includes('token_version = token_version + 1')
+        ))).toBe(true);
+    });
+
+    it('revokes every active student session when a class is archived', async () => {
+        authState.currentUser = { username: 'admin-a', role: 'admin' };
+        const db = new ClassroomDatabase({
+            classroom: { id: 'class-a', teacher_username: 'teacher-a', archived_at: '' },
+        });
+        const response = await callRoute(
+            '/api/classes/class-a/archive', 'PATCH', db,
+            JSON.stringify({ archived: true }),
+        );
+
+        expect(response.status).toBe(200);
+        expect(db.executed.some(statement => (
+            /UPDATE\s+students\s+SET\s+archived_at\s*=\s*\?/u.test(statement.sql)
+            && statement.sql.includes('token_version = token_version + 1')
+        ))).toBe(true);
     });
 
     it('rejects starting an assignment from another class', async () => {

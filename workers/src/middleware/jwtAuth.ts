@@ -67,6 +67,34 @@ export async function verifyJWTMiddleware(
         }
     }
 
+    if (payload.role === 'student') {
+        if (!payload.id || payload.tokenVersion === undefined) {
+            return errorResponse('Unauthorized: Session has been revoked', 401);
+        }
+        const student = await env.DB.prepare(`
+            SELECT
+                s.id,
+                s.token_version,
+                s.archived_at,
+                c.archived_at AS class_archived_at
+            FROM students s
+            LEFT JOIN classes c ON c.id = s.class_id
+            WHERE s.id = ? AND s.username = ?
+            LIMIT 1
+        `).bind(payload.id, payload.username).first<{
+            id: string;
+            token_version: number;
+            archived_at: string | null;
+            class_archived_at: string | null;
+        }>();
+        if (!student
+            || Boolean(student.archived_at)
+            || Boolean(student.class_archived_at)
+            || payload.tokenVersion !== Number(student.token_version)) {
+            return errorResponse('Unauthorized: Session has been revoked', 401);
+        }
+    }
+
     // Return user context to be attached to request
     return { user: payload };
 }

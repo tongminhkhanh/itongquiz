@@ -1,161 +1,233 @@
 import { Env } from '../types';
-import { jsonResponse, errorResponse } from '../utils/response';
+import { isStudent, verifyJWTMiddleware } from '../middleware/jwtAuth';
+import { rateLimit } from '../middleware/rateLimit';
+import { sanitizeQuestionForStudent } from './quizzes';
+import { handleValidateAnswers, parseBody } from '../utils/helpers';
+import { errorResponse, jsonResponse } from '../utils/response';
+import {
+  signPracticeAttemptToken,
+  verifyPracticeAttemptToken,
+} from '../services/practiceAttemptToken';
 
-export async function handlePracticeRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
-    const db = env.DB;
+const MAX_PRACTICE_LIMIT = 50;
+const MAX_TOPIC_LENGTH = 80;
 
-    // GET /api/practice/topics - List all unique topics (from tags column)
-    if (path === '/api/practice/topics' && method === 'GET') {
-        try {
-            // Get all tags from questions table that are not empty
-            const rows = await db.prepare('SELECT tags FROM questions WHERE tags IS NOT NULL AND tags != ""').all<{ tags: string }>();
+const parseJson = (value: unknown, fallback: unknown) => {
+  if (typeof value !== 'string') return value ?? fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
 
-            // Because one question could have multiple tags separated by commas or spaces, we need to process them
-            const topicMap = new Map<string, number>();
+const parseTags = (value: unknown): string[] => String(value || '')
+  .split(/[\s,]+/u)
+  .map(tag => tag.trim())
+  .filter(Boolean);
 
-            rows.results.forEach((row: any) => {
-                if (row.tags) {
-                    // Split by comma or space
-                    const tagsArray = row.tags.split(/[\s,]+/);
-                    const uniqueTagsInQuestion = new Set<string>();
+const normalizeTopic = (value: string | null): string | null => {
+  if (!value) return null;
+  const name = value.startsWith('#') ? value.slice(1) : value;
+  if (name.length < 1 || name.length > MAX_TOPIC_LENGTH) return null;
+  const topic = `#${name}`;
+  return /^#[\p{L}\p{N}_-]+$/u.test(topic) ? topic : null;
+};
 
-                    tagsArray.forEach((tag: string) => {
-                        const trimmed = tag.trim();
-                        // Only add hashtags that start with # and exist
-                        if (trimmed && trimmed.startsWith('#')) {
-                            uniqueTagsInQuestion.add(trimmed);
-                        }
-                    });
+const parseLimit = (value: string | null): number | null => {
+  if (value === null) return 10;
+  if (!/^\d+$/u.test(value)) return null;
+  const limit = Number(value);
+  return Number.isInteger(limit) && limit >= 1 && limit <= MAX_PRACTICE_LIMIT ? limit : null;
+};
 
-                    // Update count for each unique tag in this question
-                    uniqueTagsInQuestion.forEach(tag => {
-                        topicMap.set(tag, (topicMap.get(tag) || 0) + 1);
-                    });
-                }
-            });
+const escapeLike = (value: string): string => value.replace(/[\\%_]/gu, match => `\\${match}`);
 
-            const uniqueTopics = Array.from(topicMap.entries())
-                .map(([name, count]) => ({ name, count }))
-                .sort((a, b) => a.name.localeCompare(b.name));
+const shuffle = <T>(values: T[]): T[] => {
+  const result = [...values];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
+  }
+  return result;
+};
 
-            return jsonResponse({ topics: uniqueTopics }, 200, 60);
-        } catch (error: any) {
-            console.error('[GET /api/practice/topics] Error:', error.message);
-            return errorResponse('Failed to fetch practice topics');
-        }
+const mapQuestionForClient = (question: any, sanitize: boolean): any => {
+  const source = sanitize ? sanitizeQuestionForStudent(question) : { ...question };
+  const mapped: any = { ...source };
+  mapped.items = parseJson(source.items, []);
+  mapped.pairs = parseJson(source.pairs, []);
+  mapped.leftItems = parseJson(source.left_items ?? source.leftItems, []);
+  mapped.rightItems = parseJson(source.right_items ?? source.rightItems, []);
+  mapped.categories = parseJson(source.categories, []);
+  mapped.blanks = parseJson(source.blanks, []);
+  mapped.distractors = parseJson(source.distractors, []);
+  mapped.options = typeof source.options === 'string' ? source.options.split('|') : (source.options || []);
+  mapped.words = parseJson(source.words, []);
+  mapped.letters = parseJson(source.letters, []);
+  mapped.riddleLines = parseJson(source.riddleLines, []);
+  mapped.optionImages = parseJson(source.option_images ?? source.optionImages, []);
+  mapped.quizId = source.quiz_id;
+  mapped.mainQuestion = source.question;
+  mapped.text = source.text_field;
+  mapped.sentence = source.sentence || source.text_field || '';
+  if (!sanitize) {
+    mapped.correctAnswer = parseJson(source.correct_answer, source.correct_answer ?? '');
+    mapped.correctAnswers = parseJson(source.correct_answers, source.correct_answers ?? []);
+    mapped.correctWord = source.correct_word;
+    mapped.correctWordIndexes = parseJson(source.correct_word_indexes, []);
+    mapped.correctOrder = parseJson(source.correct_order, []);
+  }
+  return mapped;
+};
+
+const requirePracticeStudent = async (request: Request, env: Env) => {
+  const authResult = await verifyJWTMiddleware(request, env);
+  if (authResult instanceof Response) return authResult;
+  if (!isStudent(authResult.user) || !authResult.user.id) {
+    return errorResponse('Forbidden: Student access required', 403);
+  }
+  return authResult.user;
+};
+
+const practiceRateLimit = (
+  request: Request,
+  env: Env,
+  studentId: string,
+  maxRequests: number,
+) => rateLimit(request, env, {
+  windowMs: 60 * 1000,
+  maxRequests,
+  failureMode: 'closed',
+  keyGenerator: () => `ratelimit:practice:${new URL(request.url).pathname}:${studentId}`,
+});
+
+const loadAttemptQuestions = async (db: D1Database, questionIds: string[]) => {
+  const placeholders = questionIds.map(() => '?').join(', ');
+  const rows = await db.prepare(
+    `SELECT * FROM questions WHERE id IN (${placeholders})`
+  ).bind(...questionIds).all<any>();
+  const byId = new Map(rows.results.map(question => [String(question.id), question]));
+  return questionIds.map(id => byId.get(id)).filter(Boolean);
+};
+
+export async function handlePracticeRoutes(
+  request: Request,
+  env: Env,
+  path: string,
+  method: string,
+): Promise<Response> {
+  const auth = await requirePracticeStudent(request, env);
+  if (auth instanceof Response) return auth;
+  const db = env.DB;
+
+  if (path === '/api/practice/topics' && method === 'GET') {
+    const limited = await practiceRateLimit(request, env, auth.id!, 120);
+    if (limited) return limited;
+    try {
+      const rows = await db.prepare(
+        'SELECT tags FROM questions WHERE tags IS NOT NULL AND tags != ""'
+      ).all<{ tags: string }>();
+      const topicMap = new Map<string, number>();
+      rows.results.forEach(row => {
+        new Set(parseTags(row.tags).filter(tag => tag.startsWith('#'))).forEach(tag => {
+          topicMap.set(tag, (topicMap.get(tag) || 0) + 1);
+        });
+      });
+      const topics = Array.from(topicMap.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      return jsonResponse({ topics }, 200, 60);
+    } catch (error) {
+      console.error('[GET /api/practice/topics] Error:', error);
+      return errorResponse('Failed to fetch practice topics');
+    }
+  }
+
+  if (path === '/api/practice' && method === 'GET') {
+    const limited = await practiceRateLimit(request, env, auth.id!, 20);
+    if (limited) return limited;
+    const url = new URL(request.url);
+    const topic = normalizeTopic(url.searchParams.get('topic'));
+    const limit = parseLimit(url.searchParams.get('limit'));
+    if (!topic) return errorResponse('Invalid topic parameter', 400);
+    if (limit === null) return errorResponse('Invalid limit parameter', 400);
+    if (!env.JWT_SECRET) return errorResponse('Authentication service unavailable', 503);
+
+    try {
+      const rows = await db.prepare(`
+        SELECT *
+        FROM questions
+        WHERE tags LIKE ? ESCAPE '\\'
+        LIMIT 500
+      `).bind(`%${escapeLike(topic)}%`).all<any>();
+      const selected = shuffle(
+        rows.results.filter(question => parseTags(question.tags).includes(topic))
+      ).slice(0, limit);
+      if (selected.length === 0) return errorResponse('No practice questions found', 404);
+
+      const practiceAttemptToken = await signPracticeAttemptToken({
+        studentId: auth.id!,
+        topic,
+        questionIds: selected.map(question => String(question.id)),
+      }, env.JWT_SECRET);
+      return jsonResponse({
+        id: `practice_${crypto.randomUUID()}`,
+        title: `Ôn tập: ${topic.slice(1).replace(/_/g, ' ')}`,
+        classLevel: 'Tự do',
+        category: 'Luyện tập',
+        timeLimit: 0,
+        isPractice: true,
+        createdAt: new Date().toISOString(),
+        practiceAttemptToken,
+        questions: selected.map(question => mapQuestionForClient(question, true)),
+      });
+    } catch (error) {
+      console.error('[GET /api/practice] Error:', error);
+      return errorResponse('Failed to fetch practice quiz');
+    }
+  }
+
+  if (path === '/api/practice/submissions' && method === 'POST') {
+    const limited = await practiceRateLimit(request, env, auth.id!, 30);
+    if (limited) return limited;
+    if (!env.JWT_SECRET) return errorResponse('Authentication service unavailable', 503);
+    const body = await parseBody(request);
+    if (!body || typeof body.attemptToken !== 'string'
+      || !body.answers || typeof body.answers !== 'object' || Array.isArray(body.answers)) {
+      return errorResponse('Invalid practice submission', 400);
     }
 
-    // GET /api/practice - Fetch random questions for a specific topic
-    // Expects ?topic=#Phép_Nhân
-    if (path === '/api/practice' && method === 'GET') {
-        try {
-            const url = new URL(request.url);
-            let topic = url.searchParams.get('topic');
-            let limitParam = url.searchParams.get('limit') || '10';
-            const limit = Math.min(parseInt(limitParam, 10) || 10, 50); // Max 50 questions
-
-            if (!topic) {
-                return errorResponse('Missing topic parameter', 400);
-            }
-
-            // Decode URI component in case it was encoded (e.g., %23Phép_Nhân)
-            topic = decodeURIComponent(topic);
-
-            // Add # prefix if missing
-            if (!topic.startsWith('#')) {
-                topic = '#' + topic;
-            }
-
-            // Using LIKE to match variations, e.g. multiple tags in the same string "#Toan, #Phep_Nhan"
-            // We pad with % to allow matching anywhere in the tags string
-            const searchPattern = `%${topic}%`;
-
-            const rows = await db.prepare(
-                'SELECT id, quiz_id, type, question, options, correct_answer, items, text_field, blanks, distractors, sentence, words, correct_word_indexes, image, tags FROM questions WHERE tags LIKE ? ORDER BY RANDOM() LIMIT ?'
-            ).bind(searchPattern, limit).all<import('../types').Question>();
-
-            // Map D1 snake_case and JSON string fields to frontend camelCase objects
-            const mappedQuestions = rows.results.map((q: any) => {
-                let parsed = { ...q };
-                if (typeof q.items === 'string') try { parsed.items = JSON.parse(q.items); } catch { }
-                if (typeof q.pairs === 'string') try { parsed.pairs = JSON.parse(q.pairs); } catch { }
-                if (typeof q.categories === 'string') try { parsed.categories = JSON.parse(q.categories); } catch { }
-                if (typeof q.blanks === 'string') try { parsed.blanks = JSON.parse(q.blanks); } catch { }
-                if (typeof q.distractors === 'string') try { parsed.distractors = JSON.parse(q.distractors); } catch { }
-                if (typeof q.options === 'string') parsed.options = q.options.split('|');
-                if (typeof q.correctAnswers === 'string') try { parsed.correctAnswers = JSON.parse(q.correctAnswers); } catch { }
-                if (typeof q.letters === 'string') try { parsed.letters = JSON.parse(q.letters); } catch { }
-                if (typeof q.riddleLines === 'string') try { parsed.riddleLines = JSON.parse(q.riddleLines); } catch { }
-                if (typeof q.words === 'string') try { parsed.words = JSON.parse(q.words); } catch { }
-                if (typeof q.correctWordIndexes === 'string') try { parsed.correctWordIndexes = JSON.parse(q.correctWordIndexes); } catch { }
-                if (typeof q.correctOrder === 'string') try { parsed.correctOrder = JSON.parse(q.correctOrder); } catch { }
-                if (typeof q.optionImages === 'string') try { parsed.optionImages = JSON.parse(q.optionImages); } catch { }
-
-                // Map legacy/snake_case fields to frontend expected fields
-                parsed.quizId = parsed.quiz_id;
-                parsed.correctAnswer = parsed.correct_answer;
-                parsed.mainQuestion = parsed.question;
-                parsed.correctWord = parsed.correct_word;
-                parsed.text = parsed.text_field;
-                parsed.sentence = parsed.sentence || parsed.text_field || ""; // Found missing mapping
-                parsed.explanation = parsed.explanation || "";
-                parsed.audio = parsed.audio || "";
-
-                const qType = parsed.type;
-                if (qType === 'IMAGE_QUESTION') {
-                    parsed.optionImages = parsed.optionImages || parsed.distractors || [];
-                } else if (qType === 'UNDERLINE') {
-                    // Critical Fix for Underline
-                    parsed.words = parsed.words || parsed.items || [];
-                    if (parsed.words.length === 0 && parsed.sentence) {
-                        // Fallback: Split sentence into words if words array is empty
-                        parsed.words = parsed.sentence.split(/\s+/).filter((w: string) => w.length > 0);
-                    }
-                    let parsedIndexes = [];
-                    try {
-                        parsedIndexes = typeof parsed.correctAnswer === 'string' ? JSON.parse(parsed.correctAnswer) : (parsed.correctWordIndexes || parsed.correctAnswer);
-                    } catch (e) { }
-                    parsed.correctWordIndexes = Array.isArray(parsedIndexes) ? parsedIndexes : [];
-                } else if (qType === 'MATCHING') {
-                    // Critical Fix for Matching
-                    parsed.pairs = parsed.pairs || parsed.items || [];
-                    // Ensure pairs is an array of objects {left, right}
-                    if (Array.isArray(parsed.pairs) && parsed.pairs.length > 0 && typeof parsed.pairs[0] === 'string') {
-                        // Sometimes items is a flat mixed array, but QuestionRenderer expects objects
-                        // This usually shouldn't happen with modern schema but good to have
-                    }
-                } else if (qType === 'RIDDLE') {
-                    parsed.riddleLines = parsed.riddleLines || parsed.items || [];
-                    parsed.answerLabel = parsed.answerLabel || parsed.text || '';
-                    parsed.hint = parsed.hint || parsed.sentence || '';
-                } else if (qType === 'CATEGORIZATION') {
-                    parsed.categories = parsed.categories || parsed.distractors || [];
-                    parsed.items = parsed.items || [];
-                } else if (qType === 'WORD_SCRAMBLE') {
-                    parsed.letters = parsed.letters || parsed.items || [];
-                }
-
-                return parsed;
-            });
-
-            // Construct a virtual quiz payload required by TakeQuizUI (it expects full quiz + questions)
-            const virtualQuiz = {
-                id: `practice_${new Date().getTime()}`,
-                title: `Ôn tập: ${topic.replace('#', '').replace(/_/g, ' ')}`,
-                classLevel: 'Tự do',
-                category: 'Luyện tập',
-                timeLimit: 0, // No time limit for practice
-                isPractice: true, // Flag for frontend logic
-                createdAt: new Date().toISOString(),
-                questions: mappedQuestions
-            };
-
-            return jsonResponse(virtualQuiz);
-        } catch (error: any) {
-            console.error('[GET /api/practice] Error:', error.message);
-            return errorResponse('Failed to fetch practice quiz');
-        }
+    const verification = await verifyPracticeAttemptToken(body.attemptToken, env.JWT_SECRET);
+    if (!verification.ok) {
+      if (verification.reason === 'expired') {
+        return jsonResponse({
+          status: 'error',
+          code: 'PRACTICE_ATTEMPT_EXPIRED',
+          message: 'Lượt luyện tập đã hết hạn. Em hãy tải một lượt mới.',
+        }, 410);
+      }
+      return errorResponse('Invalid practice attempt', 400);
+    }
+    if (verification.claims.studentId !== auth.id) {
+      return errorResponse('Forbidden: Practice attempt belongs to another student', 403);
     }
 
-    return errorResponse('Not found: ' + path, 404);
+    const questions = await loadAttemptQuestions(db, verification.claims.questionIds);
+    if (questions.length !== verification.claims.questionIds.length) {
+      return errorResponse('Invalid practice attempt', 400);
+    }
+    const gradingResponse = await handleValidateAnswers(db, { answers: body.answers }, {
+      questionIds: verification.claims.questionIds,
+    });
+    const grading = await gradingResponse.json<any>();
+    if (gradingResponse.status !== 200 || grading.status === 'error') return gradingResponse;
+
+    return jsonResponse({
+      ...grading,
+      reviewQuestions: questions.map(question => mapQuestionForClient(question, false)),
+    });
+  }
+
+  return errorResponse(`Not found: ${path}`, 404);
 }

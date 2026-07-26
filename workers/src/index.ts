@@ -47,6 +47,7 @@ import { rateLimit } from './middleware/rateLimit';
 import { mapQuestionForSave, mapAssignment, mapAssignments, handleValidateAnswers } from './utils/helpers';
 import { checkAndAutoCloseExpiredExams } from './services/liveExamService';
 import { createDueHomeworkReminders } from './parentPortal/deadlineReminderService';
+import { withSecurityHeaders } from './middleware/securityHeaders';
 
 export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -56,7 +57,7 @@ export default {
 
         // Handle CORS preflight before every route, including health.
         const corsResponse = handleCors(request, env);
-        if (corsResponse) return corsResponse;
+        if (corsResponse) return addCors(corsResponse, request, env);
 
         if (path === '/api/health') {
             return addCors(jsonResponse({ status: 'ok', timestamp: new Date().toISOString() }), request, env);
@@ -325,10 +326,10 @@ function addCors(response: Response, request: Request, env: Env): Response {
     for (const [key, value] of Object.entries(corsHeaders(request, env))) {
         headers.set(key, value);
     }
-    return new Response(response.body, {
+    return withSecurityHeaders(new Response(response.body, {
         status: response.status,
         statusText: response.statusText,
         headers,
-    });
+    }));
 }
 

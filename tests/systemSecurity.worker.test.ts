@@ -11,6 +11,7 @@ import { internalErrorResponse } from '../workers/src/utils/internalError';
 import { errorResponse } from '../workers/src/utils/response';
 import { corsHeaders, handleCors } from '../workers/src/middleware/cors';
 import { enforceOriginGuard } from '../workers/src/middleware/originGuard';
+import { withSecurityHeaders } from '../workers/src/middleware/securityHeaders';
 import { vi } from 'vitest';
 
 describe('system security password storage', () => {
@@ -194,6 +195,27 @@ describe('system security password storage', () => {
 
         expect(response?.status).toBe(403);
         expect(response?.headers.get('Access-Control-Allow-Origin')).toBeNull();
+    });
+
+    it.each([
+        ['success response', new Response('ok', { status: 200 })],
+        ['error response', new Response('forbidden', { status: 403 })],
+        ['rejected CORS preflight', handleCors(new Request('https://quiz-api.thitong.site/api/account/me', {
+            method: 'OPTIONS',
+            headers: {
+                Origin: 'https://evil.example',
+                'Access-Control-Request-Method': 'POST',
+            },
+        }), { ENVIRONMENT: 'production' } as any)!],
+    ])('adds security headers to every %s', async (_label, baseResponse) => {
+        const response = withSecurityHeaders(baseResponse);
+
+        expect(response.headers.get('Strict-Transport-Security')).toBe('max-age=63072000; includeSubDomains');
+        expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
+        expect(response.headers.get('X-Frame-Options')).toBe('DENY');
+        expect(response.headers.get('Referrer-Policy')).toBe('no-referrer');
+        expect(response.headers.get('Permissions-Policy')).toContain('camera=()');
+        expect(response.headers.get('Content-Security-Policy')).toContain("default-src 'none'");
     });
 
     it('blocks unsafe cookie-authenticated requests from an untrusted origin', async () => {

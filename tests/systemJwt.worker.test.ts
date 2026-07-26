@@ -119,3 +119,54 @@ describe('teacher session version enforcement', () => {
         expect(allowed).not.toBeInstanceOf(Response);
     });
 });
+
+describe('student session version enforcement', () => {
+    const secret = 'a-test-secret-that-is-long-enough';
+
+    const studentEnv = (student: any) => ({
+        DB: {
+            prepare: () => ({ bind: () => ({ first: async () => student }) }),
+        },
+        JWT_SECRET: secret,
+        AUTH_MIGRATION_MODE: 'compat',
+    } as any);
+
+    it('rejects a legacy student JWT without a token version', async () => {
+        const legacy = await signJWT({
+            id: 'student-a', username: 'student-a', role: 'student', classId: 'class-a',
+        }, secret);
+        const result = await verifyJWTMiddleware(new Request('https://test/api/student-profile', {
+            headers: { Authorization: `Bearer ${legacy}` },
+        }), studentEnv({
+            id: 'student-a', token_version: 0, archived_at: '', class_archived_at: '',
+        }));
+
+        expect(result).toBeInstanceOf(Response);
+        expect((result as Response).status).toBe(401);
+    });
+
+    it('accepts only the active student and class with the current token version', async () => {
+        const current = await signJWT({
+            id: 'student-a', username: 'student-a', role: 'student',
+            classId: 'class-a', tokenVersion: 4,
+        }, secret);
+        const active = await verifyJWTMiddleware(new Request('https://test/api/student-profile', {
+            headers: { Authorization: `Bearer ${current}` },
+        }), studentEnv({
+            id: 'student-a', token_version: 4, archived_at: '', class_archived_at: '',
+        }));
+        expect(active).not.toBeInstanceOf(Response);
+
+        for (const state of [
+            { id: 'student-a', token_version: 4, archived_at: '2026-07-26', class_archived_at: '' },
+            { id: 'student-a', token_version: 4, archived_at: '', class_archived_at: '2026-07-26' },
+            { id: 'student-a', token_version: 5, archived_at: '', class_archived_at: '' },
+        ]) {
+            const blocked = await verifyJWTMiddleware(new Request('https://test/api/student-profile', {
+                headers: { Authorization: `Bearer ${current}` },
+            }), studentEnv(state));
+            expect(blocked).toBeInstanceOf(Response);
+            expect((blocked as Response).status).toBe(401);
+        }
+    });
+});

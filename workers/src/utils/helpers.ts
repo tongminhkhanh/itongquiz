@@ -155,7 +155,7 @@ export function mapShopItem(i: ShopItem): any {
 export async function handleValidateAnswers(
     db: D1Database,
     body: any,
-    options: { includeCorrectAnswers?: boolean } = {},
+    options: { includeCorrectAnswers?: boolean; questionIds?: string[] } = {},
 ): Promise<Response> {
     const quizId = body.quizId;
     const studentAnswers = body.answers || {};
@@ -167,7 +167,12 @@ export async function handleValidateAnswers(
         (typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0)
     );
 
-    const questions = await db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all();
+    const questionIds = options.questionIds;
+    const questions = questionIds
+        ? await db.prepare(
+            `SELECT * FROM questions WHERE id IN (${questionIds.map(() => '?').join(', ')})`
+        ).bind(...questionIds).all()
+        : await db.prepare('SELECT * FROM questions WHERE quiz_id = ?').bind(quizId).all();
     if (questions.results.length === 0) {
         return jsonResponse({ status: 'error', message: 'No questions found for quiz: ' + quizId });
     }
@@ -244,9 +249,19 @@ export async function handleValidateAnswers(
             } catch { isCorrect = false; }
         } else if (qType === 'MATCHING') {
             try {
-                const pairs = JSON.parse(items);
+                const storedPairs = JSON.parse(row.pairs || '[]');
+                const pairs = Array.isArray(storedPairs) && storedPairs.length > 0
+                    ? storedPairs
+                    : JSON.parse(items || '[]');
                 const studentPairs = studentAnswer || {};
-                isCorrect = pairs.every((pair: any) => studentPairs[pair.left] === pair.right);
+                const pairId = (value: any, index: number, side: 'left' | 'right') => (
+                    String(value && typeof value === 'object'
+                        ? (value.id ?? value.key ?? `${side}-${index + 1}`)
+                        : (value ?? ''))
+                );
+                isCorrect = pairs.length > 0 && pairs.every((pair: any, index: number) => (
+                    studentPairs[pairId(pair.left, index, 'left')] === pairId(pair.right, index, 'right')
+                ));
             } catch { isCorrect = false; }
         } else if (qType === 'ORDERING') {
             try {

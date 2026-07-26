@@ -33,6 +33,11 @@ vi.mock('../src/components/schoolPage/AboutPage', () => ({ default: () => <div>a
 vi.mock('../src/components/schoolPage/ContactPage', () => ({ default: () => <div>contact-page</div> }));
 vi.mock('../src/pages/PhieuPublicPage', () => ({ default: () => <div>phieu-public-page</div> }));
 vi.mock('../src/features/parent-portal/ParentPortalApp', () => ({ default: () => <div>parent-portal-app</div> }));
+vi.mock('../src/app/LazyMathJaxBoundary', () => ({
+    LazyMathJaxBoundary: ({ children }: { children: React.ReactNode }) => (
+        <div data-testid="math-runtime">{children}</div>
+    ),
+}));
 
 const originalQuizState = useQuizStore.getState();
 const originalAuthState = useAuthStore.getState();
@@ -126,6 +131,7 @@ describe('App shell routing contracts', () => {
         expect(screen.getByText('chatbot')).toBeInTheDocument();
         expect(screen.getByTestId('analytics')).toBeInTheDocument();
         expect(screen.getByTestId('toaster')).toBeInTheDocument();
+        expect(screen.queryByTestId('math-runtime')).not.toBeInTheDocument();
     });
 
     it('canonicalizes the legacy quiz query without dropping other parameters', async () => {
@@ -144,6 +150,7 @@ describe('App shell routing contracts', () => {
         expect(useQuizStore.getState().selectedQuiz?.id).toBe('quiz-1');
         expect(useQuizStore.getState().view).toBe('student');
         expect(screen.queryByText('chatbot')).not.toBeInTheDocument();
+        expect(screen.getByTestId('math-runtime')).toBeInTheDocument();
     });
 
     it('supports teacher autologin, seeds a mock result, and enters the dashboard', async () => {
@@ -158,6 +165,7 @@ describe('App shell routing contracts', () => {
             isAdmin: true,
             teacherClass: '4A',
         });
+        expect(screen.queryByTestId('math-runtime')).not.toBeInTheDocument();
         expect(useQuizStore.getState().results).toHaveLength(1);
         expect(useQuizStore.getState().results[0]?.id).toBe('mock-123');
     });

@@ -14,8 +14,25 @@ export default defineConfig({
         include: ['tests/**/*.{test,spec}.{ts,tsx}', 'src/**/__tests__/**/*.{test,spec}.{ts,tsx}'],
         coverage: {
             provider: 'v8',
-            reporter: ['text', 'json', 'html'],
-            include: ['utils/**', 'schemas/**', 'services/**', 'stores/**']
+            reporter: ['text', 'json', 'json-summary', 'html'],
+            exclude: [
+                '**/*.d.ts',
+                '**/*.config.{ts,js,mjs,cjs}',
+                '**/index.ts',
+                '**/types/**',
+            ],
+            thresholds: {
+                statements: 30,
+                lines: 30,
+                functions: 30,
+                branches: 20,
+                'workers/src/{routes/practice.ts,services/practiceAttemptToken.ts}': {
+                    statements: 90,
+                    lines: 90,
+                    functions: 80,
+                    branches: 80,
+                },
+            },
         }
     }
 });

@@ -19,6 +19,7 @@ import { useWeaknessProfile } from './student-detail/hooks/useWeaknessProfile';
 import { ReviewPanel } from './student-detail/components/ReviewPanel';
 import { StudentDetailHeader } from './student-detail/components/StudentDetailHeader';
 import { AnalyticsPanel } from './student-detail/components/AnalyticsPanel';
+import { LazyMathJaxBoundary } from '../../../app/LazyMathJaxBoundary';
 interface StudentDetailModalProps {
     result: StudentResult;
     questions: Question[];
@@ -76,6 +77,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     } = useQuestionReviewState(displayQuestions);
     const { correctCount, wrongCount } = getQuestionResultCounts(displayQuestions);
     return (
+      <LazyMathJaxBoundary>
         <div className={embedded ? 'min-h-screen bg-slate-50' : 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4'}>
             <div className={embedded ? 'bg-white w-full min-h-screen overflow-hidden flex flex-col' : 'bg-white w-full h-dvh md:h-auto md:max-h-[92vh] md:max-w-[96vw] rounded-none md:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300'}>
                 
@@ -141,6 +143,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
         </div>
+      </LazyMathJaxBoundary>
     );
 };
 

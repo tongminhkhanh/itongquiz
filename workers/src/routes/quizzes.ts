@@ -127,26 +127,47 @@ const copiedQuestionValues = (
 
 export const sanitizeQuestionForStudent = (question: any): any => {
     const safe = { ...question };
-    for (const field of [
-        'correct_answer', 'correctAnswer', 'correct_answers', 'correctAnswers',
-        'explanation',
-        'correct_order', 'correctOrder', 'correct_word_indexes', 'correctWordIndexes',
-        'correct_word', 'correctWord', 'wrong_word', 'wrongWord',
-    ]) delete safe[field];
+    Object.keys(safe).forEach((field) => {
+        if (/^correct/i.test(field)) delete safe[field];
+    });
+    for (const field of ['explanation', 'wrong_word', 'wrongWord']) delete safe[field];
 
     const type = String(question.type || '').toUpperCase();
+    const stripAnswerKeys = (value: any): any => {
+        if (Array.isArray(value)) return value.map(stripAnswerKeys);
+        if (!value || typeof value !== 'object') return value;
+        return Object.fromEntries(Object.entries(value)
+            .filter(([key]) => !/^correct/i.test(key)
+                && !['answer', 'isCorrect', 'isTrue', 'correct', 'categoryId'].includes(key))
+            .map(([key, nestedValue]) => [key, stripAnswerKeys(nestedValue)]));
+    };
     const items = parseJsonArray(question.items);
-    if (type === 'MATCHING' && items.some((item) => item && typeof item === 'object' && 'left' in item && 'right' in item)) {
+    const storedPairs = parseJsonArray(question.pairs);
+    const matchingPairs = storedPairs.length > 0 ? storedPairs : items;
+    if (type === 'MATCHING' && matchingPairs.some((item) => (
+        item && typeof item === 'object' && 'left' in item && 'right' in item
+    ))) {
+        const toColumnItem = (value: any, index: number, side: 'left' | 'right') => {
+            if (value && typeof value === 'object') {
+                const id = String(value.id ?? value.key ?? `${side}-${index + 1}`);
+                return {
+                    id,
+                    content: String(value.content ?? value.text ?? value.label ?? value.value ?? id),
+                };
+            }
+            const content = String(value ?? '');
+            return { id: content || `${side}-${index + 1}`, content };
+        };
         safe.items = '[]';
-        safe.left_items = JSON.stringify(items.map((item) => ({ id: String(item.left), content: String(item.left) })));
-        safe.right_items = JSON.stringify(shuffle(items.map((item) => ({ id: String(item.right), content: String(item.right) }))));
+        safe.pairs = '[]';
+        safe.left_items = JSON.stringify(matchingPairs.map((item, index) => toColumnItem(item.left, index, 'left')));
+        safe.right_items = JSON.stringify(shuffle(
+            matchingPairs.map((item, index) => toColumnItem(item.right, index, 'right'))
+        ));
     } else if (items.length > 0) {
-        safe.items = JSON.stringify(items.map((item) => {
-            if (!item || typeof item !== 'object') return item;
-            const { isCorrect, isTrue, correct, answer, categoryId, ...rest } = item;
-            return rest;
-        }));
+        safe.items = JSON.stringify(stripAnswerKeys(items));
     }
+    if (type !== 'MATCHING') delete safe.pairs;
 
     const blanks = parseJsonArray(question.blanks);
     if (type === 'DRAG_DROP') {
@@ -160,11 +181,11 @@ export const sanitizeQuestionForStudent = (question: any): any => {
         safe.blanks = '[]';
         safe.distractors = JSON.stringify(shuffle([...correctChoices, ...distractors]));
     } else if (blanks.length > 0 && blanks.some((blank) => blank && typeof blank === 'object')) {
-        safe.blanks = JSON.stringify(blanks.map((blank) => {
-            if (!blank || typeof blank !== 'object') return blank;
-            const { correctAnswer, answer, ...rest } = blank;
-            return rest;
-        }));
+        safe.blanks = JSON.stringify(stripAnswerKeys(blanks));
+    }
+    const distractors = parseJsonArray(question.distractors);
+    if (type !== 'DRAG_DROP' && distractors.length > 0) {
+        safe.distractors = JSON.stringify(stripAnswerKeys(distractors));
     }
     if (type === 'ERROR_CORRECTION') delete safe.distractors;
     return safe;

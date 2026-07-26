@@ -22,7 +22,9 @@ export async function handleStudentArchiveRoute(context: ClassroomRouteContext):
             const studentError = await requireTeacherForStudent(db, user, studentId);
             if (studentError) return studentError;
 
-            await db.prepare('UPDATE students SET archived_at = ? WHERE id = ?').bind(nowIso, studentId).run();
+            await db.prepare(
+                'UPDATE students SET archived_at = ?, token_version = token_version + 1 WHERE id = ?'
+            ).bind(nowIso, studentId).run();
             return jsonResponse({ status: 'success' });
         }
     return null;

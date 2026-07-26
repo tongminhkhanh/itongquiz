@@ -4,6 +4,7 @@ import { useClassroomStore } from '../../../stores/useClassroomStore';
 import { useGamificationStore } from '../../../stores/useGamificationStore';
 import { useGameLoopStore } from '../../../stores/useGameLoopStore';
 import { validateAnswersOnServer } from '../../../services/quizValidationService';
+import { practiceService } from '../../../services/practiceService';
 import { calculateStudentScore } from '../utils/quizScoring';
 import { playTingSound, showError } from '../../../utils/toast';
 
@@ -213,17 +214,36 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
         const timeTaken = Math.round((elapsedSeconds / 60) * 100) / 100;
 
         try {
-            const validationResult = await validateAnswersOnServer({
-                quizId: quiz.id,
-                answers,
-                studentName,
-                studentClass
-            });
+            const isSignedPractice = Boolean(quiz.isPractice && quiz.practiceAttemptToken);
+            const practiceResult = isSignedPractice
+                ? await practiceService.submitPracticeAnswers({
+                    attemptToken: quiz.practiceAttemptToken!,
+                    answers,
+                })
+                : null;
+            const validationResult = practiceResult
+                ? {
+                    success: practiceResult.status === 'success',
+                    score: practiceResult.score,
+                    correctCount: practiceResult.correctCount,
+                    total: practiceResult.total,
+                    details: practiceResult.details,
+                    error: undefined,
+                }
+                : await validateAnswersOnServer({
+                    quizId: quiz.id,
+                    answers,
+                    studentName,
+                    studentClass
+                });
 
             if (!validationResult.success) throw new Error(validationResult.error || 'Server validation failed');
 
             // Senior Enrichment: Merge server results with client overrides
             const clientScoring = calculateStudentScore(quiz, answers);
+            const reviewQuestionsById = new Map(
+                (practiceResult?.reviewQuestions || []).map(question => [question.id, question])
+            );
             
             // Rebuild final answers with snapshots and corrections
             const finalAnswersWithSnapshots: Record<string, any> = {};
@@ -251,7 +271,9 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
                     const clientIsCorrect = Boolean(clientResult?.isCorrect);
                     const serverIsCorrect = serverResult?.isCorrect;
 
-                    if (clientOverrideTypes.has(q.type)) {
+                    if (isSignedPractice) {
+                        isCorrect = Boolean(serverIsCorrect);
+                    } else if (clientOverrideTypes.has(q.type)) {
                         // Keep local override only for historically unstable server types.
                         isCorrect = clientIsCorrect || Boolean(serverIsCorrect);
                     } else if (typeof serverIsCorrect === 'boolean') {
@@ -264,7 +286,7 @@ export const useQuizPlayer = ({ quiz, onExit, onSaveResult }: UseQuizPlayerProps
                 finalAnswersWithSnapshots[q.id] = {
                     selectedAnswer,
                     isCorrect,
-                    questionSnapshot: { ...q }
+                    questionSnapshot: { ...(reviewQuestionsById.get(q.id) || q) }
                 };
             });
 

@@ -30,7 +30,9 @@ export async function handleStudentResetPasswordRoute(context: ClassroomRouteCon
             if (!student) return errorResponse('Student not found', 404);
 
             const hash = await hashPassword(newPassword);
-            await db.prepare('UPDATE students SET password_hash = ? WHERE id = ?').bind(hash, studentId).run();
+            await db.prepare(
+                'UPDATE students SET password_hash = ?, token_version = token_version + 1 WHERE id = ?'
+            ).bind(hash, studentId).run();
             return jsonResponse({ status: 'success' });
         }
     return null;

@@ -9,6 +9,7 @@ import {
   useStudentDashboardController,
 } from '../../features/student-dashboard';
 import { isPracticeSubjectId } from '../../features/student-dashboard/model';
+import { LazyMathJaxBoundary } from '../../app/LazyMathJaxBoundary';
 
 const StudentDashboardUI = () => {
   const { subjectId } = useParams<{ subjectId?: string }>();
@@ -22,15 +23,17 @@ const StudentDashboardUI = () => {
   if (!studentSession) return null;
   if (assignments.reviewState) {
     return (
-      <ResultScreen
-        quiz={assignments.reviewState.quiz}
-        result={assignments.reviewState.result}
-        answers={assignments.reviewState.answers}
-        initialTab="review"
-        onExit={assignments.closeReview}
-        studentName={studentSession.fullName}
-        studentClass={studentSession.className}
-      />
+      <LazyMathJaxBoundary>
+        <ResultScreen
+          quiz={assignments.reviewState.quiz}
+          result={assignments.reviewState.result}
+          answers={assignments.reviewState.answers}
+          initialTab="review"
+          onExit={assignments.closeReview}
+          studentName={studentSession.fullName}
+          studentClass={studentSession.className}
+        />
+      </LazyMathJaxBoundary>
     );
   }
   if (subjectId) {

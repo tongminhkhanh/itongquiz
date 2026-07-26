@@ -4,7 +4,7 @@ import { handleTeacherRoutes } from '../workers/src/routes/teachers';
 import { authenticateStudent } from '../workers/src/classroom/studentLoginService';
 import { hashPasswordPbkdf2 } from '../workers/src/utils/password';
 import { hashPassword } from '../workers/src/utils/response';
-import { signJWT } from '../workers/src/utils/jwt';
+import { signJWT, verifyJWT } from '../workers/src/utils/jwt';
 
 vi.mock('../workers/src/utils/loginRateLimit', () => ({
     checkLoginLimit: vi.fn(async () => null),
@@ -52,6 +52,7 @@ class Statement {
             id: 'student-1', username: 'student-a', full_name: 'Học sinh An',
             password_hash: studentPassword, class_id: 'class-1', class_name: '3A',
             avatar: '', coins: 20, pet_id: null,
+            token_version: 4,
         } as T;
         return null as T;
     }
@@ -114,5 +115,11 @@ describe('backend auth transport integration', () => {
         expect(body.data).toMatchObject({ studentId: 'student-1', username: 'student-a' });
         expect(response.headers.get('Set-Cookie')).toContain('SameSite=Lax');
         expect(response.headers.get('Cache-Control')).toBe('no-store');
+        const cookieToken = response.headers.get('Set-Cookie')?.match(/auth_token=([^;]+)/)?.[1] || '';
+        await expect(verifyJWT(
+            cookieToken,
+            'a-test-secret-that-is-long-enough',
+            { allowLegacy: false },
+        )).resolves.toMatchObject({ role: 'student', tokenVersion: 4 });
     });
 });
