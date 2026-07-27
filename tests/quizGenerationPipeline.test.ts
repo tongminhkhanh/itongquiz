@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuestionType } from '../src/types';
 import type { QuizGenerationOptions } from '../src/services/geminiService';
 import { buildQuizSchemaRepairPrompt } from '../src/services/ai/quizRepair';
+import {
+  GeneratedQuizSchemaError,
+  getQuizGenerationUserMessage,
+} from '../src/services/ai/quizGenerationErrors';
 
 const mocks = vi.hoisted(() => ({
   generateWithOpenAIResilient: vi.fn(),
@@ -218,6 +222,70 @@ describe('quiz generation quality pipeline', () => {
       .toEqual(['REPAIR']);
   });
 
+  it('repairs only malformed questions and preserves valid provider questions', async () => {
+    const validQuestion = {
+      ...makeMcq(1),
+      question: 'Câu hợp lệ phải được giữ nguyên.',
+    };
+    const invalidQuestion = {
+      type: QuestionType.DROPDOWN,
+      question: 'Chọn đáp án đúng.',
+      text: 'Thủ đô Việt Nam là [1].',
+      blanks: ['Hà Nội'],
+      explanation: 'Hà Nội là thủ đô.',
+      difficultyLevel: 2,
+    };
+    const repairedQuestion = repairedInteractiveDraft.questions[1];
+    const targetedOptions: QuizGenerationOptions = {
+      title: 'Đề sửa theo câu',
+      questionCount: 2,
+      questionTypes: [QuestionType.MCQ, QuestionType.DROPDOWN],
+      difficultyLevels: { level1: 0, level2: 2, level3: 0 },
+      blueprint: {
+        intent: 'PRACTICE',
+        sourceMode: 'TOPIC',
+        totalQuestions: 2,
+        typeAllocations: [
+          { type: QuestionType.MCQ, count: 1 },
+          { type: QuestionType.DROPDOWN, count: 1 },
+        ],
+        difficultyLevels: { level1: 0, level2: 2, level3: 0 },
+      },
+    };
+
+    mocks.generateWithOpenAIResilient.mockResolvedValue({
+      title: 'Bản nháp có một câu lỗi',
+      questions: [validQuestion, invalidQuestion],
+    });
+    mocks.requestWorkerAiText.mockImplementation(async (body, requestOptions) => {
+      expect(requestOptions?.action?.stage).toBe('REPAIR');
+      const prompt = JSON.stringify(body);
+      expect(prompt).toContain('questions.1');
+      expect(prompt).not.toContain(validQuestion.question);
+      return JSON.stringify({
+        title: 'Phần sửa cấu trúc',
+        questions: [repairedQuestion],
+      });
+    });
+
+    const result = await generateQuiz(
+      'Thủ đô',
+      '4',
+      '',
+      undefined,
+      { ...targetedOptions, reviewMode: 'fast' },
+      undefined,
+      'openai',
+      undefined,
+      execution,
+    );
+
+    expect(result.questions).toHaveLength(2);
+    expect(result.questions[0]).toEqual(validQuestion);
+    expect(result.questions[1]).toEqual(repairedQuestion);
+    expect(mocks.requestWorkerAiText).toHaveBeenCalledTimes(1);
+  });
+
   it('does not add a schema repair or reviewer call when the provider draft is already valid in fast mode', async () => {
     mocks.generateWithOpenAIResilient.mockResolvedValue({
       title: 'Đề hợp lệ',
@@ -271,7 +339,7 @@ describe('quiz generation quality pipeline', () => {
     expect(mocks.requestWorkerAiText).toHaveBeenCalledTimes(1);
   });
 
-  it('does not spend a second REPAIR call after schema repair leaves semantic issues', async () => {
+  it('stops after the allowed semantic REPAIR still leaves semantic issues', async () => {
     const schemaValidButSemanticallyInvalid = {
       ...repairedInteractiveDraft,
       questions: repairedInteractiveDraft.questions.map((question) => ({
@@ -294,8 +362,65 @@ describe('quiz generation quality pipeline', () => {
       execution,
     )).rejects.toMatchObject({ name: 'QuizGenerationValidationError' });
 
-    expect(mocks.requestWorkerAiText).toHaveBeenCalledTimes(1);
-    expect(mocks.requestWorkerAiText.mock.calls[0][1]?.action?.stage).toBe('REPAIR');
+    expect(mocks.requestWorkerAiText).toHaveBeenCalledTimes(2);
+    expect(mocks.requestWorkerAiText.mock.calls.map((call) => call[1]?.action?.stage))
+      .toEqual(['REPAIR', 'REPAIR']);
+  });
+
+  it('uses a second targeted repair when schema repair leaves a semantic issue', async () => {
+    const schemaValidButSemanticallyInvalid = {
+      ...repairedInteractiveDraft,
+      questions: repairedInteractiveDraft.questions.map((question) => ({
+        ...question,
+        question: 'Câu hỏi giống nhau hoàn toàn',
+      })),
+    };
+    mocks.generateWithOpenAIResilient.mockResolvedValue(malformedInteractiveDraft);
+    mocks.requestWorkerAiText
+      .mockResolvedValueOnce(JSON.stringify(schemaValidButSemanticallyInvalid))
+      .mockResolvedValueOnce(JSON.stringify({
+        title: 'Phần sửa nội dung',
+        questions: [repairedInteractiveDraft.questions[1]],
+      }));
+
+    const result = await generateQuiz(
+      'Từ loại',
+      '4',
+      '',
+      undefined,
+      { ...interactivePipelineOptions, reviewMode: 'fast' },
+      undefined,
+      'openai',
+      undefined,
+      execution,
+    );
+
+    expect(result.questions).toHaveLength(2);
+    expect(result.questions[1].question).toBe(repairedInteractiveDraft.questions[1].question);
+    expect(mocks.requestWorkerAiText.mock.calls.map((call) => call[1]?.action?.stage))
+      .toEqual(['REPAIR', 'REPAIR']);
+  });
+
+  it('shows question numbers and a friendly field name without raw schema paths', () => {
+    const error = new GeneratedQuizSchemaError([
+      {
+        path: ['questions', 3, 'options'],
+        code: 'too_small',
+        message: 'Array must contain at least 2 element(s)',
+      },
+      {
+        path: ['questions', 5, 'correctAnswer'],
+        code: 'invalid_string',
+        message: 'Invalid',
+      },
+    ]);
+
+    const message = getQuizGenerationUserMessage(error);
+
+    expect(message).toContain('câu 4, 6');
+    expect(message).toContain('phương án trả lời');
+    expect(message).not.toContain('questions');
+    expect(message).not.toContain('too_small');
   });
 
   it('does not schema-repair an invalid single-question regeneration response', async () => {

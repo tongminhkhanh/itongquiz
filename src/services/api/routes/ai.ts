@@ -11,6 +11,11 @@ export const aiRoutes: RouteRegistry = {
         auth: 'session',
         path: () => '/api/ai/chat',
     },
+    ai_action_finalize: {
+        method: 'POST',
+        auth: 'session',
+        path: () => '/api/ai/actions/finalize',
+    },
     get_teacher_ai_quota: {
         method: 'GET',
         auth: 'session',

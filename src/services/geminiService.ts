@@ -30,11 +30,14 @@ import {
 } from './ai/quizAudit';
 import {
   buildQuizRepairPrompt,
+  buildQuizQuestionSchemaRepairPrompt,
   buildQuizSchemaRepairPrompt,
   buildQuizSlotRepairPrompt,
+  createQuizQuestionSchemaRepairPlan,
   createQuizRepairPlan,
   createQuizSlotRepairPlan,
   mergeRepairedQuestions,
+  mergeSchemaRepairedQuestions,
   mergeRepairedSlots,
   QuizGenerationValidationError,
 } from './ai/quizRepair';
@@ -123,7 +126,6 @@ export const validateQuizWithAI = async (
 
 interface ParsedDraftResult {
   quiz: GeneratedQuizPayload;
-  repairCallUsed: boolean;
 }
 
 const parseDraftWithOneSchemaRepair = async (
@@ -134,13 +136,14 @@ const parseDraftWithOneSchemaRepair = async (
   const normalized = validateAndFixQuiz(result);
   const initial = GeneratedQuizSchema.safeParse(normalized);
   if (initial.success) {
-    return { quiz: initial.data, repairCallUsed: false };
+    return { quiz: initial.data };
   }
 
   const initialIssues = toGeneratedQuizSchemaIssues(initial.error.issues);
   if (execution?.action.workflow !== 'QUIZ_CREATE') {
     throw new GeneratedQuizSchemaError(initialIssues);
   }
+  const questionRepairPlan = createQuizQuestionSchemaRepairPlan(normalized, initialIssues);
 
   onStepChange?.('repairing');
   const repairedText = await requestWorkerAiText({
@@ -152,7 +155,9 @@ const parseDraftWithOneSchemaRepair = async (
       },
       {
         role: 'user',
-        content: buildQuizSchemaRepairPrompt({ quiz: normalized, issues: initialIssues }),
+        content: questionRepairPlan.requestedCount > 0
+          ? buildQuizQuestionSchemaRepairPrompt({ quiz: normalized, issues: initialIssues })
+          : buildQuizSchemaRepairPrompt({ quiz: normalized, issues: initialIssues }),
       },
     ],
     temperature: 0.1,
@@ -166,7 +171,23 @@ const parseDraftWithOneSchemaRepair = async (
       toGeneratedQuizSchemaIssues(repaired.error.issues),
     );
   }
-  return { quiz: repaired.data, repairCallUsed: true };
+
+  if (questionRepairPlan.requestedCount > 0) {
+    const mergedRaw = mergeSchemaRepairedQuestions(
+      normalized,
+      repaired.data,
+      questionRepairPlan,
+    );
+    const merged = GeneratedQuizSchema.safeParse(mergedRaw);
+    if (!merged.success) {
+      throw new GeneratedQuizSchemaError(
+        toGeneratedQuizSchemaIssues(merged.error.issues),
+      );
+    }
+    return { quiz: merged.data };
+  }
+
+  return { quiz: repaired.data };
 };
 
 const reviewGeneratedQuiz = async (
@@ -209,7 +230,7 @@ const runDeterministicQualityPipeline = async (
 
   const canUseAuxiliaryStages = execution?.action.workflow === 'QUIZ_CREATE';
   if (issues.length > 0) {
-    if (!canUseAuxiliaryStages || parsed.repairCallUsed) {
+    if (!canUseAuxiliaryStages) {
       throw new QuizGenerationValidationError(issues);
     }
 

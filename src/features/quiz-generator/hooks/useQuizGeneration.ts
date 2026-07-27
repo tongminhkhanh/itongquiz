@@ -23,6 +23,10 @@ import { validateQuizGenerationInput } from '../domain/quizCreationValidation';
 import type { GenerationStep, QuizMode } from '../domain/quizCreation.types';
 import type { useQuizFormState } from './useQuizFormState';
 import { createAiAction, type ClientAiAction } from '../../../services/ai/aiAction';
+import {
+    finalizeAiAction,
+    getAiActionClientFailureCode,
+} from '../../../services/ai/aiActionFinalization';
 import { hydrateGeneratedImages, prepareGeneratedImageJobs } from '../../../services/ai/generatedImageHydration';
 import { generateImage } from '../../../services/imageGenerationService';
 import { isAiDeferredImagesEnabled, isAiFastPathEnabled } from '../../../config/featureFlags';
@@ -376,6 +380,7 @@ export const useQuizGeneration = ({
                 detectedLesson,
                 suggestedTags,
             ));
+            await finalizeAiAction(action.actionId, { outcome: 'SUCCEEDED' });
 
             if (prepared.jobs.length === 0) {
                 setGenerationStep('completed');
@@ -414,6 +419,10 @@ export const useQuizGeneration = ({
                 });
             }
         } catch (error: unknown) {
+            await finalizeAiAction(action.actionId, {
+                outcome: 'FAILED',
+                failureCode: getAiActionClientFailureCode(error, controller.signal.aborted),
+            });
             if (controller.signal.aborted) {
                 setGenerationStep('cancelled');
             } else {

@@ -59,6 +59,10 @@ const interceptBootstrap = () => {
   cy.intercept('GET', '**/api/classes*', { statusCode: 200, body: { status: 'success', data: [] } });
   cy.intercept('GET', '**/api/quizzes*', { statusCode: 200, body: { status: 'success', data: [] } });
   cy.intercept('GET', '**/api/results*', { statusCode: 200, body: { status: 'success', data: [] } });
+  cy.intercept('POST', '**/api/ai/actions/finalize', {
+    statusCode: 200,
+    body: { status: 'success', actionStatus: 'SUCCEEDED' },
+  });
 };
 
 const visitCreateTab = () => {

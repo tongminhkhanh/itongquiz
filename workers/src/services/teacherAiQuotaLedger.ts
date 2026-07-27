@@ -271,6 +271,53 @@ export async function succeedAiAction(
   `).bind(nowIso, nowIso, actionId, username).first<UsageDateRow>();
 }
 
+export async function finalizeQuizCreateAction(
+  db: D1Database,
+  input: {
+    actionId: string;
+    username: string;
+    outcome: 'SUCCEEDED' | 'FAILED';
+    failureCode?: string;
+    now?: Date;
+  },
+): Promise<AiActionStatus | null> {
+  const nowIso = (input.now ?? new Date()).toISOString();
+  const failureCode = input.outcome === 'FAILED'
+    ? input.failureCode || 'CLIENT_GENERATION_FAILED'
+    : null;
+  const transitioned = await db.prepare(`
+    UPDATE ai_generation_actions
+    SET status = ?,
+        failure_code = ?,
+        updated_at = ?,
+        completed_at = ?
+    WHERE action_id = ?
+      AND username = ?
+      AND workflow = 'QUIZ_CREATE'
+      AND generate_calls = 1
+      AND status = 'RESERVED'
+    RETURNING status
+  `).bind(
+    input.outcome,
+    failureCode,
+    nowIso,
+    nowIso,
+    input.actionId,
+    input.username,
+  ).first<{ status: AiActionStatus }>();
+
+  if (transitioned) return transitioned.status;
+
+  const existing = await findAction(db, input.actionId);
+  if (!existing
+    || existing.username !== input.username
+    || existing.workflow !== 'QUIZ_CREATE') {
+    return null;
+  }
+  if (existing.status === input.outcome) return existing.status;
+  return null;
+}
+
 export async function failAiAction(
   db: D1Database,
   actionId: string,

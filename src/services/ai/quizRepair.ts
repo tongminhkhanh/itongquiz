@@ -59,6 +59,77 @@ const uniqueSortedIndexes = (indexes: number[], maxExclusive: number): number[] 
   .filter((index) => Number.isInteger(index) && index >= 0 && index < maxExclusive)
   .sort((left, right) => left - right);
 
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
+export interface QuizQuestionSchemaRepairPlan {
+  questionIndexes: number[];
+  requestedCount: number;
+}
+
+export function createQuizQuestionSchemaRepairPlan(
+  quiz: unknown,
+  issues: GeneratedQuizSchemaIssue[],
+): QuizQuestionSchemaRepairPlan {
+  if (!isRecord(quiz) || !Array.isArray(quiz.questions) || issues.length === 0) {
+    return { questionIndexes: [], requestedCount: 0 };
+  }
+
+  const everyIssueBelongsToAQuestion = issues.every((issue) => (
+    issue.path[0] === 'questions'
+    && typeof issue.path[1] === 'number'
+    && Number.isInteger(issue.path[1])
+  ));
+  if (!everyIssueBelongsToAQuestion) {
+    return { questionIndexes: [], requestedCount: 0 };
+  }
+
+  const questionIndexes = uniqueSortedIndexes(
+    issues.map((issue) => Number(issue.path[1])),
+    quiz.questions.length,
+  );
+  return { questionIndexes, requestedCount: questionIndexes.length };
+}
+
+export function buildQuizQuestionSchemaRepairPrompt(input: QuizSchemaRepairRequest): string {
+  const plan = createQuizQuestionSchemaRepairPlan(input.quiz, input.issues);
+  if (!isRecord(input.quiz) || !Array.isArray(input.quiz.questions) || plan.requestedCount === 0) {
+    return buildQuizSchemaRepairPrompt(input);
+  }
+
+  const questions = input.quiz.questions;
+  const issueLines = input.issues.map((issue) => {
+    const path = issue.path.join('.') || '<root>';
+    return `- ${path} | ${issue.code} | ${issue.message}`;
+  });
+  const malformedQuestions = plan.questionIndexes.map((index) => {
+    const question = questions[index];
+    return {
+      originalQuestionNumber: index + 1,
+      expectedType: isRecord(question) ? question.type : undefined,
+      draft: question,
+    };
+  });
+
+  return [
+    'Bạn đang sửa đúng các câu sai cấu trúc trong một đề do AI tạo.',
+    `Chỉ trả về ${plan.requestedCount} câu đã sửa, theo đúng thứ tự câu trong danh sách lỗi.`,
+    'Không trả lại hoặc viết lại những câu hợp lệ.',
+    '[LỖI SCHEMA]',
+    ...issueLines,
+    '[CÂU CẦN SỬA]',
+    JSON.stringify(malformedQuestions),
+    '[YÊU CẦU OUTPUT]',
+    'Trả JSON dạng {"title":"Phần sửa cấu trúc","questions":[...]}.',
+    'Mỗi câu phải giữ đúng type, có explanation và difficultyLevel từ 1 đến 3.',
+    'MCQ phải có options và correctAnswer là chữ cái tham chiếu phương án hiện có.',
+    'DROPDOWN.blanks[] phải là object gồm id, options và correctAnswer.',
+    'CATEGORIZATION items[].categoryId phải trùng với categories[].id.',
+    'Chỉ trả JSON object, không dùng markdown hoặc lời dẫn.',
+  ].join('\n');
+}
+
 export function createQuizRepairPlan(input: QuizRepairRequest): QuizRepairPlan {
   const removalIndexes = uniqueSortedIndexes(
     input.issues
@@ -126,6 +197,42 @@ const preserveQuestionId = (
   if (!original.id) return replacement;
   return { ...replacement, id: original.id } as GeneratedQuestion;
 };
+
+export function mergeSchemaRepairedQuestions(
+  original: unknown,
+  repaired: GeneratedQuizPayload,
+  plan: QuizQuestionSchemaRepairPlan,
+): unknown {
+  if (!isRecord(original) || !Array.isArray(original.questions)) return repaired;
+  if (plan.requestedCount === 0) return repaired;
+
+  const repairedQuestions = repaired.questions;
+  const replacements = repairedQuestions.length === plan.requestedCount
+    ? repairedQuestions
+    : repairedQuestions.length === original.questions.length
+      ? plan.questionIndexes.map((index) => repairedQuestions[index])
+      : [];
+  if (replacements.length !== plan.requestedCount || replacements.some((question) => !question)) {
+    throw new Error(
+      `AI trả về ${repairedQuestions.length} câu sửa, cần đúng ${plan.requestedCount} câu.`,
+    );
+  }
+
+  const questions = [...original.questions];
+  plan.questionIndexes.forEach((questionIndex, repairIndex) => {
+    const originalQuestion = questions[questionIndex];
+    const replacement = replacements[repairIndex];
+    if (isRecord(originalQuestion)
+      && typeof originalQuestion.id === 'string'
+      && !replacement.id) {
+      questions[questionIndex] = { ...replacement, id: originalQuestion.id };
+      return;
+    }
+    questions[questionIndex] = replacement;
+  });
+
+  return { ...original, questions };
+}
 
 export function mergeRepairedQuestions(
   original: GeneratedQuizPayload,

@@ -37,6 +37,7 @@ const WORKFLOW_STAGES: Record<AiWorkflow, ReadonlySet<AiStage>> = {
 };
 
 const IMAGE_CALL_LIMIT = 10;
+const REPAIR_CALL_LIMIT = 2;
 
 type StageColumn = 'ocr_calls' | 'generate_calls' | 'review_calls' | 'repair_calls' | 'image_calls';
 
@@ -50,7 +51,11 @@ const STAGE_COLUMNS: Record<AiStage, StageColumn> = {
   GENERIC: 'generate_calls',
 };
 
-const stageLimit = (stage: AiStage): number => stage === 'IMAGE' ? IMAGE_CALL_LIMIT : 1;
+const stageLimit = (stage: AiStage): number => {
+  if (stage === 'IMAGE') return IMAGE_CALL_LIMIT;
+  if (stage === 'REPAIR') return REPAIR_CALL_LIMIT;
+  return 1;
+};
 
 export class AiRequestPolicyError extends Error {
   constructor(public readonly code: AiRequestPolicyCode) {

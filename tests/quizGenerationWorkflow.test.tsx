@@ -11,6 +11,7 @@ const aiMocks = vi.hoisted(() => ({
   extractTextFromPdf: vi.fn(),
   generateQuiz: vi.fn(),
   generateImage: vi.fn(),
+  finalizeAiAction: vi.fn(async () => true),
 }));
 const quotaMocks = vi.hoisted(() => ({
   refresh: vi.fn(async () => undefined),
@@ -28,6 +29,14 @@ vi.mock('../src/services/geminiService', async (importOriginal) => {
 vi.mock('../src/services/imageGenerationService', () => ({
   generateImage: aiMocks.generateImage,
 }));
+
+vi.mock('../src/services/ai/aiActionFinalization', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/services/ai/aiActionFinalization')>();
+  return {
+    ...actual,
+    finalizeAiAction: aiMocks.finalizeAiAction,
+  };
+});
 
 vi.mock('../src/features/quiz-generator/hooks/useTeacherAiQuota', () => ({
   useTeacherAiQuota: () => ({
@@ -157,6 +166,11 @@ describe('quiz AI workflow', () => {
     });
 
     expect(result.current.generationStartedAt).toEqual(expect.any(Number));
+    const generationActionId = aiMocks.generateQuiz.mock.calls[0][8].action.actionId;
+    expect(aiMocks.finalizeAiAction).toHaveBeenCalledWith(
+      generationActionId,
+      { outcome: 'SUCCEEDED' },
+    );
   });
 
   it('uses the same action id for OCR and generate after page review', async () => {
@@ -340,6 +354,13 @@ describe('quiz AI workflow', () => {
     expect(String(showErrorMock.mock.calls[0][0])).not.toContain('too_small');
     expect(String(showErrorMock.mock.calls[0][0])).not.toContain('questions');
     expect(String(showErrorMock.mock.calls[0][0])).not.toMatch(/^\s*\[/);
+    expect(aiMocks.finalizeAiAction).toHaveBeenCalledWith(
+      expect.any(String),
+      {
+        outcome: 'FAILED',
+        failureCode: 'CLIENT_SCHEMA_INVALID',
+      },
+    );
   });
 
   it('preserves actionable messages for non-schema generation errors', async () => {

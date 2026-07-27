@@ -22,6 +22,16 @@ vi.mock('../src/services/trangNguyenGeminiService', () => ({
     generateTrangNguyenQuiz: vi.fn(),
 }));
 
+vi.mock('../src/services/ai/aiActionFinalization', async () => {
+    const actual = await vi.importActual<typeof import('../src/services/ai/aiActionFinalization')>(
+        '../src/services/ai/aiActionFinalization',
+    );
+    return {
+        ...actual,
+        finalizeAiAction: vi.fn(async () => true),
+    };
+});
+
 vi.mock('../src/services/teacherAiQuotaService', () => ({
     getTeacherAiQuota: vi.fn(),
 }));

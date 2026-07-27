@@ -111,6 +111,25 @@ class FakeAiDb {
       return { used_count: this.usedCount };
     }
 
+    if (normalized.startsWith('UPDATE AI_GENERATION_ACTIONS')
+      && normalized.includes('SET STATUS = ?')
+      && normalized.includes("WORKFLOW = 'QUIZ_CREATE'")) {
+      const [status, failureCode, , completedAt, actionId, username] = values;
+      const action = this.actions.get(String(actionId));
+      if (!action
+        || action.username !== String(username)
+        || action.workflow !== 'QUIZ_CREATE'
+        || action.generate_calls !== 1
+        || action.status !== 'RESERVED') {
+        return null;
+      }
+      action.status = status as ActionRow['status'];
+      action.failure_code = failureCode === null ? null : String(failureCode);
+      action.updated_at = String(completedAt);
+      action.completed_at = String(completedAt);
+      return { status: action.status };
+    }
+
     if (normalized.startsWith('UPDATE AI_GENERATION_ACTIONS') && normalized.includes("STATUS = 'SUCCEEDED'")) {
       return this.transition(values, 'SUCCEEDED', null);
     }
@@ -292,6 +311,21 @@ describe('AI request policy', () => {
     await expect(authorizeAiStage(env.DB, 'teacher-a', meta))
       .rejects.toBeInstanceOf(AiRequestPolicyError);
   });
+
+  it('allows two REPAIR calls after generation and rejects a third one', async () => {
+    const base = { actionId, workflow: 'QUIZ_CREATE' as const };
+    fakeDb.seedAction({ ...base, stage: 'GENERATE' });
+    await recordAiStageSuccess(env.DB, 'teacher-a', { ...base, stage: 'GENERATE' });
+
+    for (let call = 0; call < 2; call += 1) {
+      const meta = { ...base, stage: 'REPAIR' as const };
+      await authorizeAiStage(env.DB, 'teacher-a', meta);
+      await recordAiStageSuccess(env.DB, 'teacher-a', meta);
+    }
+
+    await expect(authorizeAiStage(env.DB, 'teacher-a', { ...base, stage: 'REPAIR' }))
+      .rejects.toMatchObject({ code: 'AI_STAGE_CONFLICT' });
+  });
 });
 
 describe('/api/ai/chat', () => {
@@ -323,6 +357,80 @@ describe('/api/ai/chat', () => {
 
     expect(response?.status).toBe(403);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('finalizes QUIZ_CREATE only after client-side validation succeeds', async () => {
+    const generateResponse = await handleAiProxy(
+      request({
+        model: 'gemini-2.5-flash',
+        messages: [{}],
+        _meta: { actionId, workflow: 'QUIZ_CREATE', stage: 'GENERATE' },
+      }),
+      env,
+      '/api/ai/chat',
+      'POST',
+    );
+
+    expect(generateResponse?.status).toBe(200);
+    expect(fakeDb.actions.get(actionId)?.status).toBe('RESERVED');
+
+    const finalizeResponse = await handleAiProxy(
+      new Request('https://www.thitong.site/api/ai/actions/finalize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CF-Connecting-IP': '1.2.3.4',
+        },
+        body: JSON.stringify({ actionId, outcome: 'SUCCEEDED' }),
+      }),
+      env,
+      '/api/ai/actions/finalize',
+      'POST',
+    );
+
+    expect(finalizeResponse?.status).toBe(200);
+    await expect(finalizeResponse?.json()).resolves.toMatchObject({
+      status: 'success',
+      actionStatus: 'SUCCEEDED',
+    });
+    expect(fakeDb.actions.get(actionId)?.status).toBe('SUCCEEDED');
+    expect(fakeDb.usedCount).toBe(1);
+  });
+
+  it('records client validation failure without refunding the consumed AI quota', async () => {
+    await handleAiProxy(
+      request({
+        model: 'gemini-2.5-flash',
+        messages: [{}],
+        _meta: { actionId, workflow: 'QUIZ_CREATE', stage: 'GENERATE' },
+      }),
+      env,
+      '/api/ai/chat',
+      'POST',
+    );
+
+    const response = await handleAiProxy(
+      new Request('https://www.thitong.site/api/ai/actions/finalize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CF-Connecting-IP': '1.2.3.4',
+        },
+        body: JSON.stringify({
+          actionId,
+          outcome: 'FAILED',
+          failureCode: 'CLIENT_SCHEMA_INVALID',
+        }),
+      }),
+      env,
+      '/api/ai/actions/finalize',
+      'POST',
+    );
+
+    expect(response?.status).toBe(200);
+    expect(fakeDb.actions.get(actionId)?.status).toBe('FAILED');
+    expect(fakeDb.actions.get(actionId)?.failure_code).toBe('CLIENT_SCHEMA_INVALID');
+    expect(fakeDb.usedCount).toBe(1);
   });
 
   it('reuses a completed quiz action for IMAGE without increasing daily quota', async () => {

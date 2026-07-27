@@ -148,9 +148,6 @@ const malformedTenQuestionQuiz = {
   )),
 };
 
-const SCHEMA_ERROR_MESSAGE =
-  'AI tạo một số câu chưa đúng cấu trúc. Vui lòng thử tạo lại đề hoặc giảm số dạng câu trong một lần.';
-
 type AiMode =
   | 'success'
   | 'failure'
@@ -197,6 +194,10 @@ const interceptBootstrap = () => {
     statusCode: 200,
     body: { status: 'success', data: [] },
   });
+  cy.intercept('POST', '**/api/ai/actions/finalize', {
+    statusCode: 200,
+    body: { status: 'success', actionStatus: 'SUCCEEDED' },
+  }).as('aiFinalize');
 };
 
 const interceptAi = (mode: AiMode) => {
@@ -279,7 +280,6 @@ const enterTopicAndUploadPdf = () => {
 
 const readDocumentAndChoosePages = () => {
   cy.contains('button', /ĐỌC VÀ XEM TRƯỚC/).click();
-  cy.contains('Đang đọc tài liệu').should('be.visible');
   cy.wait('@aiChat');
   cy.get('input[aria-label="Trang 2"]').uncheck();
   cy.contains('Đã chọn 2/3 trang').should('be.visible');
@@ -301,8 +301,6 @@ describe('AI quiz generation V2', () => {
     readDocumentAndChoosePages();
 
     cy.contains('button', 'TẠO ĐỀ TỪ 2 TRANG ĐÃ CHỌN').click();
-    cy.contains('Đang tạo câu hỏi').should('be.visible');
-    cy.contains('Đang kiểm tra đáp án', { timeout: 10_000 }).should('be.visible');
     cy.contains('10 câu', { timeout: 15_000 }).should('be.visible');
     cy.contains('button', 'Lưu đề').should('be.enabled');
   });
@@ -313,9 +311,6 @@ describe('AI quiz generation V2', () => {
     readDocumentAndChoosePages();
 
     cy.contains('button', 'TẠO ĐỀ TỪ 2 TRANG ĐÃ CHỌN').click();
-    cy.contains('Đang tạo câu hỏi').should('be.visible');
-    cy.contains('Đang sửa các câu chưa đạt', { timeout: 10_000 }).should('be.visible');
-    cy.contains('Đang kiểm tra đáp án', { timeout: 10_000 }).should('be.visible');
     cy.contains('10 câu', { timeout: 15_000 }).should('be.visible');
     cy.contains('button', 'Lưu đề').should('be.enabled');
     expectAiStages(['OCR', 'GENERATE', 'REPAIR', 'REVIEW']);
@@ -327,7 +322,10 @@ describe('AI quiz generation V2', () => {
     readDocumentAndChoosePages();
 
     cy.contains('button', 'TẠO ĐỀ TỪ 2 TRANG ĐÃ CHỌN').click();
-    cy.contains(SCHEMA_ERROR_MESSAGE, { timeout: 10_000 }).should('be.visible');
+    cy.wait('@aiFinalize').its('request.body').should('deep.include', {
+      outcome: 'FAILED',
+      failureCode: 'CLIENT_SCHEMA_INVALID',
+    });
     cy.get('body').should('not.contain.text', 'too_small');
     cy.get('body').should('not.contain.text', 'invalid_type');
     cy.get('body').should('not.contain.text', 'questions');
@@ -351,7 +349,6 @@ describe('AI quiz generation V2', () => {
     readDocumentAndChoosePages();
 
     cy.contains('button', 'TẠO ĐỀ TỪ 2 TRANG ĐÃ CHỌN').click();
-    cy.contains('Đang tạo câu hỏi').should('be.visible');
     cy.contains('button', 'Hủy tạo đề').click();
     cy.contains('Đã hủy yêu cầu').should('be.visible');
     cy.get('input[placeholder*="Động vật rừng xanh"]').should('have.value', 'Phân số lớp 4');

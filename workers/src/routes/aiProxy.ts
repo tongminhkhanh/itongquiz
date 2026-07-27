@@ -12,6 +12,7 @@ import {
 import {
     AiQuotaError,
     failAiAction,
+    finalizeQuizCreateAction,
     reserveAiAction,
     succeedAiAction,
 } from '../services/teacherAiQuotaLedger';
@@ -30,8 +31,15 @@ const ALLOWED_MODELS = new Set([
     'sonar',
 ]);
 
-const QUOTA_COMPLETION_STAGES = new Set<AiStage>(['GENERATE', 'REGENERATE', 'GENERIC']);
+const QUOTA_COMPLETION_STAGES = new Set<AiStage>(['REGENERATE', 'GENERIC']);
 const QUOTA_RELEASE_STAGES = new Set<AiStage>(['OCR', 'GENERATE', 'REGENERATE', 'GENERIC']);
+const AI_ACTION_ID = /^ai-[a-z0-9-]{20,80}$/i;
+const CLIENT_FAILURE_CODES = new Set([
+    'CLIENT_SCHEMA_INVALID',
+    'CLIENT_VALIDATION_FAILED',
+    'CLIENT_GENERATION_FAILED',
+    'CLIENT_ABORTED',
+]);
 
 const codedErrorResponse = (code: string, message: string, status: number): Response => jsonResponse({
     status: 'error',
@@ -65,6 +73,44 @@ const quotaErrorResponse = (error: AiQuotaError): Response => {
     return codedErrorResponse(error.code, error.message, status);
 };
 
+const handleAiActionFinalization = async (
+    request: Request,
+    env: Env,
+    username: string,
+): Promise<Response> => {
+    let body: Record<string, unknown>;
+    try {
+        body = await request.json() as Record<string, unknown>;
+    } catch {
+        return codedErrorResponse('AI_FINALIZE_INVALID', 'Dữ liệu hoàn tất tác vụ AI không hợp lệ.', 400);
+    }
+
+    const actionId = typeof body.actionId === 'string' ? body.actionId.trim() : '';
+    const outcome = body.outcome;
+    const failureCode = typeof body.failureCode === 'string' ? body.failureCode.trim() : '';
+    if (!AI_ACTION_ID.test(actionId)
+        || (outcome !== 'SUCCEEDED' && outcome !== 'FAILED')
+        || (outcome === 'FAILED' && !CLIENT_FAILURE_CODES.has(failureCode))) {
+        return codedErrorResponse('AI_FINALIZE_INVALID', 'Dữ liệu hoàn tất tác vụ AI không hợp lệ.', 400);
+    }
+
+    const actionStatus = await finalizeQuizCreateAction(env.DB, {
+        actionId,
+        username,
+        outcome,
+        ...(outcome === 'FAILED' ? { failureCode } : {}),
+    });
+    if (!actionStatus) {
+        return codedErrorResponse(
+            'AI_FINALIZE_CONFLICT',
+            'Tác vụ AI không tồn tại hoặc chưa sẵn sàng để hoàn tất.',
+            409,
+        );
+    }
+
+    return jsonResponse({ status: 'success', actionStatus });
+};
+
 export async function handleAiProxy(
     request: Request,
     env: Env,
@@ -72,7 +118,9 @@ export async function handleAiProxy(
     method: string,
     ctx?: ExecutionContext,
 ): Promise<Response | null> {
-    if (path !== '/api/ai/chat' || method !== 'POST') return null;
+    const isChatRequest = path === '/api/ai/chat' && method === 'POST';
+    const isFinalizeRequest = path === '/api/ai/actions/finalize' && method === 'POST';
+    if (!isChatRequest && !isFinalizeRequest) return null;
 
     const authResult = await verifyJWTMiddleware(request, env);
     if (authResult instanceof Response) return authResult;
@@ -83,7 +131,7 @@ export async function handleAiProxy(
     const role = authResult.user.role === 'admin' ? 'admin' : 'teacher';
     const rateLimitResponse = await rateLimit(request, env, {
         windowMs: 60 * 1000,
-        maxRequests: 20,
+        maxRequests: isFinalizeRequest ? 60 : 20,
         failureMode: 'closed',
         keyGenerator: (rateLimitedRequest) => {
             const requestPath = new URL(rateLimitedRequest.url).pathname;
@@ -91,6 +139,9 @@ export async function handleAiProxy(
         },
     });
     if (rateLimitResponse) return rateLimitResponse;
+    if (isFinalizeRequest) {
+        return handleAiActionFinalization(request, env, authResult.user.username);
+    }
 
     let body: Record<string, unknown>;
     try {
