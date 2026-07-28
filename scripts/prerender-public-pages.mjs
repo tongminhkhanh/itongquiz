@@ -84,7 +84,7 @@ export const prerenderPublicPages = (outputDirectory = join(ROOT_DIRECTORY, 'dis
     }
 };
 
-if (process.argv[1] && import.meta.url === new URL(`file:///${process.argv[1].replace(/\\/g, '/')}`).href) {
+if (process.argv[1] && resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])) {
     try {
         prerenderPublicPages();
         console.log(`[seo-prerender] generated ${Object.keys(PUBLIC_PAGE_METADATA).length} public HTML documents.`);
