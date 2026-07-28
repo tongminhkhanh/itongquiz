@@ -1,148 +1,124 @@
 import React from 'react';
-import { Award, Building2, CalendarDays, Flag, School, Sparkles, Trophy } from 'lucide-react';
+import { ArrowRight, BarChart3, BookOpenCheck, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { useNavigate } from 'react-router';
+import PublicSiteHeader from './PublicSiteHeader';
 
-const milestones = [
-    { year: '2016', title: 'Khởi động hành trình', desc: 'Trường bắt đầu xây dựng môi trường học tập thân thiện và sáng tạo.' },
-    { year: '2019', title: 'Nâng cấp cơ sở vật chất', desc: 'Hoàn thiện phòng học thông minh, thư viện mở và không gian trải nghiệm.' },
-    { year: '2023', title: 'Đẩy mạnh chuyển đổi số', desc: 'Ứng dụng nền tảng học tập trực tuyến và đánh giá tiến bộ theo năng lực.' },
-    { year: '2026', title: 'Hướng tới trường học hạnh phúc', desc: 'Tập trung vào trải nghiệm học sinh, kết nối phụ huynh và cộng đồng.' },
-];
-
-const gallery = [
-    'Ngày hội đọc sách',
-    'Sân chơi STEM',
-    'Hoạt động ngoại khóa',
-    'Giờ học sáng tạo',
-    'Lễ tổng kết năm học',
-    'CLB văn nghệ',
-];
-
-const achievements = [
-    'Top phong trào đổi mới dạy học cấp huyện',
-    'Nhiều học sinh đạt giải cấp huyện, cấp tỉnh',
-    'Liên tục đạt tập thể lao động tiên tiến',
+const values = [
+    {
+        icon: BookOpenCheck,
+        title: 'Học tập đúng trọng tâm',
+        description: 'Bài được giao, thư viện luyện tập và kết quả học tập nằm trong một hành trình rõ ràng.',
+        color: 'bg-blue-50 text-blue-700',
+    },
+    {
+        icon: BarChart3,
+        title: 'Theo dõi tiến bộ dễ dàng',
+        description: 'Giáo viên nắm được mức độ hoàn thành, điểm số và nội dung học sinh cần củng cố.',
+        color: 'bg-amber-50 text-amber-700',
+    },
+    {
+        icon: ShieldCheck,
+        title: 'An toàn cho học sinh',
+        description: 'Trải nghiệm đơn giản, nội dung phù hợp lứa tuổi và tài khoản do nhà trường quản lý.',
+        color: 'bg-emerald-50 text-emerald-700',
+    },
 ];
 
 const AboutPage: React.FC = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="min-h-screen bg-[#F8FAF9] font-['Baloo_2'] text-slate-800">
-            <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/70 border-b border-green-100">
-                <div className="max-w-7xl mx-auto px-4 md:px-8 h-18 flex items-center justify-between">
-                    <button
-                        onClick={() => navigate('/')}
-                        className="font-black text-[#064E3B] tracking-tight text-xl hover:text-green-600 transition-colors"
-                    >
-                        ÍtOng<span className="text-orange-500">Quiz</span>
-                    </button>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => navigate('/')}
-                            className="px-4 py-2 rounded-full text-sm font-semibold text-green-900 hover:text-emerald-600 hover:bg-green-50 transition"
-                        >
-                            Trang chủ
-                        </button>
-                        <button
-                            onClick={() => navigate('/about')}
-                            className="px-4 py-2 rounded-full text-sm font-semibold text-emerald-700 bg-green-100"
-                        >
-                            Giới thiệu
-                        </button>
-                        <button
-                            onClick={() => navigate('/contact')}
-                            className="px-4 py-2 rounded-full text-sm font-semibold text-green-900 hover:text-emerald-600 hover:bg-green-50 transition"
-                        >
-                            Liên hệ
-                        </button>
-                    </div>
-                </div>
-            </header>
+        <div className="min-h-screen bg-[#f7f9ff] font-['Be_Vietnam_Pro'] text-slate-900">
+            <PublicSiteHeader active="about" />
 
-            <main className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-14 space-y-12">
-                <section className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-emerald-600 via-green-600 to-lime-500 p-8 md:p-14 text-white shadow-xl">
-                    <div className="absolute -top-16 -right-12 w-64 h-64 rounded-full bg-white/20 blur-3xl animate-pulse" />
-                    <div className="absolute -bottom-16 -left-10 w-48 h-48 rounded-full bg-lime-300/30 blur-2xl" />
-                    <div className="relative z-10 max-w-3xl">
-                        <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] mb-6 backdrop-blur-md">
-                            <Sparkles className="w-3.5 h-3.5" />
-                            Giới thiệu nhà trường
-                        </p>
-                        <h1 className="text-4xl md:text-6xl font-black leading-tight mb-6 tracking-tight">
-                            Trường Tiểu học Ít Ong
-                        </h1>
-                        <p className="text-green-50 text-base md:text-xl leading-relaxed font-medium opacity-90">
-                            Chúng tôi xây dựng môi trường học tập an toàn, nhân ái và truyền cảm hứng.
-                            Học sinh được tôn trọng sự khác biệt, được khuyến khích sáng tạo và phát triển toàn diện.
-                        </p>
-                    </div>
-                </section>
-
-                <section className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-                    {[
-                        { icon: School, title: 'Tầm nhìn', desc: 'Đào tạo thế hệ học sinh tự tin, có kỹ năng học tập suốt đời.', color: 'bg-emerald-100 text-emerald-600' },
-                        { icon: Flag, title: 'Sứ mệnh', desc: 'Kết hợp nền tảng số và phương pháp dạy học tích cực vì học sinh.', color: 'bg-green-100 text-green-600' },
-                        { icon: Building2, title: 'Giá trị cốt lõi', desc: 'Tôn trọng, hợp tác, kỷ luật tích cực, trách nhiệm và sáng tạo.', color: 'bg-lime-100 text-emerald-700' }
-                    ].map((item, idx) => (
-                        <div key={idx} className="rounded-[2.5rem] bg-white border border-green-50 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-lg transition-all duration-300 group">
-                            <div className={`w-14 h-14 rounded-2xl ${item.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                                <item.icon className="w-7 h-7" />
+            <main>
+                <section className="relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(37,99,235,0.10),transparent_32%),radial-gradient(circle_at_85%_75%,rgba(250,204,21,0.16),transparent_30%)]" />
+                    <div className="relative mx-auto grid min-h-[670px] max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.02fr_0.98fr] lg:px-8 lg:py-24">
+                        <div className="max-w-2xl">
+                            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-bold text-blue-700">
+                                <Sparkles className="h-4 w-4" aria-hidden="true" />
+                                Nền tảng học tập dành cho học sinh tiểu học
                             </div>
-                            <h3 className="font-black text-2xl mb-3 text-[#064E3B]">{item.title}</h3>
-                            <p className="text-slate-600 text-base leading-relaxed">{item.desc}</p>
-                        </div>
-                    ))}
-                </section>
-
-                <section className="rounded-[2.5rem] bg-white border border-green-50 p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                    <div className="flex items-center gap-4 mb-10">
-                        <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
-                            <CalendarDays className="w-6 h-6" />
-                        </div>
-                        <h2 className="text-3xl font-black text-[#064E3B]">Hành trình phát triển</h2>
-                    </div>
-                    <div className="space-y-6">
-                        {milestones.map((item) => (
-                            <div key={item.year} className="flex flex-col md:flex-row gap-4 md:gap-8 group">
-                                <div className="w-24 shrink-0 text-xl font-black text-emerald-600 pt-1">{item.year}</div>
-                                <div className="flex-1 rounded-[1.8rem] bg-[#F0FDF4]/50 border border-green-100 p-6 group-hover:bg-[#F0FDF4] transition-colors">
-                                    <h3 className="font-bold text-lg text-slate-800 mb-2">{item.title}</h3>
-                                    <p className="text-base text-slate-600 leading-relaxed">{item.desc}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div className="rounded-[2.5rem] bg-white border border-green-50 p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="w-12 h-12 rounded-2xl bg-yellow-100 text-yellow-600 flex items-center justify-center">
-                                <Trophy className="w-6 h-6" />
-                            </div>
-                            <h2 className="text-2xl font-black text-[#064E3B]">Bảng vàng thành tích</h2>
-                        </div>
-                        <ul className="space-y-4">
-                            {achievements.map((item) => (
-                                <li key={item} className="flex items-start gap-4 text-base text-slate-700 bg-slate-50/50 p-4 rounded-2xl border border-transparent hover:border-green-100 transition-all">
-                                    <Award className="w-5 h-5 mt-0.5 text-amber-500 shrink-0" />
-                                    <span className="font-medium">{item}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    <div className="rounded-[2.5rem] bg-white border border-green-50 p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                        <h2 className="text-2xl font-black mb-8 text-[#064E3B]">Thư viện hình ảnh</h2>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {gallery.map((item) => (
-                                <div
-                                    key={item}
-                                    className="aspect-square rounded-[1.5rem] border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-4 flex items-end hover:shadow-md transition-shadow cursor-default"
+                            <h1 className="text-4xl font-black leading-[1.08] tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+                                Học vui hơn.
+                                <span className="block text-blue-700">Dạy nhẹ nhàng hơn.</span>
+                            </h1>
+                            <p className="mt-6 max-w-xl text-base font-medium leading-8 text-slate-600 sm:text-lg">
+                                iTongQuiz là hệ sinh thái giáo dục số đồng hành cùng giáo viên và học sinh Trường Tiểu học Ít Ong:
+                                giao bài thuận tiện, luyện tập hứng thú và theo dõi tiến bộ rõ ràng mỗi ngày.
+                            </p>
+                            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/')}
+                                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-blue-700 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 hover:bg-blue-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                                 >
-                                    <p className="text-[11px] md:text-xs font-bold text-emerald-800 leading-snug">{item}</p>
+                                    Bắt đầu học tập
+                                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/contact')}
+                                    className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-slate-200 bg-white px-7 py-3 text-sm font-bold text-slate-800 shadow-sm transition hover:border-blue-300 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                                >
+                                    Liên hệ với chúng tôi
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="relative mx-auto w-full max-w-[590px]" data-testid="about-illustration">
+                            <div className="absolute -inset-5 rounded-[2.25rem] bg-gradient-to-br from-blue-200/70 via-white to-amber-100 blur-2xl" />
+                            <figure className="relative overflow-hidden rounded-[2rem] border border-white/80 bg-white p-2 shadow-[0_30px_80px_rgba(30,64,175,0.20)]">
+                                <img
+                                    src="/about-platform-illustration.webp"
+                                    alt="Minh họa bảng điều khiển học tập số với biểu đồ tiến bộ"
+                                    className="aspect-[4/3] w-full rounded-[1.6rem] object-cover"
+                                />
+                            </figure>
+                            <div className="absolute -left-3 top-8 rounded-2xl border border-white bg-white/95 px-4 py-3 shadow-xl sm:-left-8">
+                                <div className="flex items-center gap-3">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                                        <UsersRound className="h-5 w-5" aria-hidden="true" />
+                                    </span>
+                                    <div>
+                                        <p className="text-xs font-black text-slate-900">Kết nối lớp học</p>
+                                        <p className="text-[11px] font-medium text-slate-500">Giáo viên và học sinh</p>
+                                    </div>
                                 </div>
+                            </div>
+                            <div className="absolute -bottom-4 right-3 rounded-2xl border border-white bg-white/95 px-4 py-3 shadow-xl sm:-right-5 sm:bottom-8">
+                                <div className="flex items-center gap-3">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                                        <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+                                    </span>
+                                    <div>
+                                        <p className="text-xs font-black text-slate-900">Học tập an toàn</p>
+                                        <p className="text-[11px] font-medium text-slate-500">Dễ dùng mỗi ngày</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="border-y border-slate-200/70 bg-white py-16" aria-labelledby="about-values-title">
+                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                        <div className="mx-auto mb-10 max-w-2xl text-center">
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">Giá trị chúng tôi theo đuổi</p>
+                            <h2 id="about-values-title" className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+                                Công nghệ phục vụ việc học, không làm việc học phức tạp hơn
+                            </h2>
+                        </div>
+                        <div className="grid gap-5 md:grid-cols-3">
+                            {values.map(({ icon: Icon, title, description, color }) => (
+                                <article key={title} className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+                                    <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl ${color}`}>
+                                        <Icon className="h-6 w-6" aria-hidden="true" />
+                                    </div>
+                                    <h3 className="text-lg font-black text-slate-950">{title}</h3>
+                                    <p className="mt-3 text-sm font-medium leading-6 text-slate-600">{description}</p>
+                                </article>
                             ))}
                         </div>
                     </div>

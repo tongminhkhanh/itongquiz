@@ -130,13 +130,13 @@ export const useSeo = (
         let robots = 'index, follow';
 
         if (pathname === '/about') {
-            title = 'Giới thiệu trường Ít Ong - ItOng Quiz';
-            description = 'Thông tin giới thiệu Trường Tiểu học Ít Ong, quá trình phát triển và hoạt động nổi bật.';
-            keywords = 'giới thiệu trường Ít Ong, Trường Tiểu học Ít Ong, ItOng Quiz';
+            title = 'Giới thiệu iTongQuiz - Trường Tiểu học Ít Ong';
+            description = 'Khám phá iTongQuiz, nền tảng giao bài, luyện tập và theo dõi tiến bộ dành cho giáo viên và học sinh Trường Tiểu học Ít Ong.';
+            keywords = 'giới thiệu iTongQuiz, Trường Tiểu học Ít Ong, nền tảng học tập tiểu học';
         } else if (pathname === '/contact') {
-            title = 'Liên hệ trường Ít Ong - ItOng Quiz';
-            description = 'Kênh liên hệ Trường Tiểu học Ít Ong: địa chỉ, hotline, fanpage và bản đồ.';
-            keywords = 'liên hệ trường Ít Ong, bản đồ trường Ít Ong, hotline trường Ít Ong';
+            title = 'Liên hệ hỗ trợ - iTongQuiz';
+            description = 'Liên hệ hỗ trợ iTongQuiz qua email, website và biểu mẫu tạo sẵn nội dung dành cho giáo viên, học sinh và phụ huynh.';
+            keywords = 'liên hệ iTongQuiz, hỗ trợ tài khoản iTongQuiz, Trường Tiểu học Ít Ong';
         } else if (pathname === '/privacy') {
             title = 'Chính sách bảo mật - ItOng Quiz';
         } else if (pathname === '/tos') {
