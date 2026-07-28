@@ -30,6 +30,12 @@ const LandingHeader: React.FC = () => {
                             Giới thiệu
                         </a>
                         <a
+                            href="/huong-dan-tao-de-kiem-tra-tieu-hoc"
+                            className="font-semibold text-slate-700 transition hover:text-blue-700"
+                        >
+                            Hướng dẫn giáo viên
+                        </a>
+                        <a
                             href="/contact"
                             className="font-semibold text-slate-700 transition hover:text-blue-700"
                         >

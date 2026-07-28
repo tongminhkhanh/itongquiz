@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import { PUBLIC_PAGE_METADATA, SITE_ORIGIN } from '../src/seo/publicPageMetadata';
+import { PUBLIC_PAGE_METADATA, SITE_ORIGIN, TEACHER_GUIDE_METADATA } from '../src/seo/publicPageMetadata';
 
 const require = createRequire(import.meta.url);
 const { PUBLIC_PATHS, buildPublicEntries, renderSitemap } = require('../scripts/generate_sitemap.cjs') as {
@@ -11,7 +11,7 @@ const { PUBLIC_PATHS, buildPublicEntries, renderSitemap } = require('../scripts/
 
 describe('canonical public sitemap', () => {
   it('stays aligned with the prerendered public route contract', () => {
-    expect(PUBLIC_PATHS).toEqual(Object.keys(PUBLIC_PAGE_METADATA));
+    expect(PUBLIC_PATHS).toEqual(Object.keys({ ...PUBLIC_PAGE_METADATA, ...TEACHER_GUIDE_METADATA }));
     expect(buildPublicEntries()).toEqual(PUBLIC_PATHS.map((pathname) => ({
       loc: new URL(pathname, `${SITE_ORIGIN}/`).toString(),
     })));

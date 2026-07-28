@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router';
 import { useQuizStore } from '../../stores/quizStore';
-import { AboutPage, ContactPage, ManualQuizWorkspacePage, PhieuPublicPage, PrivacyPolicy, TeacherResultDetailPage, TermsOfService } from './lazyViews';
+import { AboutPage, ContactPage, ManualQuizWorkspacePage, PhieuPublicPage, PrivacyPolicy, TeacherGuidePage, TeacherResultDetailPage, TermsOfService } from './lazyViews';
 import { PageLoading } from './PageLoading';
 import { PublicPageLayout } from './PublicPageLayout';
 import { RootView } from './RootView';
@@ -46,6 +46,9 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
             />
             <Route path="/about" element={suspended(<PublicPageLayout onNavigate={onNavigate}><AboutPage /></PublicPageLayout>)} />
             <Route path="/contact" element={suspended(<PublicPageLayout onNavigate={onNavigate}><ContactPage /></PublicPageLayout>)} />
+            <Route path="/huong-dan-tao-de-kiem-tra-tieu-hoc" element={suspended(<TeacherGuidePage guide="create-quiz" />)} />
+            <Route path="/huong-dan-giao-bai-truc-tuyen" element={suspended(<TeacherGuidePage guide="assign-work" />)} />
+            <Route path="/huong-dan-xem-ket-qua-hoc-tap" element={suspended(<TeacherGuidePage guide="review-results" />)} />
             <Route path="/phieu/p/:publicToken" element={suspended(<PhieuPublicPage />)} />
             <Route path="/privacy" element={suspended(<PublicPageLayout onNavigate={onNavigate}><PrivacyPolicy onBack={goBackHome} /></PublicPageLayout>)} />
             <Route path="/tos" element={suspended(<PublicPageLayout onNavigate={onNavigate}><TermsOfService onBack={goBackHome} /></PublicPageLayout>)} />

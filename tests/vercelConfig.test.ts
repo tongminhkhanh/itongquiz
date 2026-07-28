@@ -39,6 +39,9 @@ describe('Vercel route and SEO configuration', () => {
       '/contact',
       '/privacy',
       '/tos',
+      '/huong-dan-tao-de-kiem-tra-tieu-hoc',
+      '/huong-dan-giao-bai-truc-tuyen',
+      '/huong-dan-xem-ket-qua-hoc-tap',
       '/student/practice/:subjectId',
       '/teacher/results/:resultId',
       '/teacher/quizzes/manual/new',
@@ -47,6 +50,7 @@ describe('Vercel route and SEO configuration', () => {
     ]));
     expect(config.rewrites.find(item => item.source === '/about')?.destination).toBe('/about.html');
     expect(config.rewrites.find(item => item.source === '/contact')?.destination).toBe('/contact.html');
+    expect(config.rewrites.find(item => item.source === '/huong-dan-tao-de-kiem-tra-tieu-hoc')?.destination).toBe('/huong-dan-tao-de-kiem-tra-tieu-hoc.html');
   });
 
   it('normalizes the canonical host and trailing-slash policy', () => {

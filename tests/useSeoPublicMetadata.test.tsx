@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { useSeo } from '../src/hooks/useSeo';
-import { PUBLIC_PAGE_METADATA, SITE_ORIGIN } from '../src/seo/publicPageMetadata';
+import { PUBLIC_PAGE_METADATA, SITE_ORIGIN, TEACHER_GUIDE_METADATA } from '../src/seo/publicPageMetadata';
 
 const SeoProbe: React.FC<{ pathname: string }> = ({ pathname }) => {
     useSeo(pathname, 'home', null, false);
@@ -38,5 +38,14 @@ describe('useSeo public metadata', () => {
         expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`${SITE_ORIGIN}/`);
         expect(document.querySelector('meta[name="robots"]')?.getAttribute('content'))
             .toBe('noindex, nofollow, noarchive');
+    });
+
+    it('uses guide metadata for a crawlable teacher guide route', () => {
+        const pathname = '/huong-dan-giao-bai-truc-tuyen';
+        render(<SeoProbe pathname={pathname} />);
+
+        expect(document.title).toBe(TEACHER_GUIDE_METADATA[pathname].title);
+        expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href'))
+            .toBe(`${SITE_ORIGIN}${pathname}`);
     });
 });

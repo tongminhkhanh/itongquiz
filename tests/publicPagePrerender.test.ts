@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
-import { PUBLIC_PAGE_METADATA, SITE_ORIGIN } from '../src/seo/publicPageMetadata';
+import { PUBLIC_PAGE_METADATA, SITE_ORIGIN, TEACHER_GUIDE_METADATA } from '../src/seo/publicPageMetadata';
 import { prerenderPublicPages, renderPublicPageHtml } from '../scripts/prerender-public-pages.mjs';
 
 const shell = `<!doctype html><html lang="vi"><head><title>Old title</title><meta name="description" content="old"><link rel="canonical" href="https://example.com/"><script id="seo-jsonld" type="application/ld+json">{}</script></head><body><div id="root"></div></body></html>`;
@@ -21,6 +21,11 @@ describe('public-page prerendering', () => {
             expect(about).toContain(`<h1>${PUBLIC_PAGE_METADATA['/about'].heading}</h1>`);
             expect(about).toContain('"@type":"AboutPage"');
             expect(about).toContain('"@type":"BreadcrumbList"');
+
+            const guide = readFileSync(join(outputDirectory, 'huong-dan-tao-de-kiem-tra-tieu-hoc.html'), 'utf8');
+            expect(guide).toContain('<html lang="vi" data-seo-prerendered="/huong-dan-tao-de-kiem-tra-tieu-hoc">');
+            expect(guide).toContain(`<title>${TEACHER_GUIDE_METADATA['/huong-dan-tao-de-kiem-tra-tieu-hoc'].title}</title>`);
+            expect(guide).toContain('"@type":"Article"');
         } finally {
             rmSync(outputDirectory, { recursive: true, force: true });
         }

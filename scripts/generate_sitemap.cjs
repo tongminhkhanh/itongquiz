@@ -5,7 +5,12 @@ const path = require('path');
 const ROOT_DIR = path.resolve(__dirname, '..');
 const OUTPUT_FILE = path.join(ROOT_DIR, 'public', 'sitemap.xml');
 const DEFAULT_SITE_URL = 'https://www.thitong.site';
-const PUBLIC_PATHS = ['/', '/about', '/contact', '/privacy', '/tos'];
+const PUBLIC_PATHS = [
+  '/', '/about', '/contact', '/privacy', '/tos',
+  '/huong-dan-tao-de-kiem-tra-tieu-hoc',
+  '/huong-dan-giao-bai-truc-tuyen',
+  '/huong-dan-xem-ket-qua-hoc-tap',
+];
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;

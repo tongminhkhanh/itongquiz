@@ -38,11 +38,37 @@ export const PUBLIC_PAGE_METADATA = Object.freeze({
     },
 });
 
-export const getPublicPageMetadata = (pathname) => PUBLIC_PAGE_METADATA[pathname] || PUBLIC_PAGE_METADATA['/'];
+export const TEACHER_GUIDE_METADATA = Object.freeze({
+    '/huong-dan-tao-de-kiem-tra-tieu-hoc': {
+        title: 'Hướng dẫn tạo đề kiểm tra tiểu học | iTongQuiz',
+        description: 'Hướng dẫn giáo viên tạo đề kiểm tra tiểu học trên iTongQuiz: xác định mục tiêu, thiết lập câu hỏi, rà soát và lưu đề.',
+        keywords: 'hướng dẫn tạo đề kiểm tra tiểu học, tạo đề trắc nghiệm tiểu học, iTongQuiz giáo viên',
+        heading: 'Hướng dẫn tạo đề kiểm tra tiểu học',
+        summary: 'Các bước chuẩn bị, tạo và rà soát đề kiểm tra phù hợp với học sinh tiểu học.',
+    },
+    '/huong-dan-giao-bai-truc-tuyen': {
+        title: 'Hướng dẫn giao bài trực tuyến cho học sinh | iTongQuiz',
+        description: 'Hướng dẫn giáo viên giao bài trực tuyến trên iTongQuiz: chọn lớp, đặt hạn nộp, số lượt làm và theo dõi việc hoàn thành.',
+        keywords: 'hướng dẫn giao bài trực tuyến, giao bài cho học sinh, iTongQuiz giáo viên',
+        heading: 'Hướng dẫn giao bài trực tuyến cho học sinh',
+        summary: 'Các bước giao đề đúng lớp, đúng thời gian và phù hợp với mục tiêu bài học.',
+    },
+    '/huong-dan-xem-ket-qua-hoc-tap': {
+        title: 'Hướng dẫn xem và phân tích kết quả học tập | iTongQuiz',
+        description: 'Hướng dẫn giáo viên xem tiến độ, kết quả từng học sinh và nhận diện nội dung cần củng cố trên iTongQuiz.',
+        keywords: 'hướng dẫn xem kết quả học tập, phân tích kết quả học sinh, iTongQuiz giáo viên',
+        heading: 'Hướng dẫn xem và phân tích kết quả học tập',
+        summary: 'Dùng kết quả học tập để hỗ trợ học sinh và điều chỉnh hoạt động ôn tập.',
+    },
+});
+
+export const getPublicPageMetadata = (pathname) => PUBLIC_PAGE_METADATA[pathname] || TEACHER_GUIDE_METADATA[pathname] || PUBLIC_PAGE_METADATA['/'];
 
 export const buildPublicStructuredData = (canonicalUrl, metadata) => {
     const pathname = new URL(canonicalUrl).pathname;
-    const pageType = pathname === '/about'
+    const pageType = pathname.startsWith('/huong-dan-')
+        ? 'Article'
+        : pathname === '/about'
         ? 'AboutPage'
         : pathname === '/contact'
             ? 'ContactPage'

@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildPublicStructuredData, PUBLIC_PAGE_METADATA, SITE_ORIGIN } from '../src/seo/publicPageMetadata.js';
+import { buildPublicStructuredData, PUBLIC_PAGE_METADATA, SITE_ORIGIN, TEACHER_GUIDE_METADATA } from '../src/seo/publicPageMetadata.js';
 
 const ROOT_DIRECTORY = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -77,7 +77,7 @@ export const prerenderPublicPages = (outputDirectory = join(ROOT_DIRECTORY, 'dis
     }
 
     const shell = readFileSync(sourceFile, 'utf8');
-    for (const [route, metadata] of Object.entries(PUBLIC_PAGE_METADATA)) {
+    for (const [route, metadata] of Object.entries({ ...PUBLIC_PAGE_METADATA, ...TEACHER_GUIDE_METADATA })) {
         const target = routeFilePath(outputDirectory, route);
         mkdirSync(dirname(target), { recursive: true });
         writeFileSync(target, renderPublicPageHtml(shell, route, metadata), 'utf8');
@@ -87,7 +87,7 @@ export const prerenderPublicPages = (outputDirectory = join(ROOT_DIRECTORY, 'dis
 if (process.argv[1] && resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])) {
     try {
         prerenderPublicPages();
-        console.log(`[seo-prerender] generated ${Object.keys(PUBLIC_PAGE_METADATA).length} public HTML documents.`);
+        console.log(`[seo-prerender] generated ${Object.keys(PUBLIC_PAGE_METADATA).length + Object.keys(TEACHER_GUIDE_METADATA).length} public HTML documents.`);
     } catch (error) {
         console.error('[seo-prerender] failed:', error instanceof Error ? error.message : error);
         process.exitCode = 1;

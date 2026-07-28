@@ -44,6 +44,18 @@
       "destination": "/contact.html"
     },
     {
+      "source": "/huong-dan-tao-de-kiem-tra-tieu-hoc",
+      "destination": "/huong-dan-tao-de-kiem-tra-tieu-hoc.html"
+    },
+    {
+      "source": "/huong-dan-giao-bai-truc-tuyen",
+      "destination": "/huong-dan-giao-bai-truc-tuyen.html"
+    },
+    {
+      "source": "/huong-dan-xem-ket-qua-hoc-tap",
+      "destination": "/huong-dan-xem-ket-qua-hoc-tap.html"
+    },
+    {
       "source": "/privacy",
       "destination": "/privacy.html"
     },

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { ArrowRight, Menu, X } from 'lucide-react';
 
-type PublicSection = 'about' | 'contact';
+type PublicSection = 'about' | 'contact' | 'guides';
 
 interface PublicSiteHeaderProps {
     active: PublicSection;
 }
 
-const navItems: Array<{ label: string; path: '/' | '/about' | '/contact'; id?: PublicSection }> = [
+const navItems: Array<{ label: string; path: '/' | '/about' | '/contact' | '/huong-dan-tao-de-kiem-tra-tieu-hoc'; id?: PublicSection }> = [
+    { label: 'Hướng dẫn giáo viên', path: '/huong-dan-tao-de-kiem-tra-tieu-hoc', id: 'guides' },
     { label: 'Trang chủ', path: '/' },
     { label: 'Giới thiệu', path: '/about', id: 'about' },
     { label: 'Liên hệ', path: '/contact', id: 'contact' },

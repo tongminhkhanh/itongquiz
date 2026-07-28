@@ -2,7 +2,7 @@ import React from 'react';
 import { Globe2, Mail, MapPin } from 'lucide-react';
 import { SCHOOL_NAME } from '../../config/constants';
 
-export type FooterRoutePath = '/' | '/about' | '/contact' | '/privacy' | '/tos';
+export type FooterRoutePath = '/' | '/about' | '/contact' | '/privacy' | '/tos' | '/huong-dan-tao-de-kiem-tra-tieu-hoc' | '/huong-dan-giao-bai-truc-tuyen' | '/huong-dan-xem-ket-qua-hoc-tap';
 
 interface Props {
     onNavigate: (path: FooterRoutePath) => void;
