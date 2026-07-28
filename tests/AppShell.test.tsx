@@ -205,15 +205,16 @@ describe('App shell routing contracts', () => {
         expect(goHome).toHaveBeenCalledTimes(1);
     });
 
-    it('keeps public routes and wildcard redirect contracts', async () => {
+    it('keeps public routes and renders an explicit client-side 404', async () => {
         const aboutRender = renderApp('/about');
         expect(await screen.findByText('about-page')).toBeInTheDocument();
         expect(screen.getByText('footer-public')).toBeInTheDocument();
         aboutRender.unmount();
 
         renderApp('/missing-page');
-        await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/'));
-        expect(await screen.findByText('home-page')).toBeInTheDocument();
+        expect(screen.getByTestId('location')).toHaveTextContent('/missing-page');
+        expect(await screen.findByRole('heading', { name: 'Không tìm thấy trang này' })).toBeInTheDocument();
+        expect(screen.queryByText('home-page')).not.toBeInTheDocument();
     });
 
     it('updates chatbot visibility from the system-settings event contract', async () => {

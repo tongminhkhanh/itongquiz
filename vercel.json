@@ -1,15 +1,90 @@
 {
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        { "type": "host", "value": "thitong.site" }
+      ],
+      "destination": "https://www.thitong.site/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",
       "destination": "https://phieu.thitong.site/api/:path*"
     },
     {
-      "source": "/phieu/:path*",
+      "source": "/student/practice/:subjectId",
       "destination": "/index.html"
     },
     {
-      "source": "/((?!api/|assets/|.*\\..*).*)",
+      "source": "/teacher/results/:resultId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/teacher/quizzes/manual/new",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/teacher/quizzes/manual/:quizId/edit",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/phieu/p/:publicToken",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/about",
+      "destination": "/about/index.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact/index.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy/index.html"
+    },
+    {
+      "source": "/tos",
+      "destination": "/tos/index.html"
+    },
+    {
+      "source": "/activate",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notifications",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/results",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/results/:resultId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/assignments",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/certificates",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile",
       "destination": "/index.html"
     }
   ],
@@ -50,6 +125,45 @@
           "key": "X-Robots-Tag",
           "value": "noindex, nofollow"
         }
+      ]
+    },
+    {
+      "source": "/student/:path*",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
+    {
+      "source": "/teacher/:path*",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
+    {
+      "source": "/",
+      "has": [
+        { "type": "query", "key": "quizId" }
+      ],
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
+    {
+      "source": "/",
+      "has": [
+        { "type": "query", "key": "quiz" }
+      ],
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
+    {
+      "source": "/",
+      "has": [
+        { "type": "query", "key": "category" }
+      ],
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
       ]
     },
     {

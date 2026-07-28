@@ -11,7 +11,7 @@ describe('public school pages', () => {
         expect(screen.getByRole('heading', { level: 1, name: /Học vui hơn/i })).toBeInTheDocument();
         expect(screen.getByAltText('Minh họa bảng điều khiển học tập số với biểu đồ tiến bộ')).toBeInTheDocument();
         expect(screen.getAllByRole('article')).toHaveLength(3);
-        expect(screen.getByRole('button', { name: 'Liên hệ với chúng tôi' })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Liên hệ với chúng tôi' })).toHaveAttribute('href', '/contact');
     });
 
     it('lets visitors preselect a contact topic from the support cards', () => {

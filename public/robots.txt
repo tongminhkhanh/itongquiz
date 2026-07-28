@@ -2,8 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /admin/
-Disallow: /teacher-dashboard/
-Disallow: /student-portal/
 Disallow: /*?*token=
 Disallow: /*?*auth=
 

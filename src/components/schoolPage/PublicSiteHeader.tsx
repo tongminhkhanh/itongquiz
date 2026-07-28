@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { ArrowRight, Menu, X } from 'lucide-react';
-import { useNavigate } from 'react-router';
 
 type PublicSection = 'about' | 'contact';
 
@@ -15,20 +14,13 @@ const navItems: Array<{ label: string; path: '/' | '/about' | '/contact'; id?: P
 ];
 
 const PublicSiteHeader: React.FC<PublicSiteHeaderProps> = ({ active }) => {
-    const navigate = useNavigate();
     const [menuOpen, setMenuOpen] = useState(false);
-
-    const goTo = (path: '/' | '/about' | '/contact') => {
-        setMenuOpen(false);
-        navigate(path);
-    };
 
     return (
         <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
             <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-                <button
-                    type="button"
-                    onClick={() => goTo('/')}
+                <a
+                    href="/"
                     className="flex items-center gap-2.5 rounded-xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                     aria-label="Về trang đăng nhập iTongQuiz"
                 >
@@ -43,16 +35,15 @@ const PublicSiteHeader: React.FC<PublicSiteHeaderProps> = ({ active }) => {
                     <span className="text-xl font-black tracking-tight text-[#16407f]">
                         ItOng<span className="text-[#ff9d00]">Quiz</span>
                     </span>
-                </button>
+                </a>
 
                 <nav className="hidden items-center gap-7 md:flex" aria-label="Điều hướng trang công khai">
                     {navItems.map((item) => {
                         const isActive = item.id === active;
                         return (
-                            <button
-                                type="button"
+                            <a
+                                href={item.path}
                                 key={item.path}
-                                onClick={() => goTo(item.path)}
                                 aria-current={isActive ? 'page' : undefined}
                                 className={`relative rounded-lg px-1 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
                                     isActive
@@ -61,19 +52,18 @@ const PublicSiteHeader: React.FC<PublicSiteHeaderProps> = ({ active }) => {
                                 }`}
                             >
                                 {item.label}
-                            </button>
+                            </a>
                         );
                     })}
                 </nav>
 
-                <button
-                    type="button"
-                    onClick={() => goTo('/')}
+                <a
+                    href="/"
                     className="hidden items-center gap-2 rounded-full bg-blue-700 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 md:inline-flex"
                 >
                     Khám phá nền tảng
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </button>
+                </a>
 
                 <button
                     type="button"
@@ -92,17 +82,17 @@ const PublicSiteHeader: React.FC<PublicSiteHeaderProps> = ({ active }) => {
                         {navItems.map((item) => {
                             const isActive = item.id === active;
                             return (
-                                <button
-                                    type="button"
+                                <a
+                                    href={item.path}
                                     key={item.path}
-                                    onClick={() => goTo(item.path)}
+                                    onClick={() => setMenuOpen(false)}
                                     aria-current={isActive ? 'page' : undefined}
                                     className={`rounded-xl px-4 py-3 text-left text-sm font-bold ${
                                         isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'
                                     }`}
                                 >
                                     {item.label}
-                                </button>
+                                </a>
                             );
                         })}
                     </div>

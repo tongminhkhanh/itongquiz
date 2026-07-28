@@ -5,6 +5,7 @@ import { AboutPage, ContactPage, ManualQuizWorkspacePage, PhieuPublicPage, Priva
 import { PageLoading } from './PageLoading';
 import { PublicPageLayout } from './PublicPageLayout';
 import { RootView } from './RootView';
+import { NotFoundPage } from './NotFoundPage';
 import type { RoutePath } from './routeTypes';
 import { isManualQuizWorkspaceEnabled } from '../config/featureFlags';
 
@@ -48,7 +49,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
             <Route path="/phieu/p/:publicToken" element={suspended(<PhieuPublicPage />)} />
             <Route path="/privacy" element={suspended(<PublicPageLayout onNavigate={onNavigate}><PrivacyPolicy onBack={goBackHome} /></PublicPageLayout>)} />
             <Route path="/tos" element={suspended(<PublicPageLayout onNavigate={onNavigate}><TermsOfService onBack={goBackHome} /></PublicPageLayout>)} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
         </Routes>
     );
 };

@@ -1,6 +1,5 @@
 import React from 'react';
 import { ArrowRight, BarChart3, BookOpenCheck, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
-import { useNavigate } from 'react-router';
 import PublicSiteHeader from './PublicSiteHeader';
 
 const values = [
@@ -25,8 +24,6 @@ const values = [
 ];
 
 const AboutPage: React.FC = () => {
-    const navigate = useNavigate();
-
     return (
         <div className="min-h-screen bg-[#f7f9ff] font-['Be_Vietnam_Pro'] text-slate-900">
             <PublicSiteHeader active="about" />
@@ -49,21 +46,19 @@ const AboutPage: React.FC = () => {
                                 giao bài thuận tiện, luyện tập hứng thú và theo dõi tiến bộ rõ ràng mỗi ngày.
                             </p>
                             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/')}
+                                <a
+                                    href="/"
                                     className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-blue-700 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 hover:bg-blue-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                                 >
                                     Bắt đầu học tập
                                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/contact')}
+                                </a>
+                                <a
+                                    href="/contact"
                                     className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-slate-200 bg-white px-7 py-3 text-sm font-bold text-slate-800 shadow-sm transition hover:border-blue-300 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                                 >
                                     Liên hệ với chúng tôi
-                                </button>
+                                </a>
                             </div>
                         </div>
 

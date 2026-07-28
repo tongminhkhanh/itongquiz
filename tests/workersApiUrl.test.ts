@@ -35,13 +35,14 @@ describe('normalizeWorkersApiUrl', () => {
     })).toBe('');
   });
 
-  it('orders the external API rewrite before the SPA fallback', () => {
+  it('orders the external API rewrite before explicit client-route rewrites', () => {
     const config = JSON.parse(readFileSync('vercel.json', 'utf8'));
     expect(config.rewrites[0]).toEqual({
       source: '/api/:path*',
       destination: 'https://phieu.thitong.site/api/:path*',
     });
-    const spaFallback = config.rewrites.find((rewrite: { source: string }) => rewrite.destination === '/index.html' && rewrite.source.includes('?!api/'));
-    expect(config.rewrites.indexOf(spaFallback)).toBeGreaterThan(0);
+    expect(config.rewrites.some((rewrite: { source: string }) => rewrite.source.includes('?!api/'))).toBe(false);
+    expect(config.rewrites.find((rewrite: { source: string }) => rewrite.source === '/student/practice/:subjectId'))
+      .toEqual({ source: '/student/practice/:subjectId', destination: '/index.html' });
   });
 });

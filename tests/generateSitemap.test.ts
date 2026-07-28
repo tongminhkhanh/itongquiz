@@ -1,45 +1,30 @@
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
+import { PUBLIC_PAGE_METADATA, SITE_ORIGIN } from '../src/seo/publicPageMetadata';
 
 const require = createRequire(import.meta.url);
-const { isQuizPublic, resolveApiUrl } = require('../scripts/generate_sitemap.cjs') as {
-  isQuizPublic: (quiz: Record<string, unknown>) => boolean;
-  resolveApiUrl: (env?: Record<string, string | undefined>) => string;
+const { PUBLIC_PATHS, buildPublicEntries, renderSitemap } = require('../scripts/generate_sitemap.cjs') as {
+  PUBLIC_PATHS: string[];
+  buildPublicEntries: (siteUrl?: string) => Array<{ loc: string }>;
+  renderSitemap: (entries: Array<{ loc: string }>) => string;
 };
 
-describe('generate sitemap API URL resolution', () => {
-  it('uses the production API when build variables are absent', () => {
-    expect(resolveApiUrl({})).toBe('https://phieu.thitong.site');
+describe('canonical public sitemap', () => {
+  it('stays aligned with the prerendered public route contract', () => {
+    expect(PUBLIC_PATHS).toEqual(Object.keys(PUBLIC_PAGE_METADATA));
+    expect(buildPublicEntries()).toEqual(PUBLIC_PATHS.map((pathname) => ({
+      loc: new URL(pathname, `${SITE_ORIGIN}/`).toString(),
+    })));
   });
 
-  it('prefers explicit sitemap configuration over other API variables', () => {
-    expect(resolveApiUrl({
-      SITEMAP_API_URL: 'https://sitemap.example.test ',
-      WORKERS_API_URL: 'https://workers.example.test',
-      VITE_WORKERS_API_URL: 'https://vite.example.test',
-    })).toBe('https://sitemap.example.test');
-  });
+  it('contains only canonical URLs without query parameters or ignored hints', () => {
+    const sitemap = renderSitemap(buildPublicEntries());
+    const locations = Array.from(sitemap.matchAll(/<loc>(.*?)<\/loc>/g), match => match[1]);
 
-  it('falls back through worker variables in order', () => {
-    expect(resolveApiUrl({
-      WORKERS_API_URL: 'https://workers.example.test',
-      VITE_WORKERS_API_URL: 'https://vite.example.test',
-    })).toBe('https://workers.example.test');
-
-    expect(resolveApiUrl({
-      VITE_WORKERS_API_URL: 'https://vite.example.test',
-    })).toBe('https://vite.example.test');
-  });
-});
-
-describe('generate sitemap public quiz policy', () => {
-  it('excludes quizzes from archived categories', () => {
-    expect(isQuizPublic({ category: 'ioe', showOnHome: true, requireCode: false })).toBe(false);
-    expect(isQuizPublic({ category_name: ' IOE ', show_on_home: 1, require_code: 0 })).toBe(false);
-  });
-
-  it('keeps active public quizzes and excludes protected ones', () => {
-    expect(isQuizPublic({ category: 'tieng-anh', showOnHome: true, requireCode: false })).toBe(true);
-    expect(isQuizPublic({ category: 'toan', showOnHome: true, requireCode: true })).toBe(false);
+    expect(locations.every(location => !location.includes('?'))).toBe(true);
+    expect(sitemap).not.toContain('<priority>');
+    expect(sitemap).not.toContain('<changefreq>');
+    expect(sitemap).not.toContain('<lastmod>');
+    expect((sitemap.match(/<url>/g) || [])).toHaveLength(PUBLIC_PATHS.length);
   });
 });
