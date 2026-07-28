@@ -25,7 +25,7 @@ const metaTag = (attribute, name, content) => `<meta ${attribute}="${name}" cont
 const routeFilePath = (outputDirectory, route) => (
     route === '/'
         ? join(outputDirectory, 'index.html')
-        : join(outputDirectory, route.slice(1), 'index.html')
+        : join(outputDirectory, `${route.slice(1)}.html`)
 );
 
 export const renderPublicPageHtml = (html, route, metadata) => {

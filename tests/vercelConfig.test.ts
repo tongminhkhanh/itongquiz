@@ -45,8 +45,8 @@ describe('Vercel route and SEO configuration', () => {
       '/teacher/quizzes/manual/:quizId/edit',
       '/phieu/p/:publicToken',
     ]));
-    expect(config.rewrites.find(item => item.source === '/about')?.destination).toBe('/about/index.html');
-    expect(config.rewrites.find(item => item.source === '/contact')?.destination).toBe('/contact/index.html');
+    expect(config.rewrites.find(item => item.source === '/about')?.destination).toBe('/about.html');
+    expect(config.rewrites.find(item => item.source === '/contact')?.destination).toBe('/contact.html');
   });
 
   it('normalizes the canonical host and trailing-slash policy', () => {

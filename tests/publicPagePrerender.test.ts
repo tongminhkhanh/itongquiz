@@ -14,7 +14,7 @@ describe('public-page prerendering', () => {
             writeFileSync(join(outputDirectory, 'index.html'), shell, 'utf8');
             prerenderPublicPages(outputDirectory);
 
-            const about = readFileSync(join(outputDirectory, 'about', 'index.html'), 'utf8');
+            const about = readFileSync(join(outputDirectory, 'about.html'), 'utf8');
             expect(about).toContain('<html lang="vi" data-seo-prerendered="/about">');
             expect(about).toContain(`<title>${PUBLIC_PAGE_METADATA['/about'].title}</title>`);
             expect(about).toContain(`<link rel="canonical" href="${SITE_ORIGIN}/about">`);

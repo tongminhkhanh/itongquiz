@@ -37,19 +37,19 @@
     },
     {
       "source": "/about",
-      "destination": "/about/index.html"
+      "destination": "/about.html"
     },
     {
       "source": "/contact",
-      "destination": "/contact/index.html"
+      "destination": "/contact.html"
     },
     {
       "source": "/privacy",
-      "destination": "/privacy/index.html"
+      "destination": "/privacy.html"
     },
     {
       "source": "/tos",
-      "destination": "/tos/index.html"
+      "destination": "/tos.html"
     },
     {
       "source": "/activate",
