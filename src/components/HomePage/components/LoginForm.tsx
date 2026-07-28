@@ -79,21 +79,12 @@ const LoginForm: React.FC<LoginFormProps> = ({
 
     return (
         <section
-            className="order-1 w-full max-w-[440px] md:order-2"
+            className="order-1 w-full md:order-2 md:h-full md:min-w-0"
             aria-label={isStudent ? 'Đăng nhập học sinh' : 'Đăng nhập giáo viên'}
         >
-            <div className="relative overflow-hidden rounded-[24px] border border-white/80 bg-white/95 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.18)] ring-1 ring-slate-900/5 backdrop-blur-sm sm:p-7 md:p-8">
-                <div
-                    aria-hidden="true"
-                    className={`absolute inset-x-0 top-0 h-1.5 ${
-                        isStudent
-                            ? 'bg-gradient-to-r from-emerald-400 via-green-500 to-lime-400'
-                            : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-sky-400'
-                    }`}
-                />
-
-                <div className="relative z-10 mb-5 text-center">
-                    <div className={`mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl ${
+            <div className="relative h-full overflow-hidden bg-white/95 p-6 sm:p-8 md:p-9 lg:p-10">
+                <div className="relative z-10 mb-5 text-left">
+                    <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-2xl ${
                         isStudent
                             ? 'bg-emerald-50 text-emerald-700'
                             : 'bg-blue-50 text-blue-700'
@@ -105,7 +96,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
                             ? 'Chào em, bắt đầu học nhé!'
                             : 'Đăng nhập khu vực giáo viên'}
                     </h1>
-                    <p className="mx-auto mt-1.5 max-w-[330px] text-sm font-medium leading-6 text-slate-600">
+                    <p className="mt-1.5 max-w-[390px] text-sm font-medium leading-6 text-slate-600">
                         {isStudent
                             ? 'Dùng tài khoản do giáo viên chủ nhiệm cung cấp.'
                             : 'Truy cập lớp học, đề kiểm tra và báo cáo học tập.'}
@@ -126,7 +117,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
                         aria-selected={isStudent}
                         aria-controls="login-panel-student"
                         disabled={isLoading}
-                        className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                        className={`flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
                             isStudent
                                 ? 'bg-white text-emerald-800 shadow-sm'
                                 : 'text-slate-600 hover:bg-white/70 hover:text-slate-900'
@@ -144,7 +135,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
                         aria-selected={!isStudent}
                         aria-controls="login-panel-teacher"
                         disabled={isLoading}
-                        className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                        className={`flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
                             !isStudent
                                 ? 'bg-white text-blue-800 shadow-sm'
                                 : 'text-slate-600 hover:bg-white/70 hover:text-slate-900'
@@ -296,7 +287,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
 
                     <button
                         type="submit"
-                        className={`flex min-h-[50px] w-full items-center justify-center rounded-xl px-4 text-base font-extrabold text-white shadow-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-65 ${
+                        className={`flex min-h-[52px] w-full items-center justify-center rounded-xl px-4 text-base font-extrabold text-white shadow-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-65 ${
                             isStudent
                                 ? 'bg-emerald-600 shadow-emerald-600/25 hover:bg-emerald-700 focus-visible:ring-emerald-600'
                                 : 'bg-blue-700 shadow-blue-700/25 hover:bg-blue-800 focus-visible:ring-blue-700'

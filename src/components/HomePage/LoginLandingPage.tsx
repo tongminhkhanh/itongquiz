@@ -157,10 +157,10 @@ const LoginLandingPage: React.FC = () => {
     };
 
     return (
-        <div className="relative flex min-h-dvh flex-col overflow-x-hidden bg-[#eef8f1] bg-[url('/meadow-bg.webp')] bg-cover bg-bottom bg-no-repeat font-baloo">
+        <div className="relative flex min-h-dvh flex-col overflow-x-hidden bg-[#eef8f1] bg-[url('/meadow-bg.webp')] bg-cover bg-bottom bg-no-repeat font-['Be_Vietnam_Pro']">
             <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-white/20 to-emerald-50/20"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/45 via-sky-50/20 to-emerald-50/25"
             />
             {pendingTeacher && (
                 <PasswordChangeDialog forced onCancel={() => {
@@ -182,27 +182,32 @@ const LoginLandingPage: React.FC = () => {
 
             <section
                 aria-label="Khu vực đăng nhập"
-                className="z-10 mx-auto flex w-full max-w-[1240px] flex-1 flex-col items-center justify-center gap-8 px-4 pb-8 pt-5 sm:px-6 md:flex-row md:justify-between md:gap-12 md:px-12 md:pb-12 md:pt-4 lg:px-16"
+                className="relative z-10 mx-auto flex w-full max-w-[1216px] flex-1 items-center justify-center px-4 py-6 sm:px-6 md:px-8 md:py-7 lg:px-12"
             >
-                <Suspense fallback={<div className="flex-1 h-64 animate-pulse bg-white/10 rounded-3xl" />}>
-                    <HeroSection />
-                </Suspense>
-                
-                <Suspense fallback={<div className="w-full max-w-md h-96 animate-pulse bg-white/20 rounded-3xl" />}>
-                    <LoginForm 
-                        activeTab={activeTab}
-                        setActiveTab={handleRoleChange}
-                        username={username}
-                        setUsername={handleUsernameChange}
-                        password={password}
-                        setPassword={handlePasswordChange}
-                        isLoading={isLoading}
-                        onSubmit={handleLogin}
-                        rememberAccount={rememberAccount}
-                        onRememberAccountChange={setRememberAccount}
-                        errorMessage={loginError}
-                    />
-                </Suspense>
+                <div
+                    data-testid="login-shell"
+                    className="flex w-full max-w-[1120px] flex-col overflow-hidden rounded-[28px] border border-white/85 bg-white/[0.94] shadow-[0_28px_80px_rgba(18,59,118,0.18)] ring-1 ring-slate-900/5 backdrop-blur-md md:grid md:min-h-[590px] md:grid-cols-[44%_56%]"
+                >
+                    <Suspense fallback={<div className="order-2 h-72 animate-pulse bg-white/40 md:order-1 md:h-full" />}>
+                        <HeroSection />
+                    </Suspense>
+
+                    <Suspense fallback={<div className="order-1 h-[590px] animate-pulse bg-white/70 md:order-2" />}>
+                        <LoginForm
+                            activeTab={activeTab}
+                            setActiveTab={handleRoleChange}
+                            username={username}
+                            setUsername={handleUsernameChange}
+                            password={password}
+                            setPassword={handlePasswordChange}
+                            isLoading={isLoading}
+                            onSubmit={handleLogin}
+                            rememberAccount={rememberAccount}
+                            onRememberAccountChange={setRememberAccount}
+                            errorMessage={loginError}
+                        />
+                    </Suspense>
+                </div>
             </section>
 
             <LandingFooter />

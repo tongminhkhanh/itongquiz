@@ -53,6 +53,15 @@ describe('LoginLandingPage behavior', () => {
     mocks.setView.mockReset();
   });
 
+  it('groups the value panel and login form in the approved split shell', () => {
+    render(<LoginLandingPage />);
+
+    const shell = screen.getByTestId('login-shell');
+    expect(shell).toHaveClass('md:grid-cols-[44%_56%]');
+    expect(shell).toContainElement(screen.getByText('Học tốt hơn'));
+    expect(shell).toContainElement(screen.getByRole('tabpanel'));
+  });
+
   it('restores a saved account and role with an explicit remembered state', async () => {
     localStorage.setItem('itongquiz_saved_login_v1', JSON.stringify({
       username: 'giaovien01',

@@ -6,8 +6,8 @@ const LandingHeader: React.FC = () => {
     const navigate = useNavigate();
 
     return (
-        <header className="relative z-20 border-b border-white/50 bg-white/45 px-4 py-3 backdrop-blur-md sm:px-6 md:px-10 md:py-4">
-            <div className="mx-auto flex w-full max-w-[1240px] items-center justify-between gap-4">
+        <header className="relative z-20 min-h-[72px] border-b border-white/55 bg-white/55 px-4 py-2.5 backdrop-blur-md sm:px-6 md:px-10">
+            <div className="mx-auto flex min-h-[51px] w-full max-w-[1120px] items-center justify-between gap-4">
                 <button
                     type="button"
                     aria-label="Về trang chủ"
