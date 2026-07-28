@@ -35,7 +35,9 @@ vi.mock('../src/components/HomePage/components/LandingHeader', () => ({
   default: () => <header>ItOngQuiz</header>,
 }));
 vi.mock('../src/components/HomePage/components/HeroSection', () => ({
-  default: () => <div>Học tốt hơn</div>,
+  default: ({ activeTab }: { activeTab: 'student' | 'teacher' }) => (
+    <div>{activeTab === 'student' ? 'Học vui mỗi ngày' : 'Dạy nhẹ nhàng hơn'}</div>
+  ),
 }));
 vi.mock('../src/components/HomePage/components/LandingFooter', () => ({
   default: () => <footer>Trường Tiểu học Ít Ong</footer>,
@@ -58,7 +60,7 @@ describe('LoginLandingPage behavior', () => {
 
     const shell = screen.getByTestId('login-shell');
     expect(shell).toHaveClass('md:grid-cols-[44%_56%]');
-    expect(shell).toContainElement(screen.getByText('Học tốt hơn'));
+    expect(shell).toContainElement(screen.getByText('Học vui mỗi ngày'));
     expect(shell).toContainElement(screen.getByRole('tabpanel'));
   });
 
@@ -72,9 +74,9 @@ describe('LoginLandingPage behavior', () => {
     render(<LoginLandingPage />);
 
     expect(await screen.findByRole('heading', {
-      name: 'Đăng nhập khu vực giáo viên',
+      name: 'Đăng nhập dành cho giáo viên',
     })).toBeInTheDocument();
-    expect(screen.getByLabelText('Tên đăng nhập')).toHaveValue('giaovien01');
+    expect(screen.getByLabelText('Tên đăng nhập giáo viên')).toHaveValue('giaovien01');
     expect(screen.getByRole('checkbox', {
       name: 'Ghi nhớ tài khoản trên thiết bị này',
     })).toBeChecked();

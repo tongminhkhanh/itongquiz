@@ -189,7 +189,7 @@ const LoginLandingPage: React.FC = () => {
                     className="flex w-full max-w-[1120px] flex-col overflow-hidden rounded-[28px] border border-white/85 bg-white/[0.94] shadow-[0_28px_80px_rgba(18,59,118,0.18)] ring-1 ring-slate-900/5 backdrop-blur-md md:grid md:min-h-[590px] md:grid-cols-[44%_56%]"
                 >
                     <Suspense fallback={<div className="order-2 h-72 animate-pulse bg-white/40 md:order-1 md:h-full" />}>
-                        <HeroSection />
+                        <HeroSection activeTab={activeTab} />
                     </Suspense>
 
                     <Suspense fallback={<div className="order-1 h-[590px] animate-pulse bg-white/70 md:order-2" />}>

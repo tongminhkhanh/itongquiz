@@ -47,9 +47,13 @@ describe('LoginForm UX', () => {
     const setActiveTab = vi.fn();
     renderLoginForm({ activeTab: 'teacher', setActiveTab });
 
-    expect(screen.getByRole('heading', { name: 'Đăng nhập khu vực giáo viên' }))
+    expect(screen.getByRole('heading', { name: 'Đăng nhập dành cho giáo viên' }))
       .toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Vào trang quản lý' }))
+    expect(screen.getByText('Quản lý lớp học, giao bài và theo dõi kết quả học sinh.'))
+      .toBeInTheDocument();
+    expect(screen.getByLabelText('Tên đăng nhập giáo viên'))
+      .toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Đăng nhập quản lý' }))
       .toBeInTheDocument();
     expect(screen.getByText('Ghi nhớ tài khoản trên thiết bị này'))
       .toBeInTheDocument();

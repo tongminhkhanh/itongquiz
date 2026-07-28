@@ -32,7 +32,7 @@ describe('password autocomplete metadata', () => {
       />,
     );
 
-    expect(screen.getByLabelText('Tên đăng nhập'))
+    expect(screen.getByLabelText('Tên đăng nhập giáo viên'))
       .toHaveAttribute('autocomplete', 'username');
     expect(screen.getByLabelText('Mật khẩu'))
       .toHaveAttribute('autocomplete', 'current-password');

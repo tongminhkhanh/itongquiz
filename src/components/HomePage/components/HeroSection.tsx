@@ -1,49 +1,114 @@
 import React from 'react';
-import { BarChart3, BookOpenCheck, Hexagon, Sparkles } from 'lucide-react';
+import {
+    BarChart3,
+    BookOpenCheck,
+    ClipboardCheck,
+    Hexagon,
+    LayoutDashboard,
+    ShieldCheck,
+    Sparkles,
+    type LucideIcon,
+} from 'lucide-react';
 
-const features = [
-    {
-        icon: BookOpenCheck,
-        title: 'Học tập đúng trọng tâm',
-        description: 'Bài được giao và thư viện luyện tập luôn sẵn sàng.',
-    },
-    {
-        icon: BarChart3,
-        title: 'Theo dõi tiến bộ rõ ràng',
-        description: 'Điểm số và kết quả được tổng hợp tự động.',
-    },
-    {
-        icon: Sparkles,
-        title: 'Dễ dùng mỗi ngày',
-        description: 'Thao tác đơn giản cho cả học sinh và giáo viên.',
-    },
-];
+type LoginRole = 'student' | 'teacher';
 
-const HeroSection: React.FC = () => {
+interface HeroSectionProps {
+    activeTab: LoginRole;
+}
+
+const roleContent = {
+    student: {
+        heading: 'Học vui mỗi ngày, tiến bộ qua từng bài.',
+        description: 'Bài được giao, thư viện luyện tập và kết quả của em luôn sẵn sàng trong một không gian an toàn, dễ sử dụng.',
+        benefitsLabel: 'Lợi ích dành cho học sinh',
+        features: [
+            {
+                icon: BookOpenCheck,
+                title: 'Học đúng trọng tâm',
+                description: 'Ưu tiên bài giáo viên giao và nội dung em cần luyện thêm.',
+                iconClass: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+            },
+            {
+                icon: BarChart3,
+                title: 'Biết mình tiến bộ ra sao',
+                description: 'Xem điểm, đáp án và toàn bộ bài đã làm.',
+                iconClass: 'bg-blue-50 text-blue-700 ring-blue-100',
+            },
+            {
+                icon: ShieldCheck,
+                title: 'An toàn, dễ sử dụng',
+                description: 'Thao tác đơn giản, phù hợp với học sinh tiểu học.',
+                iconClass: 'bg-amber-50 text-amber-700 ring-amber-100',
+            },
+        ],
+    },
+    teacher: {
+        heading: 'Dạy nhẹ nhàng hơn, theo dõi lớp rõ hơn.',
+        description: 'Giao bài, quản lý lớp và xem kết quả học tập trong một không gian tập trung, rõ ràng và dễ sử dụng.',
+        benefitsLabel: 'Lợi ích dành cho giáo viên',
+        features: [
+            {
+                icon: ClipboardCheck,
+                title: 'Giao bài nhanh chóng',
+                description: 'Chọn đề, đặt thời hạn và giao cho cả lớp chỉ trong vài bước.',
+                iconClass: 'bg-blue-50 text-blue-700 ring-blue-100',
+            },
+            {
+                icon: BarChart3,
+                title: 'Nắm tiến độ từng em',
+                description: 'Theo dõi lượt làm, điểm số và nội dung học sinh cần củng cố.',
+                iconClass: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+            },
+            {
+                icon: LayoutDashboard,
+                title: 'Quản lý tập trung',
+                description: 'Lớp học, đề kiểm tra và báo cáo được sắp xếp tại một nơi.',
+                iconClass: 'bg-amber-50 text-amber-700 ring-amber-100',
+            },
+        ],
+    },
+} satisfies Record<LoginRole, {
+    heading: string;
+    description: string;
+    benefitsLabel: string;
+    features: Array<{
+        icon: LucideIcon;
+        title: string;
+        description: string;
+        iconClass: string;
+    }>;
+}>;
+
+const HeroSection: React.FC<HeroSectionProps> = ({ activeTab }) => {
+    const content = roleContent[activeTab];
+
     return (
-        <section className="relative order-2 flex w-full flex-col overflow-hidden bg-slate-50/75 px-6 py-8 text-left sm:px-8 md:order-1 md:h-full md:border-r md:border-slate-200/75 md:px-10 md:py-10 lg:px-11">
+        <section
+            className="relative order-2 flex w-full flex-col overflow-hidden bg-slate-50/75 px-6 py-8 text-left sm:px-8 md:order-1 md:h-full md:border-r md:border-slate-200/75 md:px-10 md:py-10 lg:px-11"
+            data-role={activeTab}
+            aria-live="polite"
+        >
             <div className="relative z-10 w-fit rounded-full border border-blue-100 bg-blue-50/90 px-3.5 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#123b76]">
                 Trường Tiểu học Ít Ong
             </div>
 
             <h2 className="relative z-10 mt-5 max-w-[430px] text-[2rem] font-extrabold leading-[1.16] tracking-[-0.025em] text-[#123b76] sm:text-[2.3rem] md:text-[2.55rem] lg:text-[2.75rem]">
-                Học tốt hơn, dạy nhẹ nhàng hơn.
+                {content.heading}
             </h2>
             <p className="relative z-10 mt-4 max-w-[410px] text-sm font-medium leading-6 text-slate-600 sm:text-[0.95rem]">
-                Nền tảng học tập trực tuyến đồng hành cùng học sinh mỗi ngày,
-                đồng thời giúp giáo viên theo dõi lớp học nhẹ nhàng hơn.
+                {content.description}
             </p>
 
             <div
                 className="relative z-10 mt-7 flex w-full flex-col gap-3"
-                aria-label="Lợi ích của ItOngQuiz"
+                aria-label={content.benefitsLabel}
             >
-                {features.map(({ icon: Icon, title, description }) => (
+                {content.features.map(({ icon: Icon, title, description, iconClass }) => (
                     <article
                         key={title}
                         className="flex items-start gap-3 rounded-2xl border border-transparent px-1 py-1.5 text-left transition hover:border-white/90 hover:bg-white/60"
                     >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ring-1 ${iconClass}`}>
                             <Icon size={18} strokeWidth={2.1} />
                         </div>
                         <div className="min-w-0 pt-0.5">

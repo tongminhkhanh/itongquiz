@@ -94,12 +94,12 @@ const LoginForm: React.FC<LoginFormProps> = ({
                     <h1 className="text-[1.55rem] font-extrabold leading-tight text-slate-950 sm:text-[1.7rem]">
                         {isStudent
                             ? 'Chào em, bắt đầu học nhé!'
-                            : 'Đăng nhập khu vực giáo viên'}
+                            : 'Đăng nhập dành cho giáo viên'}
                     </h1>
                     <p className="mt-1.5 max-w-[390px] text-sm font-medium leading-6 text-slate-600">
                         {isStudent
                             ? 'Dùng tài khoản do giáo viên chủ nhiệm cung cấp.'
-                            : 'Truy cập lớp học, đề kiểm tra và báo cáo học tập.'}
+                            : 'Quản lý lớp học, giao bài và theo dõi kết quả học sinh.'}
                     </p>
                 </div>
 
@@ -161,7 +161,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
                             htmlFor="login-username"
                             className="mb-2 block text-sm font-bold text-slate-800"
                         >
-                            {isStudent ? 'Mã học sinh' : 'Tên đăng nhập'}
+                            {isStudent ? 'Mã học sinh' : 'Tên đăng nhập giáo viên'}
                         </label>
                         <div className="relative">
                             <UserRound
@@ -302,7 +302,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
                         ) : isStudent ? (
                             'Vào lớp học'
                         ) : (
-                            'Vào trang quản lý'
+                            'Đăng nhập quản lý'
                         )}
                     </button>
                 </form>
