@@ -1,41 +1,55 @@
 import React from 'react';
-import { ArrowRight } from 'lucide-react';
+import { CircleHelp } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
 const LandingHeader: React.FC = () => {
     const navigate = useNavigate();
 
     return (
-        <header className="px-5 md:px-12 py-5 flex items-center justify-between z-10">
-            {/* Logo */}
-            <div 
-                className="flex items-center gap-2.5 cursor-pointer" 
-                onClick={() => navigate('/')}
-            >
-                <img
-                    src="/school-logo-v2.webp"
-                    alt="ítOngQuiz logo"
-                    className="w-11 h-11 object-contain"
-                />
-                <span className="font-extrabold text-[1.4rem]">
-                    <span className="text-[#1e3a8a]">ítong</span>
-                    <span className="text-[#FACC15]">Quiz</span>
-                </span>
-            </div>
-
-            {/* Nav & CTA */}
-            <div className="flex items-center gap-8 header-nav-container">
-                <nav className="hidden md:flex gap-6">
-                    <button className="font-baloo font-semibold text-[#1e3a8a] hover:text-[#2563eb] text-base transition-colors" onClick={() => navigate('/')}>Trang chủ</button>
-                    <button className="font-baloo font-semibold text-[#1e3a8a] hover:text-[#2563eb] text-base transition-colors" onClick={() => navigate('/about')}>Giới thiệu</button>
-                    <button className="font-baloo font-semibold text-[#1e3a8a] hover:text-[#2563eb] text-base transition-colors" onClick={() => navigate('/contact')}>Liên hệ</button>
-                </nav>
+        <header className="relative z-20 border-b border-white/50 bg-white/45 px-4 py-3 backdrop-blur-md sm:px-6 md:px-10 md:py-4">
+            <div className="mx-auto flex w-full max-w-[1240px] items-center justify-between gap-4">
                 <button
-                    className="bg-white text-[#16a34a] rounded-full px-[18px] py-2 font-baloo font-bold text-[0.95rem] cursor-pointer flex items-center gap-1.5 transition-all shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-95"
-                    onClick={() => window.open('https://cdth.vercel.app/', '_blank')}
+                    type="button"
+                    aria-label="Về trang chủ"
+                    className="flex items-center gap-2.5 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                    onClick={() => navigate('/')}
                 >
-                    Chuyển Đổi YCCĐ <ArrowRight size={16} />
+                    <img
+                        src="/school-logo-v2.webp"
+                        alt=""
+                        className="h-10 w-10 object-contain sm:h-11 sm:w-11"
+                    />
+                    <span className="text-[1.2rem] font-extrabold sm:text-[1.35rem]">
+                        <span className="text-[#173b7a]">ItOng</span>
+                        <span className="text-amber-500">Quiz</span>
+                    </span>
                 </button>
+
+                <div className="flex items-center gap-3 sm:gap-6">
+                    <nav className="hidden items-center gap-5 md:flex" aria-label="Điều hướng chính">
+                        <button
+                            type="button"
+                            className="font-semibold text-slate-700 transition hover:text-blue-700"
+                            onClick={() => navigate('/about')}
+                        >
+                            Giới thiệu
+                        </button>
+                        <button
+                            type="button"
+                            className="font-semibold text-slate-700 transition hover:text-blue-700"
+                            onClick={() => navigate('/contact')}
+                        >
+                            Liên hệ
+                        </button>
+                    </nav>
+                    <a
+                        href="mailto:support@thitong.site"
+                        className="flex min-h-10 items-center gap-2 rounded-xl border border-white/80 bg-white/85 px-3 text-sm font-bold text-emerald-800 shadow-sm transition hover:bg-white hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 sm:px-4"
+                    >
+                        <CircleHelp size={17} />
+                        <span className="hidden sm:inline">Trợ giúp</span>
+                    </a>
+                </div>
             </div>
         </header>
     );

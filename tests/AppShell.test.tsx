@@ -121,13 +121,13 @@ describe('App shell routing contracts', () => {
         expect(useClassroomStore.getState().restoreStudentSession).not.toHaveBeenCalled();
     });
 
-    it('loads quizzes and system settings on mount while showing public shell globals', async () => {
+    it('loads quizzes and system settings on mount without duplicating the login footer', async () => {
         renderApp();
 
         await waitFor(() => expect(useQuizStore.getState().loadQuizzes).toHaveBeenCalledTimes(1));
         expect(mockedSettings).toHaveBeenCalledTimes(1);
         expect(await screen.findByText('home-page')).toBeInTheDocument();
-        expect(screen.getByText('footer-public')).toBeInTheDocument();
+        expect(screen.queryByText('footer-public')).not.toBeInTheDocument();
         expect(screen.getByText('chatbot')).toBeInTheDocument();
         expect(screen.getByTestId('analytics')).toBeInTheDocument();
         expect(screen.getByTestId('toaster')).toBeInTheDocument();

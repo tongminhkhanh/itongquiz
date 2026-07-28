@@ -2,8 +2,10 @@ import React from 'react';
 
 const LandingFooter: React.FC = () => {
     return (
-        <footer className="w-full px-8 py-4 text-center text-[0.85rem] text-[#1e293b] font-medium relative mt-auto border-t border-white/20 sm:border-t-0">
-            <p>© {new Date().getFullYear()} itongQuiz. All rights reserved.</p>
+        <footer className="relative z-10 mt-auto w-full border-t border-white/40 bg-white/25 px-5 py-3 text-center text-xs font-medium text-slate-600 backdrop-blur-sm">
+            <p>
+                © {new Date().getFullYear()} ItOngQuiz · Nền tảng học tập của Trường Tiểu học Ít Ong
+            </p>
         </footer>
     );
 };

@@ -37,7 +37,13 @@ export const RootView: React.FC<{ giftShopEnabled: boolean }> = ({ giftShopEnabl
     const showPublicLinks = !authStore.isLoggedIn && !classroomStore.studentSession;
     return (
         <Suspense fallback={<PageLoading />}>
-            <PublicPageLayout onNavigate={onNavigate} showPublicLinks={showPublicLinks}><HomePage /></PublicPageLayout>
+            <PublicPageLayout
+                onNavigate={onNavigate}
+                showPublicLinks={showPublicLinks}
+                hideFooter={showPublicLinks}
+            >
+                <HomePage />
+            </PublicPageLayout>
         </Suspense>
     );
 };

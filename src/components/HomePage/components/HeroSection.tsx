@@ -1,41 +1,54 @@
 import React from 'react';
+import { BarChart3, BookOpenCheck, Sparkles } from 'lucide-react';
 
-interface Feature {
-  avatar: string;
-  text: React.ReactNode;
-}
+const features = [
+    {
+        icon: BookOpenCheck,
+        title: 'Học tập đúng trọng tâm',
+        description: 'Bài được giao và thư viện luyện tập luôn sẵn sàng.',
+    },
+    {
+        icon: BarChart3,
+        title: 'Theo dõi tiến bộ rõ ràng',
+        description: 'Điểm số và kết quả được tổng hợp tự động.',
+    },
+    {
+        icon: Sparkles,
+        title: 'Dễ dùng mỗi ngày',
+        description: 'Thao tác đơn giản cho cả học sinh và giáo viên.',
+    },
+];
 
 const HeroSection: React.FC = () => {
-    const features: Feature[] = [
-        { avatar: "/avatar1.webp", text: <>Ngân hàng <strong>10,000+</strong> câu hỏi trắc nghiệm đa dạng.</> },
-        { avatar: "/avatar2.webp", text: <>Báo cáo điểm số, <strong>thống kê chi tiết</strong> tự động.</> },
-        { avatar: "/avatar3.webp", text: <>Giao diện <strong>điều khiển trực quan</strong>, dễ dùng cho mọi người.</> },
-    ];
-
     return (
-        <section className="flex-1 max-w-[540px] bg-transparent flex flex-col gap-8 text-left md:text-left items-center md:items-start w-full">
-            <div className="hero-text text-center md:text-left">
-                <h1 className="text-[4.2rem] font-extrabold leading-[1.1] text-[#1e3a8a] mb-5 sm:text-4xl md:text-6xl lg:text-[4.2rem]">
-                    Khơi Dậy Tiềm Năng Tri Thức
-                </h1>
-                <p className="text-[1.05rem] text-slate-800 leading-[1.6] max-w-[460px] font-medium m-0">
-                    Nền tảng kiểm tra trực tuyến thông minh, giúp giáo viên quản lý lớp học hiệu quả và học sinh ôn luyện hứng thú mỗi ngày.
-                </p>
+        <section className="order-2 flex w-full max-w-[560px] flex-1 flex-col items-center text-center md:order-1 md:items-start md:text-left">
+            <div className="rounded-full border border-white/80 bg-white/70 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-800 shadow-sm backdrop-blur-sm">
+                Trường Tiểu học Ít Ong
             </div>
 
-            <div className="hidden md:flex flex-col gap-5 w-full">
-                {features.map((f, i) => (
-                    <div 
-                        key={i} 
-                        className="flex items-center gap-4 bg-transparent hover:bg-white/85 hover:translate-y-[-5px] hover:scale-[1.03] hover:shadow-xl border border-transparent hover:border-white/90 rounded-[24px] p-2.5 transition-all duration-300 cursor-pointer pointer-events-auto"
+            <h2 className="mt-4 max-w-[540px] text-[2.25rem] font-extrabold leading-[1.12] text-[#173b7a] sm:text-[2.65rem] md:text-[3.25rem] lg:text-[3.8rem]">
+                Học tốt hơn,
+                <span className="block text-emerald-700">dạy nhẹ nhàng hơn.</span>
+            </h2>
+            <p className="mt-4 max-w-[500px] text-[0.98rem] font-medium leading-7 text-slate-700 sm:text-base">
+                Một không gian học tập an toàn, giúp giáo viên quản lý lớp hiệu quả
+                và học sinh luyện tập hứng thú mỗi ngày.
+            </p>
+
+            <div className="mt-7 hidden w-full grid-cols-1 gap-3 md:grid lg:grid-cols-3">
+                {features.map(({ icon: Icon, title, description }) => (
+                    <article
+                        key={title}
+                        className="rounded-2xl border border-white/80 bg-white/72 p-4 text-left shadow-sm backdrop-blur-sm"
                     >
-                        <img 
-                            src={f.avatar} 
-                            alt={`Feature aspect ${i+1}`}
-                            className="w-12 h-12 rounded-full object-cover bg-white shadow-sm border-2 border-white" 
-                        />
-                        <span className="flex-1 text-slate-800 font-medium">{f.text}</span>
-                    </div>
+                        <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                            <Icon size={19} />
+                        </div>
+                        <h3 className="text-sm font-extrabold text-slate-900">{title}</h3>
+                        <p className="mt-1 text-xs font-medium leading-5 text-slate-600">
+                            {description}
+                        </p>
+                    </article>
                 ))}
             </div>
         </section>

@@ -2,7 +2,6 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useClassroomStore } from '../../stores/useClassroomStore';
 import { useQuizStore } from '../../../stores/quizStore';
-import { showError, showConfirm } from '../../utils/toast';
 import PasswordChangeDialog from '../common/PasswordChangeDialog';
 import CurrentAnnouncementBanner from '../common/CurrentAnnouncementBanner';
 import { NotificationSurfaceStack } from '../../features/notifications/components';
@@ -27,6 +26,8 @@ const LoginLandingPage: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [pendingTeacher, setPendingTeacher] = useState<any | null>(null);
+    const [rememberAccount, setRememberAccount] = useState(false);
+    const [loginError, setLoginError] = useState('');
 
     const authStore = useAuthStore();
     const classroomStore = useClassroomStore();
@@ -41,6 +42,7 @@ const LoginLandingPage: React.FC = () => {
             const saved = JSON.parse(raw) as Partial<SavedLoginAccount>;
             if (typeof saved.username === 'string' && saved.username.trim()) {
                 setUsername(saved.username.trim());
+                setRememberAccount(true);
             }
             if (saved.role === 'teacher' || saved.role === 'student') {
                 setActiveTab(saved.role);
@@ -52,14 +54,47 @@ const LoginLandingPage: React.FC = () => {
 
     const isLoading = activeTab === 'teacher' ? authStore.isLoggingIn : classroomStore.isLoading;
 
-    // askToSaveAccount has been removed as per user request to avoid annoying popups
+    const persistLoginPreference = () => {
+        try {
+            if (!rememberAccount) {
+                localStorage.removeItem(SAVED_LOGIN_KEY);
+                return;
+            }
+            const saved: SavedLoginAccount = {
+                username: username.trim(),
+                role: activeTab,
+                savedAt: new Date().toISOString(),
+            };
+            localStorage.setItem(SAVED_LOGIN_KEY, JSON.stringify(saved));
+        } catch (error) {
+            console.warn('Could not save login account:', error);
+        }
+    };
+
+    const handleRoleChange = (role: 'student' | 'teacher') => {
+        if (isLoading || role === activeTab) return;
+        setActiveTab(role);
+        setPassword('');
+        setLoginError('');
+    };
+
+    const handleUsernameChange = (value: string) => {
+        setUsername(value);
+        if (loginError) setLoginError('');
+    };
+
+    const handlePasswordChange = (value: string) => {
+        setPassword(value);
+        if (loginError) setLoginError('');
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!username || !password) {
-            showError('Vui lòng nhập đầy đủ thông tin!');
+        if (!username.trim() || !password) {
+            setLoginError('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.');
             return;
         }
+        setLoginError('');
         if (activeTab === 'teacher') {
             await handleTeacherLogin();
         } else {
@@ -71,7 +106,10 @@ const LoginLandingPage: React.FC = () => {
         authStore.loginStart();
         try {
             const { callApi } = await import('../../services/apiAdapter');
-            const result = await callApi<{ status?: string; data?: any; message?: string }>('login', { username, password });
+            const result = await callApi<{ status?: string; data?: any; message?: string }>('login', {
+                username: username.trim(),
+                password,
+            });
             
             if (result?.status === 'success' && result.data) {
                 const teacher = result.data;
@@ -91,35 +129,45 @@ const LoginLandingPage: React.FC = () => {
                     return;
                 }
                 
+                persistLoginPreference();
                 authStore.loginSuccess(tUsername, tFullName, isTeacherAdmin, tClass);
                 quizStore.setView('teacher_dash');
                 return;
             }
             authStore.loginFailure();
-            showError(result?.message || 'Tên đăng nhập hoặc mật khẩu không đúng!');
+            setLoginError('Tên đăng nhập hoặc mật khẩu chưa đúng.');
         } catch (error) {
             console.error('Login error:', error);
             authStore.loginFailure();
-            showError('Có lỗi xảy ra khi kết nối. Vui lòng thử lại!');
+            setLoginError('Không thể kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại.');
         }
     };
 
     const handleStudentLogin = async () => {
-        const success = await classroomStore.loginStudent({ username, password });
+        const success = await classroomStore.loginStudent({
+            username: username.trim(),
+            password,
+        });
         if (success) {
+            persistLoginPreference();
             quizStore.setView('home');
         } else {
-            showError('Tên đăng nhập hoặc mật khẩu học sinh không đúng!');
+            setLoginError('Mã học sinh hoặc mật khẩu chưa đúng.');
         }
     };
 
     return (
-        <div className="min-h-screen flex flex-col relative font-baloo bg-[url('/meadow-bg.webp')] bg-cover bg-bottom bg-no-repeat transition-all duration-500">
+        <div className="relative flex min-h-dvh flex-col overflow-x-hidden bg-[#eef8f1] bg-[url('/meadow-bg.webp')] bg-cover bg-bottom bg-no-repeat font-baloo">
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-white/20 to-emerald-50/20"
+            />
             {pendingTeacher && (
                 <PasswordChangeDialog forced onCancel={() => {
                     void import('../../services/apiAdapter').then(({ callApi }) => callApi('logout')).catch(() => undefined);
                     setPendingTeacher(null);
                 }} onComplete={() => {
+                    persistLoginPreference();
                     authStore.loginSuccess(pendingTeacher.username, pendingTeacher.fullName, pendingTeacher.isAdmin, pendingTeacher.class);
                     setPendingTeacher(null);
                     quizStore.setView('teacher_dash');
@@ -132,7 +180,10 @@ const LoginLandingPage: React.FC = () => {
                     : <CurrentAnnouncementBanner role={activeTab} />
             )}
 
-            <main className="flex-1 flex flex-col md:flex-row items-center justify-between gap-10 px-4 md:px-20 pb-16 max-w-[1280px] mx-auto w-full z-10">
+            <section
+                aria-label="Khu vực đăng nhập"
+                className="z-10 mx-auto flex w-full max-w-[1240px] flex-1 flex-col items-center justify-center gap-8 px-4 pb-8 pt-5 sm:px-6 md:flex-row md:justify-between md:gap-12 md:px-12 md:pb-12 md:pt-4 lg:px-16"
+            >
                 <Suspense fallback={<div className="flex-1 h-64 animate-pulse bg-white/10 rounded-3xl" />}>
                     <HeroSection />
                 </Suspense>
@@ -140,16 +191,19 @@ const LoginLandingPage: React.FC = () => {
                 <Suspense fallback={<div className="w-full max-w-md h-96 animate-pulse bg-white/20 rounded-3xl" />}>
                     <LoginForm 
                         activeTab={activeTab}
-                        setActiveTab={setActiveTab}
+                        setActiveTab={handleRoleChange}
                         username={username}
-                        setUsername={setUsername}
+                        setUsername={handleUsernameChange}
                         password={password}
-                        setPassword={setPassword}
+                        setPassword={handlePasswordChange}
                         isLoading={isLoading}
                         onSubmit={handleLogin}
+                        rememberAccount={rememberAccount}
+                        onRememberAccountChange={setRememberAccount}
+                        errorMessage={loginError}
                     />
                 </Suspense>
-            </main>
+            </section>
 
             <LandingFooter />
         </div>
