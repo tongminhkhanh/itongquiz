@@ -128,6 +128,57 @@ export const deriveResultMetricsFromAnswers = (
     return { score, correctCount, totalQuestions };
 };
 
+const gradeSubmittedResultAnswers = async (
+    db: D1Database,
+    quizId: string,
+    submittedAnswers: unknown,
+): Promise<Record<string, unknown> | null> => {
+    if (!submittedAnswers || typeof submittedAnswers !== 'object' || Array.isArray(submittedAnswers)) {
+        return null;
+    }
+
+    const storedAnswers = submittedAnswers as Record<string, unknown>;
+    const answerEntries = Object.entries(storedAnswers).filter(([key]) => !key.startsWith('_'));
+    if (answerEntries.length === 0) return null;
+
+    const rawAnswers = Object.fromEntries(answerEntries.map(([questionId, answer]) => {
+        if (answer && typeof answer === 'object' && !Array.isArray(answer)
+            && Object.prototype.hasOwnProperty.call(answer, 'selectedAnswer')) {
+            return [questionId, (answer as { selectedAnswer?: unknown }).selectedAnswer];
+        }
+        return [questionId, answer];
+    }));
+
+    const validationResponse = await handleValidateAnswers(db, { quizId, answers: rawAnswers });
+    const validation = await validationResponse.json() as {
+        status?: string;
+        details?: Array<{ questionId?: unknown; isCorrect?: unknown }>;
+    };
+    if (validation.status === 'error' || !Array.isArray(validation.details)) return null;
+
+    const correctnessById = new Map(
+        validation.details
+            .filter((detail) => typeof detail.questionId === 'string' && typeof detail.isCorrect === 'boolean')
+            .map((detail) => [String(detail.questionId), Boolean(detail.isCorrect)]),
+    );
+    if (correctnessById.size !== answerEntries.length
+        || answerEntries.some(([questionId]) => !correctnessById.has(questionId))) {
+        return null;
+    }
+
+    const gradedAnswers: Record<string, unknown> = { ...storedAnswers };
+    for (const [questionId, answer] of answerEntries) {
+        const answerSnapshot = answer && typeof answer === 'object' && !Array.isArray(answer)
+            ? answer as Record<string, unknown>
+            : { selectedAnswer: answer };
+        gradedAnswers[questionId] = {
+            ...answerSnapshot,
+            isCorrect: correctnessById.get(questionId),
+        };
+    }
+    return gradedAnswers;
+};
+
 const getStudentForUser = async (db: D1Database, user: JWTPayload): Promise<any | null> => {
     if (!isStudent(user)) return null;
     return await db.prepare(
@@ -173,8 +224,15 @@ const canAccessResult = async (db: D1Database, user: JWTPayload, result: any): P
     if (isStudent(user)) {
         const student = await getStudentForUser(db, user);
         if (!student) return false;
-        return normalizeName(result.student_name) === normalizeName(student.full_name) &&
-            normalizeName(result.class_name) === normalizeName(student.class_name);
+        const resultStudentId = String(result.student_id || '').trim();
+        if (resultStudentId) return resultStudentId === String(student.id);
+
+        const legacyStudentId = await resolveUniqueStudentId(
+            db,
+            String(result.student_name || ''),
+            String(result.class_name || ''),
+        );
+        return legacyStudentId === String(student.id);
     }
     return false;
 };
@@ -182,10 +240,17 @@ const canAccessResult = async (db: D1Database, user: JWTPayload, result: any): P
 const requireResultAccess = async (db: D1Database, user: JWTPayload, resultId: string): Promise<{ result: any } | Response> => {
     const result = await getResultById(db, resultId);
     if (!result) return errorResponse('Result not found', 404);
-    if (!(await canAccessResult(db, user, result))) {
+    const ownership = await db.prepare('SELECT student_id FROM results WHERE id = ?')
+        .bind(resultId)
+        .first<{ student_id: string | null }>();
+    const scopedResult = {
+        ...result,
+        student_id: ownership?.student_id ?? null,
+    };
+    if (!(await canAccessResult(db, user, scopedResult))) {
         return errorResponse('Forbidden: You do not have access to this result', 403);
     }
-    return { result };
+    return { result: scopedResult };
 };
 
 export async function handleResultRoutes(request: Request, env: Env, path: string, method: string): Promise<Response> {
@@ -233,8 +298,31 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
         } else if (isStudent(user)) {
             const student = await getStudentForUser(db, user);
             if (!student) return errorResponse('Student not found', 404);
-            whereClauses.push('LOWER(TRIM(student_name)) = ? AND LOWER(TRIM(class_name)) = ?');
-            bindings.push(normalizeName(student.full_name), normalizeName(student.class_name));
+            whereClauses.push(`(
+                student_id = ?
+                OR (
+                    student_id IS NULL
+                    AND LOWER(TRIM(student_name)) = ?
+                    AND LOWER(TRIM(class_name)) = ?
+                    AND (
+                        SELECT COUNT(*)
+                        FROM students legacy_student
+                        JOIN classes legacy_class ON legacy_class.id = legacy_student.class_id
+                        WHERE LOWER(TRIM(legacy_student.full_name)) = ?
+                          AND LOWER(TRIM(legacy_class.name)) = ?
+                          AND COALESCE(legacy_student.archived_at, '') = ''
+                    ) = 1
+                )
+            )`);
+            const normalizedStudentName = normalizeName(student.full_name);
+            const normalizedClassName = normalizeName(student.class_name);
+            bindings.push(
+                student.id,
+                normalizedStudentName,
+                normalizedClassName,
+                normalizedStudentName,
+                normalizedClassName,
+            );
         } else if (!requireAdmin(user)) {
             return errorResponse('Forbidden: Results access required', 403);
         }
@@ -417,7 +505,13 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
             }
         }
 
-        const derivedMetrics = deriveResultMetricsFromAnswers(body.answers, body.totalQuestions);
+        const gradedAnswers = isStudent(user)
+            ? await gradeSubmittedResultAnswers(db, quizId, body.answers)
+            : body.answers;
+        const derivedMetrics = deriveResultMetricsFromAnswers(gradedAnswers, body.totalQuestions);
+        if (isStudent(user) && (!gradedAnswers || !derivedMetrics)) {
+            return errorResponse('Answers could not be validated for this quiz', 400);
+        }
         const submittedScore = Number(body.score);
         const submittedCorrectCount = Number(body.correctCount);
         const submittedTotalQuestions = Number(body.totalQuestions);
@@ -439,7 +533,7 @@ export async function handleResultRoutes(request: Request, env: Env, path: strin
             body.quizTitle || '', score, correctCount,
             totalQuestions, body.timeTaken || 0,
             submittedAt,
-            JSON.stringify(body.answers || {}),
+            JSON.stringify(gradedAnswers || {}),
         ).run();
 
         const resultId = insertResult.meta.last_row_id;

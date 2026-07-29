@@ -278,8 +278,7 @@ export async function handleHelpRagRoutes(request: Request, env: Env, path: stri
     });
 
     if (!aiResponse.ok) {
-        const errText = await aiResponse.text().catch(() => '');
-        console.error('[RAG] upstream error:', aiResponse.status, errText);
+        console.error('[RAG] upstream error status:', aiResponse.status);
         return errorResponse(`AI service temporarily unavailable (${aiResponse.status})`, 503);
     }
 

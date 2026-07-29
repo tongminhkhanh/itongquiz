@@ -3,8 +3,59 @@
 
 import { Env } from '../types';
 import { jsonResponse, errorResponse } from '../utils/response';
-import { verifyJWTMiddleware } from '../middleware/jwtAuth';
+import { requireAdmin, verifyJWTMiddleware } from '../middleware/jwtAuth';
 import { internalErrorResponse } from '../utils/internalError';
+import {
+    loadTeacherQuizOwnerIdentity,
+    quizOwnerMatchesIdentity,
+} from '../services/quizOwnership';
+
+const hasAiTutorQuestionAccess = async (
+    db: D1Database,
+    user: import('../utils/jwt').JWTPayload,
+    quizId: string,
+    questionIds: string[],
+): Promise<boolean> => {
+    if (requireAdmin(user)) return true;
+
+    if (user.role === 'teacher') {
+        const [quiz, identity] = await Promise.all([
+            db.prepare('SELECT created_by FROM quizzes WHERE id = ?')
+                .bind(quizId)
+                .first<{ created_by: string }>(),
+            loadTeacherQuizOwnerIdentity(db, user.username),
+        ]);
+        return Boolean(quiz && identity && quizOwnerMatchesIdentity(quiz.created_by, identity));
+    }
+
+    if (user.role !== 'student' || !user.id) return false;
+    const rows = await db.prepare(`
+        SELECT answers
+        FROM results
+        WHERE student_id = ?
+          AND quiz_id = ?
+          AND answers != '{"status":"STARTED"}'
+        ORDER BY submitted_at DESC
+        LIMIT 20
+    `).bind(user.id, quizId).all<{ answers: string }>();
+
+    const wrongQuestionIds = new Set<string>();
+    for (const row of rows.results || []) {
+        try {
+            const answers = JSON.parse(String(row.answers || '{}'));
+            if (!answers || typeof answers !== 'object' || Array.isArray(answers)) continue;
+            for (const [questionId, answer] of Object.entries(answers)) {
+                if (answer && typeof answer === 'object'
+                    && (answer as { isCorrect?: unknown }).isCorrect === false) {
+                    wrongQuestionIds.add(questionId);
+                }
+            }
+        } catch {
+            // Ignore malformed legacy rows; access remains denied unless a valid row proves ownership.
+        }
+    }
+    return questionIds.every((questionId) => wrongQuestionIds.has(questionId));
+};
 
 // Prompt template for Gemini AI
 const buildPrompt = (wrongQuestions: any[]): string => {
@@ -62,14 +113,24 @@ export async function handleAiTutorRoutes(
 
         try {
             const body = await request.json() as any;
-            const { quizId, wrongQuestionIds } = body;
+            const quizId = typeof body.quizId === 'string' ? body.quizId.trim() : '';
+            const wrongQuestionIds = body.wrongQuestionIds;
 
-            if (!quizId || !wrongQuestionIds || !Array.isArray(wrongQuestionIds) || wrongQuestionIds.length === 0) {
+            if (!quizId || quizId.length > 128 || !Array.isArray(wrongQuestionIds)
+                || wrongQuestionIds.length === 0 || wrongQuestionIds.length > 3) {
                 return errorResponse('Missing quizId or wrongQuestionIds', 400);
             }
 
-            // Limit to max 3 wrong questions to control token usage
-            const limitedIds = wrongQuestionIds.slice(0, 3);
+            const limitedIds = Array.from(new Set(wrongQuestionIds.map((id: unknown) => (
+                typeof id === 'string' ? id.trim() : ''
+            ))));
+            if (limitedIds.length !== wrongQuestionIds.length
+                || limitedIds.some((id) => !id || id.length > 128)) {
+                return errorResponse('Invalid wrongQuestionIds', 400);
+            }
+            if (!(await hasAiTutorQuestionAccess(env.DB, authResult.user, quizId, limitedIds))) {
+                return errorResponse('Forbidden: You do not have access to these questions', 403);
+            }
 
             // Fetch the actual question content from DB
             const placeholders = limitedIds.map(() => '?').join(',');
@@ -105,14 +166,13 @@ export async function handleAiTutorRoutes(
             });
 
             if (!aiResponse.ok) {
-                const errText = await aiResponse.text();
-                console.error('[AI Tutor] CLIProxy error:', aiResponse.status, errText);
+                console.error('[AI Tutor] CLIProxy error status:', aiResponse.status);
                 return errorResponse('AI service temporarily unavailable. Status: ' + aiResponse.status, 503);
             }
 
             const aiData = await aiResponse.json() as any;
             const rawContent = aiData?.choices?.[0]?.message?.content || '';
-            console.log('[AI Tutor] Raw AI response length:', rawContent.length, 'first 200 chars:', rawContent.substring(0, 200));
+            console.log('[AI Tutor] AI response received:', { length: rawContent.length });
 
             // Robust JSON extraction - multiple strategies
             let parsed: any = null;
@@ -143,22 +203,14 @@ export async function handleAiTutorRoutes(
             }
 
             if (!parsed) {
-                console.error('[AI Tutor] All parse strategies failed. Raw:', rawContent.substring(0, 500));
-                return jsonResponse({
-                    status: 'error',
-                    message: 'JSON_PARSE_ERROR',
-                    raw: rawContent
-                });
+                console.error('[AI Tutor] AI response JSON parse failed');
+                return errorResponse('AI service returned an invalid response', 502);
             }
 
             // Validate the parsed response structure
             if (!parsed.diagnosis || !parsed.practiceQuestions || !Array.isArray(parsed.practiceQuestions)) {
-                console.error('[AI Tutor] Invalid AI response structure:', JSON.stringify(parsed).substring(0, 300));
-                return jsonResponse({
-                    status: 'error',
-                    message: 'INVALID_JSON_STRUCTURE',
-                    raw: parsed
-                });
+                console.error('[AI Tutor] AI response structure validation failed');
+                return errorResponse('AI service returned an invalid response', 502);
             }
 
             return jsonResponse({
