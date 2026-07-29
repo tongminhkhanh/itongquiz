@@ -1,5 +1,5 @@
 // Quizzes + Questions API Routes
-// GET /api/quizzes - List all quizzes (PUBLIC)
+// GET /api/quizzes - Role-scoped quiz catalog
 // GET /api/questions - Public DTOs exclude answer fields; teachers receive scoped full data
 // POST /api/quizzes - Create quiz (TEACHER/ADMIN)
 // PUT /api/quizzes/:id - Update quiz (TEACHER/ADMIN with ownership check)
@@ -244,10 +244,54 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
 
     // GET /api/quizzes
     if (path === '/api/quizzes' && method === 'GET') {
-        const rows = await withD1Retry(
-            () => db.prepare('SELECT * FROM quizzes').all<import('../types').Quiz>(),
-            'GET /api/quizzes'
-        );
+        const authResult = await verifyJWTMiddleware(request, env);
+        const user: JWTPayload | null = authResult instanceof Response ? null : authResult.user;
+        let rows: { results: import('../types').Quiz[] };
+
+        if (!user) {
+            rows = await withD1Retry(
+                () => db.prepare(`
+                    SELECT *
+                    FROM quizzes
+                    WHERE UPPER(COALESCE(show_on_home, 'FALSE')) = 'TRUE'
+                `).all<import('../types').Quiz>(),
+                'GET /api/quizzes public',
+            );
+        } else if (requireAdmin(user)) {
+            rows = await withD1Retry(
+                () => db.prepare('SELECT * FROM quizzes').all<import('../types').Quiz>(),
+                'GET /api/quizzes admin',
+            );
+        } else if (user.role === 'teacher') {
+            const identity = await loadTeacherQuizOwnerIdentity(db, user.username);
+            if (!identity) return errorResponse('Teacher not found', 404);
+            rows = await withD1Retry(
+                () => db.prepare(`
+                    SELECT *
+                    FROM quizzes
+                    WHERE LOWER(TRIM(created_by)) = LOWER(TRIM(?))
+                       OR (? IS NOT NULL AND LOWER(TRIM(created_by)) = LOWER(TRIM(?)))
+                `).bind(...teacherQuizOwnerQueryValues(identity)).all<import('../types').Quiz>(),
+                'GET /api/quizzes teacher',
+            );
+        } else {
+            rows = await withD1Retry(
+                () => db.prepare(`
+                    SELECT z.*
+                    FROM quizzes z
+                    WHERE UPPER(COALESCE(z.show_on_home, 'FALSE')) = 'TRUE'
+                       OR EXISTS (
+                         SELECT 1
+                         FROM assignments a
+                         JOIN students s ON s.id = ?
+                         WHERE a.quiz_id = z.id
+                           AND a.class_id = s.class_id
+                           AND (COALESCE(a.student_id, '') = '' OR a.student_id = s.id)
+                       )
+                `).bind(user.id || '').all<import('../types').Quiz>(),
+                'GET /api/quizzes student',
+            );
+        }
         return jsonResponse(rows.results);
     }
 
@@ -261,6 +305,28 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
 
         if (user && quizId && requireTeacher(user) && !(await canAccessQuiz(db, user, quizId))) {
             return errorResponse('Forbidden: You do not have permission to read this quiz', 403);
+        }
+        if (user?.role === 'student' && quizId) {
+            const access = await db.prepare(`
+                SELECT 1 AS allowed
+                FROM quizzes z
+                WHERE z.id = ?
+                  AND (
+                    UPPER(COALESCE(z.show_on_home, 'FALSE')) = 'TRUE'
+                    OR EXISTS (
+                      SELECT 1
+                      FROM assignments a
+                      JOIN students s ON s.id = ?
+                      WHERE a.quiz_id = z.id
+                        AND a.class_id = s.class_id
+                        AND (COALESCE(a.student_id, '') = '' OR a.student_id = s.id)
+                    )
+                  )
+                LIMIT 1
+            `).bind(quizId, user.id || '').first<{ allowed: number }>();
+            if (!access) {
+                return errorResponse('Forbidden: This quiz is not available to this student', 403);
+            }
         }
 
         let rows: { results: any[] };
@@ -307,7 +373,20 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
             );
         } else {
             rows = await withD1Retry(
-                () => db.prepare('SELECT * FROM questions').all<any>(),
+                () => db.prepare(`
+                    SELECT q.*
+                    FROM questions q
+                    JOIN quizzes z ON z.id = q.quiz_id
+                    WHERE UPPER(COALESCE(z.show_on_home, 'FALSE')) = 'TRUE'
+                       OR EXISTS (
+                         SELECT 1
+                         FROM assignments a
+                         JOIN students s ON s.id = ?
+                         WHERE a.quiz_id = z.id
+                           AND a.class_id = s.class_id
+                           AND (COALESCE(a.student_id, '') = '' OR a.student_id = s.id)
+                       )
+                `).bind(user.id || '').all<any>(),
                 'GET /api/questions student catalog',
             );
         }

@@ -4,6 +4,7 @@ vi.mock('../workers/src/middleware/jwtAuth', () => ({
   verifyJWTMiddleware: vi.fn(async () => ({
     user: { id: 'student-a', username: 'student-a', role: 'student', classId: 'class-a' },
   })),
+  requireAdmin: vi.fn(() => false),
 }));
 
 import { handleAiTutorRoutes } from '../workers/src/routes/aiTutor';

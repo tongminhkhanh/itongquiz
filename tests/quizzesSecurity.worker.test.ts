@@ -35,6 +35,9 @@ class Database {
   };
   prepare(sql: string) { return new Statement(sql, this); }
   first(sql: string, bindings: unknown[]) {
+    if (sql.includes('SELECT 1 AS allowed')) {
+      return { allowed: 1 };
+    }
     if (sql.includes('FROM teachers t')) {
       return { username: 'teacher-a', full_name: 'Cô A', full_name_count: 1 };
     }
