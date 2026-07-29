@@ -1,4 +1,3 @@
-import type ExcelJS from 'exceljs';
 import Papa from 'papaparse';
 import { QuestionType } from '../../../types';
 import type { ManualQuizQuestion } from '../types/manualQuizWorkspace.types';
@@ -8,7 +7,14 @@ import {
     type QuestionImportCandidate,
     type QuestionImportResult,
     type QuestionImportStatus,
+    type QuizImportMetadata,
 } from './questionImport.types';
+import {
+    enforceQuestionImportCount,
+    normalizeImportKey,
+    parseQuizImportMetadataPairs,
+    validateQuestionImportFile,
+} from './questionImportPolicy';
 
 const HEADER_ALIASES: Record<string, string[]> = {
     type: ['type', 'loai', 'loai_cau_hoi', 'dạng', 'dang'],
@@ -24,6 +30,11 @@ const HEADER_ALIASES: Record<string, string[]> = {
     subject: ['subject', 'mon', 'môn'],
     image: ['image', 'anh', 'ảnh'],
     imageAlt: ['imagealt', 'image_alt', 'mo_ta_anh', 'mô_tả_ảnh'],
+    title: ['title', 'quiz_title', 'ten_de', 'tên_đề'],
+    classLevel: ['classlevel', 'class_level', 'khoi', 'khối', 'lop', 'lớp'],
+    category: ['category', 'danh_muc', 'môn', 'mon'],
+    timeLimit: ['timelimit', 'time_limit', 'thoi_gian', 'thời_gian'],
+    tags: ['tags', 'the', 'thẻ', 'nhan', 'nhãn'],
 };
 
 let candidateCounter = 0;
@@ -34,10 +45,7 @@ const createCandidateId = (): string => {
     return `import-candidate-${candidateCounter}`;
 };
 
-const normalizeHeader = (value: string): string => value
-    .trim()
-    .toLocaleLowerCase('vi')
-    .replace(/[\s-]+/g, '_');
+const normalizeHeader = (value: string): string => normalizeImportKey(value);
 
 const normalizeRow = (row: Record<string, unknown>): Record<string, unknown> => {
     const source = new Map(Object.entries(row).map(([key, value]) => [normalizeHeader(key), value]));
@@ -51,8 +59,20 @@ const text = (value: unknown): string => String(value ?? '').trim();
 
 const normalizeQuestionType = (value: unknown, options: string[]): { type: QuestionType; inferred: boolean } => {
     const raw = text(value).toUpperCase().replace(/[\s-]+/g, '_');
-    if (Object.values(QuestionType).includes(raw as QuestionType) && raw !== QuestionType.GEOMETRY) {
-        return { type: raw as QuestionType, inferred: false };
+    const aliases: Record<string, QuestionType> = {
+        TRAC_NGHIEM: QuestionType.MCQ,
+        MOT_DAP_AN: QuestionType.MCQ,
+        NHIEU_DAP_AN: QuestionType.MULTIPLE_SELECT,
+        TRA_LOI_NGAN: QuestionType.SHORT_ANSWER,
+    };
+    const normalized = aliases[raw] ?? raw as QuestionType;
+    if ([
+        QuestionType.MCQ,
+        QuestionType.MULTIPLE_SELECT,
+        QuestionType.SHORT_ANSWER,
+        QuestionType.IMAGE_QUESTION,
+    ].includes(normalized)) {
+        return { type: normalized, inferred: false };
     }
     return { type: options.length >= 2 ? QuestionType.MCQ : QuestionType.SHORT_ANSWER, inferred: true };
 };
@@ -98,13 +118,31 @@ const createQuestion = (
     return { ...base, type: QuestionType.SHORT_ANSWER, question: text(row.question), correctAnswer } as ManualQuizQuestion;
 };
 
+const metadataFromRow = (row: Record<string, unknown>): QuizImportMetadata => {
+    const normalized = normalizeRow(row);
+    return parseQuizImportMetadataPairs([
+        ['title', normalized.title],
+        ['classLevel', normalized.classLevel],
+        ['category', normalized.category],
+        ['timeLimit', normalized.timeLimit],
+        ['tags', normalized.tags],
+    ]);
+};
+
 const classifyRow = (row: Record<string, unknown>, sourceRow: number): QuestionImportCandidate => {
     const normalized = normalizeRow(row);
     const questionText = text(normalized.question);
     const options = ['optionA', 'optionB', 'optionC', 'optionD']
         .map((key) => text(normalized[key]))
         .filter(Boolean);
-    const answer = text(normalized.correctAnswer).toUpperCase();
+    const rawAnswerTokens = text(normalized.correctAnswer).split(/[;,]/).map((entry) => entry.trim()).filter(Boolean);
+    const answerTokens = rawAnswerTokens.map((entry) => {
+        const direct = entry.toUpperCase();
+        if (/^[A-D]$/.test(direct)) return direct;
+        const optionIndex = options.findIndex((option) => option.toLocaleLowerCase('vi') === entry.toLocaleLowerCase('vi'));
+        return optionIndex >= 0 ? String.fromCharCode(65 + optionIndex) : direct;
+    });
+    const answer = answerTokens.join(',');
     const normalizedType = normalizeQuestionType(normalized.type, options);
     const issues: string[] = [];
     let status: QuestionImportStatus = 'accepted';
@@ -121,12 +159,18 @@ const classifyRow = (row: Record<string, unknown>, sourceRow: number): QuestionI
         issues.push('Cần ít nhất hai phương án.');
         if (status !== 'rejected') status = 'needsReview';
     }
-    if (!answer) {
+    if (answerTokens.length === 0) {
         issues.push('Thiếu đáp án đúng.');
         if (status !== 'rejected') status = 'needsReview';
     }
     if ((normalizedType.type === QuestionType.MCQ || normalizedType.type === QuestionType.IMAGE_QUESTION)
-        && answer && !options[answer.charCodeAt(0) - 65]) {
+        && answerTokens.length > 0
+        && (answerTokens.length !== 1 || !/^[A-D]$/.test(answerTokens[0]) || !options[answerTokens[0].charCodeAt(0) - 65])) {
+        issues.push('Đáp án đúng không khớp với phương án hiện có.');
+        if (status !== 'rejected') status = 'needsReview';
+    }
+    if (normalizedType.type === QuestionType.MULTIPLE_SELECT
+        && answerTokens.some((entry) => !/^[A-D]$/.test(entry) || !options[entry.charCodeAt(0) - 65])) {
         issues.push('Đáp án đúng không khớp với phương án hiện có.');
         if (status !== 'rejected') status = 'needsReview';
     }
@@ -141,10 +185,14 @@ const classifyRow = (row: Record<string, unknown>, sourceRow: number): QuestionI
     };
 };
 
-export const parseSpreadsheetRows = (rows: Record<string, unknown>[]): QuestionImportResult => {
+export const parseSpreadsheetRows = (
+    rows: Record<string, unknown>[],
+    metadata: QuizImportMetadata = {},
+): QuestionImportResult => {
     const result = createEmptyQuestionImportResult();
+    result.metadata = { ...metadataFromRow(rows[0] ?? {}), ...metadata };
     rows.forEach((row, index) => appendImportCandidate(result, classifyRow(row, index + 2)));
-    return result;
+    return enforceQuestionImportCount(result);
 };
 
 export const parseQuestionCsvText = (csvText: string): QuestionImportResult => {
@@ -156,15 +204,19 @@ export const parseQuestionCsvText = (csvText: string): QuestionImportResult => {
     return parseSpreadsheetRows(parsed.data);
 };
 
-const worksheetRows = (worksheet: ExcelJS.Worksheet): Record<string, unknown>[] => {
-    const headers = (worksheet.getRow(1).values as unknown[]).slice(1).map((value) => text(value));
-    const rows: Record<string, unknown>[] = [];
-    worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) return;
-        const values = (row.values as unknown[]).slice(1);
-        rows.push(Object.fromEntries(headers.map((header, index) => [header, values[index]])));
-    });
-    return rows;
+const worksheetRows = (worksheet: readonly (readonly unknown[])[]): Record<string, unknown>[] => {
+    const headers = (worksheet[0] ?? []).map((value) => text(value));
+    return worksheet.slice(1)
+        .filter((row) => row.some((value) => text(value) !== ''))
+        .map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index]])));
+};
+
+const worksheetMetadata = (worksheet: readonly (readonly unknown[])[]): QuizImportMetadata => {
+    const pairs = worksheet
+        .filter((row) => row.some((value) => text(value) !== ''))
+        .map((row) => [row[0], row[1]] as const)
+        .filter(([key]) => !['truong', 'field', 'key'].includes(normalizeImportKey(key)));
+    return parseQuizImportMetadataPairs(pairs);
 };
 
 const readFile = <T extends string | ArrayBuffer>(file: File, mode: 'text' | 'arrayBuffer'): Promise<T> => {
@@ -180,12 +232,20 @@ const readFile = <T extends string | ArrayBuffer>(file: File, mode: 'text' | 'ar
 };
 
 export const importQuestionSpreadsheet = async (file: File): Promise<QuestionImportResult> => {
+    const extension = validateQuestionImportFile(file);
     if (file.name.toLowerCase().endsWith('.csv') || file.type.includes('csv')) {
         return parseQuestionCsvText(await readFile<string>(file, 'text'));
     }
-    const excelModule = await import('exceljs');
-    const workbook = new excelModule.default.Workbook();
-    await workbook.xlsx.load(await readFile<ArrayBuffer>(file, 'arrayBuffer'));
-    const worksheet = workbook.worksheets[0];
-    return worksheet ? parseSpreadsheetRows(worksheetRows(worksheet)) : createEmptyQuestionImportResult();
+    if (extension !== 'xlsx') {
+        throw new Error('Tệp đã chọn không phải định dạng XLSX.');
+    }
+    const { default: readWorkbook } = await import('read-excel-file/browser');
+    const workbook = await readWorkbook(await readFile<ArrayBuffer>(file, 'arrayBuffer'));
+    const questionSheet = workbook.find((sheet) => ['cau_hoi', 'questions'].includes(normalizeImportKey(sheet.sheet)))
+        ?? workbook.find((sheet) => !['thong_tin_de', 'metadata', 'info'].includes(normalizeImportKey(sheet.sheet)));
+    const metadataSheet = workbook.find((sheet) => ['thong_tin_de', 'metadata', 'info'].includes(normalizeImportKey(sheet.sheet)));
+    const metadata = metadataSheet ? worksheetMetadata(metadataSheet.data) : {};
+    return questionSheet && questionSheet.data.length > 0
+        ? parseSpreadsheetRows(worksheetRows(questionSheet.data), metadata)
+        : createEmptyQuestionImportResult();
 };

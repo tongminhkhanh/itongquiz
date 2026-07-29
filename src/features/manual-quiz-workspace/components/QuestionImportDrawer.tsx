@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { FileSpreadsheet, RotateCcw, X } from 'lucide-react';
+import { FileSpreadsheet, Info, RotateCcw, X } from 'lucide-react';
 import QuestionImportReview from '../import/QuestionImportReview';
-import type { QuestionImportResult } from '../import/questionImport.types';
+import type { QuestionImportResult, QuizImportMetadata } from '../import/questionImport.types';
+import { validateQuestionImportFile } from '../import/questionImportPolicy';
 import type { ManualQuizQuestion } from '../types/manualQuizWorkspace.types';
 import { useManualQuizWorkspaceStore } from '../store/useManualQuizWorkspaceStore';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
@@ -11,6 +12,22 @@ interface QuestionImportDrawerProps {
     onClose: () => void;
 }
 
+type RestorableQuizMetadata = {
+    title: string;
+    classLevel: string;
+    category: string;
+    timeLimit: number;
+    tags: string[];
+};
+
+const metadataEntries = (metadata: QuizImportMetadata): Array<[string, string]> => [
+    ['Tên đề', metadata.title || ''],
+    ['Khối/lớp', metadata.classLevel || ''],
+    ['Môn/danh mục', metadata.category || ''],
+    ['Thời gian', metadata.timeLimit ? `${metadata.timeLimit} phút` : ''],
+    ['Thẻ', metadata.tags?.join(', ') || ''],
+].filter((entry): entry is [string, string] => Boolean(entry[1]));
+
 const QuestionImportDrawer: React.FC<QuestionImportDrawerProps> = ({ open, onClose }) => {
     const inputRef = useRef<HTMLInputElement>(null);
     const drawerRef = useRef<HTMLElement>(null);
@@ -19,9 +36,15 @@ const QuestionImportDrawer: React.FC<QuestionImportDrawerProps> = ({ open, onClo
     const [fileName, setFileName] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [lastAddedIds, setLastAddedIds] = useState<string[]>([]);
+    const [applyMetadata, setApplyMetadata] = useState(true);
+    const [lastImport, setLastImport] = useState<{
+        questionIds: string[];
+        previousMetadata: RestorableQuizMetadata | null;
+    } | null>(null);
+    const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
     const addQuestions = useManualQuizWorkspaceStore((state) => state.addQuestions);
     const removeQuestions = useManualQuizWorkspaceStore((state) => state.removeQuestions);
+    const updateQuiz = useManualQuizWorkspaceStore((state) => state.updateQuiz);
 
     useDialogFocusTrap({
         open,
@@ -33,17 +56,13 @@ const QuestionImportDrawer: React.FC<QuestionImportDrawerProps> = ({ open, onClo
     if (!open) return null;
 
     const loadFile = async (file: File) => {
-        const extension = file.name.split('.').pop()?.toLowerCase();
-        if (!extension || !['csv', 'xlsx', 'docx'].includes(extension)) {
-            setError('Chỉ hỗ trợ CSV, XLSX hoặc DOCX.');
-            setResult(null);
-            return;
-        }
         setLoading(true);
         setError(null);
         setFileName(file.name);
-        setLastAddedIds([]);
+        setLastImport(null);
+        setApplyMetadata(true);
         try {
+            const extension = validateQuestionImportFile(file);
             const imported = extension === 'docx'
                 ? await import('../import/docxQuestionImporter').then((module) => module.importQuestionDocx(file))
                 : await import('../import/spreadsheetQuestionImporter').then((module) => module.importQuestionSpreadsheet(file));
@@ -57,14 +76,34 @@ const QuestionImportDrawer: React.FC<QuestionImportDrawerProps> = ({ open, onClo
     };
 
     const importQuestions = (questions: ManualQuizQuestion[]) => {
+        const previousMetadata = envelope ? {
+            title: envelope.quiz.title,
+            classLevel: envelope.quiz.classLevel,
+            category: envelope.quiz.category,
+            timeLimit: envelope.quiz.timeLimit,
+            tags: [...(envelope.quiz.tags || [])],
+        } : null;
         addQuestions(questions);
-        setLastAddedIds(questions.map((question) => question.id));
+        if (applyMetadata && result) {
+            const metadataPatch = Object.fromEntries(
+                Object.entries(result.metadata).filter(([, value]) => value !== undefined && value !== ''),
+            );
+            if (Object.keys(metadataPatch).length > 0) updateQuiz(metadataPatch);
+        }
+        setLastImport({
+            questionIds: questions.map((question) => question.id),
+            previousMetadata,
+        });
     };
 
     const undoImport = () => {
-        removeQuestions(lastAddedIds);
-        setLastAddedIds([]);
+        if (!lastImport) return;
+        removeQuestions(lastImport.questionIds);
+        if (lastImport.previousMetadata) updateQuiz(lastImport.previousMetadata);
+        setLastImport(null);
     };
+
+    const detectedMetadata = result ? metadataEntries(result.metadata) : [];
 
     return (
         <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/35" onMouseDown={onClose}>
@@ -87,12 +126,47 @@ const QuestionImportDrawer: React.FC<QuestionImportDrawerProps> = ({ open, onClo
                     {loading && <div role="status" className="grid min-h-48 place-items-center text-sm text-slate-500">Đang phân tích tệp…</div>}
                     {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</div>}
                     {!loading && !error && !result && <div className="grid min-h-48 place-items-center rounded-xl border border-dashed border-slate-300 text-center text-sm text-slate-500">Chọn một tệp để xem trước các câu hỏi trước khi nhập.</div>}
+                    {!loading && result && detectedMetadata.length > 0 && (
+                        <section aria-label="Thông tin đề nhận diện được" className="mb-5 rounded-xl border border-sky-200 bg-sky-50 p-4">
+                            <div className="flex items-start gap-3">
+                                <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" />
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="font-semibold text-sky-950">Thông tin đề nhận diện được</h3>
+                                    <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                                        {detectedMetadata.map(([label, value]) => (
+                                            <div key={label}>
+                                                <dt className="text-sky-700">{label}</dt>
+                                                <dd className="font-medium text-slate-900">{value}</dd>
+                                            </div>
+                                        ))}
+                                    </dl>
+                                    <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm font-medium text-sky-900">
+                                        <input
+                                            type="checkbox"
+                                            checked={applyMetadata}
+                                            onChange={(event) => setApplyMetadata(event.target.checked)}
+                                            className="h-4 w-4 accent-sky-700"
+                                        />
+                                        Áp dụng thông tin này cho đề đang soạn
+                                    </label>
+                                </div>
+                            </div>
+                        </section>
+                    )}
+                    {!loading && result && result.warnings.length > 0 && (
+                        <div role="alert" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                            <strong>Cần lưu ý:</strong>
+                            <ul className="mt-2 list-disc space-y-1 pl-5">
+                                {result.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+                            </ul>
+                        </div>
+                    )}
                     {!loading && result && <QuestionImportReview result={result} onImport={importQuestions} />}
                 </div>
 
-                {lastAddedIds.length > 0 && (
+                {lastImport && lastImport.questionIds.length > 0 && (
                     <footer role="status" className="flex items-center justify-between gap-4 border-t border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-900 lg:px-6">
-                        <span>Đã nhập {lastAddedIds.length} câu vào đề.</span>
+                        <span>Đã nhập {lastImport.questionIds.length} câu vào đề. Câu hỏi sẽ được lưu vào D1 khi xuất bản đề.</span>
                         <button type="button" aria-label="Hoàn tác nhập câu hỏi" onClick={undoImport} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-white px-3 font-semibold"><RotateCcw className="h-4 w-4" /> Hoàn tác</button>
                     </footer>
                 )}

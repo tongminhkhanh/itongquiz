@@ -75,6 +75,33 @@ describe('spreadsheet question importer', () => {
         expect(result.needsReview[0].sourceRow).toBe(3);
     });
 
+    it('extracts quiz metadata and supports exact option text as the answer', () => {
+        const result = parseSpreadsheetRows([{
+            title: 'Đề ôn tập Toán 4',
+            classLevel: '4',
+            category: 'toan',
+            timeLimit: '35',
+            tags: 'phan-so, on-tap',
+            type: 'TRAC_NGHIEM',
+            question: 'Phân số nào bằng một phần hai?',
+            optionA: '1/2',
+            optionB: '2/3',
+            correctAnswer: '1/2',
+        }]);
+
+        expect(result.metadata).toEqual({
+            title: 'Đề ôn tập Toán 4',
+            classLevel: '4',
+            category: 'toan',
+            timeLimit: 35,
+            tags: ['phan-so', 'on-tap'],
+        });
+        expect(result.accepted[0].question).toEqual(expect.objectContaining({
+            type: QuestionType.MCQ,
+            correctAnswer: 'A',
+        }));
+    });
+
     it('imports an XLSX workbook using the same official template', async () => {
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Cau hoi');
@@ -89,6 +116,40 @@ describe('spreadsheet question importer', () => {
         expect(result.accepted).toHaveLength(1);
         expect(result.accepted[0].question).toEqual(expect.objectContaining({
             question: '3 × 4 = ?',
+            correctAnswer: 'B',
+        }));
+    });
+
+    it('reads quiz metadata from a dedicated XLSX sheet', async () => {
+        const workbook = new ExcelJS.Workbook();
+        const metadataSheet = workbook.addWorksheet('ThongTinDe');
+        metadataSheet.addRows([
+            ['Tên đề', 'Đề giữa học kỳ'],
+            ['Khối', '4'],
+            ['Môn', 'Toán'],
+            ['Thời gian', '45 phút'],
+            ['Thẻ', 'giữa kỳ, toán 4'],
+        ]);
+        const questionSheet = workbook.addWorksheet('CauHoi');
+        questionSheet.addRows([
+            ['type', 'question', 'optionA', 'optionB', 'correctAnswer'],
+            ['MCQ', '8 × 7 = ?', '54', '56', 'B'],
+        ]);
+        const bytes = await workbook.xlsx.writeBuffer();
+        const file = new File([bytes], 'de-giua-ky.xlsx', {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+
+        const result = await importQuestionSpreadsheet(file);
+        expect(result.metadata).toEqual({
+            title: 'Đề giữa học kỳ',
+            classLevel: '4',
+            category: 'Toán',
+            timeLimit: 45,
+            tags: ['giữa kỳ', 'toán 4'],
+        });
+        expect(result.accepted[0].question).toEqual(expect.objectContaining({
+            question: '8 × 7 = ?',
             correctAnswer: 'B',
         }));
     });
@@ -121,6 +182,38 @@ describe('DOCX question importer', () => {
             explanation: 'Năm cộng năm bằng mười.',
         }));
         expect(result.needsReview[0].issues).toContain('Thiếu đáp án đúng.');
+    });
+
+    it('extracts DOCX metadata and infers multiple-select answers', () => {
+        const result = parseDocxQuestionText([
+            'Tên đề: Ôn tập cuối học kỳ',
+            'Khối: 5',
+            'Môn: Toán',
+            'Thời gian: 40 phút',
+            'Thẻ: phân số, học kỳ 2',
+            '',
+            'Câu 1: Chọn các số chẵn.',
+            'A. 2',
+            'B. 3',
+            'C. 4',
+            'Đáp án: A, C',
+            'Độ khó: 2',
+            'Điểm: 1.5',
+        ].join('\n'));
+
+        expect(result.metadata).toEqual({
+            title: 'Ôn tập cuối học kỳ',
+            classLevel: '5',
+            category: 'Toán',
+            timeLimit: 40,
+            tags: ['phân số', 'học kỳ 2'],
+        });
+        expect(result.accepted[0].question).toEqual(expect.objectContaining({
+            type: QuestionType.MULTIPLE_SELECT,
+            correctAnswers: ['A', 'C'],
+            difficulty: 2,
+            points: 1.5,
+        }));
     });
 
     it('extracts raw text from a DOCX file before parsing', async () => {

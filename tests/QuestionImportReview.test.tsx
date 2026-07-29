@@ -6,6 +6,8 @@ import QuestionImportReview from '../src/features/manual-quiz-workspace/import/Q
 import type { QuestionImportResult } from '../src/features/manual-quiz-workspace/import/questionImport.types';
 
 const result: QuestionImportResult = {
+    metadata: {},
+    warnings: [],
     accepted: [{
         id: 'candidate-1',
         sourceRow: 2,

@@ -2,6 +2,14 @@ import type { ManualQuizQuestion } from '../types/manualQuizWorkspace.types';
 
 export type QuestionImportStatus = 'accepted' | 'needsReview' | 'rejected';
 
+export interface QuizImportMetadata {
+    title?: string;
+    classLevel?: string;
+    category?: string;
+    timeLimit?: number;
+    tags?: string[];
+}
+
 export interface QuestionImportCandidate {
     id: string;
     sourceRow: number;
@@ -12,12 +20,16 @@ export interface QuestionImportCandidate {
 }
 
 export interface QuestionImportResult {
+    metadata: QuizImportMetadata;
+    warnings: string[];
     accepted: QuestionImportCandidate[];
     needsReview: QuestionImportCandidate[];
     rejected: QuestionImportCandidate[];
 }
 
 export const createEmptyQuestionImportResult = (): QuestionImportResult => ({
+    metadata: {},
+    warnings: [],
     accepted: [],
     needsReview: [],
     rejected: [],

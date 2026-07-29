@@ -10,7 +10,12 @@ vi.mock('../workers/src/middleware/jwtAuth', () => ({
     requireTeacher: vi.fn((user: JWTPayload) => user.role === 'teacher' || user.role === 'admin'),
 }));
 
-import { handleQuizRoutes, sanitizeQuestionForStudent } from '../workers/src/routes/quizzes';
+import {
+    handleQuizRoutes,
+    MAX_QUIZ_QUESTION_COUNT,
+    sanitizeQuestionForStudent,
+    validateQuizQuestionBatch,
+} from '../workers/src/routes/quizzes';
 import { mapQuestionForSave } from '../workers/src/utils/helpers';
 
 class Statement {
@@ -73,6 +78,39 @@ beforeEach(() => {
 });
 
 describe('quiz authoring points and explanations', () => {
+    it('rejects oversized and duplicate question batches before D1 writes', () => {
+        const oversized = Array.from({ length: MAX_QUIZ_QUESTION_COUNT + 1 }, (_, index) => ({
+            id: `question-${index}`,
+        }));
+        expect(validateQuizQuestionBatch(oversized)).toEqual(expect.objectContaining({
+            code: 'QUIZ_QUESTION_LIMIT_EXCEEDED',
+        }));
+        expect(validateQuizQuestionBatch([{ id: 'q-1' }, { id: 'q-1' }])).toEqual(expect.objectContaining({
+            code: 'DUPLICATE_QUESTION_ID',
+        }));
+        expect(validateQuizQuestionBatch([{ id: '' }])).toEqual(expect.objectContaining({
+            code: 'INVALID_QUESTION_ID',
+        }));
+    });
+
+    it('does not execute D1 statements when an imported batch exceeds the limit', async () => {
+        const db = new Database();
+        const questions = Array.from({ length: MAX_QUIZ_QUESTION_COUNT + 1 }, (_, index) => ({
+            ...question,
+            id: `question-${index}`,
+        }));
+        const response = await handleQuizRoutes(request('/api/quizzes', 'POST', {
+            id: 'quiz-large', title: 'Large import', classLevel: '4A', category: 'toan',
+            timeLimit: 20, createdAt: '2026-07-21T08:00:00.000Z', questions,
+        }), env(db), '/api/quizzes', 'POST');
+
+        expect(response.status).toBe(400);
+        expect(await response.json()).toEqual(expect.objectContaining({
+            code: 'QUIZ_QUESTION_LIMIT_EXCEEDED',
+        }));
+        expect(db.executed).toHaveLength(0);
+    });
+
     it('maps points and explanation as the final persisted question fields', () => {
         const mapped = mapQuestionForSave(question, 'quiz-a');
         expect(mapped).toHaveLength(23);

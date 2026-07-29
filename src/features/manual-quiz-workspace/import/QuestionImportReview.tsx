@@ -30,6 +30,13 @@ const setAnswer = (question: ManualQuizQuestion, value: string): ManualQuizQuest
     return { ...question, correctAnswer: value } as ManualQuizQuestion;
 };
 
+const setQuestionText = (question: ManualQuizQuestion, value: string): ManualQuizQuestion => {
+    if ('mainQuestion' in question) {
+        return { ...question, mainQuestion: value } as ManualQuizQuestion;
+    }
+    return { ...question, question: value } as ManualQuizQuestion;
+};
+
 const convertQuestionType = (question: ManualQuizQuestion, type: QuestionType): ManualQuizQuestion => {
     if (question.type === type) return question;
     const starter = createManualQuestionDraft(type) as ManualQuizQuestion;
@@ -71,9 +78,11 @@ const ReviewCard: React.FC<{
             <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                     <strong className="text-sm text-slate-900">{candidate.sourceLabel}</strong>
-                    <span className="rounded bg-white px-2 py-1 text-xs font-medium text-slate-600">{candidate.status}</span>
+                    <span className="rounded bg-white px-2 py-1 text-xs font-medium text-slate-600">
+                        {candidate.status === 'accepted' ? 'Hợp lệ' : candidate.status === 'needsReview' ? 'Cần rà soát' : 'Không thể nhập'}
+                    </span>
                 </div>
-                <p className="mt-2 text-sm font-medium text-slate-800">{questionText(candidate.question)}</p>
+                {!selectable && <p className="mt-2 text-sm font-medium text-slate-800">{questionText(candidate.question)}</p>}
                 {candidate.issues.length > 0 && (
                     <ul className="mt-2 space-y-1 text-xs text-amber-800">
                         {candidate.issues.map((issue) => <li key={issue}>{issue}</li>)}
@@ -81,6 +90,16 @@ const ReviewCard: React.FC<{
                 )}
                 {selectable && (
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label className="text-xs font-medium text-slate-600 sm:col-span-2">
+                            Nội dung câu hỏi
+                            <textarea
+                                aria-label={`Nội dung câu hỏi ${candidate.sourceLabel}`}
+                                value={questionText(candidate.question)}
+                                onChange={(event) => onChange(setQuestionText(candidate.question, event.target.value))}
+                                rows={2}
+                                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                        </label>
                         <label className="text-xs font-medium text-slate-600">
                             Loại câu hỏi
                             <select
@@ -98,6 +117,37 @@ const ReviewCard: React.FC<{
                                 aria-label={`Đáp án đúng ${candidate.sourceLabel}`}
                                 value={getAnswer(candidate.question)}
                                 onChange={(event) => onChange(setAnswer(candidate.question, event.target.value))}
+                                className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                            />
+                        </label>
+                        <label className="text-xs font-medium text-slate-600">
+                            Độ khó
+                            <select
+                                aria-label={`Độ khó ${candidate.sourceLabel}`}
+                                value={Number(candidate.question.difficulty || 1)}
+                                onChange={(event) => onChange({
+                                    ...candidate.question,
+                                    difficulty: Number(event.target.value) as 1 | 2 | 3,
+                                })}
+                                className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                            >
+                                <option value={1}>1 — Nhận biết</option>
+                                <option value={2}>2 — Thông hiểu</option>
+                                <option value={3}>3 — Vận dụng</option>
+                            </select>
+                        </label>
+                        <label className="text-xs font-medium text-slate-600">
+                            Điểm
+                            <input
+                                type="number"
+                                min="0.1"
+                                step="0.1"
+                                aria-label={`Điểm ${candidate.sourceLabel}`}
+                                value={Number(candidate.question.points || 1)}
+                                onChange={(event) => onChange({
+                                    ...candidate.question,
+                                    points: Math.max(0.1, Number(event.target.value) || 1),
+                                })}
                                 className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                             />
                         </label>
@@ -134,6 +184,11 @@ const QuestionImportReview: React.FC<QuestionImportReviewProps> = ({ result, onI
 
     return (
         <div className="space-y-6">
+            <div className="grid grid-cols-3 gap-3" aria-label="Tổng hợp kết quả bóc tách">
+                <div className="rounded-lg bg-emerald-50 p-3 text-center"><strong className="block text-lg text-emerald-800">{result.accepted.length}</strong><span className="text-xs text-emerald-700">Hợp lệ</span></div>
+                <div className="rounded-lg bg-amber-50 p-3 text-center"><strong className="block text-lg text-amber-800">{result.needsReview.length}</strong><span className="text-xs text-amber-700">Cần rà soát</span></div>
+                <div className="rounded-lg bg-rose-50 p-3 text-center"><strong className="block text-lg text-rose-800">{result.rejected.length}</strong><span className="text-xs text-rose-700">Bị từ chối</span></div>
+            </div>
             {sections.map(({ status, title, icon: Icon }) => {
                 const items = candidates.filter((candidate) => candidate.status === status);
                 if (items.length === 0) return null;

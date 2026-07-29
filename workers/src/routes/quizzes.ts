@@ -73,6 +73,54 @@ const mapQuestionBatch = (questions: unknown[], quizId: string): string[][] =>
         quizId,
     ));
 
+export const MAX_QUIZ_QUESTION_COUNT = 200;
+
+export interface QuizQuestionBatchValidationError {
+    code: 'QUIZ_QUESTION_LIMIT_EXCEEDED' | 'INVALID_QUESTION_ID' | 'DUPLICATE_QUESTION_ID';
+    message: string;
+}
+
+export const validateQuizQuestionBatch = (
+    questions: unknown[],
+): QuizQuestionBatchValidationError | null => {
+    if (questions.length > MAX_QUIZ_QUESTION_COUNT) {
+        return {
+            code: 'QUIZ_QUESTION_LIMIT_EXCEEDED',
+            message: `Mỗi đề thi chỉ được chứa tối đa ${MAX_QUIZ_QUESTION_COUNT} câu hỏi.`,
+        };
+    }
+
+    const ids = new Set<string>();
+    for (const question of questions) {
+        const id = question && typeof question === 'object' && 'id' in question
+            ? String(question.id || '').trim()
+            : '';
+        if (!id) {
+            return {
+                code: 'INVALID_QUESTION_ID',
+                message: 'Mỗi câu hỏi phải có mã định danh hợp lệ.',
+            };
+        }
+        if (ids.has(id)) {
+            return {
+                code: 'DUPLICATE_QUESTION_ID',
+                message: `Mã câu hỏi bị trùng: ${id}.`,
+            };
+        }
+        ids.add(id);
+    }
+
+    return null;
+};
+
+const quizQuestionBatchValidationResponse = (
+    error: QuizQuestionBatchValidationError,
+): Response => jsonResponse({
+    status: 'error',
+    code: error.code,
+    message: error.message,
+}, 400);
+
 const mathValidationResponse = (error: QuestionMathValidationError): Response => jsonResponse({
     status: 'error',
     code: 'INVALID_MATH_NOTATION',
@@ -282,6 +330,8 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         if (!body) return errorResponse('Invalid JSON body');
 
         const incomingQuestions = Array.isArray(body.questions) ? body.questions : [];
+        const questionValidation = validateQuizQuestionBatch(incomingQuestions);
+        if (questionValidation) return quizQuestionBatchValidationResponse(questionValidation);
         let mappedQuestions: string[][];
         try {
             // Normalize and validate every question before any D1 statement is executed.
@@ -346,6 +396,8 @@ export async function handleQuizRoutes(request: Request, env: Env, path: string,
         }
 
         const incomingQuestions = Array.isArray(body.questions) ? body.questions : [];
+        const questionValidation = validateQuizQuestionBatch(incomingQuestions);
+        if (questionValidation) return quizQuestionBatchValidationResponse(questionValidation);
         let mappedQuestions: string[][];
         try {
             // This must happen before destructive replacement so invalid TeX cannot erase the existing quiz.
