@@ -1,5 +1,4 @@
 import React from 'react';
-import { CircleHelp } from 'lucide-react';
 
 const LandingHeader: React.FC = () => {
     return (
@@ -30,25 +29,18 @@ const LandingHeader: React.FC = () => {
                             Giới thiệu
                         </a>
                         <a
-                            href="/huong-dan-tao-de-kiem-tra-tieu-hoc"
-                            className="font-semibold text-slate-700 transition hover:text-blue-700"
-                        >
-                            Hướng dẫn giáo viên
-                        </a>
-                        <a
                             href="/contact"
                             className="font-semibold text-slate-700 transition hover:text-blue-700"
                         >
                             Liên hệ
                         </a>
+                        <a
+                            href="/huong-dan-tao-de-kiem-tra-tieu-hoc"
+                            className="font-semibold text-slate-700 transition hover:text-blue-700"
+                        >
+                            Hướng dẫn
+                        </a>
                     </nav>
-                    <a
-                        href="mailto:support@thitong.site"
-                        className="flex min-h-10 items-center gap-2 rounded-xl border border-white/80 bg-white/85 px-3 text-sm font-bold text-emerald-800 shadow-sm transition hover:bg-white hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 sm:px-4"
-                    >
-                        <CircleHelp size={17} />
-                        <span className="hidden sm:inline">Trợ giúp</span>
-                    </a>
                 </div>
             </div>
         </header>
