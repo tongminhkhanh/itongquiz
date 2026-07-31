@@ -44,25 +44,29 @@ const QuestionRenderer: React.FC<BaseRendererProps> = (props) => {
 
   return (
     <section
-      className="question-renderer-shell overflow-hidden rounded-[14px] border border-[#E5E7EB] bg-white"
+      className="question-renderer-shell overflow-hidden rounded-3xl border border-transparent bg-white shadow-sm"
+      data-testid="question-card"
       data-math-quiz-id={quizId || ''}
       data-math-question-id={question.id}
       data-math-question-type={normalizedType}
       data-math-format-version={(question as any).mathFormatVersion || (question as any).math_format_version || 1}
     >
-      <div className="flex items-start gap-4 border-b border-slate-100 px-5 py-5 sm:px-6 md:py-6">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-slate-200 bg-white text-sm font-semibold text-slate-600">
-          {index + 1}
-        </span>
-        <div className="min-h-9 flex-1 py-1 text-base font-medium leading-7 text-[#172033] sm:text-lg">
+      <div
+        className="m-3 rounded-2xl bg-gradient-to-br from-sky-50 via-white to-teal-50 px-5 py-5 sm:m-4 sm:px-6 sm:py-6"
+        data-testid="question-prompt"
+      >
+        <h2 className="text-slate-900">
+          <span className="mb-3 block text-sm font-semibold uppercase tracking-wide text-sky-700">
+            Câu {index + 1}
+          </span>
           <SmartText
             content={(question as any).mainQuestion || (question as any).content || (question as any).question}
-            className="leading-relaxed"
+            className="text-base font-semibold leading-relaxed sm:text-lg"
           />
-        </div>
+        </h2>
       </div>
 
-      <div className="space-y-6 p-5 sm:p-6 md:p-7">
+      <div className="space-y-6 p-5 pt-2 sm:p-7 sm:pt-3">
         {question.image && normalizedType !== 'IMAGE' && normalizedType !== 'IMAGE_QUESTION' ? (
           <div className="mb-6 flex justify-center">
             <img
