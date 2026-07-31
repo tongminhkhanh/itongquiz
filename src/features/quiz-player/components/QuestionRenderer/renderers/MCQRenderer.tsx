@@ -1,7 +1,8 @@
 import React from 'react';
+import { Check } from 'lucide-react';
 import { BaseRendererProps } from '../types';
 import MathSpan from '../atoms/MathSpan';
-import ChoiceIndicator from '../atoms/ChoiceIndicator';
+import SelectableChoice from '../atoms/SelectableChoice';
 
 const MCQRenderer: React.FC<BaseRendererProps> = ({
   question: question,
@@ -26,23 +27,20 @@ const MCQRenderer: React.FC<BaseRendererProps> = ({
                 const isSelected = answers[answerKey] === `${groupIndex}-${label}`;
 
                 return (
-                  <button
+                  <SelectableChoice
                     key={optionIndex}
-                    type="button"
-                    aria-pressed={isSelected}
+                    selected={isSelected}
                     onClick={() => onAnswerChange(answerKey, `${groupIndex}-${label}`)}
-                    className={`flex min-h-14 items-center rounded-[12px] border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${
-                      isSelected
-                        ? 'border-emerald-500 bg-emerald-50 text-emerald-950'
-                        : 'border-slate-200 bg-white text-slate-800 hover:border-sky-300 hover:bg-slate-50'
-                    }`}
+                    className="flex min-h-14 items-center rounded-2xl p-3 text-left"
                   >
-                    <ChoiceIndicator label={label} isSelected={isSelected} />
+                    <span className="mr-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600 group-aria-pressed:bg-emerald-500 group-aria-pressed:text-white">
+                      {isSelected ? <Check className="h-4 w-4" aria-hidden="true" /> : label}
+                    </span>
                     <MathSpan
                       content={typeof option === 'string' ? option.replace(/^[A-Za-z][.)]\s*/, '') : String(option)}
                       className="flex-1"
                     />
-                  </button>
+                  </SelectableChoice>
                 );
               })}
             </div>
@@ -59,25 +57,22 @@ const MCQRenderer: React.FC<BaseRendererProps> = ({
         const isSelected = answers[question.id] === label;
 
         return (
-          <button
+          <SelectableChoice
             key={index}
-            type="button"
-            aria-pressed={isSelected}
+            selected={isSelected}
             onClick={() => onAnswerChange(question.id, label)}
-            className={`group flex min-h-16 items-center rounded-[12px] border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${
-              isSelected
-                ? 'border-emerald-500 bg-emerald-50 text-emerald-950'
-                : 'border-slate-200 bg-white text-slate-800 hover:border-sky-300 hover:bg-slate-50'
-            }`}
+            className="flex min-h-16 items-center rounded-2xl p-4 text-left"
           >
-            <ChoiceIndicator label={label} isSelected={isSelected} />
+            <span className="mr-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600 group-aria-pressed:bg-emerald-500 group-aria-pressed:text-white">
+              {isSelected ? <Check className="h-4 w-4" aria-hidden="true" /> : label}
+            </span>
             <div className="min-w-0 flex-1">
               <MathSpan
                 content={typeof option === 'string' ? option.replace(/^[A-Za-z][.)]\s*/, '') : String(option)}
                 className="block overflow-hidden text-ellipsis font-medium leading-relaxed text-slate-800"
               />
             </div>
-          </button>
+          </SelectableChoice>
         );
       })}
     </div>

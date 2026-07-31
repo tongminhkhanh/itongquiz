@@ -51,6 +51,10 @@ const underlineQuestion = {
   words: ['từ một', 'từ hai'],
 } as unknown as Question;
 
+const expectCalmInteraction = (choice: HTMLElement) => {
+  expect(choice).toHaveClass('active:scale-[0.985]', 'motion-reduce:transform-none');
+};
+
 describe('quiz answer state colors', () => {
   it('shows a selected multiple-choice answer in green', () => {
     render(
@@ -63,9 +67,13 @@ describe('quiz answer state colors', () => {
     );
 
     const selectedAnswer = screen.getByRole('button', { name: /Hai/ });
+    const unselectedAnswer = screen.getByRole('button', { name: /Một/ });
     expect(selectedAnswer).toHaveAttribute('aria-pressed', 'true');
-    expect(selectedAnswer).toHaveClass('border-emerald-500', 'bg-emerald-50', 'text-emerald-950');
-    expect(selectedAnswer.querySelector('span')).toHaveClass('bg-emerald-500');
+    expect(selectedAnswer).toHaveClass('bg-emerald-50', 'text-emerald-950', 'ring-emerald-300');
+    expect(selectedAnswer.querySelector('svg')).toBeTruthy();
+    expect(unselectedAnswer).toHaveAttribute('aria-pressed', 'false');
+    expect(unselectedAnswer).toHaveClass('border-transparent', 'bg-white');
+    expectCalmInteraction(selectedAnswer);
   });
 
   it('uses green for other selectable answer types', () => {
@@ -77,10 +85,11 @@ describe('quiz answer state colors', () => {
         onAnswerChange={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: /Một/ })).toHaveClass(
-      'border-emerald-500',
-      'bg-emerald-50',
-    );
+    const multipleChoice = screen.getByRole('button', { name: /Một/ });
+    expect(multipleChoice).toHaveAttribute('aria-pressed', 'true');
+    expect(multipleChoice).toHaveClass('bg-emerald-50', 'ring-emerald-300');
+    expect(screen.getByRole('button', { name: /Hai/ })).toHaveClass('border-transparent', 'bg-white');
+    expectCalmInteraction(multipleChoice);
     unmount();
 
     const imageRender = render(
@@ -91,10 +100,11 @@ describe('quiz answer state colors', () => {
         onAnswerChange={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: /Hình hai/ })).toHaveClass(
-      'border-emerald-500',
-      'bg-emerald-50',
-    );
+    const imageChoice = screen.getByRole('button', { name: /Hình hai/ });
+    expect(imageChoice).toHaveAttribute('aria-pressed', 'true');
+    expect(imageChoice).toHaveClass('bg-emerald-50', 'ring-emerald-300');
+    expect(screen.getByRole('button', { name: /Hình một/ })).toHaveClass('border-transparent', 'bg-white');
+    expectCalmInteraction(imageChoice);
     imageRender.unmount();
 
     render(
@@ -105,13 +115,14 @@ describe('quiz answer state colors', () => {
         onAnswerChange={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: 'từ hai' })).toHaveClass(
-      'border-emerald-500',
-      'bg-emerald-50',
-    );
+    const underlineChoice = screen.getByRole('button', { name: 'từ hai' });
+    expect(underlineChoice).toHaveAttribute('aria-pressed', 'true');
+    expect(underlineChoice).toHaveClass('bg-emerald-50', 'ring-emerald-300');
+    expect(screen.getByRole('button', { name: 'từ một' })).toHaveClass('border-transparent', 'bg-white');
+    expectCalmInteraction(underlineChoice);
   });
 
-  it('uses green for Đúng and red for Sai after selection', () => {
+  it('uses the same calm green state for Đúng and Sai after selection', () => {
     const Harness = () => {
       const [answers, setAnswers] = useState<Record<string, any>>({});
       return (
@@ -135,12 +146,18 @@ describe('quiz answer state colors', () => {
     const falseButton = screen.getByRole('button', { name: 'Sai' });
 
     fireEvent.click(trueButton);
-    expect(trueButton).toHaveClass('border-emerald-500', 'bg-emerald-50', 'text-emerald-700');
+    expect(trueButton).toHaveAttribute('aria-pressed', 'true');
+    expect(trueButton).toHaveClass('bg-emerald-50', 'text-emerald-950', 'ring-emerald-300');
     expect(falseButton).not.toHaveClass('bg-red-50');
+    expectCalmInteraction(trueButton);
 
     fireEvent.click(falseButton);
-    expect(falseButton).toHaveClass('border-red-500', 'bg-red-50', 'text-red-700');
+    expect(falseButton).toHaveAttribute('aria-pressed', 'true');
+    expect(falseButton).toHaveClass('bg-emerald-50', 'text-emerald-950', 'ring-emerald-300');
+    expect(falseButton).not.toHaveClass('bg-red-50');
     expect(trueButton).not.toHaveClass('bg-emerald-50');
+    expect(trueButton).toHaveClass('border-transparent', 'bg-white');
+    expectCalmInteraction(falseButton);
   });
 
   it('marks answered question numbers in green while preserving the active focus ring', () => {

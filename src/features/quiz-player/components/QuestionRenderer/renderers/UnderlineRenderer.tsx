@@ -1,6 +1,7 @@
 import React from 'react';
 import { BaseRendererProps } from '../types';
 import MathSpan from '../atoms/MathSpan';
+import SelectableChoice from '../atoms/SelectableChoice';
 
 const UnderlineRenderer: React.FC<BaseRendererProps> = ({
   question: question,
@@ -33,16 +34,11 @@ const UnderlineRenderer: React.FC<BaseRendererProps> = ({
           const isSelected = selectedIndexes.includes(index);
 
           return (
-            <button
+            <SelectableChoice
               key={index}
-              type="button"
-              aria-pressed={isSelected}
+              selected={isSelected}
               onClick={() => handleToggle(index)}
-              className={`rounded-[8px] border px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${
-                isSelected
-                  ? 'border-emerald-500 bg-emerald-50 text-emerald-900'
-                  : 'border-slate-200 bg-white text-slate-800 hover:border-sky-300'
-              }`}
+              className="rounded-xl px-4 py-2"
             >
               <MathSpan
                 content={word}
@@ -50,7 +46,7 @@ const UnderlineRenderer: React.FC<BaseRendererProps> = ({
                   isSelected ? 'underline decoration-2 decoration-emerald-500 underline-offset-8' : ''
                 }`}
               />
-            </button>
+            </SelectableChoice>
           );
         })}
       </div>
