@@ -25,11 +25,14 @@ const MCQRenderer: React.FC<BaseRendererProps> = ({
                 const label = String.fromCharCode(65 + optionIndex);
                 const answerKey = question.id;
                 const isSelected = answers[answerKey] === `${groupIndex}-${label}`;
+                const optionText =
+                  typeof option === 'string' ? option.replace(/^[A-Za-z][.)]\s*/, '') : String(option);
 
                 return (
                   <SelectableChoice
                     key={optionIndex}
                     selected={isSelected}
+                    aria-label={`Đáp án ${label}: ${optionText}`}
                     onClick={() => onAnswerChange(answerKey, `${groupIndex}-${label}`)}
                     className="flex min-h-14 items-center rounded-2xl p-3 text-left"
                   >
@@ -37,7 +40,7 @@ const MCQRenderer: React.FC<BaseRendererProps> = ({
                       {isSelected ? <Check className="h-4 w-4" aria-hidden="true" /> : label}
                     </span>
                     <MathSpan
-                      content={typeof option === 'string' ? option.replace(/^[A-Za-z][.)]\s*/, '') : String(option)}
+                      content={optionText}
                       className="flex-1"
                     />
                   </SelectableChoice>
@@ -55,11 +58,14 @@ const MCQRenderer: React.FC<BaseRendererProps> = ({
       {rawOptions.map((option: unknown, index: number) => {
         const label = String.fromCharCode(65 + index);
         const isSelected = answers[question.id] === label;
+        const optionText =
+          typeof option === 'string' ? option.replace(/^[A-Za-z][.)]\s*/, '') : String(option);
 
         return (
           <SelectableChoice
             key={index}
             selected={isSelected}
+            aria-label={`Đáp án ${label}: ${optionText}`}
             onClick={() => onAnswerChange(question.id, label)}
             className="flex min-h-16 items-center rounded-2xl p-4 text-left"
           >
@@ -68,7 +74,7 @@ const MCQRenderer: React.FC<BaseRendererProps> = ({
             </span>
             <div className="min-w-0 flex-1">
               <MathSpan
-                content={typeof option === 'string' ? option.replace(/^[A-Za-z][.)]\s*/, '') : String(option)}
+                content={optionText}
                 className="block overflow-hidden text-ellipsis font-medium leading-relaxed text-slate-800"
               />
             </div>

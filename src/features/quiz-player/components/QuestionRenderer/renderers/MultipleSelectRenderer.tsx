@@ -17,11 +17,14 @@ const MultipleSelectRenderer: React.FC<BaseRendererProps> = ({
         const label = String.fromCharCode(65 + index);
         const currentAnswers = (answers[question.id] as string[]) || [];
         const isSelected = currentAnswers.includes(label);
+        const optionText =
+          typeof option === 'string' ? option.replace(/^[A-Za-z][.)]\s*/, '') : String(option);
 
         return (
           <SelectableChoice
             key={index}
             selected={isSelected}
+            aria-label={`Đáp án ${label}: ${optionText}`}
             onClick={() => {
               const newAnswers = isSelected
                 ? currentAnswers.filter((answer) => answer !== label)
@@ -34,7 +37,7 @@ const MultipleSelectRenderer: React.FC<BaseRendererProps> = ({
               {isSelected ? <Check className="h-4 w-4" aria-hidden="true" /> : label}
             </span>
             <MathSpan
-              content={typeof option === 'string' ? option.replace(/^[A-Za-z][.)]\s*/, '') : String(option)}
+              content={optionText}
               className="flex-1"
             />
           </SelectableChoice>

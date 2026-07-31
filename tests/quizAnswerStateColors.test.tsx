@@ -51,11 +51,80 @@ const underlineQuestion = {
   words: ['từ một', 'từ hai'],
 } as unknown as Question;
 
+const sparseImageQuestion = {
+  id: 'image-sparse',
+  type: 'IMAGE_QUESTION',
+  text: 'Chọn hình phù hợp',
+  options: ['', ''],
+  optionImages: ['data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', ''],
+} as unknown as Question;
+
 const expectCalmInteraction = (choice: HTMLElement) => {
   expect(choice).toHaveClass('active:scale-[0.985]', 'motion-reduce:transform-none');
 };
 
 describe('quiz answer state colors', () => {
+  it('keeps option letters in accessible names before and after selection', () => {
+    const mcqRender = render(
+      <MCQRenderer
+        question={mcqQuestion}
+        index={0}
+        answers={{}}
+        onAnswerChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Đáp án B: Hai' })).toBeVisible();
+    mcqRender.rerender(
+      <MCQRenderer
+        question={mcqQuestion}
+        index={0}
+        answers={{ 'mcq-1': 'B' }}
+        onAnswerChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Đáp án B: Hai' })).toBeVisible();
+    mcqRender.unmount();
+
+    const multipleRender = render(
+      <MultipleSelectRenderer
+        question={multipleSelectQuestion}
+        index={0}
+        answers={{}}
+        onAnswerChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Đáp án A: Một' })).toBeVisible();
+    multipleRender.rerender(
+      <MultipleSelectRenderer
+        question={multipleSelectQuestion}
+        index={0}
+        answers={{ 'multi-1': ['A'] }}
+        onAnswerChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Đáp án A: Một' })).toBeVisible();
+    multipleRender.unmount();
+
+    const imageRender = render(
+      <ImageQuestionRenderer
+        question={sparseImageQuestion}
+        index={0}
+        answers={{}}
+        onAnswerChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Đáp án B' })).toBeVisible();
+    imageRender.rerender(
+      <ImageQuestionRenderer
+        question={sparseImageQuestion}
+        index={0}
+        answers={{ 'image-sparse': 'B' }}
+        onAnswerChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Đáp án B' })).toBeVisible();
+  });
+
   it('shows a selected multiple-choice answer in green', () => {
     render(
       <MCQRenderer

@@ -21,11 +21,13 @@ const ImageQuestionRenderer: React.FC<BaseRendererProps> = ({
             const label = String.fromCharCode(65 + index);
             const isSelected = answers[question.id] === label;
             const imageUrl = optionImages[index];
+            const optionText = option.trim().replace(/^[A-Za-z][.)]\s*/, '');
 
             return (
               <SelectableChoice
                 key={index}
                 selected={isSelected}
+                aria-label={optionText ? `Đáp án ${label}: ${optionText}` : `Đáp án ${label}`}
                 onClick={() => onAnswerChange(question.id, label)}
                 className="relative flex flex-col overflow-hidden rounded-2xl text-left"
               >
@@ -58,11 +60,13 @@ const ImageQuestionRenderer: React.FC<BaseRendererProps> = ({
           {options.map((option: string, index: number) => {
             const label = String.fromCharCode(65 + index);
             const isSelected = answers[question.id] === label;
+            const optionText = option.trim().replace(/^[A-Za-z][.)]\s*/, '');
 
             return (
               <SelectableChoice
                 key={index}
                 selected={isSelected}
+                aria-label={optionText ? `Đáp án ${label}: ${optionText}` : `Đáp án ${label}`}
                 onClick={() => onAnswerChange(question.id, label)}
                 className="flex min-h-14 items-center rounded-2xl p-3 text-left"
               >
