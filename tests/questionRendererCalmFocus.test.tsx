@@ -1,19 +1,22 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { Question } from '../src/types';
+import { QuestionType, type Question } from '../src/types';
 import QuestionRenderer from '../src/features/quiz-player/components/QuestionRenderer';
 
 vi.mock('../src/features/quiz-player/components/QuestionRenderer/atoms/MathSpan', () => ({
   default: ({ content }: { content: string }) => <span>{content}</span>,
 }));
 
-const question = {
+const prompt = 'Hai cộng hai bằng bao nhiêu?';
+
+const question: Question = {
   id: 'q-1',
-  type: 'MULTIPLE_CHOICE',
-  text: 'Hai cộng hai bằng bao nhiêu?',
+  type: QuestionType.MCQ,
+  question: prompt,
   options: ['A. 3', 'B. 4'],
-} as unknown as Question;
+  correctAnswer: 'B',
+};
 
 describe('QuestionRenderer Calm Focus shell', () => {
   it('places the prompt on the focal gradient and removes hard card borders', () => {
@@ -26,12 +29,12 @@ describe('QuestionRenderer Calm Focus shell', () => {
       />,
     );
 
-    expect(screen.getByTestId('question-card')).toHaveClass('border-transparent', 'shadow-sm');
-    expect(screen.getByTestId('question-prompt')).toHaveClass(
-      'bg-gradient-to-br',
-      'from-sky-50',
-      'to-teal-50',
-    );
-    expect(screen.getByText('Câu 1')).toBeVisible();
+    const heading = screen.getByRole('heading', { level: 2 });
+    const promptSurface = screen.getByTestId('question-prompt');
+
+    expect(within(heading).getByText(prompt)).toBeVisible();
+    expect(screen.getByText('Trắc nghiệm một đáp án')).toBeVisible();
+    expect(promptSurface).toHaveClass('from-sky-50', 'to-teal-50');
+    expect(promptSurface).not.toHaveClass('border-b');
   });
 });

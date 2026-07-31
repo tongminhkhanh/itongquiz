@@ -15,10 +15,30 @@ import GeometryRenderer from './renderers/GeometryRenderer';
 import DragDropRenderer from './renderers/DragDropRenderer';
 import UnderlineRenderer from './renderers/UnderlineRenderer';
 
+const QUESTION_TYPE_LABELS: Record<string, string> = {
+  MCQ: 'Trắc nghiệm một đáp án',
+  MULTIPLE_CHOICE: 'Trắc nghiệm một đáp án',
+  TRUE_FALSE: 'Đúng / Sai',
+  MULTIPLE_SELECT: 'Trắc nghiệm nhiều đáp án',
+  MATCHING: 'Nối cặp',
+  ORDERING: 'Sắp xếp thứ tự',
+  IMAGE: 'Câu hỏi hình ảnh',
+  IMAGE_QUESTION: 'Câu hỏi hình ảnh',
+  FILL_IN_THE_BLANK: 'Điền vào chỗ trống',
+  DROPDOWN: 'Điền vào chỗ trống',
+  DRAG_DROP: 'Điền vào chỗ trống',
+  CATEGORIZATION: 'Phân loại',
+  SHORT_ANSWER: 'Trả lời ngắn',
+  MATH_INPUT: 'Nhập đáp án toán',
+  GEOMETRY: 'Hình học',
+  UNDERLINE: 'Gạch chân',
+};
+
 const QuestionRenderer: React.FC<BaseRendererProps> = (props) => {
   const { question: question, index, quizId } = props;
   const rawType = (question.type || 'MCQ').toString().toUpperCase();
   const normalizedType = rawType.replace(/-/g, '_');
+  const questionTypeLabel = QUESTION_TYPE_LABELS[normalizedType] || 'Câu hỏi';
 
   const renderers: Record<string, React.FC<BaseRendererProps>> = {
     MCQ: MCQRenderer,
@@ -55,10 +75,13 @@ const QuestionRenderer: React.FC<BaseRendererProps> = (props) => {
         className="m-3 rounded-2xl bg-gradient-to-br from-sky-50 via-white to-teal-50 px-5 py-5 sm:m-4 sm:px-6 sm:py-6"
         data-testid="question-prompt"
       >
-        <h2 className="text-slate-900">
-          <span className="mb-3 block text-sm font-semibold uppercase tracking-wide text-sky-700">
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold">
+          <span className="uppercase tracking-wide text-sky-700">
             Câu {index + 1}
           </span>
+          <span className="text-slate-500">{questionTypeLabel}</span>
+        </div>
+        <h2 className="text-slate-900">
           <SmartText
             content={(question as any).mainQuestion || (question as any).content || (question as any).question}
             className="text-base font-semibold leading-relaxed sm:text-lg"
