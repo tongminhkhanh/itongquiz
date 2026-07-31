@@ -6,6 +6,7 @@ import { LiveExamQuiz } from '../src/components/LiveExam/LiveExamQuiz';
 
 const mocks = vi.hoisted(() => ({
     updateActivity: vi.fn(),
+    navigationProps: [] as Array<Record<string, any>>,
 }));
 
 vi.mock('../src/hooks', () => ({
@@ -23,6 +24,22 @@ vi.mock('../src/components/student/QuestionRenderer', () => ({
 
 vi.mock('../src/components/student', () => ({
     SubmitConfirmModal: () => null,
+}));
+
+vi.mock('../src/features/quiz-player/components/QuizNavigation', () => ({
+    default: (props: Record<string, any>) => {
+        mocks.navigationProps.push(props);
+        return (
+            <nav aria-label={`${props.variant} quiz navigation`}>
+                <button
+                    type="button"
+                    onClick={() => props.onPageChange(2, props.questions[10].id)}
+                >
+                    {props.variant} câu 11
+                </button>
+            </nav>
+        );
+    },
 }));
 
 const questions = Array.from({ length: 25 }, (_, index) => ({
@@ -43,6 +60,7 @@ describe('LiveExamQuiz pagination activity', () => {
 
     beforeEach(() => {
         mocks.updateActivity.mockReset();
+        mocks.navigationProps.length = 0;
         frameCallbacks = [];
         vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
             frameCallbacks.push(callback);
@@ -93,6 +111,54 @@ describe('LiveExamQuiz pagination activity', () => {
                 answeredCount: 0,
             });
         });
+        expect(document.activeElement).toBe(document.getElementById('question-live-11'));
+    });
+
+    it('wires matching mobile and sidebar navigation to the live page handler', async () => {
+        render(
+            <LiveExamQuiz
+                sessionId="session-1"
+                questions={questions}
+                quizTitle="Thi thử"
+                duration={60}
+                endsAt="2026-07-17T16:00:00.000Z"
+                onComplete={vi.fn()}
+            />,
+        );
+
+        const mobileProps = mocks.navigationProps.find((props) => props.variant === 'mobile')!;
+        const sidebarProps = mocks.navigationProps.find((props) => props.variant === 'sidebar')!;
+
+        expect(screen.getByRole('navigation', { name: 'mobile quiz navigation' })).toBeVisible();
+        expect(screen.getByRole('navigation', { name: 'sidebar quiz navigation' })).toBeVisible();
+        expect(mobileProps).toMatchObject({
+            variant: 'mobile',
+            questions,
+            activeQuestionId: 'live-1',
+            QUESTIONS_PER_PAGE: 10,
+        });
+        expect(sidebarProps).toMatchObject({
+            variant: 'sidebar',
+            questions,
+            activeQuestionId: 'live-1',
+            QUESTIONS_PER_PAGE: 10,
+        });
+        expect(mobileProps.onPageChange).toBe(sidebarProps.onPageChange);
+
+        fireEvent.click(screen.getByRole('button', { name: 'mobile câu 11' }));
+        act(flushAnimationFrames);
+
+        await waitFor(() => {
+            expect(mocks.updateActivity).toHaveBeenLastCalledWith({
+                currentQuestion: 11,
+                answeredCount: 0,
+            });
+        });
+        expect(
+            mocks.updateActivity.mock.calls.filter(
+                ([activity]) => activity.currentQuestion === 11,
+            ),
+        ).toHaveLength(1);
         expect(document.activeElement).toBe(document.getElementById('question-live-11'));
     });
 });

@@ -11,7 +11,7 @@ const QuizPlayerLayout: React.FC<QuizPlayerLayoutProps> = ({
   sidebarNavigation,
   children,
 }) => (
-  <main data-testid="quiz-player-main" className="min-h-screen bg-slate-50">
+  <main data-testid="quiz-player-main" className="min-h-0 flex-1 bg-slate-50">
     <div className="mx-auto max-w-[1180px] px-4 py-5 sm:px-5 sm:py-7 lg:px-8">
       <div data-testid="quiz-mobile-navigation" className="mb-5 lg:hidden">
         {mobileNavigation}
