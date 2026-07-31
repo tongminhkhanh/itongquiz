@@ -254,4 +254,32 @@ describe('quiz answer state colors', () => {
       .find((label) => label.previousElementSibling?.classList.contains('bg-emerald-700'));
     expect(answeredLegend?.previousElementSibling).toHaveClass('bg-emerald-700');
   });
+
+  it('uses unique answered descriptions when multiple navigation regions are rendered', () => {
+    const navigation = (
+      <QuizNavigation
+        questions={[mcqQuestion]}
+        isQuestionAnswered={() => true}
+        activeQuestionId="mcq-1"
+        QUESTIONS_PER_PAGE={10}
+        onPageChange={vi.fn()}
+      />
+    );
+
+    render(
+      <>
+        {navigation}
+        {navigation}
+      </>,
+    );
+
+    const answeredButtons = screen.getAllByRole('button', { name: 'Đi đến câu 1' });
+    const descriptionIds = answeredButtons.map((button) => button.getAttribute('aria-describedby'));
+
+    expect(new Set(descriptionIds).size).toBe(2);
+    for (const descriptionId of descriptionIds) {
+      expect(descriptionId).toBeTruthy();
+      expect(document.getElementById(descriptionId!)).toHaveTextContent('Đã trả lời');
+    }
+  });
 });

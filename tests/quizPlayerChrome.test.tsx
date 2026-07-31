@@ -88,5 +88,20 @@ describe('quiz player chrome', () => {
     expect(submitButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     fireEvent.click(submitButton);
     expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <QuizPagination
+        currentPage={2}
+        totalPages={2}
+        onPageChange={onPageChange}
+        onSubmit={onSubmit}
+        isSubmitting
+      />,
+    );
+
+    const submittingButton = screen.getByRole('button', { name: 'Đang nộp bài...' });
+    expect(submittingButton).toBeDisabled();
+    fireEvent.click(submittingButton);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 });

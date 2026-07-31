@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { Check, ListChecks } from 'lucide-react';
 import { Question } from '../../../types';
 import type { QuizPageChangeHandler } from '../hooks/useQuizPageNavigation';
@@ -20,6 +20,8 @@ const QuizNavigation: React.FC<QuizNavigationProps> = ({
   onPageChange,
   variant = 'sidebar',
 }) => {
+  const navigationId = useId();
+
   const handleQuestionClick = (question: Question, page: number) => {
     onPageChange(page, question.id);
   };
@@ -50,7 +52,7 @@ const QuizNavigation: React.FC<QuizNavigationProps> = ({
           const isAnswered = isQuestionAnswered(question);
           const pageOfQuestion = Math.floor(index / QUESTIONS_PER_PAGE) + 1;
           const isActive = question.id === activeQuestionId;
-          const answeredDescriptionId = `quiz-question-${index + 1}-answered`;
+          const answeredDescriptionId = `${navigationId}-question-${index + 1}-answered`;
           const stateClass = isAnswered
             ? 'border-transparent bg-emerald-700 text-white hover:bg-emerald-800'
             : 'border-transparent bg-slate-100 text-slate-600 hover:bg-slate-200';
