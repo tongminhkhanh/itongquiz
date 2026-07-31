@@ -1,5 +1,5 @@
 import React from 'react';
-import { Timer } from 'lucide-react';
+import { CircleCheckBig, Timer } from 'lucide-react';
 
 interface QuizHeaderProps {
   title: string;
@@ -30,22 +30,27 @@ const QuizHeader: React.FC<QuizHeaderProps> = ({
     : 0;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[#E5E7EB] bg-[#FFFDF7]">
+    <header className="sticky top-0 z-30 bg-white/90 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur">
       <div className="mx-auto max-w-[1180px] px-4 py-3 sm:px-5 lg:px-8">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold text-[#172033] sm:text-lg">{title}</h1>
-              <p className="mt-0.5 truncate text-xs text-[#526174]">
-                {studentName ? `${studentName} · ` : ''}Đã làm {answeredCount}/{totalQuestions} câu
+              <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-[#526174]">
+                <CircleCheckBig className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
+                <span className="truncate">
+                  {studentName ? `${studentName} · ` : ''}Đã làm {answeredCount}/{totalQuestions} câu
+                </span>
               </p>
             </div>
           </div>
 
           {!isPractice ? (
             <div
-              className={`flex shrink-0 items-center gap-2 text-sm font-semibold ${
-                timeLeft < 60 ? 'text-[#E76F51]' : 'text-slate-700'
+              className={`flex min-h-11 shrink-0 items-center gap-2 rounded-2xl px-3.5 text-sm font-semibold shadow-sm ${
+                timeLeft < 60
+                  ? 'bg-rose-50 text-rose-600'
+                  : 'bg-sky-50 text-sky-700'
               }`}
               aria-label={`Thời gian còn lại ${formatTime(timeLeft)}`}
             >
@@ -63,10 +68,10 @@ const QuizHeader: React.FC<QuizHeaderProps> = ({
           aria-valuemin={0}
           aria-valuemax={Math.max(0, totalQuestions)}
           aria-valuenow={Math.min(Math.max(0, answeredCount), Math.max(0, totalQuestions))}
-          className="mt-3 h-1.5 overflow-hidden rounded-[3px] bg-slate-200"
+          className="mt-3 h-1.5 overflow-hidden rounded-full bg-sky-100"
         >
           <div
-            className="h-full bg-sky-500 transition-[width] duration-300 motion-reduce:transition-none"
+            className="h-full rounded-full bg-gradient-to-r from-sky-500 to-teal-400 transition-[width] duration-300 motion-reduce:transition-none"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>

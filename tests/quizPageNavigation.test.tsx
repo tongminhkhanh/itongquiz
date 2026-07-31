@@ -132,4 +132,25 @@ describe('quiz page navigation', () => {
         expect(getActiveQuestionNumber(questions, null, 3, QUESTIONS_PER_PAGE)).toBe(21);
         expect(getActiveQuestionNumber([], null, 1, QUESTIONS_PER_PAGE)).toBe(0);
     });
+
+    it('renders the mobile navigation as a horizontal chip list', () => {
+        render(
+            <QuizNavigation
+                questions={questions}
+                isQuestionAnswered={() => false}
+                activeQuestionId="q-1"
+                QUESTIONS_PER_PAGE={QUESTIONS_PER_PAGE}
+                onPageChange={vi.fn()}
+                variant="mobile"
+            />,
+        );
+
+        expect(screen.getByRole('navigation', { name: 'Điều hướng câu hỏi' })).toHaveClass(
+            'overflow-x-auto',
+        );
+        expect(screen.getByRole('button', { name: 'Đi đến câu 1' })).toHaveAttribute(
+            'aria-current',
+            'step',
+        );
+    });
 });

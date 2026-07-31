@@ -1,4 +1,5 @@
 import React from 'react';
+import { ChevronLeft, ChevronRight, Send } from 'lucide-react';
 import type { QuizPageChangeHandler } from '../hooks/useQuizPageNavigation';
 
 interface QuizPaginationProps {
@@ -17,15 +18,16 @@ const QuizPagination: React.FC<QuizPaginationProps> = ({
   isSubmitting,
 }) => {
   return (
-    <div className="mt-8 flex flex-col gap-4 border-t border-slate-200 pb-12 pt-6 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-8 flex flex-col gap-4 pb-12 pt-2 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center justify-between gap-2 sm:justify-start">
         <button
           type="button"
           aria-label="Trang trước"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 transition-[background-color,box-shadow,transform] hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 active:scale-[0.985] disabled:cursor-not-allowed disabled:text-slate-400 disabled:opacity-60 motion-reduce:transform-none motion-reduce:transition-none"
         >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           Câu trước
         </button>
 
@@ -42,9 +44,10 @@ const QuizPagination: React.FC<QuizPaginationProps> = ({
           aria-label="Trang sau"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 transition-[background-color,box-shadow,transform] hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 active:scale-[0.985] disabled:cursor-not-allowed disabled:text-slate-400 disabled:opacity-60 motion-reduce:transform-none motion-reduce:transition-none"
         >
           Câu tiếp theo
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
 
@@ -53,17 +56,19 @@ const QuizPagination: React.FC<QuizPaginationProps> = ({
           type="button"
           onClick={onSubmit}
           disabled={isSubmitting}
-          className="inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-sky-600 px-6 text-base font-semibold text-white transition-colors hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-6 text-base font-semibold text-white shadow-sm transition-[background-color,box-shadow,transform] hover:bg-sky-700 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transform-none motion-reduce:transition-none sm:w-auto"
         >
+          <Send className="h-4 w-4" aria-hidden="true" />
           {isSubmitting ? 'Đang nộp bài...' : 'Nộp bài'}
         </button>
       ) : (
         <button
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
-          className="inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-sky-500 px-6 text-base font-semibold text-white transition-colors hover:bg-sky-600 sm:w-auto"
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-6 text-base font-semibold text-white shadow-sm transition-[background-color,box-shadow,transform] hover:bg-sky-700 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 active:scale-[0.985] motion-reduce:transform-none motion-reduce:transition-none sm:w-auto"
         >
           Câu tiếp theo
+          <ChevronRight className="h-5 w-5" aria-hidden="true" />
         </button>
       )}
     </div>

@@ -243,9 +243,9 @@ describe('quiz answer state colors', () => {
     const answeredQuestion = screen.getByRole('button', { name: 'Đi đến câu 1' });
     const unansweredQuestion = screen.getByRole('button', { name: 'Đi đến câu 2' });
 
-    expect(answeredQuestion).toHaveClass('border-emerald-500', 'bg-emerald-50', 'text-emerald-800');
+    expect(answeredQuestion).toHaveClass('border-transparent', 'bg-emerald-500', 'text-white');
     expect(answeredQuestion).toHaveClass('ring-1', 'ring-sky-500');
-    expect(unansweredQuestion).toHaveClass('border-slate-200', 'bg-white');
-    expect(screen.getByText('Đã trả lời').previousElementSibling).toHaveClass('bg-emerald-50');
+    expect(unansweredQuestion).toHaveClass('border-transparent', 'bg-slate-100', 'text-slate-600');
+    expect(screen.getByText('Đã trả lời').previousElementSibling).toHaveClass('bg-emerald-500');
   });
 });
