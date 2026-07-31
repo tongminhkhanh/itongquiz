@@ -243,9 +243,15 @@ describe('quiz answer state colors', () => {
     const answeredQuestion = screen.getByRole('button', { name: 'Đi đến câu 1' });
     const unansweredQuestion = screen.getByRole('button', { name: 'Đi đến câu 2' });
 
-    expect(answeredQuestion).toHaveClass('border-transparent', 'bg-emerald-500', 'text-white');
+    expect(answeredQuestion).toHaveClass('border-transparent', 'bg-emerald-700', 'text-white');
     expect(answeredQuestion).toHaveClass('ring-1', 'ring-sky-500');
+    expect(answeredQuestion).toHaveAccessibleDescription('Đã trả lời');
+    expect(answeredQuestion.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     expect(unansweredQuestion).toHaveClass('border-transparent', 'bg-slate-100', 'text-slate-600');
-    expect(screen.getByText('Đã trả lời').previousElementSibling).toHaveClass('bg-emerald-500');
+    expect(unansweredQuestion).not.toHaveAccessibleDescription();
+    const answeredLegend = screen
+      .getAllByText('Đã trả lời')
+      .find((label) => label.previousElementSibling?.classList.contains('bg-emerald-700'));
+    expect(answeredLegend?.previousElementSibling).toHaveClass('bg-emerald-700');
   });
 });
