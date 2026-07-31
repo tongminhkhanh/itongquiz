@@ -15,6 +15,7 @@ import QuestionRenderer from '../student/QuestionRenderer';
 import QuizHeader from '../../features/quiz-player/components/QuizHeader';
 import QuizNavigation from '../../features/quiz-player/components/QuizNavigation';
 import QuizPagination from '../../features/quiz-player/components/QuizPagination';
+import QuizPlayerLayout from '../../features/quiz-player/components/QuizPlayerLayout';
 import {
     getActiveQuestionNumber,
     useQuizPageNavigation,
@@ -165,7 +166,7 @@ export const LiveExamQuiz: React.FC<LiveExamQuizProps> = ({
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="flex min-h-screen flex-col bg-slate-50">
             <QuizHeader
                 title={quizTitle}
                 timeLeft={timeRemaining}
@@ -176,56 +177,63 @@ export const LiveExamQuiz: React.FC<LiveExamQuizProps> = ({
                 avatar={null}
             />
 
-            <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
-                <div className="flex flex-col lg:flex-row gap-8">
-                    <aside className="hidden lg:block w-72 flex-shrink-0">
-                        <QuizNavigation
-                            questions={questions}
-                            isQuestionAnswered={isQuestionAnswered}
-                            activeQuestionId={activeQuestionId}
-                            QUESTIONS_PER_PAGE={QUESTIONS_PER_PAGE}
-                            onPageChange={changePage}
-                        />
-                    </aside>
-
-                    <main className="flex-1 min-w-0">
-                        <div className="space-y-8">
-                            {questionsOnCurrentPage.map((q, idx) => (
-                                <div
-                                    key={q.id}
-                                    id={`question-${q.id}`}
-                                    tabIndex={-1}
-                                    aria-label={`Câu ${(currentPage - 1) * QUESTIONS_PER_PAGE + idx + 1}`}
-                                    className="scroll-mt-32 transition-all duration-500 focus:outline-none"
-                                >
-                                    <QuestionRenderer
-                                        question={q}
-                                        index={(currentPage - 1) * QUESTIONS_PER_PAGE + idx}
-                                        answers={answers}
-                                        onAnswerChange={handleAnswerChange}
-                                        onMatchingClick={handleMatchingClick}
-                                    />
-                                </div>
-                            ))}
+            <QuizPlayerLayout
+                mobileNavigation={(
+                    <QuizNavigation
+                        questions={questions}
+                        isQuestionAnswered={isQuestionAnswered}
+                        activeQuestionId={activeQuestionId}
+                        QUESTIONS_PER_PAGE={QUESTIONS_PER_PAGE}
+                        onPageChange={changePage}
+                        variant="mobile"
+                    />
+                )}
+                sidebarNavigation={(
+                    <QuizNavigation
+                        questions={questions}
+                        isQuestionAnswered={isQuestionAnswered}
+                        activeQuestionId={activeQuestionId}
+                        QUESTIONS_PER_PAGE={QUESTIONS_PER_PAGE}
+                        onPageChange={changePage}
+                        variant="sidebar"
+                    />
+                )}
+            >
+                <div className="space-y-8">
+                    {questionsOnCurrentPage.map((q, idx) => (
+                        <div
+                            key={q.id}
+                            id={`question-${q.id}`}
+                            tabIndex={-1}
+                            aria-label={`Câu ${(currentPage - 1) * QUESTIONS_PER_PAGE + idx + 1}`}
+                            className="scroll-mt-32 transition-all duration-500 focus:outline-none"
+                        >
+                            <QuestionRenderer
+                                question={q}
+                                index={(currentPage - 1) * QUESTIONS_PER_PAGE + idx}
+                                answers={answers}
+                                onAnswerChange={handleAnswerChange}
+                                onMatchingClick={handleMatchingClick}
+                            />
                         </div>
-
-                        <QuizPagination
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            onPageChange={changePage}
-                            onSubmit={() => setShowSubmitConfirm(true)}
-                            isSubmitting={isSubmitting}
-                        />
-
-                        {error && (
-                            <div className="mt-4 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-center font-medium flex items-center justify-center gap-2">
-                                <AlertCircle size={16} />
-                                {error}
-                            </div>
-                        )}
-                    </main>
+                    ))}
                 </div>
-            </div>
+
+                <QuizPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={changePage}
+                    onSubmit={() => setShowSubmitConfirm(true)}
+                    isSubmitting={isSubmitting}
+                />
+
+                {error && (
+                    <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-center font-medium text-red-600">
+                        <AlertCircle size={16} />
+                        {error}
+                    </div>
+                )}
+            </QuizPlayerLayout>
 
             <SubmitConfirmModal
                 isOpen={showSubmitConfirm}

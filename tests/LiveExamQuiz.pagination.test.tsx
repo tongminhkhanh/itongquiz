@@ -75,6 +75,8 @@ describe('LiveExamQuiz pagination activity', () => {
             />,
         );
 
+        expect(screen.getByTestId('quiz-player-main')).toBeVisible();
+
         await waitFor(() => {
             expect(mocks.updateActivity).toHaveBeenCalledWith({
                 currentQuestion: 1,

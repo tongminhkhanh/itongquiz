@@ -12,6 +12,7 @@ import { useQuizPlayer } from '../features/quiz-player/hooks/useQuizPlayer';
 import QuizHeader from '../features/quiz-player/components/QuizHeader';
 import QuizNavigation from '../features/quiz-player/components/QuizNavigation';
 import QuizPagination from '../features/quiz-player/components/QuizPagination';
+import QuizPlayerLayout from '../features/quiz-player/components/QuizPlayerLayout';
 import { useQuizPageNavigation } from '../features/quiz-player/hooks/useQuizPageNavigation';
 
 interface Props {
@@ -71,7 +72,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     const unansweredCount = shuffledQuestions.length - answeredCount;
 
     return (
-      <div className="student-quiz-shell flex min-h-screen flex-col bg-[#FFFDF7] font-['Be_Vietnam_Pro'] text-[#172033]">
+      <div className="student-quiz-shell flex min-h-screen flex-col bg-slate-50 font-['Be_Vietnam_Pro'] text-[#172033]">
         <QuizHeader
           title={quiz.title}
           timeLeft={timeLeft}
@@ -82,56 +83,63 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
           avatar={studentAvatar}
         />
 
-        <div className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-5 sm:px-5 md:py-7 lg:px-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-            <aside className="hidden w-60 shrink-0 lg:block">
-              <QuizNavigation
-                questions={shuffledQuestions}
-                isQuestionAnswered={isQuestionAnswered}
-                activeQuestionId={activeQuestionId}
-                QUESTIONS_PER_PAGE={QUESTIONS_PER_PAGE}
-                onPageChange={changePage}
-              />
-            </aside>
-
-            <main className="min-w-0 flex-1">
-              <div className="space-y-6">
-                {questionsOnCurrentPage.map((question, index) => (
-                  <div
-                    key={question.id}
-                    id={`question-${question.id}`}
-                    tabIndex={-1}
-                    aria-label={`Câu ${(currentPage - 1) * QUESTIONS_PER_PAGE + index + 1}`}
-                    className="scroll-mt-28 focus:outline-none"
-                  >
-                    <QuestionRenderer
-                      question={question}
-                      quizId={quiz.id}
-                      index={(currentPage - 1) * QUESTIONS_PER_PAGE + index}
-                      answers={answers}
-                      onAnswerChange={handleAnswerChange}
-                      onMatchingClick={handleMatchingClick}
-                    />
-                  </div>
-                ))}
+        <QuizPlayerLayout
+          mobileNavigation={(
+            <QuizNavigation
+              questions={shuffledQuestions}
+              isQuestionAnswered={isQuestionAnswered}
+              activeQuestionId={activeQuestionId}
+              QUESTIONS_PER_PAGE={QUESTIONS_PER_PAGE}
+              onPageChange={changePage}
+              variant="mobile"
+            />
+          )}
+          sidebarNavigation={(
+            <QuizNavigation
+              questions={shuffledQuestions}
+              isQuestionAnswered={isQuestionAnswered}
+              activeQuestionId={activeQuestionId}
+              QUESTIONS_PER_PAGE={QUESTIONS_PER_PAGE}
+              onPageChange={changePage}
+              variant="sidebar"
+            />
+          )}
+        >
+          <div className="space-y-6">
+            {questionsOnCurrentPage.map((question, index) => (
+              <div
+                key={question.id}
+                id={`question-${question.id}`}
+                tabIndex={-1}
+                aria-label={`Câu ${(currentPage - 1) * QUESTIONS_PER_PAGE + index + 1}`}
+                className="scroll-mt-28 focus:outline-none"
+              >
+                <QuestionRenderer
+                  question={question}
+                  quizId={quiz.id}
+                  index={(currentPage - 1) * QUESTIONS_PER_PAGE + index}
+                  answers={answers}
+                  onAnswerChange={handleAnswerChange}
+                  onMatchingClick={handleMatchingClick}
+                />
               </div>
-
-              <QuizPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={changePage}
-                onSubmit={() => setShowSubmitConfirm(true)}
-                isSubmitting={isSubmitting}
-              />
-
-              {submitError ? (
-                <div className="mt-4 rounded-[10px] border border-[#E76F51]/30 bg-[#FFF4F1] p-4 text-center text-sm font-medium text-[#B94D36]">
-                  {submitError}
-                </div>
-              ) : null}
-            </main>
+            ))}
           </div>
-        </div>
+
+          <QuizPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={changePage}
+            onSubmit={() => setShowSubmitConfirm(true)}
+            isSubmitting={isSubmitting}
+          />
+
+          {submitError ? (
+            <div className="mt-4 rounded-[10px] border border-[#E76F51]/30 bg-[#FFF4F1] p-4 text-center text-sm font-medium text-[#B94D36]">
+              {submitError}
+            </div>
+          ) : null}
+        </QuizPlayerLayout>
 
         <SubmitConfirmModal
           isOpen={showSubmitConfirm}
