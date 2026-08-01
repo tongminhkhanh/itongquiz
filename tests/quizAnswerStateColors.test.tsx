@@ -189,6 +189,7 @@ describe('quiz answer state colors', () => {
     expect(underlineChoice).toHaveClass('bg-emerald-50', 'ring-emerald-300');
     expect(screen.getByRole('button', { name: 'từ một' })).toHaveClass('border-transparent', 'bg-white');
     expectCalmInteraction(underlineChoice);
+    expect(screen.getByRole('button', { name: 'Xóa tất cả gạch chân' })).toHaveClass('min-h-11');
   });
 
   it('uses the same calm green state for Đúng and Sai after selection', () => {

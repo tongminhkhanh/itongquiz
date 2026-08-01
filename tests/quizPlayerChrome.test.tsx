@@ -40,6 +40,26 @@ describe('quiz player chrome', () => {
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '5');
   });
 
+  it('shows practice mode without a timer while retaining progress semantics', () => {
+    render(
+      <QuizHeader
+        title="Luyện tập Toán"
+        timeLeft={0}
+        totalQuestions={10}
+        answeredCount={4}
+        isPractice
+        studentName="An"
+      />,
+    );
+
+    expect(screen.getByText('Luyện tập')).toBeVisible();
+    expect(screen.queryByLabelText(/Thời gian còn lại/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Tiến độ trả lời' })).toHaveAttribute(
+      'aria-valuenow',
+      '4',
+    );
+  });
+
   it('preserves pagination behavior and hides decorative lucide icons', () => {
     const onPageChange = vi.fn();
     const onSubmit = vi.fn();
@@ -58,6 +78,8 @@ describe('quiz player chrome', () => {
     const primaryNextButton = screen.getByRole('button', { name: 'Câu tiếp theo' });
 
     expect(previousButton).toBeDisabled();
+    expect(previousButton).toHaveClass('disabled:bg-slate-200', 'disabled:text-slate-700');
+    expect(previousButton).not.toHaveClass('disabled:opacity-60');
     fireEvent.click(previousButton);
     expect(onPageChange).not.toHaveBeenCalled();
 
@@ -101,6 +123,8 @@ describe('quiz player chrome', () => {
 
     const submittingButton = screen.getByRole('button', { name: 'Đang nộp bài...' });
     expect(submittingButton).toBeDisabled();
+    expect(submittingButton).toHaveClass('disabled:bg-slate-300', 'disabled:text-slate-700');
+    expect(submittingButton).not.toHaveClass('disabled:opacity-60');
     fireEvent.click(submittingButton);
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });

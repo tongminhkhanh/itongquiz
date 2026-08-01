@@ -15,6 +15,8 @@ describe('SelectableChoice', () => {
     const choice = screen.getByRole('button', { name: 'Đáp án B' });
     expect(choice).toHaveAttribute('aria-pressed', 'true');
     expect(choice).toHaveClass('bg-emerald-50', 'text-emerald-950', 'shadow-sm');
+    expect(choice).not.toHaveClass('bg-white', 'text-slate-700');
+    expect(choice).toHaveClass('min-h-11', 'min-w-11');
     expect(choice).toHaveClass('active:scale-[0.985]', 'motion-reduce:transform-none');
 
     fireEvent.click(choice);
@@ -25,6 +27,8 @@ describe('SelectableChoice', () => {
     render(<SelectableChoice selected={false}>Đáp án A</SelectableChoice>);
 
     expect(screen.getByRole('button', { name: 'Đáp án A' })).toHaveClass(
+      'min-h-11',
+      'min-w-11',
       'border-transparent',
       'bg-white',
       'focus-visible:ring-2',

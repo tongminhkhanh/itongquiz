@@ -59,7 +59,7 @@ const UnderlineRenderer: React.FC<BaseRendererProps> = ({
           <button
             type="button"
             onClick={() => onAnswerChange(question.id, [])}
-            className="min-h-10 rounded-[8px] px-3 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-[#E76F51]"
+            className="min-h-11 rounded-[8px] px-3 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-[#E76F51]"
           >
             Xóa tất cả gạch chân
           </button>
