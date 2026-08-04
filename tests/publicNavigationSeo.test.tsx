@@ -13,6 +13,10 @@ describe('crawlable public navigation', () => {
 
         expect(links.some(link => link.getAttribute('href') === '/about')).toBe(true);
         expect(links.some(link => link.getAttribute('href') === '/contact')).toBe(true);
+        expect(screen.getByRole('link', { name: 'Cổng phụ huynh' })).toHaveAttribute(
+            'href',
+            'https://phuhuynh.thitong.site/',
+        );
         expect(links.some(link => link.getAttribute('href') === '/privacy')).toBe(true);
         expect(links.some(link => link.getAttribute('href') === '/tos')).toBe(true);
     });

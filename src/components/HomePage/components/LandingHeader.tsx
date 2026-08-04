@@ -40,6 +40,12 @@ const LandingHeader: React.FC = () => {
                         >
                             Hướng dẫn
                         </a>
+                        <a
+                            href="https://phuhuynh.thitong.site/"
+                            className="font-semibold text-slate-700 transition hover:text-blue-700"
+                        >
+                            Cổng phụ huynh
+                        </a>
                     </nav>
                 </div>
             </div>
