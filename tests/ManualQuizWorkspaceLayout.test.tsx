@@ -79,4 +79,14 @@ describe('ManualQuizWorkspace desktop shell', () => {
         expect(screen.getByRole('button', { name: 'Mở danh sách câu hỏi' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Mở xem trước' })).toBeInTheDocument();
     });
+
+    it('opens quiz settings from the workspace header and persists class/time', async () => {
+        renderWorkspace();
+        fireEvent.click(await screen.findByRole('button', { name: /Thiết lập đề/ }));
+        expect(screen.getByRole('dialog', { name: 'Thiết lập đề' })).toBeInTheDocument();
+        fireEvent.change(screen.getByRole('combobox'), { target: { value: '5' } });
+        fireEvent.change(screen.getByLabelText('Thời gian làm bài'), { target: { value: '45' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Lưu thiết lập' }));
+        expect(useManualQuizWorkspaceStore.getState().envelope?.quiz).toEqual(expect.objectContaining({ classLevel: '5', timeLimit: 45 }));
+    });
 });

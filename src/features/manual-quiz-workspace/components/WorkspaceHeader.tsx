@@ -15,9 +15,10 @@ const SAVE_STATUS_COPY = {
 
 interface WorkspaceHeaderProps {
     onOpenValidation(): void;
+    onOpenSettings(): void;
 }
 
-const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onOpenValidation }) => {
+const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onOpenValidation, onOpenSettings }) => {
     const navigate = useNavigate();
     const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
     const saveStatus = useManualQuizWorkspaceStore((state) => state.saveStatus);
@@ -77,9 +78,10 @@ const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onOpenValidation }) =
                 )}
                 <button
                     type="button"
-                    className="hidden h-11 items-center gap-2 rounded-[10px] border border-slate-200 px-3 text-sm font-medium xl:inline-flex"
+                    onClick={onOpenSettings}
+                    className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-slate-200 px-3 text-sm font-medium"
                 >
-                    <Settings2 className="h-4 w-4" /> Thiết lập đề
+                    <Settings2 className="h-4 w-4" /><span className="hidden sm:inline">Thiết lập đề</span>
                 </button>
                 <button
                     type="button"

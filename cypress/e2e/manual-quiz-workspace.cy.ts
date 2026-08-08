@@ -46,6 +46,17 @@ const validDraft = () => {
     };
 };
 
+const longDraft = () => {
+    const draft = validDraft();
+    draft.quiz.questions = Array.from({ length: 40 }, (_, index) => ({
+        ...draft.quiz.questions[0],
+        id: `manual-e2e-question-${index + 1}`,
+        question: `Câu hỏi cuộn ${index + 1}`,
+    }));
+    draft.selectedQuestionId = draft.quiz.questions[0].id;
+    return draft;
+};
+
 const installAuth = (win: Window) => {
     win.localStorage.setItem('auth-storage', authStorageValue);
 };
@@ -192,6 +203,17 @@ describe('Manual quiz workspace end-to-end', () => {
         cy.wait('@publishQuiz');
         cy.wait('@deleteDraft');
         cy.location('pathname', { timeout: 15_000 }).should('eq', '/');
+    });
+
+    it('scrolls the question navigator independently when the draft is long', () => {
+        cy.viewport(1440, 900);
+        visitManualWorkspace(longDraft());
+        continueRecoveredDraft('Đề kiểm tra E2E');
+        cy.get('[data-testid="question-navigator-scroll"]').should(($scroll) => {
+            expect($scroll[0].scrollHeight, 'question list scroll height')
+                .to.be.greaterThan($scroll[0].clientHeight);
+        }).scrollTo('bottom');
+        cy.contains('Câu hỏi cuộn 40').should('be.visible');
     });
 
     [

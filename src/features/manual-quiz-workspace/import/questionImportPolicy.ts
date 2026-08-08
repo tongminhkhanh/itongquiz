@@ -1,6 +1,7 @@
 import type { QuestionImportResult, QuizImportMetadata } from './questionImport.types';
 
 export const QUESTION_IMPORT_MAX_FILE_BYTES = 10 * 1024 * 1024;
+export const QUESTION_IMPORT_MAX_JSON_BYTES = 1024 * 1024;
 export const QUESTION_IMPORT_MAX_QUESTIONS = 200;
 export const QUESTION_IMPORT_EXTENSIONS = ['csv', 'xlsx', 'docx'] as const;
 
@@ -15,6 +16,16 @@ export class QuestionImportPolicyError extends Error {
         this.name = 'QuestionImportPolicyError';
     }
 }
+
+export const validateQuestionImportJson = (value: string): void => {
+    const byteLength = new TextEncoder().encode(value).byteLength;
+    if (byteLength > QUESTION_IMPORT_MAX_JSON_BYTES) {
+        throw new QuestionImportPolicyError(
+            'Nội dung JSON vượt quá giới hạn 1 MB. Hãy giảm số câu hoặc chia thành nhiều lần nhập.',
+            'FILE_TOO_LARGE',
+        );
+    }
+};
 
 export const getQuestionImportExtension = (fileName: string): QuestionImportExtension | null => {
     const extension = fileName.split('.').pop()?.trim().toLowerCase();

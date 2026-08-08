@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { FileSpreadsheet, Info, RotateCcw, X } from 'lucide-react';
+import { ClipboardPaste, FileSpreadsheet, Info, RotateCcw, X } from 'lucide-react';
 import QuestionImportReview from '../import/QuestionImportReview';
 import type { QuestionImportResult, QuizImportMetadata } from '../import/questionImport.types';
 import { validateQuestionImportFile } from '../import/questionImportPolicy';
+import { importQuestionJson } from '../import/jsonQuestionImporter';
 import type { ManualQuizQuestion } from '../types/manualQuizWorkspace.types';
 import { useManualQuizWorkspaceStore } from '../store/useManualQuizWorkspaceStore';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
@@ -19,6 +20,8 @@ type RestorableQuizMetadata = {
     timeLimit: number;
     tags: string[];
 };
+
+type ImportMode = 'file' | 'json';
 
 const metadataEntries = (metadata: QuizImportMetadata): Array<[string, string]> => [
     ['Tên đề', metadata.title || ''],
@@ -37,6 +40,8 @@ const QuestionImportDrawer: React.FC<QuestionImportDrawerProps> = ({ open, onClo
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [applyMetadata, setApplyMetadata] = useState(true);
+    const [mode, setMode] = useState<ImportMode>('file');
+    const [jsonText, setJsonText] = useState('');
     const [lastImport, setLastImport] = useState<{
         questionIds: string[];
         previousMetadata: RestorableQuizMetadata | null;
@@ -75,6 +80,22 @@ const QuestionImportDrawer: React.FC<QuestionImportDrawerProps> = ({ open, onClo
         }
     };
 
+    const analyzeJson = () => {
+        setLoading(true);
+        setError(null);
+        setFileName('JSON dán từ bộ nhớ tạm');
+        setLastImport(null);
+        setApplyMetadata(true);
+        try {
+            setResult(importQuestionJson(jsonText));
+        } catch (importError) {
+            setError(importError instanceof Error ? importError.message : 'Không thể phân tích JSON.');
+            setResult(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const importQuestions = (questions: ManualQuizQuestion[]) => {
         const previousMetadata = envelope ? {
             title: envelope.quiz.title,
@@ -107,18 +128,36 @@ const QuestionImportDrawer: React.FC<QuestionImportDrawerProps> = ({ open, onClo
 
     return (
         <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/35" onMouseDown={onClose}>
-            <section ref={drawerRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Nhập câu hỏi từ tệp" onMouseDown={(event) => event.stopPropagation()} className="flex h-full w-full max-w-5xl flex-col bg-white shadow-2xl">
+            <section ref={drawerRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Nhập câu hỏi" onMouseDown={(event) => event.stopPropagation()} className="flex h-full w-full max-w-5xl flex-col bg-white shadow-2xl">
                 <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 lg:px-6">
                     <div className="flex items-start gap-3">
                         <span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><FileSpreadsheet className="h-5 w-5" /></span>
-                        <div><h2 className="text-xl font-semibold text-slate-900">Nhập câu hỏi từ tệp</h2><p className="mt-1 text-sm text-slate-600">CSV/XLSX theo mẫu hoặc DOCX có cấu trúc Câu – phương án – đáp án.</p></div>
+                        <div><h2 className="text-xl font-semibold text-slate-900">Nhập câu hỏi</h2><p className="mt-1 text-sm text-slate-600">Phân tích trước, rà soát rồi mới thêm câu hỏi vào đề.</p></div>
                     </div>
                     <button ref={closeButtonRef} type="button" aria-label="Đóng nhập câu hỏi" onClick={onClose} className="grid h-11 w-11 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
                 </header>
 
                 <div className="border-b border-slate-200 bg-slate-50 p-4">
-                    <input ref={inputRef} type="file" accept=".csv,.xlsx,.docx" aria-label="Chọn tệp câu hỏi" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void loadFile(file); }} />
-                    <button type="button" onClick={() => inputRef.current?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-[10px] bg-emerald-600 px-5 text-sm font-semibold text-white"><FileSpreadsheet className="h-4 w-4" /> Chọn tệp CSV, XLSX hoặc DOCX</button>
+                    <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Nguồn câu hỏi">
+                        <button type="button" role="tab" aria-selected={mode === 'file'} onClick={() => { setMode('file'); setError(null); }} className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-semibold ${mode === 'file' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-700'}`}><FileSpreadsheet className="h-4 w-4" /> Từ tệp</button>
+                        <button type="button" role="tab" aria-selected={mode === 'json'} onClick={() => { setMode('json'); setError(null); }} className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-semibold ${mode === 'json' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700'}`}><ClipboardPaste className="h-4 w-4" /> Dán JSON</button>
+                    </div>
+                    {mode === 'file' ? (
+                        <>
+                            <input ref={inputRef} type="file" accept=".csv,.xlsx,.docx" aria-label="Chọn tệp câu hỏi" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void loadFile(file); }} />
+                            <button type="button" onClick={() => inputRef.current?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-[10px] bg-emerald-600 px-5 text-sm font-semibold text-white"><FileSpreadsheet className="h-4 w-4" /> Chọn tệp CSV, XLSX hoặc DOCX</button>
+                        </>
+                    ) : (
+                        <div className="space-y-3">
+                            <label className="block text-sm font-semibold text-slate-800" htmlFor="question-json-input">JSON câu hỏi <span className="font-normal text-slate-500">(chỉ mảng [...], tối đa 200 câu)</span></label>
+                            <textarea id="question-json-input" aria-label="JSON câu hỏi" value={jsonText} onChange={(event) => setJsonText(event.target.value)} rows={8} spellCheck={false} placeholder={'[\n  {"id":"Q001","question_type":"SINGLE_CHOICE",...}\n]'} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 font-mono text-sm leading-6 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20" />
+                            <div className="flex flex-wrap items-center gap-3">
+                                <button type="button" onClick={analyzeJson} disabled={!jsonText.trim() || loading} className="inline-flex min-h-11 items-center gap-2 rounded-[10px] bg-sky-600 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"><ClipboardPaste className="h-4 w-4" /> Phân tích JSON</button>
+                                <button type="button" onClick={() => { setJsonText(''); setResult(null); setError(null); }} className="min-h-11 rounded-[10px] border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700">Xóa nội dung</button>
+                                <p className="text-xs text-slate-500">LaTeX trong JSON cần escape dấu gạch chéo, ví dụ <code>\\frac</code>.</p>
+                            </div>
+                        </div>
+                    )}
                     {fileName && <span className="ml-3 text-sm text-slate-600">{fileName}</span>}
                 </div>
 
@@ -161,7 +200,7 @@ const QuestionImportDrawer: React.FC<QuestionImportDrawerProps> = ({ open, onClo
                             </ul>
                         </div>
                     )}
-                    {!loading && result && <QuestionImportReview result={result} onImport={importQuestions} />}
+                    {!loading && result && <QuestionImportReview key={fileName} result={result} onImport={importQuestions} />}
                 </div>
 
                 {lastImport && lastImport.questionIds.length > 0 && (

@@ -64,4 +64,22 @@ describe('QuestionImportDrawer', () => {
         expect(await screen.findByRole('alert')).toHaveTextContent('Chỉ hỗ trợ tệp CSV, XLSX hoặc DOCX');
         expect(useManualQuizWorkspaceStore.getState().envelope!.quiz.questions).toHaveLength(0);
     });
+
+    it('parses pasted JSON through the review flow before importing', async () => {
+        render(<QuestionImportDrawer open onClose={vi.fn()} />);
+        fireEvent.click(screen.getByRole('tab', { name: 'Dán JSON' }));
+        fireEvent.change(screen.getByLabelText('JSON câu hỏi'), {
+            target: { value: JSON.stringify([{
+                id: 'Q001', question_type: 'SINGLE_CHOICE', difficulty: 'NHAN_BIET', points: 1,
+                question: '1 + 1 bằng bao nhiêu?',
+                options: [{ id: 'A', text: '1' }, { id: 'B', text: '2' }], correct_answer: 'B',
+            }]) },
+        });
+        fireEvent.click(screen.getByRole('button', { name: 'Phân tích JSON' }));
+        expect(await screen.findByText('1 + 1 bằng bao nhiêu?')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Nhập 1 câu đã chọn' })).toBeInTheDocument();
+        expect(useManualQuizWorkspaceStore.getState().envelope!.quiz.questions).toHaveLength(0);
+        fireEvent.click(screen.getByRole('button', { name: 'Nhập 1 câu đã chọn' }));
+        await waitFor(() => expect(useManualQuizWorkspaceStore.getState().envelope!.quiz.questions).toHaveLength(1));
+    });
 });

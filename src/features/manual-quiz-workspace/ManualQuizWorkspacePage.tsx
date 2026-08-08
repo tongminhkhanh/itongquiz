@@ -13,6 +13,7 @@ import WorkspaceHeader from './components/WorkspaceHeader';
 import WorkspaceStatusBar from './components/WorkspaceStatusBar';
 import PublishValidationDrawer from './components/PublishValidationDrawer';
 import PointDistributionDialog from './components/PointDistributionDialog';
+import QuizSettingsDialog from './components/QuizSettingsDialog';
 import QuestionBankDrawer from './components/QuestionBankDrawer';
 import WorkspaceMobileTabs, { type WorkspaceMobilePane } from './components/WorkspaceMobileTabs';
 import {
@@ -72,6 +73,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
     const [previousPoints, setPreviousPoints] = useState<Record<string, number> | null>(null);
     const [isQuestionBankOpen, setQuestionBankOpen] = useState(false);
     const [isQuestionImportOpen, setQuestionImportOpen] = useState(false);
+    const [isSettingsOpen, setSettingsOpen] = useState(false);
     const [mobilePane, setMobilePane] = useState<WorkspaceMobilePane>('editor');
     const openedDraftRef = useRef<string | null>(null);
 
@@ -121,6 +123,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
         if (isValidationOpen) setValidationOpen(false);
         else if (isPointDialogOpen) setPointDialogOpen(false);
         else if (isQuestionImportOpen) setQuestionImportOpen(false);
+        else if (isSettingsOpen) setSettingsOpen(false);
         else if (isQuestionBankOpen) setQuestionBankOpen(false);
         else if (!isPreviewCollapsed) setPreviewCollapsed(true);
     }, [
@@ -128,6 +131,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
         isPreviewCollapsed,
         isQuestionBankOpen,
         isQuestionImportOpen,
+        isSettingsOpen,
         isValidationOpen,
         setPreviewCollapsed,
     ]);
@@ -242,7 +246,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
                 className="flex h-[100dvh] min-h-[640px] max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-[#FFFDF7] font-['Be_Vietnam_Pro',sans-serif] text-[#172033]"
             >
                 <h1 className="sr-only">Phòng soạn đề thủ công</h1>
-                <WorkspaceHeader onOpenValidation={openValidation} />
+                <WorkspaceHeader onOpenValidation={openValidation} onOpenSettings={() => setSettingsOpen(true)} />
                 <div
                     data-testid="workspace-grid"
                     data-mobile-pane={mobilePane}
@@ -253,7 +257,7 @@ const ManualQuizWorkspacePage: React.FC = () => {
                             id="workspace-pane-list"
                             data-testid="workspace-pane-list"
                             data-mobile-visible={mobilePane === 'list'}
-                            className={`min-h-0 min-w-0 overflow-hidden ${mobilePane === 'list' ? 'block' : 'hidden'} md:block`}
+                            className={`h-full max-h-full min-h-0 min-w-0 overflow-hidden ${mobilePane === 'list' ? 'block' : 'hidden'} md:block`}
                         >
                             <QuestionNavigator
                                 onOpenQuestionBank={() => setQuestionBankOpen(true)}
@@ -319,6 +323,14 @@ const ManualQuizWorkspacePage: React.FC = () => {
                         targetPoints={envelope.targetPoints}
                         onClose={() => setPointDialogOpen(false)}
                         onApply={applyPointDistribution}
+                    />
+                )}
+                {envelope && (
+                    <QuizSettingsDialog
+                        open={isSettingsOpen}
+                        quiz={envelope.quiz}
+                        onClose={() => setSettingsOpen(false)}
+                        onSave={(settings) => updateQuiz(settings)}
                     />
                 )}
                 {autosaveController.conflict && envelope && (

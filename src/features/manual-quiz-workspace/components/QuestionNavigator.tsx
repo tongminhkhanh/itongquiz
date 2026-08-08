@@ -74,7 +74,7 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBan
         <nav
             aria-label="Danh sách câu hỏi"
             data-pane-width="280"
-            className="flex min-h-0 w-full min-w-0 flex-col border-r border-slate-200 bg-slate-50 md:w-[280px]"
+            className="flex h-full max-h-full min-h-0 w-full min-w-0 flex-col overflow-hidden border-r border-slate-200 bg-slate-50 md:w-[280px]"
         >
             <div className="border-b border-slate-200 p-4">
                 <div className="mb-3 flex items-center justify-between gap-2">
@@ -123,7 +123,7 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBan
                 </label>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <div data-testid="question-navigator-scroll" className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable]">
                 {filteredQuestions.length === 0 && (
                     <div className="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500">
                         {questions.length === 0 ? 'Chưa có câu hỏi nào.' : 'Không tìm thấy câu hỏi.'}
@@ -220,7 +220,7 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({ onOpenQuestionBan
                     onClick={onOpenImport}
                     className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-slate-200 bg-white px-3 text-sm font-medium"
                 >
-                    <FileUp className="h-4 w-4" /> Nhập từ tệp
+                    <FileUp className="h-4 w-4" /> Nhập câu hỏi
                 </button>
             </div>
 
