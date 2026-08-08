@@ -66,6 +66,48 @@ const answerIndex = (answer: unknown, options: unknown[]): number => {
     return options.findIndex((option) => optionText(option) === target);
 };
 
+const DRAG_DROP_PLACEHOLDER_PATTERN = /\{\{\{([A-Za-z][A-Za-z0-9_-]*)\}\}\}|\{\{([A-Za-z][A-Za-z0-9_-]*)\}\}/g;
+
+const findOpeningBrace = (value: string, closingIndex: number): number => {
+    let depth = 0;
+    for (let index = closingIndex; index >= 0; index -= 1) {
+        if (value[index] === '}') depth += 1;
+        if (value[index] === '{') {
+            depth -= 1;
+            if (depth === 0) return index;
+        }
+    }
+    return -1;
+};
+
+const isLatexRequiredArgument = (value: string, placeholderIndex: number): boolean => {
+    const beforePlaceholder = value.slice(0, placeholderIndex);
+    if (/\\(?:dfrac|tfrac|frac|sqrt)\s*$/.test(beforePlaceholder)) return true;
+
+    let previousIndex = placeholderIndex - 1;
+    while (previousIndex >= 0 && /\s/.test(value[previousIndex])) previousIndex -= 1;
+    if (value[previousIndex] !== '}') return false;
+
+    const previousGroupStart = findOpeningBrace(value, previousIndex);
+    return previousGroupStart >= 0
+        && /\\(?:dfrac|tfrac|frac)\s*$/.test(value.slice(0, previousGroupStart));
+};
+
+const parseDragDropContent = (value: unknown): { content: string; placeholders: string[] } => {
+    const source = text(value);
+    const placeholders: string[] = [];
+    const content = source.replace(
+        DRAG_DROP_PLACEHOLDER_PATTERN,
+        (_full, wrappedId: string | undefined, standaloneId: string | undefined, offset: number) => {
+            const placeholderId = wrappedId || standaloneId || '';
+            placeholders.push(placeholderId);
+            const needsLatexGroup = Boolean(wrappedId) || isLatexRequiredArgument(source, offset);
+            return needsLatexGroup ? `{[${placeholderId}]}` : `[${placeholderId}]`;
+        },
+    );
+    return { content, placeholders };
+};
+
 const buildQuestion = (record: JsonRecord, index: number): { question: ManualQuizQuestion; issues: string[] } => {
     const rawType = text(record.question_type);
     const type = TYPE_MAP[rawType];
@@ -137,11 +179,12 @@ const buildQuestion = (record: JsonRecord, index: number): { question: ManualQui
         }
         case 'DRAG_DROP_FILL':
             base.question = text(record.question);
-            base.text = text(record.content).replace(/\{\{([^}]+)\}\}/g, '[$1]');
             {
+                const parsedContent = parseDragDropContent(record.content);
+                base.text = parsedContent.content;
                 const dragItems = asArray(record.drag_items);
                 const dragById = new Map(dragItems.map((item) => [text(asRecord(item)?.id), optionText(item)]));
-                const placeholders = [...text(record.content).matchAll(/\{\{([^}]+)\}\}/g)].map((match) => match[1]);
+                const placeholders = parsedContent.placeholders;
                 const answers = asArray(record.answers).map((answer) => asRecord(answer) || {});
                 const blankAnswers = answers.map((answer) => {
                     const blank = text(answer.blank);

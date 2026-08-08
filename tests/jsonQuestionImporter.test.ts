@@ -55,6 +55,33 @@ describe('importQuestionJson', () => {
         expect(result.needsReview[0].issues.join(' ')).toContain('accepted_answers');
     });
 
+    it('preserves LaTeX braces when drag-drop placeholders are fraction arguments', () => {
+        const wrapped = importQuestionJson(JSON.stringify([question('DRAG_DROP_FILL', {
+            content: 'Điền phân số $\\frac{{blank2}}{{blank3}}$ vào chỗ trống.',
+            drag_items: [
+                { id: 'D2', text: '2' },
+                { id: 'D3', text: '5' },
+            ],
+            answers: [
+                { blank: 'blank2', item: 'D2' },
+                { blank: 'blank3', item: 'D3' },
+            ],
+        })]));
+
+        expect(wrapped.accepted).toHaveLength(1);
+        expect(wrapped.needsReview).toHaveLength(0);
+        expect((wrapped.accepted[0].question as any).text).toBe('Điền phân số $\\frac{[blank2]}{[blank3]}$ vào chỗ trống.');
+        expect((wrapped.accepted[0].question as any).blanks).toEqual(['2', '5']);
+
+        const explicitlyGrouped = importQuestionJson(JSON.stringify([question('DRAG_DROP_FILL', {
+            content: 'Điền phân số $\\frac{{{blank2}}}{{{blank3}}}$.',
+            drag_items: [{ id: 'D2', text: '2' }, { id: 'D3', text: '5' }],
+            answers: [{ blank: 'blank2', item: 'D2' }, { blank: 'blank3', item: 'D3' }],
+        })]));
+        expect(explicitlyGrouped.accepted).toHaveLength(1);
+        expect((explicitlyGrouped.accepted[0].question as any).text).toBe('Điền phân số $\\frac{[blank2]}{[blank3]}$.');
+    });
+
     it('does not accept more than 200 questions', () => {
         const payload = Array.from({ length: 201 }, (_, index) => question('RIDDLE', {
             id: `Q${index}`,
