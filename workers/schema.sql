@@ -102,7 +102,9 @@ CREATE TABLE IF NOT EXISTS questions (
   math_format_version INTEGER NOT NULL DEFAULT 1,
   points REAL,
   explanation TEXT NOT NULL DEFAULT '',
-  image_alt TEXT NOT NULL DEFAULT ''
+  image_alt TEXT NOT NULL DEFAULT '',
+  question_content_json TEXT,
+  explanation_content_json TEXT
 );
 
 -- Results

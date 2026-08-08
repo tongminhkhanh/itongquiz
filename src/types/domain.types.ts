@@ -1,4 +1,5 @@
 import type { QuestionSkillMetadataFields } from '../shared/skillTaxonomy';
+import type { RichTextDocumentV1 } from '../features/rich-text/richText.types';
 
 /**
  * Domain Types
@@ -15,6 +16,10 @@ export interface QuestionMetadata extends QuestionSkillMetadataFields {
     /** Lời giải/hướng dẫn, chỉ hiển thị theo policy sau khi học sinh nộp bài. */
     explanation?: string;
     imageAlt?: string;
+    /** Structured, safe rich text for the question prompt. Plain question remains the fallback/search field. */
+    questionContent?: RichTextDocumentV1;
+    /** Structured, safe rich text for the explanation when an explanation editor is enabled. */
+    explanationContent?: RichTextDocumentV1;
 }
 
 export enum QuestionType {

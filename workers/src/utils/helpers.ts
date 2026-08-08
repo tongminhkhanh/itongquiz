@@ -90,6 +90,37 @@ export function mapQuestionForSave(q: Partial<Question> & { type: string }, quiz
     const imageAltField = typeof anyQ.imageAlt === 'string'
         ? anyQ.imageAlt
         : (typeof anyQ.image_alt === 'string' ? anyQ.image_alt : '');
+    const normalizeRichContent = (value: unknown, fallback: string): string => {
+        let candidate = value;
+        if (typeof candidate === 'string') {
+            try { candidate = JSON.parse(candidate); } catch { candidate = null; }
+        }
+        if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return '';
+        const record = candidate as Record<string, unknown>;
+        if (record.version !== 1 || !Array.isArray(record.blocks) || record.blocks.length > 100) return '';
+        const blocks = record.blocks.map((block, index) => {
+            if (!block || typeof block !== 'object' || Array.isArray(block)) return null;
+            const source = block as Record<string, unknown>;
+            const type = source.type === 'bulletList' || source.type === 'orderedList' ? source.type : 'paragraph';
+            const align = source.align === 'center' || source.align === 'right' || source.align === 'justify' ? source.align : 'left';
+            const children = Array.isArray(source.children) ? source.children.slice(0, 500).map((child) => {
+                if (!child || typeof child !== 'object' || Array.isArray(child)) return null;
+                const item = child as Record<string, unknown>;
+                if (item.type === 'lineBreak') return { type: 'lineBreak' };
+                if (item.type === 'math' && typeof item.latex === 'string') return { type: 'math', latex: item.latex.slice(0, 4000) };
+                if (item.type === 'text' && typeof item.text === 'string') return {
+                    type: 'text', text: item.text.slice(0, 10000),
+                    ...(item.bold ? { bold: true } : {}), ...(item.italic ? { italic: true } : {}), ...(item.underline ? { underline: true } : {}),
+                };
+                return null;
+            }).filter(Boolean) : [];
+            return { id: typeof source.id === 'string' ? source.id.slice(0, 120) : `rt-block-${index}`, type, align, children };
+        }).filter(Boolean);
+        if (!blocks.length) return '';
+        return JSON.stringify({ version: 1, blocks });
+    };
+    const questionContentField = normalizeRichContent(anyQ.questionContent ?? anyQ.question_content_json, questionText || '');
+    const explanationContentField = normalizeRichContent(anyQ.explanationContent ?? anyQ.explanation_content_json, explanationField);
 
     const result = [
         normalizedQuestion.id || '', quizId, normalizedQuestion.type, questionText || '', options, correctAnswer,
@@ -97,6 +128,7 @@ export function mapQuestionForSave(q: Partial<Question> & { type: string }, quiz
         wordsField, correctWordIndexesField, imageField, tagsField,
         subjectField, skillCodeField, subskillCodeField, difficultyField,
         CURRENT_MATH_FORMAT_VERSION, pointsField, explanationField, imageAltField,
+        questionContentField, explanationContentField,
     ];
 
     return result.map(v => (v === undefined || v === null) ? '' : String(v));

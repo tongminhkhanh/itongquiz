@@ -41,7 +41,7 @@ const InlineQuestionEditor: React.FC<{ question: ManualQuizQuestion }> = ({ ques
         if (!next) return;
         selectQuestion(next.id);
         window.setTimeout(() => {
-            document.querySelector<HTMLElement>('[aria-label="Trình soạn câu hỏi"] textarea')?.focus();
+            document.querySelector<HTMLElement>('[aria-label="Trình soạn câu hỏi"] textarea[placeholder]')?.focus();
         }, 0);
     }, [question.id, questions, saveQuestion, selectQuestion]);
 

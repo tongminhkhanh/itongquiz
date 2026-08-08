@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { Save, X } from 'lucide-react';
 import { QuestionType } from '../../../../types';
 import type { Question } from '../../../../types';
@@ -16,8 +16,10 @@ import CategorizationEditor from './editors/CategorizationEditor';
 import WordScrambleEditor from './editors/WordScrambleEditor';
 import RiddleEditor from './editors/RiddleEditor';
 import ErrorCorrectionEditor from './editors/ErrorCorrectionEditor';
-import { FieldRow, MathTextarea, TextInput } from './editors/shared';
+import { FieldRow, TextInput } from './editors/shared';
 import MediaDropzone from '../../../manual-quiz-workspace/components/MediaDropzone';
+import RichTextEditor from '../../../rich-text/RichTextEditor';
+import { normalizeRichTextDocument } from '../../../rich-text/richTextDocument';
 
 export interface QuestionEditorFormProps {
     editingQuestion: Question;
@@ -43,7 +45,6 @@ const SharedHeaderEditor: React.FC<{
     draft: AnyEditorDraft;
     onDraftChange: (updater: (prev: AnyEditorDraft) => AnyEditorDraft) => void;
 }> = ({ draft, onDraftChange }) => {
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const questionField = draft.type === QuestionType.TRUE_FALSE ? 'mainQuestion' : 'question';
     const questionValue = draft.type === QuestionType.TRUE_FALSE
         ? (draft as { mainQuestion: string }).mainQuestion
@@ -52,15 +53,14 @@ const SharedHeaderEditor: React.FC<{
     return (
         <div className="space-y-4">
             <FieldRow label="Nội dung câu hỏi">
-                <MathTextarea
-                    ref={textareaRef}
-                    value={questionValue}
-                    onChange={(event) => onDraftChange((previous) => ({
+                <RichTextEditor
+                    value={(draft as { questionContent?: unknown }).questionContent as any}
+                    fallbackText={questionValue}
+                    onChange={(content, plainText) => onDraftChange((previous) => ({
                         ...previous,
-                        [questionField]: event.target.value,
+                        [questionField]: plainText,
+                        questionContent: normalizeRichTextDocument(content, plainText),
                     }))}
-                    rows={4}
-                    className="resize-y"
                     placeholder="Nhập nội dung câu hỏi..."
                 />
             </FieldRow>

@@ -52,6 +52,8 @@ export interface Question {
     points?: number | null;
     explanation?: string;
     image_alt?: string;
+    question_content_json?: string;
+    explanation_content_json?: string;
 }
 
 export interface Assignment {

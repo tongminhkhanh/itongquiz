@@ -67,6 +67,8 @@ const mapQuestionForClient = (question: any, sanitize: boolean): any => {
   mapped.letters = parseJson(source.letters, []);
   mapped.riddleLines = parseJson(source.riddleLines, []);
   mapped.optionImages = parseJson(source.option_images ?? source.optionImages, []);
+  mapped.questionContent = parseJson(source.question_content_json ?? source.questionContent, null);
+  mapped.explanationContent = parseJson(source.explanation_content_json ?? source.explanationContent, null);
   mapped.quizId = source.quiz_id;
   mapped.mainQuestion = source.question;
   mapped.text = source.text_field;

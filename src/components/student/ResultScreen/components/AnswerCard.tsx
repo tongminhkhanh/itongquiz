@@ -4,6 +4,7 @@ import { Check, X, Minus, ChevronRight, HelpCircle } from 'lucide-react';
 import { formatMathText } from '../../../../utils/formatters';
 
 import { MathSpan } from '../../../common';
+import RichTextRenderer from '../../../../features/rich-text/RichTextRenderer';
 
 export type AnswerStatus = 'correct' | 'wrong' | 'skipped';
 
@@ -240,7 +241,15 @@ const AnswerCard: React.FC<Props> = ({
                     </div>
 
                     {/* Question text */}
-                    <MathSpan content={getQuestionText()} className="text-gray-800 font-medium mb-2 line-clamp-2 block" />
+                    {(question as any).questionContent ? (
+                        <RichTextRenderer
+                            value={(question as any).questionContent}
+                            fallbackText={getQuestionText()}
+                            className="text-gray-800 font-medium mb-2 line-clamp-2 block"
+                        />
+                    ) : (
+                        <MathSpan content={getQuestionText()} className="text-gray-800 font-medium mb-2 line-clamp-2 block" />
+                    )}
 
                     {/* Question image */}
                     {question.image && (

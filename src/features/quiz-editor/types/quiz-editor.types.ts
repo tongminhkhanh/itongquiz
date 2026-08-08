@@ -17,6 +17,7 @@ import type {
     CategoryGroup,
     CategorizationItem,
 } from '../../../types';
+import type { RichTextDocumentV1 } from '../../rich-text/richText.types';
 
 // ---------------------------------------------------------------------------
 // Common Fields
@@ -28,6 +29,7 @@ export type Difficulty = 1 | 2 | 3;
 /** Fields common to all editor drafts. */
 interface BaseEditorDraft {
     question: string;
+    questionContent?: RichTextDocumentV1;
     difficulty?: Difficulty;
     image?: string;
     imageAlt?: string;
@@ -52,6 +54,7 @@ export interface MultipleSelectEditorDraft extends BaseEditorDraft {
 export interface TrueFalseEditorDraft {
     type: QuestionType.TRUE_FALSE;
     mainQuestion: string;
+    questionContent?: RichTextDocumentV1;
     items: TrueFalseItem[];
     difficulty?: Difficulty;
 }

@@ -63,8 +63,9 @@ const buildQuestionInsertStatement = (db: D1Database) => db.prepare(
     `INSERT INTO questions (
         id, quiz_id, type, question, options, correct_answer, items, text_field,
         blanks, distractors, sentence, words, correct_word_indexes, image, tags,
-        subject, skill_code, subskill_code, difficulty, math_format_version, points, explanation, image_alt
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        subject, skill_code, subskill_code, difficulty, math_format_version, points, explanation, image_alt,
+        question_content_json, explanation_content_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 );
 
 const mapQuestionBatch = (questions: unknown[], quizId: string): string[][] =>
@@ -170,6 +171,16 @@ const copiedQuestionValues = (
         String((question as import('../types').Question & { imageAlt?: string; image_alt?: string }).imageAlt
             ?? (question as import('../types').Question & { imageAlt?: string; image_alt?: string }).image_alt
             ?? ''),
+        (() => {
+            const value = (question as import('../types').Question & { questionContent?: unknown; question_content_json?: string }).questionContent
+                ?? (question as import('../types').Question & { questionContent?: unknown; question_content_json?: string }).question_content_json;
+            return typeof value === 'string' ? value : (value ? JSON.stringify(value) : '');
+        })(),
+        (() => {
+            const value = (question as import('../types').Question & { explanationContent?: unknown; explanation_content_json?: string }).explanationContent
+                ?? (question as import('../types').Question & { explanationContent?: unknown; explanation_content_json?: string }).explanation_content_json;
+            return typeof value === 'string' ? value : (value ? JSON.stringify(value) : '');
+        })(),
     ];
 };
 

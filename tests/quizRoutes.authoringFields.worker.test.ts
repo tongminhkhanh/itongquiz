@@ -71,6 +71,10 @@ const question = {
     id: 'q-1', type: 'MCQ', question: '1 + 1 = ?', options: ['1', '2'],
     correctAnswer: 'B', difficulty: 1, points: 2.5,
     explanation: 'Vì một cộng một bằng hai.', imageAlt: 'Hai khối vuông.',
+    questionContent: {
+        version: 1,
+        blocks: [{ id: 'b1', type: 'paragraph', align: 'center', children: [{ type: 'text', text: '1 + 1 = ?', bold: true }] }],
+    },
 };
 
 beforeEach(() => {
@@ -113,8 +117,10 @@ describe('quiz authoring points and explanations', () => {
 
     it('maps points and explanation as the final persisted question fields', () => {
         const mapped = mapQuestionForSave(question, 'quiz-a');
-        expect(mapped).toHaveLength(23);
-        expect(mapped.slice(-3)).toEqual(['2.5', 'Vì một cộng một bằng hai.', 'Hai khối vuông.']);
+        expect(mapped).toHaveLength(25);
+        expect(mapped.slice(20, 23)).toEqual(['2.5', 'Vì một cộng một bằng hai.', 'Hai khối vuông.']);
+        expect(JSON.parse(mapped[23])).toMatchObject({ version: 1, blocks: [{ align: 'center' }] });
+        expect(mapped[24]).toBe('');
     });
 
     it('persists authoring fields on quiz creation', async () => {
@@ -127,7 +133,9 @@ describe('quiz authoring points and explanations', () => {
         expect(response.status).toBe(200);
         const insert = db.executed.find((statement) => statement.sql.includes('INSERT INTO questions'));
         expect(insert?.sql).toContain('points, explanation, image_alt');
-        expect(insert?.bindings.slice(-3)).toEqual(['2.5', 'Vì một cộng một bằng hai.', 'Hai khối vuông.']);
+        expect(insert?.bindings.slice(-5, -2)).toEqual(['2.5', 'Vì một cộng một bằng hai.', 'Hai khối vuông.']);
+        expect(JSON.parse(String(insert?.bindings[insert!.bindings.length - 2]))).toMatchObject({ version: 1 });
+        expect(insert?.bindings[insert!.bindings.length - 1]).toBe('');
     });
 
     it('keeps authoring fields when duplicating a quiz', async () => {
@@ -141,7 +149,7 @@ describe('quiz authoring points and explanations', () => {
         const insert = db.executed.find((statement) =>
             statement.sql.includes('INSERT INTO questions') && statement.bindings.length > 0,
         );
-        expect(insert?.bindings.slice(-3)).toEqual(['2.5', 'Vì một cộng một bằng hai.', 'Hai khối vuông.']);
+        expect(insert?.bindings.slice(-5)).toEqual(['2.5', 'Vì một cộng một bằng hai.', 'Hai khối vuông.', '', '']);
     });
 
     it('hides explanations from students while keeping non-secret points', () => {

@@ -3,6 +3,7 @@ import { ChevronRight, Monitor, Smartphone } from 'lucide-react';
 import MathSpan from '../../../components/common/MathSpan';
 import { QuestionType } from '../../../types';
 import { useManualQuizWorkspaceStore } from '../store/useManualQuizWorkspaceStore';
+import RichTextRenderer from '../../rich-text/RichTextRenderer';
 
 const StudentPreviewPane: React.FC = () => {
     const envelope = useManualQuizWorkspaceStore((state) => state.envelope);
@@ -47,7 +48,15 @@ const StudentPreviewPane: React.FC = () => {
                     ) : (
                         <>
                             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-sky-700">Câu hỏi hiện tại</p>
-                            <MathSpan content={prompt || 'Câu hỏi chưa có nội dung'} as="div" className="text-base font-semibold leading-7" />
+                            {data.questionContent ? (
+                                <RichTextRenderer
+                                    value={data.questionContent}
+                                    fallbackText={prompt || 'Câu hỏi chưa có nội dung'}
+                                    className="text-base font-semibold leading-7"
+                                />
+                            ) : (
+                                <MathSpan content={prompt || 'Câu hỏi chưa có nội dung'} as="div" className="text-base font-semibold leading-7" />
+                            )}
                             {Array.isArray(data.options) && (
                                 <div className="mt-5 space-y-3">
                                     {data.options.map((option: string, index: number) => (

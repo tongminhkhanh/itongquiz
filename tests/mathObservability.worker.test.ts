@@ -74,7 +74,7 @@ describe('server-owned math normalization and observability', () => {
       imageAlt: 'Hai phân số cần so sánh',
     } as any, 'quiz-1');
 
-    expect(values).toHaveLength(23);
+    expect(values).toHaveLength(25);
     expect(values[3]).toBe('So sánh $\\frac{1}{2}$ và $\\frac{2}{4}$');
     expect(values[4]).toBe('$\\frac{1}{2}$|$\\frac{2}{3}$');
     expect(values[19]).toBe('2');

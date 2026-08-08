@@ -34,6 +34,8 @@ export function mapLiveExamQuestionRow(row: any): Question {
         image: String(row.image || ''),
         explanation: '',
         difficulty: row.difficulty || undefined,
+        questionContent: parseJson(row.question_content_json, undefined),
+        explanationContent: parseJson(row.explanation_content_json, undefined),
     };
 
     switch (type) {

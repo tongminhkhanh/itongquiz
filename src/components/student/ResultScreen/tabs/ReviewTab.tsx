@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { CheckCircle2, MinusCircle, XCircle } from 'lucide-react';
 import type { Quiz, StudentResult } from '../../../../types';
 import MathSpan from '../../../common/MathSpan';
+import RichTextRenderer from '../../../../features/rich-text/RichTextRenderer';
 import {
     getStoredAnswerOutcome,
     type AnswerOutcome,
@@ -127,11 +128,20 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ quiz, result, answers, initialFil
                                     {meta.label}
                                 </span>
                             </div>
-                            <MathSpan
-                                content={questionText}
-                                as="p"
-                                className="mt-3 font-semibold leading-relaxed text-slate-900"
-                            />
+                            {(question as any).questionContent ? (
+                                <RichTextRenderer
+                                    value={(question as any).questionContent}
+                                    fallbackText={questionText}
+                                    as="p"
+                                    className="mt-3 font-semibold leading-relaxed text-slate-900"
+                                />
+                            ) : (
+                                <MathSpan
+                                    content={questionText}
+                                    as="p"
+                                    className="mt-3 font-semibold leading-relaxed text-slate-900"
+                                />
+                            )}
                             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                                 <div className="rounded-[9px] bg-slate-50 p-3">
                                     <dt className="font-semibold text-slate-500">Câu trả lời của em</dt>

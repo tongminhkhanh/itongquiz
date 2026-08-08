@@ -70,7 +70,7 @@ const QuestionReview: React.FC<QuestionReviewProps> = ({
             <div className="review-header">
                 <div className="question-header-content">
                     <span className="review-question-number">Câu {index + 1}:</span>
-                    <MathContent content={questionText} className="question-text-inline" />
+                    <MathContent content={questionText} richContent={question.questionContent || question.question_content_json} className="question-text-inline" />
                 </div>
                 <div className="status-badge">
                     {getStatusIcon()}
@@ -102,7 +102,7 @@ const QuestionReview: React.FC<QuestionReviewProps> = ({
             {showExplanation && question.explanation && (
                 <div className="explanation-section">
                     <div className="explanation-title">📝 Giải thích:</div>
-                    <MathContent content={question.explanation} />
+                    <MathContent content={question.explanation} richContent={question.explanationContent || question.explanation_content_json} />
                 </div>
             )}
         </div>

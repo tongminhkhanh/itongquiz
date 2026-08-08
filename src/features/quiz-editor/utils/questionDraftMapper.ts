@@ -33,12 +33,18 @@ import type {
     ErrorCorrectionEditorDraft,
     Difficulty,
 } from '../types/quiz-editor.types';
+import { normalizeRichTextDocument } from '../../rich-text/richTextDocument';
+import type { RichTextDocumentV1 } from '../../rich-text/richText.types';
 
 // ---------------------------------------------------------------------------
 // Helper: safe cast to loose record
 // ---------------------------------------------------------------------------
 type Loose = Record<string, unknown>;
 const r = (q: Question): Loose => q as unknown as Loose;
+
+const readRichText = (value: unknown, fallback: string): RichTextDocumentV1 => (
+    normalizeRichTextDocument(value, fallback)
+);
 
 // ---------------------------------------------------------------------------
 // questionToDraft — Question → EditorDraft
@@ -48,6 +54,7 @@ export function questionToDraft(question: Question): AnyEditorDraft {
     const q = r(question);
     const base = {
         question: String(q.question ?? q.mainQuestion ?? ''),
+        questionContent: readRichText(q.questionContent ?? q.question_content_json, String(q.question ?? q.mainQuestion ?? '')),
         difficulty: q.difficulty as Difficulty | undefined,
         image: typeof q.image === 'string' ? q.image : undefined,
         imageAlt: typeof q.imageAlt === 'string' ? q.imageAlt : (typeof q.image_alt === 'string' ? q.image_alt : undefined),
@@ -81,6 +88,7 @@ export function questionToDraft(question: Question): AnyEditorDraft {
             return {
                 type: QuestionType.TRUE_FALSE,
                 mainQuestion: String(q.mainQuestion ?? q.question ?? ''),
+                questionContent: readRichText(q.questionContent ?? q.question_content_json, String(q.mainQuestion ?? q.question ?? '')),
                 items: normalizeTrueFalseItems(q.items),
                 difficulty: q.difficulty as Difficulty | undefined,
             } satisfies TrueFalseEditorDraft;
@@ -242,6 +250,7 @@ export function draftToQuestion(draft: AnyEditorDraft, original: Question): Ques
         type: original.type,
         difficulty: draft.difficulty,
         imageAlt: (draft as { imageAlt?: string }).imageAlt,
+        questionContent: (draft as { questionContent?: RichTextDocumentV1 }).questionContent,
     };
 
     switch (draft.type) {

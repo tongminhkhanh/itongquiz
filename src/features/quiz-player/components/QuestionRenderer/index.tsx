@@ -1,6 +1,7 @@
 import React from 'react';
 import { BaseRendererProps } from './types';
 import SmartText from './utils/SmartText';
+import RichTextRenderer from '../../../rich-text/RichTextRenderer';
 
 import MCQRenderer from './renderers/MCQRenderer';
 import TrueFalseRenderer from './renderers/TrueFalseRenderer';
@@ -82,10 +83,18 @@ const QuestionRenderer: React.FC<BaseRendererProps> = (props) => {
           <span className="text-slate-500">{questionTypeLabel}</span>
         </div>
         <h2 className="text-slate-900">
-          <SmartText
-            content={(question as any).mainQuestion || (question as any).content || (question as any).question}
-            className="text-base font-semibold leading-relaxed sm:text-lg"
-          />
+          {(question as any).questionContent ? (
+            <RichTextRenderer
+              value={(question as any).questionContent}
+              fallbackText={(question as any).mainQuestion || (question as any).content || (question as any).question}
+              className="text-base font-semibold leading-relaxed sm:text-lg"
+            />
+          ) : (
+            <SmartText
+              content={(question as any).mainQuestion || (question as any).content || (question as any).question}
+              className="text-base font-semibold leading-relaxed sm:text-lg"
+            />
+          )}
         </h2>
       </div>
 

@@ -20,6 +20,7 @@ import { getTypeLabel, getDifficultyLabel, getDifficultyColorClass } from '../..
 import { fixReorderQuestion } from '../../utils/questionNormalizers';
 import type { Difficulty } from '../../types/quiz-editor.types';
 import QuestionCardActions from './QuestionCardActions';
+import RichTextRenderer from '../../../rich-text/RichTextRenderer';
 
 // Renderers
 import MCQRenderer from './renderers/MCQRenderer';
@@ -147,11 +148,19 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                         Câu {index + 1}:
                     </span>
                     <div className="flex-1">
-                        <NewlineMathText
-                            content={fixReorderQuestion(questionText)}
-                            as="div"
-                            className="text-gray-800 font-medium quiz-text-preserve-block"
-                        />
+                        {q.questionContent ? (
+                            <RichTextRenderer
+                                value={q.questionContent as any}
+                                fallbackText={fixReorderQuestion(questionText)}
+                                className="text-gray-800 font-medium quiz-text-preserve-block"
+                            />
+                        ) : (
+                            <NewlineMathText
+                                content={fixReorderQuestion(questionText)}
+                                as="div"
+                                className="text-gray-800 font-medium quiz-text-preserve-block"
+                            />
+                        )}
                     </div>
                 </div>
 

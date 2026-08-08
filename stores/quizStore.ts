@@ -57,6 +57,14 @@ const normalizeQuestionRow = (q: any): any => {
     if (typeof q.optionImages === 'string') try { parsed.optionImages = JSON.parse(q.optionImages); } catch { }
     if (typeof q.left_items === 'string') try { parsed.leftItems = JSON.parse(q.left_items); } catch { }
     if (typeof q.right_items === 'string') try { parsed.rightItems = JSON.parse(q.right_items); } catch { }
+    if (typeof q.question_content_json === 'string') {
+        try { parsed.questionContent = JSON.parse(q.question_content_json); } catch { }
+    } else if (q.questionContent && typeof q.questionContent === 'string') {
+        try { parsed.questionContent = JSON.parse(q.questionContent); } catch { }
+    }
+    if (typeof q.explanation_content_json === 'string') {
+        try { parsed.explanationContent = JSON.parse(q.explanation_content_json); } catch { }
+    }
 
     parsed.quizId = parsed.quizId || parsed.quiz_id;
     parsed.correctAnswer = parsed.correctAnswer || parsed.correct_answer;
