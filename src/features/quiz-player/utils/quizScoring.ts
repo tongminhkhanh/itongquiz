@@ -1,4 +1,5 @@
 import { Quiz, QuestionType, StudentResult, Question } from '../../../types';
+import { matchesAcceptedAnswer } from '../../../utils/question/acceptedAnswer.util';
 
 /**
  * [SENIOR ENGINEERING SERVICE]
@@ -53,10 +54,7 @@ export const calculateStudentScore = (quiz: Quiz, answers: Record<string, any>):
                 isCorrect = allCorrect && correctAnswers.length > 0;
                 correctAnswer = correctAnswers;
             } else {
-                const studentAns = (answers[q.id] || "").toString().trim().replace(/^'/, '').toLowerCase();
-                const correctAns = String(qa.correctAnswer || "").toString().trim().replace(/^'/, '').toLowerCase();
-                const correctOptions = correctAns.split('|').map((s: string) => s.trim());
-                isCorrect = correctOptions.includes(studentAns);
+                isCorrect = matchesAcceptedAnswer(answers[q.id], qa);
             }
         } 
         else if (q.type === QuestionType.TRUE_FALSE) {
@@ -246,9 +244,7 @@ export const calculateStudentScore = (quiz: Quiz, answers: Record<string, any>):
         } 
         else if (q.type === QuestionType.RIDDLE) {
             totalItems++;
-            const correctAns = (qa.correctAnswer || '').toString().toLowerCase().trim();
-            const studentAns = (answers[q.id] || '').toString().toLowerCase().trim();
-            isCorrect = studentAns === correctAns;
+            isCorrect = matchesAcceptedAnswer(answers[q.id], qa);
         } 
         else if (q.type === QuestionType.ERROR_CORRECTION) {
             totalItems++;

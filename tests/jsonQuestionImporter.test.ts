@@ -46,13 +46,34 @@ describe('importQuestionJson', () => {
         expect(unsupported.rejected).toHaveLength(1);
     });
 
-    it('keeps ambiguous answer semantics in needsReview instead of silently dropping them', () => {
+    it('keeps unsupported case-sensitive answer semantics in needsReview', () => {
         const result = importQuestionJson(JSON.stringify([question('SHORT_ANSWER', {
             accepted_answers: ['một', '1'],
             case_sensitive: true,
         })]));
         expect(result.needsReview).toHaveLength(1);
-        expect(result.needsReview[0].issues.join(' ')).toContain('accepted_answers');
+        expect(result.needsReview[0].issues.join(' ')).toContain('case_sensitive');
+    });
+
+    it('accepts multiple accepted_answers without sending the question to needsReview', () => {
+        const result = importQuestionJson(JSON.stringify([
+            question('SHORT_ANSWER', {
+                accepted_answers: ['Hà Nội', 'Thăng Long'],
+                case_sensitive: false,
+            }),
+            question('RIDDLE', {
+                riddle: 'Con gì có cánh?',
+                accepted_answers: ['chim', 'con chim'],
+                case_sensitive: false,
+            }),
+        ]));
+
+        expect(result.accepted).toHaveLength(2);
+        expect(result.needsReview).toHaveLength(0);
+        expect((result.accepted[0].question as any).acceptedAnswers).toEqual(['Hà Nội', 'Thăng Long']);
+        expect((result.accepted[0].question as any).correctAnswer).toBe('Hà Nội|Thăng Long');
+        expect((result.accepted[1].question as any).acceptedAnswers).toEqual(['chim', 'con chim']);
+        expect((result.accepted[1].question as any).correctAnswer).toBe('chim|con chim');
     });
 
     it('preserves LaTeX braces when drag-drop placeholders are fraction arguments', () => {
@@ -80,6 +101,13 @@ describe('importQuestionJson', () => {
         })]));
         expect(explicitlyGrouped.accepted).toHaveLength(1);
         expect((explicitlyGrouped.accepted[0].question as any).text).toBe('Điền phân số $\\frac{[blank2]}{[blank3]}$.');
+
+        const answersOutOfOrder = importQuestionJson(JSON.stringify([question('DRAG_DROP_FILL', {
+            content: '{{blank1}} rồi {{blank2}}',
+            drag_items: [{ id: 'D1', text: 'trước' }, { id: 'D2', text: 'sau' }],
+            answers: [{ blank: 'blank2', item: 'D2' }, { blank: 'blank1', item: 'D1' }],
+        })]));
+        expect((answersOutOfOrder.accepted[0].question as any).blanks).toEqual(['trước', 'sau']);
     });
 
     it('does not accept more than 200 questions', () => {
@@ -89,5 +117,87 @@ describe('importQuestionJson', () => {
             accepted_answers: ['đáp án'],
         }));
         expect(() => importQuestionJson(JSON.stringify(payload))).toThrow('tối đa 200');
+    });
+
+    it('converts prompt v3.4 questionRichText into the frontend questionContent contract', () => {
+        const result = importQuestionJson(JSON.stringify([question('SINGLE_CHOICE', {
+            question: 'Chọn đáp án đúng.\nDòng một\nDòng hai',
+            options: [{ id: 'A', text: 'Đúng' }, { id: 'B', text: 'Sai' }],
+            correct_answer: 'A',
+            questionRichText: {
+                schemaVersion: 1,
+                doc: {
+                    type: 'doc',
+                    content: [
+                        {
+                            type: 'paragraph',
+                            content: [
+                                { type: 'text', text: 'Chọn ', marks: [{ type: 'bold' }] },
+                                {
+                                    type: 'text',
+                                    text: 'đáp án đúng.',
+                                    marks: [
+                                        { type: 'strike' },
+                                        { type: 'textStyle', attrs: { color: '#0369A1' } },
+                                        { type: 'highlight', attrs: { color: '#FEF3C7' } },
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            type: 'paragraph',
+                            attrs: { textAlign: 'center' },
+                            content: [
+                                { type: 'text', text: 'Dòng một' },
+                                { type: 'hardBreak' },
+                                { type: 'text', text: 'Dòng hai' },
+                            ],
+                        },
+                    ],
+                },
+            },
+        })]));
+
+        expect(result.accepted).toHaveLength(1);
+        const content = (result.accepted[0].question as any).questionContent;
+        expect(content.version).toBe(1);
+        expect(content.blocks).toHaveLength(2);
+        expect(content.blocks[0].children[0]).toMatchObject({ bold: true, text: 'Chọn ' });
+        expect(content.blocks[0].children[1]).toMatchObject({
+            strike: true,
+            color: '#0369A1',
+            highlight: '#FEF3C7',
+        });
+        expect(content.blocks[1]).toMatchObject({ align: 'center' });
+        expect(content.blocks[1].children[1]).toEqual({ type: 'lineBreak' });
+    });
+
+    it('uses a safe frontend prompt for RIDDLE when the unchanged v3.4 schema omits question', () => {
+        const result = importQuestionJson(JSON.stringify([{
+            id: 'Q-RIDDLE-NO-QUESTION',
+            question_type: 'RIDDLE',
+            difficulty: 'THONG_HIEU',
+            points: 1,
+            riddle: 'Cánh gì bay lượn trên trời?',
+            accepted_answers: ['chim'],
+            hint: 'Một loài vật',
+        }]));
+
+        expect(result.accepted).toHaveLength(1);
+        expect((result.accepted[0].question as any).question).toBe('Em hãy giải câu đố sau.');
+    });
+
+    it('keeps the plain fallback and requests review when rich text changes the question content', () => {
+        const result = importQuestionJson(JSON.stringify([question('SINGLE_CHOICE', {
+            options: [{ id: 'A', text: 'Đúng' }, { id: 'B', text: 'Sai' }],
+            correct_answer: 'A',
+            questionRichText: {
+                schemaVersion: 1,
+                doc: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Nội dung khác' }] }] },
+            },
+        })]));
+
+        expect(result.needsReview).toHaveLength(1);
+        expect(result.needsReview[0].issues.join(' ')).toContain('không tương đương');
     });
 });

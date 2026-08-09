@@ -66,4 +66,21 @@ describe('Scoring Engine - MCQ & Short Answer', () => {
         expect(checkAnswer(q, '  HÀ NỘI  ').isCorrect).toBe(true);
         expect(checkAnswer(q, 'Hà\nNội').isCorrect).toBe(true);
     });
+    test('Short Answer: accepts every value in acceptedAnswers', () => {
+        const q = {
+            type: 'SHORT_ANSWER',
+            correctAnswer: 'Hà Nội|Thăng Long',
+            acceptedAnswers: ['Hà Nội', 'Thăng Long'],
+        };
+
+        expect(checkAnswer(q, 'thăng long').isCorrect).toBe(true);
+        expect(checkAnswer(q, 'Huế').isCorrect).toBe(false);
+    });
+
+    test('Riddle: accepts legacy pipe-separated answers', () => {
+        const q = { type: 'RIDDLE', correctAnswer: 'chim|con chim' };
+
+        expect(checkAnswer(q, 'Con chim').isCorrect).toBe(true);
+        expect(checkAnswer(q, 'con cá').isCorrect).toBe(false);
+    });
 });

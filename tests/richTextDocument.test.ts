@@ -33,5 +33,30 @@ describe('rich text question contract', () => {
   it('creates an empty editable paragraph when content is empty', () => {
     expect(createRichTextDocument().blocks).toHaveLength(1);
   });
-});
 
+  it('preserves prompt v3.4 marks and ordered-list metadata during normalization', () => {
+    const document = normalizeRichTextDocument({
+      version: 1,
+      blocks: [{
+        id: 'imported-list-item',
+        type: 'orderedList',
+        align: 'left',
+        listStart: 3,
+        children: [{
+          type: 'text',
+          text: 'Mục được định dạng',
+          strike: true,
+          color: '#0369A1',
+          highlight: '#FEF3C7',
+        }],
+      }],
+    });
+
+    expect(document.blocks[0]).toMatchObject({ type: 'orderedList', listStart: 3 });
+    expect(document.blocks[0].children[0]).toMatchObject({
+      strike: true,
+      color: '#0369A1',
+      highlight: '#FEF3C7',
+    });
+  });
+});

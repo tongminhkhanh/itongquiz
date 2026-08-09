@@ -1,4 +1,5 @@
 import type { Question, ResultRow } from '../types';
+import { matchesAcceptedAnswer } from '../../../src/utils/question/acceptedAnswer.util';
 import {
     classifySkillStatus,
     getSubjectLabel,
@@ -117,10 +118,7 @@ function evaluateAnswer(question: NormalizedQuestionRecord, studentAnswer: any):
 
     if (questionType === 'MCQ' || questionType === 'IMAGE_QUESTION' || questionType === 'SHORT_ANSWER') {
         if (questionType === 'SHORT_ANSWER') {
-            const normalizedStudent = String(studentAnswer ?? '').trim().replace(/^'/, '').toLowerCase();
-            const normalizedCorrect = String(question.correctAnswer ?? '').trim().replace(/^'/, '').toLowerCase();
-            const correctOptions = normalizedCorrect.split('|').map((item) => item.trim()).filter(Boolean);
-            return correctOptions.includes(normalizedStudent);
+            return matchesAcceptedAnswer(studentAnswer, question, false);
         }
 
         let normalizedCorrect = String(question.correctAnswer ?? '').trim().toUpperCase();
@@ -208,7 +206,11 @@ function evaluateAnswer(question: NormalizedQuestionRecord, studentAnswer: any):
         return String(studentAnswer ?? '').trim().toLowerCase() === String(question.correctAnswer ?? '').trim().toLowerCase();
     }
 
-    if (questionType === 'ERROR_CORRECTION' || questionType === 'RIDDLE') {
+    if (questionType === 'RIDDLE') {
+        return matchesAcceptedAnswer(studentAnswer, question, false);
+    }
+
+    if (questionType === 'ERROR_CORRECTION') {
         return String(studentAnswer ?? '').trim().toLowerCase() === String(question.correctAnswer ?? '').trim().toLowerCase();
     }
 

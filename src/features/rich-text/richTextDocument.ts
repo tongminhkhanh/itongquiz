@@ -6,6 +6,7 @@ import type {
 } from './richText.types';
 
 const ALIGNMENTS: RichTextAlign[] = ['left', 'center', 'right', 'justify'];
+const COLOR_PATTERN = /^#[0-9A-F]{6}$/u;
 let blockSequence = 0;
 
 export const createRichTextBlock = (
@@ -46,6 +47,13 @@ const normalizeInline = (value: unknown): RichTextInlineNode | null => {
       ...(value.bold ? { bold: true } : {}),
       ...(value.italic ? { italic: true } : {}),
       ...(value.underline ? { underline: true } : {}),
+      ...(value.strike ? { strike: true } : {}),
+      ...(typeof value.color === 'string' && COLOR_PATTERN.test(value.color.toUpperCase())
+        ? { color: value.color.toUpperCase() }
+        : {}),
+      ...(typeof value.highlight === 'string' && COLOR_PATTERN.test(value.highlight.toUpperCase())
+        ? { highlight: value.highlight.toUpperCase() }
+        : {}),
     };
   }
   if (value.type === 'math') return { type: 'math', latex: value.latex };
@@ -61,6 +69,9 @@ const mergeTextNodes = (children: RichTextInlineNode[]): RichTextInlineNode[] =>
       && Boolean(child.bold) === Boolean(previous.bold)
       && Boolean(child.italic) === Boolean(previous.italic)
       && Boolean(child.underline) === Boolean(previous.underline)
+      && Boolean(child.strike) === Boolean(previous.strike)
+      && child.color === previous.color
+      && child.highlight === previous.highlight
     ) {
       previous.text += child.text;
     } else {
@@ -98,6 +109,9 @@ export const normalizeRichTextDocument = (
       type,
       align,
       children: mergeTextNodes(children),
+      ...(Number.isInteger(block.listStart) && Number(block.listStart) >= 1 && Number(block.listStart) <= 999
+        ? { listStart: Number(block.listStart) }
+        : {}),
     };
   });
 
@@ -122,4 +136,3 @@ export const richTextDocumentToJson = (document: RichTextDocumentV1 | null | und
 export const richTextDocumentIsEmpty = (document: RichTextDocumentV1 | null | undefined): boolean => (
   !richTextToPlainText(document).trim()
 );
-

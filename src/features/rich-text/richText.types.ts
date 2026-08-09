@@ -8,6 +8,9 @@ export interface RichTextTextNode {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+  strike?: boolean;
+  color?: string;
+  highlight?: string;
 }
 
 export interface RichTextMathNode {
@@ -26,10 +29,11 @@ export interface RichTextBlock {
   type: RichTextBlockType;
   align: RichTextAlign;
   children: RichTextInlineNode[];
+  /** Starting number imported from an ordered-list contract. */
+  listStart?: number;
 }
 
 export interface RichTextDocumentV1 {
   version: 1;
   blocks: RichTextBlock[];
 }
-

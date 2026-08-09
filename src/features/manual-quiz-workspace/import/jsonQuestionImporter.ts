@@ -13,6 +13,7 @@ import {
     QUESTION_IMPORT_MAX_QUESTIONS,
     validateQuestionImportJson,
 } from './questionImportPolicy';
+import { convertPromptQuestionRichText } from './promptRichTextAdapter';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -156,9 +157,11 @@ const buildQuestion = (record: JsonRecord, index: number): { question: ManualQui
         case 'SHORT_ANSWER': {
             base.question = text(record.question);
             const answers = asArray(record.accepted_answers).map(text).filter(Boolean);
-            base.correctAnswer = answers[0] || '';
-            if (answers.length !== 1 || record.case_sensitive === true) {
-                issues.push('Hệ thống hiện chấm một đáp án, không phân biệt hoa/thường; hãy rà soát accepted_answers/case_sensitive.');
+            base.correctAnswer = answers.join('|');
+            base.acceptedAnswers = answers;
+            base.caseSensitive = record.case_sensitive === true;
+            if (record.case_sensitive === true) {
+                issues.push('case_sensitive: true chưa được lưu qua schema database hiện hành; cần rà soát trước khi xuất bản.');
             }
             break;
         }
@@ -186,15 +189,23 @@ const buildQuestion = (record: JsonRecord, index: number): { question: ManualQui
                 const dragById = new Map(dragItems.map((item) => [text(asRecord(item)?.id), optionText(item)]));
                 const placeholders = parsedContent.placeholders;
                 const answers = asArray(record.answers).map((answer) => asRecord(answer) || {});
-                const blankAnswers = answers.map((answer) => {
+                const answerByBlank = new Map<string, string>();
+                answers.forEach((answer) => {
                     const blank = text(answer.blank);
                     const itemId = text(answer.item);
                     if (!placeholders.includes(blank) || !dragById.has(itemId)) issues.push(`DRAG_DROP_FILL tham chiếu blank/item không tồn tại: ${blank} → ${itemId}.`);
+                    if (answerByBlank.has(blank)) issues.push(`DRAG_DROP_FILL có nhiều đáp án cho blank ${blank}.`);
+                    answerByBlank.set(blank, itemId);
+                });
+                const blankAnswers = placeholders.map((blank) => {
+                    const itemId = answerByBlank.get(blank) || '';
                     return dragById.get(itemId) || itemId;
                 }).filter(Boolean);
                 base.blanks = blankAnswers;
                 base.distractors = [...dragById.values()].filter((item) => !blankAnswers.includes(item));
-                if (placeholders.length === 0 || answers.length !== placeholders.length) issues.push('Mỗi placeholder kéo-thả phải có đúng một đáp án.');
+                if (placeholders.length === 0 || answerByBlank.size !== placeholders.length || blankAnswers.length !== placeholders.length) {
+                    issues.push('Mỗi placeholder kéo-thả phải có đúng một đáp án.');
+                }
             }
             break;
         case 'ORDERING':
@@ -254,25 +265,41 @@ const buildQuestion = (record: JsonRecord, index: number): { question: ManualQui
                 const parts = asArray(record.parts);
                 const partById = new Map(parts.map((part) => [text(asRecord(part)?.id), text(asRecord(part)?.text)]));
                 const correctOrder = asArray(record.correct_order).map(text);
+                const orderedParts = correctOrder.map((partId) => partById.get(partId) || '');
+                const assembledText = orderedParts.every((part) => [...part].length === 1)
+                    ? orderedParts.join('')
+                    : orderedParts.join(' ');
                 base.letters = parts.map((part) => text(asRecord(part)?.text));
-                base.correctWord = text(record.correct_text) || correctOrder.map((partId) => partById.get(partId) || '').join(' ');
+                base.correctWord = text(record.correct_text) || assembledText;
                 if (correctOrder.some((partId) => !partById.has(partId)) || correctOrder.length !== parts.length) issues.push('WORD_ASSEMBLY.correct_order phải chứa đủ ID phần ghép, mỗi ID một lần.');
+                if (text(record.correct_text) && text(record.correct_text) !== assembledText) {
+                    issues.push('WORD_ASSEMBLY.correct_text không khớp kết quả ghép theo correct_order.');
+                }
             }
             break;
         case 'RIDDLE': {
-            base.question = text(record.question);
+            base.question = text(record.question) || 'Em hãy giải câu đố sau.';
             base.riddleLines = text(record.riddle).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
             const answers = asArray(record.accepted_answers).map(text).filter(Boolean);
-            base.correctAnswer = answers[0] || '';
+            base.correctAnswer = answers.join('|');
+            base.acceptedAnswers = answers;
+            base.caseSensitive = record.case_sensitive === true;
             base.answerType = 'original';
             base.answerLabel = 'Đáp án';
             base.hint = text(record.hint) || undefined;
-            if (answers.length !== 1 || record.case_sensitive === true) issues.push('Hệ thống hiện chấm một đáp án, không phân biệt hoa/thường; hãy rà soát accepted_answers/case_sensitive.');
+            if (record.case_sensitive === true) issues.push('case_sensitive: true chưa được lưu qua schema database hiện hành; cần rà soát trước khi xuất bản.');
             break;
         }
         default:
             throw new Error(`Câu ${sourceLabel(record, index)} không được hỗ trợ.`);
     }
+
+    const promptText = type === QuestionType.TRUE_FALSE
+        ? text(base.mainQuestion)
+        : text(base.question);
+    const richText = convertPromptQuestionRichText(record.questionRichText, promptText);
+    if (richText.document) base.questionContent = richText.document;
+    issues.push(...richText.issues);
     return { question: base as ManualQuizQuestion, issues };
 };
 

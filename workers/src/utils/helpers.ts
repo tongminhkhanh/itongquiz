@@ -4,6 +4,7 @@
 import { jsonResponse } from './response';
 import { Question, Assignment, PetData, ShopItem, ResultRow } from '../types';
 import { CURRENT_MATH_FORMAT_VERSION, prepareIncomingQuestion } from '../services/questionMath';
+import { matchesAcceptedAnswer } from '../../../src/utils/question/acceptedAnswer.util';
 
 // ============ Map question data for D1 insert ============
 export function mapQuestionForSave(q: Partial<Question> & { type: string }, quizId: string): string[] {
@@ -62,9 +63,15 @@ export function mapQuestionForSave(q: Partial<Question> & { type: string }, quiz
         anyQ.correctAnswer = anyQ.correctWord || anyQ.correctAnswer || '';
     }
 
+    const importedAcceptedAnswers = Array.isArray(anyQ.acceptedAnswers)
+        ? anyQ.acceptedAnswers.map((answer: unknown) => String(answer ?? '').trim()).filter(Boolean)
+        : [];
     const correctAnswer = normalizedQuestion.type === 'MULTIPLE_SELECT'
         ? JSON.stringify(anyQ.correctAnswers || anyQ.correctAnswer || [])
-        : (anyQ.correctAnswer || normalizedQuestion.correct_answer || '');
+        : ((normalizedQuestion.type === 'SHORT_ANSWER' || normalizedQuestion.type === 'RIDDLE')
+            && importedAcceptedAnswers.length > 0
+            ? importedAcceptedAnswers.join('|')
+            : (anyQ.correctAnswer || normalizedQuestion.correct_answer || ''));
 
     const questionText = normalizedQuestion.type === 'TRUE_FALSE'
         ? (anyQ.mainQuestion || normalizedQuestion.question || anyQ.question)
@@ -228,11 +235,7 @@ export async function handleValidateAnswers(
             isCorrect = false;
         } else if (qType === 'MCQ' || qType === 'SHORT_ANSWER' || qType === 'IMAGE_QUESTION') {
             if (qType === 'SHORT_ANSWER') {
-                const cleanStudent = String(studentAnswer || '').trim().replace(/^'/, '').toLowerCase();
-                const cleanCorrect = String(correctAnswer || '').trim().replace(/^'/, '').toLowerCase();
-                // Support multiple correct answers separated by |
-                const correctOptions = cleanCorrect.split('|').map(s => s.trim());
-                isCorrect = correctOptions.includes(cleanStudent);
+                isCorrect = matchesAcceptedAnswer(studentAnswer, correctAnswer, false);
             } else {
                 let normalizedCorrect = String(correctAnswer || '').trim().toUpperCase();
                 const normalizedStudent = String(studentAnswer || '').trim().toUpperCase();
@@ -337,7 +340,7 @@ export async function handleValidateAnswers(
                 isCorrect = studentWord.trim().toLowerCase().replace(/\s+/g, '') === String(correctAnswer).trim().toLowerCase().replace(/\s+/g, '');
             } catch { isCorrect = false; }
         } else if (qType === 'RIDDLE') {
-            isCorrect = String(studentAnswer || '').trim().toLowerCase() === String(correctAnswer || '').trim().toLowerCase();
+            isCorrect = matchesAcceptedAnswer(studentAnswer, correctAnswer, false);
         } else if (qType === 'ERROR_CORRECTION') {
             try {
                 const ecStudentWrong = String((studentAnswer?.wrongWord) || '').trim().toLowerCase();

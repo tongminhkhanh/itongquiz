@@ -5,6 +5,7 @@
  */
 
 import { StudentResult } from '../types';
+import { matchesAcceptedAnswer } from './question/acceptedAnswer.util';
 
 /**
  * Calculate mean (average) of an array
@@ -251,9 +252,7 @@ const calculateIsCorrectFallback = (
     // SHORT_ANSWER: Case-insensitive
     if (type === 'SHORT_ANSWER') {
         if (correctAnswer === undefined || correctAnswer === null) return undefined;
-        const cleanStudent = String(selectedAnswer || '').trim().replace(/^'/, '').toLowerCase();
-        const cleanCorrect = String(correctAnswer || '').trim().replace(/^'/, '').toLowerCase();
-        return cleanStudent === cleanCorrect;
+        return matchesAcceptedAnswer(selectedAnswer, question);
     }
 
     // MULTIPLE_SELECT: Array comparison (use correctAnswers first, fallback to correctAnswer)

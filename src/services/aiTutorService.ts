@@ -10,6 +10,7 @@
 import { Question } from '../types';
 import { requestWorkerAiText } from './ai/workerAiClient';
 import { isSkippedAnswer } from '../features/results/studentResultSummary';
+import { matchesAcceptedAnswer } from '../utils/question/acceptedAnswer.util';
 
 // Call AI via the JWT-authenticated Worker proxy.
 async function callLLM(prompt: string): Promise<string> {
@@ -274,13 +275,14 @@ export function extractWrongAnswers(quiz: any, answers: Record<string, any>, res
             correctAnswer = vd.correctAnswer || '';
         } else {
             // Fallback for types not handled well by simple check
-            if (q.type === 'MCQ' || q.type === 'RIDDLE') {
+            if (q.type === 'MCQ') {
                 isCorrect = String(answer).toLowerCase().trim() === String(q.correctAnswer).toLowerCase().trim();
                 correctAnswer = q.correctAnswer || '';
+            } else if (q.type === 'RIDDLE') {
+                isCorrect = matchesAcceptedAnswer(answer, q);
+                correctAnswer = q.correctAnswer || '';
             } else if (q.type === 'SHORT_ANSWER' || q.type === 'FILL_BLANK') {
-                const cleanStudent = String(answer || '').trim().replace(/^'/, '').toLowerCase();
-                const cleanCorrect = String(q.correctAnswer || '').trim().replace(/^'/, '').toLowerCase();
-                isCorrect = cleanStudent === cleanCorrect;
+                isCorrect = matchesAcceptedAnswer(answer, q);
                 correctAnswer = q.correctAnswer || '';
             } else if (q.type === 'MULTIPLE_SELECT') {
                 const studentAns = (answer as string[]) || [];

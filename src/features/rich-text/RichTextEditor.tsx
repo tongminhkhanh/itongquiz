@@ -31,18 +31,33 @@ const inlineToHtml = (node: RichTextInlineNode): string => {
   if (node.bold) html = `<strong>${html}</strong>`;
   if (node.italic) html = `<em>${html}</em>`;
   if (node.underline) html = `<u>${html}</u>`;
+  if (node.strike) html = `<s>${html}</s>`;
+  if (node.color) html = `<span data-rich-color="${escapeHtml(node.color)}" style="color:${escapeHtml(node.color)}">${html}</span>`;
+  if (node.highlight) html = `<span data-rich-highlight="${escapeHtml(node.highlight)}" style="background-color:${escapeHtml(node.highlight)}">${html}</span>`;
   return html;
 };
 
 const blockToHtml = (block: RichTextBlock): string => block.children.map(inlineToHtml).join('');
 
-const marksFromElement = (element: HTMLElement, inherited: { bold?: boolean; italic?: boolean; underline?: boolean }) => ({
+type InlineMarks = Pick<RichTextInlineNode & {
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  strike?: boolean;
+  color?: string;
+  highlight?: string;
+}, 'bold' | 'italic' | 'underline' | 'strike' | 'color' | 'highlight'>;
+
+const marksFromElement = (element: HTMLElement, inherited: InlineMarks): InlineMarks => ({
   bold: inherited.bold || element.tagName === 'B' || element.tagName === 'STRONG',
   italic: inherited.italic || element.tagName === 'I' || element.tagName === 'EM',
   underline: inherited.underline || element.tagName === 'U',
+  strike: inherited.strike || element.tagName === 'S' || element.tagName === 'STRIKE' || element.tagName === 'DEL',
+  color: element.dataset.richColor || inherited.color,
+  highlight: element.dataset.richHighlight || inherited.highlight,
 });
 
-const parseInlineNodes = (root: Node, inherited: { bold?: boolean; italic?: boolean; underline?: boolean } = {}): RichTextInlineNode[] => {
+const parseInlineNodes = (root: Node, inherited: InlineMarks = {}): RichTextInlineNode[] => {
   const result: RichTextInlineNode[] = [];
   root.childNodes.forEach((node) => {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -67,7 +82,10 @@ const compactNodes = (nodes: RichTextInlineNode[]): RichTextInlineNode[] => {
     if (node.type === 'text' && previous?.type === 'text'
       && Boolean(node.bold) === Boolean(previous.bold)
       && Boolean(node.italic) === Boolean(previous.italic)
-      && Boolean(node.underline) === Boolean(previous.underline)) {
+      && Boolean(node.underline) === Boolean(previous.underline)
+      && Boolean(node.strike) === Boolean(previous.strike)
+      && node.color === previous.color
+      && node.highlight === previous.highlight) {
       previous.text += node.text;
     } else result.push(node);
   });

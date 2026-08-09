@@ -1,3 +1,5 @@
+import { matchesAcceptedAnswer } from './acceptedAnswer.util';
+
 /**
  * Unified Scoring Utility
  * 
@@ -207,7 +209,11 @@ export const checkAnswer = (question: any, answer: any): ScoringResult => {
             break;
 
         case 'SHORT_ANSWER':
-            isCorrect = normalizeShortAnswer(answer) === normalizeShortAnswer(question.correctAnswer);
+            isCorrect = matchesAcceptedAnswer(answer, question);
+            break;
+
+        case 'RIDDLE':
+            isCorrect = matchesAcceptedAnswer(answer, question);
             break;
 
         case 'ORDERING':
