@@ -11,6 +11,7 @@ interface InteractiveMathTextProps {
 const OPEN = '\uE000';
 const CLOSE = '\uE001';
 const BLANK_PATTERN = new RegExp(`${OPEN}([^${CLOSE}]+)${CLOSE}`, 'g');
+const NAMED_BLANK_ID_PATTERN = /^(?:select|blank)\d+$/i;
 
 const isLatexOptionalBracket = (input: string, index: number): boolean => {
   if (index > 0 && input[index - 1] === '\\') return true;
@@ -24,7 +25,12 @@ export const getInteractiveBlankIds = (input: string): string[] => {
   for (const match of String(input ?? '').matchAll(/\[([^\]]+)\]/g)) {
     if (isLatexOptionalBracket(String(input ?? ''), match.index ?? 0)) continue;
     const trimmed = match[1].trim();
-    ids.push(/^\d+$/.test(trimmed) ? trimmed : String(sequential++));
+    if (/^\d+$/.test(trimmed)) {
+      ids.push(trimmed);
+      continue;
+    }
+    const fallbackId = String(sequential++);
+    ids.push(NAMED_BLANK_ID_PATTERN.test(trimmed) ? trimmed : fallbackId);
   }
   return ids;
 };
@@ -34,7 +40,11 @@ const encodeBlanks = (input: string): string => {
   return input.replace(/\[([^\]]+)\]/g, (full, raw: string, index: number) => {
     if (isLatexOptionalBracket(input, index)) return full;
     const trimmed = raw.trim();
-    const id = /^\d+$/.test(trimmed) ? trimmed : String(sequential++);
+    let id = trimmed;
+    if (!/^\d+$/.test(trimmed)) {
+      const fallbackId = String(sequential++);
+      id = NAMED_BLANK_ID_PATTERN.test(trimmed) ? trimmed : fallbackId;
+    }
     return `${OPEN}${id}${CLOSE}`;
   });
 };
