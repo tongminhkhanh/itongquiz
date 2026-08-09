@@ -109,6 +109,18 @@
   background: linear-gradient(180deg, #2563eb, #7c3aed);
 }
 
+/* Keep quiz panes scrollable while removing visual scrollbar chrome. */
+.quiz-scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.quiz-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* =========================
    ANIMATIONS
    ========================= */

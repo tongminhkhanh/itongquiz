@@ -21,7 +21,7 @@ const QuizPlayerLayout: React.FC<QuizPlayerLayoutProps> = ({
       <div className="grid gap-7 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-stretch">
         <section
           data-testid="quiz-question-scroll"
-          className="min-w-0 space-y-5 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:pr-2"
+          className="quiz-scrollbar-hidden min-w-0 space-y-5 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:pr-2"
         >
           {children}
         </section>
@@ -29,7 +29,9 @@ const QuizPlayerLayout: React.FC<QuizPlayerLayoutProps> = ({
           data-testid="quiz-sidebar-navigation"
           className="hidden lg:flex lg:h-full lg:min-h-0 lg:flex-col"
         >
-          <div className="min-h-0 flex-1 overflow-y-auto">{sidebarNavigation}</div>
+          <div className="quiz-scrollbar-hidden min-h-0 flex-1 overflow-y-auto">
+            {sidebarNavigation}
+          </div>
           {sidebarFooter ? <div className="shrink-0 pt-4">{sidebarFooter}</div> : null}
         </aside>
       </div>

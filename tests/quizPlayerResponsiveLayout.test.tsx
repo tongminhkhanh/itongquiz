@@ -25,6 +25,7 @@ describe('QuizPlayerLayout', () => {
       'lg:h-full',
       'lg:overflow-y-auto',
       'lg:overscroll-contain',
+      'quiz-scrollbar-hidden',
     );
     expect(screen.getByTestId('quiz-sidebar-navigation')).toHaveClass(
       'lg:h-full',
