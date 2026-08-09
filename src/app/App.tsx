@@ -46,6 +46,7 @@ const MainApp: React.FC = () => {
     const pathNeedsMath = location.pathname.startsWith('/teacher/results/')
         || location.pathname.startsWith('/teacher/quizzes/manual/');
     const needsMathRuntime = quizStore.view === 'student'
+        || quizStore.view === 'teacher_dash'
         || pathNeedsMath;
 
     return needsMathRuntime

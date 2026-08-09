@@ -165,9 +165,23 @@ describe('App shell routing contracts', () => {
             isAdmin: true,
             teacherClass: '4A',
         });
-        expect(screen.queryByTestId('math-runtime')).not.toBeInTheDocument();
+        expect(screen.getByTestId('math-runtime')).toBeInTheDocument();
         expect(useQuizStore.getState().results).toHaveLength(1);
         expect(useQuizStore.getState().results[0]?.id).toBe('mock-123');
+    });
+
+    it('mounts the MathJax runtime for every teacher dashboard tab', async () => {
+        useAuthStore.setState({
+            isLoggedIn: true,
+            username: 'teacher',
+            teacherName: 'Teacher',
+        });
+        useQuizStore.setState({ view: 'teacher_dash' });
+
+        renderApp('/');
+
+        expect(await screen.findByText('teacher-dashboard')).toBeInTheDocument();
+        expect(screen.getByTestId('math-runtime')).toBeInTheDocument();
     });
 
     it('guards teacher dashboard and disabled Gift Shop root views by returning home', async () => {
