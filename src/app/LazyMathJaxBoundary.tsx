@@ -1,9 +1,6 @@
-import React, { Suspense } from 'react';
-
-const MathJaxRuntime = React.lazy(() => import('./MathJaxRuntime'));
+import React from 'react';
+import MathJaxRuntime from './MathJaxRuntime';
 
 export const LazyMathJaxBoundary: React.FC<React.PropsWithChildren> = ({ children }) => (
-    <Suspense fallback={children}>
-        <MathJaxRuntime>{children}</MathJaxRuntime>
-    </Suspense>
+    <MathJaxRuntime>{children}</MathJaxRuntime>
 );
