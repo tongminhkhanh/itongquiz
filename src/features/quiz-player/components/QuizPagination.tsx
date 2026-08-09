@@ -1,6 +1,7 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { QuizPageChangeHandler } from '../hooks/useQuizPageNavigation';
+import QuizSubmitButton from './QuizSubmitButton';
 
 interface QuizPaginationProps {
   currentPage: number;
@@ -52,15 +53,11 @@ const QuizPagination: React.FC<QuizPaginationProps> = ({
       </div>
 
       {currentPage === totalPages ? (
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={isSubmitting}
-          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-6 text-base font-semibold text-white shadow-sm transition-[background-color,box-shadow,transform] hover:bg-sky-700 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 active:scale-[0.985] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-700 disabled:shadow-none disabled:hover:bg-slate-300 motion-reduce:transform-none motion-reduce:transition-none sm:w-auto"
-        >
-          <Send className="h-4 w-4" aria-hidden="true" />
-          {isSubmitting ? 'Đang nộp bài...' : 'Nộp bài'}
-        </button>
+        <QuizSubmitButton
+          onSubmit={onSubmit}
+          isSubmitting={isSubmitting}
+          className="w-full sm:w-auto lg:hidden"
+        />
       ) : (
         <button
           type="button"

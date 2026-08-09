@@ -9,6 +9,7 @@ describe('QuizPlayerLayout', () => {
       <QuizPlayerLayout
         mobileNavigation={<nav aria-label="Điều hướng câu hỏi">Mobile</nav>}
         sidebarNavigation={<nav aria-label="Điều hướng câu hỏi">Desktop</nav>}
+        sidebarFooter={<button type="button">Nộp bài</button>}
       >
         <section>Câu hỏi đang làm</section>
       </QuizPlayerLayout>,
@@ -16,9 +17,20 @@ describe('QuizPlayerLayout', () => {
 
     expect(screen.getAllByRole('navigation', { name: 'Điều hướng câu hỏi' })).toHaveLength(2);
     expect(screen.getByTestId('quiz-mobile-navigation')).toHaveClass('lg:hidden');
-    expect(screen.getByTestId('quiz-sidebar-navigation')).toHaveClass('hidden', 'lg:block');
+    expect(screen.getByTestId('quiz-sidebar-navigation')).toHaveClass('hidden', 'lg:flex');
     expect(screen.getByTestId('quiz-player-main')).toHaveClass('min-h-0', 'bg-slate-50');
+    expect(screen.getByTestId('quiz-player-main')).toHaveClass('lg:overflow-hidden');
     expect(screen.getByTestId('quiz-player-main')).not.toHaveClass('min-h-screen');
+    expect(screen.getByTestId('quiz-question-scroll')).toHaveClass(
+      'lg:h-full',
+      'lg:overflow-y-auto',
+      'lg:overscroll-contain',
+    );
+    expect(screen.getByTestId('quiz-sidebar-navigation')).toHaveClass(
+      'lg:h-full',
+      'lg:flex-col',
+    );
+    expect(screen.getByRole('button', { name: 'Nộp bài' })).toBeVisible();
     expect(screen.getByText('Câu hỏi đang làm')).toBeVisible();
   });
 });

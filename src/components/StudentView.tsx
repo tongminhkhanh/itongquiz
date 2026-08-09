@@ -13,6 +13,7 @@ import QuizHeader from '../features/quiz-player/components/QuizHeader';
 import QuizNavigation from '../features/quiz-player/components/QuizNavigation';
 import QuizPagination from '../features/quiz-player/components/QuizPagination';
 import QuizPlayerLayout from '../features/quiz-player/components/QuizPlayerLayout';
+import QuizSubmitButton from '../features/quiz-player/components/QuizSubmitButton';
 import { useQuizPageNavigation } from '../features/quiz-player/hooks/useQuizPageNavigation';
 
 interface Props {
@@ -72,7 +73,7 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
     const unansweredCount = shuffledQuestions.length - answeredCount;
 
     return (
-      <div className="student-quiz-shell flex min-h-screen flex-col bg-slate-50 font-['Be_Vietnam_Pro'] text-[#172033]">
+      <div className="student-quiz-shell flex min-h-screen flex-col bg-slate-50 font-['Be_Vietnam_Pro'] text-[#172033] lg:h-screen lg:overflow-hidden">
         <QuizHeader
           title={quiz.title}
           timeLeft={timeLeft}
@@ -102,6 +103,13 @@ const StudentView: React.FC<Props> = ({ quiz, onExit, onSaveResult }) => {
               QUESTIONS_PER_PAGE={QUESTIONS_PER_PAGE}
               onPageChange={changePage}
               variant="sidebar"
+            />
+          )}
+          sidebarFooter={(
+            <QuizSubmitButton
+              onSubmit={() => setShowSubmitConfirm(true)}
+              isSubmitting={isSubmitting}
+              className="w-full"
             />
           )}
         >

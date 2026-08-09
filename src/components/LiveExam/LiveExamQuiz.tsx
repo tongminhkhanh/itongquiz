@@ -16,6 +16,7 @@ import QuizHeader from '../../features/quiz-player/components/QuizHeader';
 import QuizNavigation from '../../features/quiz-player/components/QuizNavigation';
 import QuizPagination from '../../features/quiz-player/components/QuizPagination';
 import QuizPlayerLayout from '../../features/quiz-player/components/QuizPlayerLayout';
+import QuizSubmitButton from '../../features/quiz-player/components/QuizSubmitButton';
 import {
     getActiveQuestionNumber,
     useQuizPageNavigation,
@@ -166,7 +167,7 @@ export const LiveExamQuiz: React.FC<LiveExamQuizProps> = ({
     }
 
     return (
-        <div className="flex min-h-screen flex-col bg-slate-50">
+        <div className="flex min-h-screen flex-col bg-slate-50 lg:h-screen lg:overflow-hidden">
             <QuizHeader
                 title={quizTitle}
                 timeLeft={timeRemaining}
@@ -196,6 +197,13 @@ export const LiveExamQuiz: React.FC<LiveExamQuizProps> = ({
                         QUESTIONS_PER_PAGE={QUESTIONS_PER_PAGE}
                         onPageChange={changePage}
                         variant="sidebar"
+                    />
+                )}
+                sidebarFooter={(
+                    <QuizSubmitButton
+                        onSubmit={() => setShowSubmitConfirm(true)}
+                        isSubmitting={isSubmitting}
+                        className="w-full"
                     />
                 )}
             >
