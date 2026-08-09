@@ -39,17 +39,6 @@ const QuizPagination: React.FC<QuizPaginationProps> = ({
         >
           Trang {currentPage} / {totalPages}
         </div>
-
-        <button
-          type="button"
-          aria-label="Trang sau"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 transition-[background-color,box-shadow,transform] hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 active:scale-[0.985] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-700 disabled:hover:bg-slate-200 motion-reduce:transform-none motion-reduce:transition-none"
-        >
-          Câu tiếp theo
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
-        </button>
       </div>
 
       {currentPage === totalPages ? (

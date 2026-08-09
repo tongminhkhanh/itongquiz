@@ -74,7 +74,6 @@ describe('quiz player chrome', () => {
     );
 
     const previousButton = screen.getByRole('button', { name: 'Trang trước' });
-    const nextPageButton = screen.getByRole('button', { name: 'Trang sau' });
     const primaryNextButton = screen.getByRole('button', { name: 'Câu tiếp theo' });
 
     expect(previousButton).toBeDisabled();
@@ -86,14 +85,15 @@ describe('quiz player chrome', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Trang 1 / 2');
     expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
 
-    for (const button of [previousButton, nextPageButton, primaryNextButton]) {
+    expect(screen.queryByRole('button', { name: 'Trang sau' })).not.toBeInTheDocument();
+
+    for (const button of [previousButton, primaryNextButton]) {
       expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     }
 
-    fireEvent.click(nextPageButton);
     fireEvent.click(primaryNextButton);
-    expect(onPageChange).toHaveBeenNthCalledWith(1, 2);
-    expect(onPageChange).toHaveBeenNthCalledWith(2, 2);
+    expect(onPageChange).toHaveBeenCalledTimes(1);
+    expect(onPageChange).toHaveBeenCalledWith(2);
 
     rerender(
       <QuizPagination
@@ -105,7 +105,7 @@ describe('quiz player chrome', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: 'Trang sau' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Trang sau' })).not.toBeInTheDocument();
     const submitButton = screen.getByRole('button', { name: 'Nộp bài' });
     expect(submitButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     fireEvent.click(submitButton);
